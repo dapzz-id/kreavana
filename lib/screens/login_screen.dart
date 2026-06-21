@@ -5,6 +5,8 @@ import '../widgets/social_button.dart';
 import '../widgets/auth_divider.dart';
 import '../main.dart';
 import 'register_screen.dart';
+import 'main_navigation.dart';
+import '../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,7 +18,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _usernameOrEmailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
@@ -51,18 +53,23 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void dispose() {
     _animController.dispose();
-    _emailController.dispose();
+    _usernameOrEmailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  void _handleLogin() {
+  void _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      // Simulate login
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          setState(() => _isLoading = false);
+      
+      final result = await AuthService.login(
+        usernameOrEmail: _usernameOrEmailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+        if (result['success'] == true) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text('Login berhasil!'),
@@ -73,8 +80,25 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ),
           );
+          
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => MainNavigation(initialUser: result['user']),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Login gagal.'),
+              backgroundColor: Colors.red.shade700,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
         }
-      });
+      }
     }
   }
 
@@ -103,6 +127,13 @@ class _LoginScreenState extends State<LoginScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
+                            Image.asset(
+                              'assets/brandlogo.png',
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.contain,
+                            ),
+                            const SizedBox(height: 20),
                             // Title
                             ShaderMask(
                               shaderCallback: (bounds) => const LinearGradient(
@@ -169,27 +200,26 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                             const SizedBox(height: 40),
 
-                            // Email Field
-                            _buildLabel('ALAMAT EMAIL', textMutedColor),
+                            // Username/Email Field
+                            _buildLabel('USERNAME ATAU EMAIL', textMutedColor),
                             const SizedBox(height: 8),
                             TextFormField(
-                              controller: _emailController,
+                              controller: _usernameOrEmailController,
                               style: TextStyle(
                                   color: theme.colorScheme.onSurface, fontSize: 15),
                               decoration: InputDecoration(
-                                hintText: 'contoh@email.com',
-                                prefixIcon: Icon(Icons.email_outlined,
+                                hintText: 'Username atau email',
+                                prefixIcon: Icon(Icons.person_outline_rounded,
                                     color: textMutedColor, size: 22),
                               ),
-                              keyboardType: TextInputType.emailAddress,
+                              keyboardType: TextInputType.text,
                               textInputAction: TextInputAction.next,
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
-                                  return 'Masukkan alamat email';
+                                  return 'Masukkan username atau email';
                                 }
-                                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                                    .hasMatch(value)) {
-                                  return 'Format email tidak valid';
+                                if (value.trim().length < 3) {
+                                  return 'Minimal 3 karakter';
                                 }
                                 return null;
                               },

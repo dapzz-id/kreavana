@@ -6,6 +6,7 @@ class AppTheme {
   static const Color deepPurple = Color(0xFF6D28D9);
   static const Color surfaceDark = Color(0xFF0F0D1A);
   static const Color cardDark = Color(0xFF1A1726);
+  static const Color cardBg = cardDark;
   static const Color inputDark = Color(0xFF1E1B2E);
   static const Color inputBorder = Color(0xFF2D2A3E);
   static const Color textMuted = Color(0xFF9CA3AF);

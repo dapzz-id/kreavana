@@ -5,6 +5,7 @@ import '../widgets/social_button.dart';
 import '../widgets/auth_divider.dart';
 import '../main.dart';
 import 'login_screen.dart';
+import '../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -17,6 +18,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -54,22 +56,30 @@ class _RegisterScreenState extends State<RegisterScreen>
   void dispose() {
     _animController.dispose();
     _nameController.dispose();
+    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  void _handleRegister() {
+  void _handleRegister() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      // Simulate registration
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          setState(() => _isLoading = false);
+      
+      final result = await AuthService.register(
+        name: _nameController.text.trim(),
+        username: _usernameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+        if (result['success'] == true) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Pendaftaran berhasil!'),
+              content: const Text('Pendaftaran berhasil! Silakan masuk.'),
               backgroundColor: Colors.green.shade700,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
@@ -77,8 +87,25 @@ class _RegisterScreenState extends State<RegisterScreen>
               ),
             ),
           );
+          
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => const LoginScreen(),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Pendaftaran gagal.'),
+              backgroundColor: Colors.red.shade700,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
         }
-      });
+      }
     }
   }
 
@@ -106,6 +133,13 @@ class _RegisterScreenState extends State<RegisterScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
+                            Image.asset(
+                              'assets/brandlogo.png',
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.contain,
+                            ),
+                            const SizedBox(height: 20),
                             // Title
                             ShaderMask(
                               shaderCallback: (bounds) => const LinearGradient(
@@ -188,6 +222,34 @@ class _RegisterScreenState extends State<RegisterScreen>
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
                                   return 'Masukkan nama lengkap';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Username Field
+                            _buildLabel('USERNAME', textMutedColor),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _usernameController,
+                              style: TextStyle(
+                                  color: theme.colorScheme.onSurface, fontSize: 15),
+                              decoration: InputDecoration(
+                                hintText: 'username',
+                                prefixIcon: Icon(Icons.alternate_email_rounded,
+                                    color: textMutedColor, size: 22),
+                              ),
+                              textInputAction: TextInputAction.next,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Masukkan username';
+                                }
+                                if (value.trim().length < 3) {
+                                  return 'Username minimal 3 karakter';
+                                }
+                                if (!RegExp(r'^[a-zA-Z0-9_\.]+$').hasMatch(value.trim())) {
+                                  return 'Username hanya boleh huruf, angka, titik, atau underscore';
                                 }
                                 return null;
                               },
