@@ -101,6 +101,8 @@ class ApiService {
             return _client.post(uri, headers: headers, body: jsonEncode(body));
           case 'PUT':
             return _client.put(uri, headers: headers, body: jsonEncode(body));
+          case 'PATCH':
+            return _client.patch(uri, headers: headers, body: jsonEncode(body));
           case 'DELETE':
             return _client.delete(uri, headers: headers);
           case 'GET':
@@ -154,6 +156,10 @@ class ApiService {
 
   static Future<dynamic> put(String endpoint, Map<String, dynamic> body) {
     return _request('PUT', endpoint, body: body);
+  }
+
+  static Future<dynamic> patch(String endpoint, Map<String, dynamic> body) {
+    return _request('PATCH', endpoint, body: body);
   }
 
   static Future<dynamic> delete(String endpoint) {
