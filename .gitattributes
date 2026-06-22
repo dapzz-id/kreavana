@@ -1,16 +1,73 @@
 * text=auto eol=lf
 
-*.blade.php diff=Blade
-*.css diff=css
-*.html diff=html
-*.md diff=markdown
+# Laravel
 *.php diff=php
+*.blade.php diff=html
+*.env text
+*.sql diff=sql
+
+# Flutter / Dart
 *.dart diff=dart
+
+# Frontend
+*.html diff=html
+*.css diff=css
+*.scss diff=css
+*.sass diff=css
+*.js diff=javascript
+*.jsx diff=javascript
+*.ts diff=typescript
+*.tsx diff=typescript
+*.vue diff=html
+
+# Android
+*.java diff=java
+*.kt diff=java
+*.xml diff=xml
+*.gradle text
+
+# iOS
 *.swift diff=swift
-*.cpp diff=c++
+*.plist text
+
+# Native / Build
 *.c diff=c
+*.cpp diff=cpp
+*.h diff=c
+*.hpp diff=cpp
 *.cmake diff=cmake
 
+# Documentation
+*.md diff=markdown
+*.txt text
+
+# Config
+*.json diff=json
+*.yaml text
+*.yml text
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.svg text
+*.ico binary
+
+*.ttf binary
+*.otf binary
+
+*.mp3 binary
+*.wav binary
+*.aac binary
+
+*.mp4 binary
+*.mov binary
+
+# Exclude from archives
 /.github export-ignore
 CHANGELOG.md export-ignore
 .styleci.yml export-ignore
+.gitignore export-ignore
+README.md export-ignore
