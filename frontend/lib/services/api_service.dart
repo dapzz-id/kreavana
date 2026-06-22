@@ -84,140 +84,35 @@ class ApiService {
     };
   }
 
-  static Future<dynamic> get(String endpoint,
-      {Map<String, String>? queryParams}) async {
+  static Future<dynamic> _request(
+    String method,
+    String endpoint, {
+    Map<String, String>? queryParams,
+    Map<String, dynamic>? body,
+  }) async {
     try {
       final uri = Uri.parse('$baseUrl/$endpoint').replace(
         queryParameters: queryParams,
       );
-      final headers = await _getHeaders();
-      final response = await _client.get(uri, headers: headers);
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else if (response.statusCode == 401) {
-        if (endpoint != 'auth/refresh') {
-          final refreshed = await _refreshToken();
-          if (refreshed) {
-            // Retry request
-            final newHeaders = await _getHeaders();
-            final retryResponse = await _client.get(uri, headers: newHeaders);
-            if (retryResponse.statusCode == 200) {
-              return jsonDecode(retryResponse.body);
-            }
-          }
+      
+      Future<http.Response> makeCall(Map<String, String> headers) {
+        switch (method) {
+          case 'POST':
+            return _client.post(uri, headers: headers, body: jsonEncode(body));
+          case 'PUT':
+            return _client.put(uri, headers: headers, body: jsonEncode(body));
+          case 'DELETE':
+            return _client.delete(uri, headers: headers);
+          case 'GET':
+          default:
+            return _client.get(uri, headers: headers);
         }
-        return {
-          'success': false,
-          'message': 'Sesi telah habis, silakan login kembali.',
-        };
-      } else {
-        return {
-          'success': false,
-          'message': 'Server error: ${response.statusCode}',
-        };
       }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Koneksi gagal: $e',
-      };
-    }
-  }
 
-  static Future<dynamic> post(
-      String endpoint, Map<String, dynamic> body) async {
-    try {
-      final uri = Uri.parse('$baseUrl/$endpoint');
       final headers = await _getHeaders();
-      final response = await _client.post(
-        uri,
-        headers: headers,
-        body: jsonEncode(body),
-      );
+      final response = await makeCall(headers);
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body);
-      } else if (response.statusCode == 401) {
-        if (endpoint != 'auth/refresh') {
-          final refreshed = await _refreshToken();
-          if (refreshed) {
-            // Retry request
-            final newHeaders = await _getHeaders();
-            final retryResponse = await _client.post(uri, headers: newHeaders, body: jsonEncode(body));
-            if (retryResponse.statusCode == 200 || retryResponse.statusCode == 201) {
-              return jsonDecode(retryResponse.body);
-            }
-          }
-        }
-        return {
-          'success': false,
-          'message': 'Sesi telah habis, silakan login kembali.',
-        };
-      } else {
-        return {
-          'success': false,
-          'message': 'Server error: ${response.statusCode}',
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Koneksi gagal: $e',
-      };
-    }
-  }
-
-  static Future<dynamic> put(
-      String endpoint, Map<String, dynamic> body) async {
-    try {
-      final uri = Uri.parse('$baseUrl/$endpoint');
-      final headers = await _getHeaders();
-      final response = await _client.put(
-        uri,
-        headers: headers,
-        body: jsonEncode(body),
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body);
-      } else if (response.statusCode == 401) {
-        if (endpoint != 'auth/refresh') {
-          final refreshed = await _refreshToken();
-          if (refreshed) {
-            // Retry request
-            final newHeaders = await _getHeaders();
-            final retryResponse = await _client.put(uri, headers: newHeaders, body: jsonEncode(body));
-            if (retryResponse.statusCode == 200 || retryResponse.statusCode == 201) {
-              return jsonDecode(retryResponse.body);
-            }
-          }
-        }
-        return {
-          'success': false,
-          'message': 'Sesi telah habis, silakan login kembali.',
-        };
-      } else {
-        return {
-          'success': false,
-          'message': 'Server error: ${response.statusCode}',
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Koneksi gagal: $e',
-      };
-    }
-  }
-
-  static Future<dynamic> delete(String endpoint) async {
-    try {
-      final uri = Uri.parse('$baseUrl/$endpoint');
-      final headers = await _getHeaders();
-      final response = await _client.delete(uri, headers: headers);
-
-      if (response.statusCode == 200 || response.statusCode == 204) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return response.body.isNotEmpty ? jsonDecode(response.body) : {'success': true};
       } else if (response.statusCode == 401) {
         if (endpoint != 'auth/refresh') {
@@ -225,8 +120,8 @@ class ApiService {
           if (refreshed) {
             // Retry request
             final newHeaders = await _getHeaders();
-            final retryResponse = await _client.delete(uri, headers: newHeaders);
-            if (retryResponse.statusCode == 200 || retryResponse.statusCode == 204) {
+            final retryResponse = await makeCall(newHeaders);
+            if (retryResponse.statusCode >= 200 && retryResponse.statusCode < 300) {
               return retryResponse.body.isNotEmpty ? jsonDecode(retryResponse.body) : {'success': true};
             }
           }
@@ -247,5 +142,21 @@ class ApiService {
         'message': 'Koneksi gagal: $e',
       };
     }
+  }
+
+  static Future<dynamic> get(String endpoint, {Map<String, String>? queryParams}) {
+    return _request('GET', endpoint, queryParams: queryParams);
+  }
+
+  static Future<dynamic> post(String endpoint, Map<String, dynamic> body) {
+    return _request('POST', endpoint, body: body);
+  }
+
+  static Future<dynamic> put(String endpoint, Map<String, dynamic> body) {
+    return _request('PUT', endpoint, body: body);
+  }
+
+  static Future<dynamic> delete(String endpoint) {
+    return _request('DELETE', endpoint);
   }
 }
