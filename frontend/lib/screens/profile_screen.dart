@@ -144,6 +144,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        toolbarHeight: 75,
         title: const Text(
           'Profil Pengguna',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -182,7 +183,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 700),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
                   child: Column(
                     children: [
                       // Profile Header Icon

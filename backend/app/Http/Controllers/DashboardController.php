@@ -3,19 +3,12 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use App\Models\DashboardStat;
 use App\Models\Opportunity;
 
 class DashboardController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth:api');
-    }
-
     public function stats(Request $request)
     {
         $pihakSlug = $request->query('pihak_slug');

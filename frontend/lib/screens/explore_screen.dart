@@ -116,6 +116,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        toolbarHeight: 75,
         title: const Text(
           'Jelajahi Kolaborasi',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -246,7 +247,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             )
                           : isDesktop
                               ? GridView.builder(
-                                  padding: const EdgeInsets.all(16),
+                                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
                                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                     crossAxisCount: 2,
                                     crossAxisSpacing: 16,
@@ -271,7 +272,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                   },
                                 )
                               : ListView.builder(
-                                  padding: const EdgeInsets.all(16),
+                                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
                                   itemCount: _filteredOpportunities.length,
                                   itemBuilder: (context, index) {
                                     final op = _filteredOpportunities[index];

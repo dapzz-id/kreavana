@@ -81,6 +81,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        toolbarHeight: 75,
         title: const Text(
           'Notifikasi Anda',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -132,7 +133,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         ],
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
                         itemCount: _notifications.length,
                         itemBuilder: (context, index) {
                           final notif = _notifications[index];

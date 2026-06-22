@@ -25,6 +25,8 @@ void main() async {
   runApp(KreavanaApp(initialUser: initialUser));
 }
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 class KreavanaApp extends StatelessWidget {
   final UserModel? initialUser;
 
@@ -36,6 +38,7 @@ class KreavanaApp extends StatelessWidget {
       valueListenable: themeNotifier,
       builder: (context, currentMode, child) {
         return MaterialApp(
+          navigatorKey: navigatorKey,
           title: 'Kreavana',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,

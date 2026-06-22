@@ -8,6 +8,7 @@ import 'explore_screen.dart';
 import 'notifications_screen.dart';
 import 'profile_screen.dart';
 import 'login_screen.dart';
+import '../widgets/custom_bottom_nav_bar.dart';
 
 class MainNavigation extends StatefulWidget {
   final UserModel initialUser;
@@ -345,67 +346,49 @@ class _MainNavigationState extends State<MainNavigation> {
 
     // Mobile Layout
     return Scaffold(
+      extendBody: true,
       body: IndexedStack(
         index: _currentIndex,
         children: screens,
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            )
-          ],
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-            if (index == 3 || index == 4) {
-              // Auto-refresh when entering notifications or profile
-              _refreshProfile();
-            }
-          },
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: theme.brightness == Brightness.dark
-              ? const Color(0xFF1E1E1E)
-              : Colors.white,
-          selectedItemColor: theme.colorScheme.primary,
-          unselectedItemColor: Colors.grey.shade500,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-          unselectedLabelStyle: const TextStyle(fontSize: 11),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined),
-              activeIcon: Icon(Icons.dashboard),
-              label: 'Dashboard',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.explore_outlined),
-              activeIcon: Icon(Icons.explore),
-              label: 'Jelajahi',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline),
-              activeIcon: Icon(Icons.chat_bubble),
-              label: 'Pesan',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.notifications_none_outlined),
-              activeIcon: Icon(Icons.notifications),
-              label: 'Notifikasi',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: 'Profil',
-            ),
-          ],
-        ),
+      bottomNavigationBar: CustomDiamondBottomBar(
+        currentIndex: _currentIndex,
+        isDark: isDark,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+          if (index == 3 || index == 4) {
+            _refreshProfile();
+          }
+        },
+        items: [
+          CustomNavItem(
+            icon: Icons.dashboard_outlined,
+            activeIcon: Icons.dashboard,
+            label: 'Dashboard',
+          ),
+          CustomNavItem(
+            icon: Icons.explore_outlined,
+            activeIcon: Icons.explore,
+            label: 'Jelajahi',
+          ),
+          CustomNavItem(
+            icon: Icons.chat_bubble_outline,
+            activeIcon: Icons.chat_bubble,
+            label: 'Pesan',
+          ),
+          CustomNavItem(
+            icon: Icons.notifications_none_outlined,
+            activeIcon: Icons.notifications,
+            label: 'Notifikasi',
+          ),
+          CustomNavItem(
+            icon: Icons.person_outline,
+            activeIcon: Icons.person,
+            label: 'Profil',
+          ),
+        ],
       ),
     );
   }
