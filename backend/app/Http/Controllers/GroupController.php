@@ -54,10 +54,24 @@ class GroupController extends Controller
     {
         $request->validate(['user_id' => 'required|exists:users,id']);
         
-        ChatParticipant::firstOrCreate(
+        $participant = ChatParticipant::firstOrCreate(
             ['chat_id' => $chat->id, 'user_id' => $request->user_id],
             ['status' => 'pending']
         );
+
+        if ($participant->wasRecentlyCreated) {
+            $notification = \App\Models\Notification::create([
+                'user_id' => $request->user_id,
+                'title' => 'Undangan Grup',
+                'message' => 'Anda diundang ke grup "' . $chat->name . '"',
+                'type' => 'group_invite',
+                'data' => ['chat_id' => $chat->id],
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
+
+            broadcast(new \App\Events\NotificationSent($notification));
+        }
         
         return response()->json(['message' => 'Undangan berhasil dikirim']);
     }

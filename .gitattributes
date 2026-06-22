@@ -1,0 +1,16 @@
+* text=auto eol=lf
+
+*.blade.php diff=Blade
+*.css diff=css
+*.html diff=html
+*.md diff=markdown
+*.php diff=php
+*.dart diff=dart
+*.swift diff=swift
+*.cpp diff=c++
+*.c diff=c
+*.cmake diff=cmake
+
+/.github export-ignore
+CHANGELOG.md export-ignore
+.styleci.yml export-ignore
