@@ -243,13 +243,8 @@ class _MainNavigationState extends State<MainNavigation> {
                       children: [
                         CircleAvatar(
                           radius: 18,
-                          backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
-                          backgroundImage: _currentUser.avatarUrl != null
-                              ? NetworkImage(_currentUser.avatarUrl!)
-                              : null,
-                          child: _currentUser.avatarUrl == null
-                              ? Icon(Icons.person, size: 20, color: theme.colorScheme.primary)
-                              : null,
+                          backgroundColor: Colors.transparent,
+                          backgroundImage: const AssetImage('assets/brandlogo.png'),
                         ),
                         const SizedBox(width: 10),
                         Expanded(

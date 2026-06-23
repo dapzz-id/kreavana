@@ -412,15 +412,8 @@ class ChatListSectionState extends State<ChatListSection> {
                       children: [
                         CircleAvatar(
                           radius: 24,
-                          backgroundColor: chat['isGroup']
-                              ? Theme.of(context).colorScheme.tertiaryContainer
-                              : Theme.of(context).colorScheme.primaryContainer,
-                          child: Icon(
-                            chat['isGroup'] ? Icons.group : Icons.person,
-                            color: chat['isGroup']
-                                ? Theme.of(context).colorScheme.onTertiaryContainer
-                                : Theme.of(context).colorScheme.onPrimaryContainer,
-                          ),
+                          backgroundColor: Colors.transparent,
+                          backgroundImage: const AssetImage('assets/brandlogo.png'),
                         ),
                         if (chat['unread'])
                           Positioned(
@@ -581,16 +574,8 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor: widget.chat['isGroup']
-                    ? theme.colorScheme.tertiaryContainer
-                    : theme.colorScheme.primaryContainer,
-                child: Icon(
-                  widget.chat['isGroup'] ? Icons.group : Icons.person,
-                  size: 20,
-                  color: widget.chat['isGroup']
-                      ? theme.colorScheme.onTertiaryContainer
-                      : theme.colorScheme.onPrimaryContainer,
-                ),
+                backgroundColor: Colors.transparent,
+                backgroundImage: const AssetImage('assets/brandlogo.png'),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -842,7 +827,7 @@ class _CallScreenState extends State<CallScreen> {
                 color: Colors.black87,
                 image: DecorationImage(
                   // Gambar latar belakang simulasi kamera video call
-                  image: NetworkImage('https://images.unsplash.com/photo-1573164713988-8665fc963095?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'),
+                  image: const AssetImage('assets/brandlogo.png'),
                   fit: BoxFit.cover,
                   colorFilter: ColorFilter.mode(Colors.black45, BlendMode.darken),
                 ),
@@ -940,13 +925,7 @@ class _CallScreenState extends State<CallScreen> {
                       child: CircleAvatar(
                         radius: 80,
                         backgroundColor: theme.colorScheme.primary,
-                        backgroundImage: widget.chat['isGroup'] 
-                            ? null 
-                            // Random avatar sesuai nama untuk simulasi profil
-                            : NetworkImage('https://ui-avatars.com/api/?name=${widget.chat['name']}&background=random&size=200'),
-                        child: widget.chat['isGroup'] 
-                            ? Icon(Icons.group, size: 80, color: theme.colorScheme.onPrimary)
-                            : null,
+                        backgroundImage: const AssetImage('assets/brandlogo.png'),
                       ),
                     ),
                   ),
@@ -1150,7 +1129,10 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                             final isSelected = selectedUsers.any((u) => u['id'] == user['id']);
 
                             return ListTile(
-                              leading: const CircleAvatar(child: Icon(Icons.person)),
+                              leading: const CircleAvatar(
+                                backgroundColor: Colors.transparent,
+                                backgroundImage: AssetImage('assets/brandlogo.png'),
+                              ),
                               title: Text(user['name']),
                               subtitle: Text(isAlreadyMember ? 'Sudah berada di dalam grup' : user['email']),
                               enabled: !isAlreadyMember,
@@ -1223,11 +1205,11 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
       body: ListView(
         children: [
           const SizedBox(height: 20),
-          Center(
+          const Center(
             child: CircleAvatar(
               radius: 60,
-              backgroundColor: theme.colorScheme.tertiaryContainer,
-              child: Icon(Icons.group, size: 60, color: theme.colorScheme.onTertiaryContainer),
+              backgroundColor: Colors.transparent,
+              backgroundImage: AssetImage('assets/brandlogo.png'),
             ),
           ),
           const SizedBox(height: 16),
@@ -1299,9 +1281,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
           
           if (isLoading) const Center(child: CircularProgressIndicator())
           else ...members.map((m) => ListTile(
-            leading: CircleAvatar(
-              backgroundColor: theme.colorScheme.surfaceVariant,
-              backgroundImage: NetworkImage('https://ui-avatars.com/api/?name=${m['name']}&background=random'),
+            leading: const CircleAvatar(
+              backgroundColor: Colors.transparent,
+              backgroundImage: AssetImage('assets/brandlogo.png'),
             ),
             title: Text(m['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: m['name'] == 'Anda' ? const Text('Ponsel ini') : null,

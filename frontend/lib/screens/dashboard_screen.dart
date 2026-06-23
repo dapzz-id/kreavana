@@ -239,13 +239,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: pihakColor.withOpacity(0.2),
-              backgroundImage: widget.user.avatarUrl != null
-                  ? NetworkImage(widget.user.avatarUrl!)
-                  : null,
-              child: widget.user.avatarUrl == null
-                  ? Icon(Icons.person, size: 20, color: pihakColor)
-                  : null,
+              backgroundColor: Colors.transparent,
+              backgroundImage: const AssetImage('assets/brandlogo.png'),
             ),
             const SizedBox(width: 10),
             Column(
