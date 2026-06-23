@@ -11,6 +11,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\AdminController;
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
@@ -55,4 +56,9 @@ Route::group(['middleware' => 'auth:api'], function() {
     // Notifications Routes
     Route::get('notifications', [NotificationController::class, 'index']);
     Route::put('notifications/read', [NotificationController::class, 'markAsRead']);
+
+    // Admin Routes
+    Route::get('admin/applications', [AdminController::class, 'getApplications']);
+    Route::post('admin/applications/{id}/approve', [AdminController::class, 'approveApplication']);
+    Route::post('admin/applications/{id}/reject', [AdminController::class, 'rejectApplication']);
 });

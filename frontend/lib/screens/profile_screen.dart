@@ -327,19 +327,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: widget.user.role == 'creator'
-                              ? Colors.green.shade100.withOpacity(0.8)
-                              : Colors.grey.shade200,
+                          color: widget.user.isAdmin
+                              ? Colors.red.shade100.withOpacity(0.8)
+                              : (widget.user.role == 'creator'
+                                  ? Colors.green.shade100.withOpacity(0.8)
+                                  : Colors.grey.shade200),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          widget.user.role == 'creator' ? 'CREATOR / MITRA' : 'KLIEN / USER',
+                          widget.user.isAdmin
+                              ? 'ADMINISTRATOR'
+                              : (widget.user.role == 'creator' ? 'CREATOR / MITRA' : 'KLIEN / USER'),
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: widget.user.role == 'creator'
-                                ? Colors.green.shade800
-                                : Colors.grey.shade700,
+                            color: widget.user.isAdmin
+                                ? Colors.red.shade800
+                                : (widget.user.role == 'creator'
+                                    ? Colors.green.shade800
+                                    : Colors.grey.shade700),
                           ),
                         ),
                       ),
@@ -436,12 +442,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 24),
 
-                      // Creator Application Card
-                      CreatorApplicationCard(
-                        user: widget.user,
-                        application: _latestApplication,
-                        onApply: _handleApplyCreator,
-                      ),
+                      if (!widget.user.isAdmin) ...[
+                        // Creator Application Card
+                        CreatorApplicationCard(
+                          user: widget.user,
+                          application: _latestApplication,
+                          onApply: _handleApplyCreator,
+                        ),
+                      ],
                     ],
                   ),
                 ),

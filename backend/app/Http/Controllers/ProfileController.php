@@ -81,64 +81,42 @@ class ProfileController extends Controller
             'experience' => 'nullable|string',
         ]);
 
+        // Check if there is already a pending application
+        $existing = CreatorApplication::where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->first();
+
+        if ($existing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda sudah memiliki pengajuan kreator yang sedang diproses.'
+            ], 422);
+        }
+
         try {
             \Illuminate\Support\Facades\DB::beginTransaction();
 
-            // 1. Create creator application (Auto-approved for demo)
-            CreatorApplication::create([
+            // 1. Create creator application as pending
+            $app = CreatorApplication::create([
                 'user_id' => $user->id,
                 'pihak_category' => $request->pihak_category,
                 'skill_description' => $request->skill_description,
                 'portfolio_link' => $request->portfolio_link,
                 'experience' => $request->experience,
-                'status' => 'approved',
-                'admin_note' => 'Disetujui otomatis untuk demo sistem.',
+                'status' => 'pending',
                 'applied_at' => now(),
-                'reviewed_at' => now(),
             ]);
-
-            // 2. Update user
-            $user->role = 'creator';
-            $user->is_creator_approved = true;
-            $user->selected_pihak = $request->pihak_category;
-            $user->save();
-
-            // 3. Upsert user_pihak to active 'creator' role for this category
-            \App\Models\UserPihak::updateOrCreate(
-                [
-                    'user_id' => $user->id,
-                    'pihak_slug' => $request->pihak_category,
-                    'role_type' => 'creator',
-                ],
-                [
-                    'is_active' => true,
-                    'joined_at' => now(),
-                ]
-            );
-
-            // 4. Also add the user role 'user' for this category
-            \App\Models\UserPihak::updateOrCreate(
-                [
-                    'user_id' => $user->id,
-                    'pihak_slug' => $request->pihak_category,
-                    'role_type' => 'user',
-                ],
-                [
-                    'is_active' => true,
-                    'joined_at' => now(),
-                ]
-            );
 
             // Get category name
             $cat = \App\Models\PihakCategory::where('slug', $request->pihak_category)->first();
             $pihakName = $cat ? $cat->name : ucfirst($request->pihak_category);
 
-            // 5. Send notification
+            // 2. Send submission confirmation notification
             \App\Models\Notification::create([
                 'user_id' => $user->id,
-                'title' => 'Pengajuan Kreator Disetujui!',
-                'message' => "Selamat! Pengajuan Anda sebagai Kreator di kategori {$pihakName} telah disetujui. Dashboard Kreator Anda kini aktif.",
-                'type' => 'creator_approved',
+                'title' => 'Pengajuan Kreator Dikirim',
+                'message' => "Pengajuan Anda sebagai Kreator kategori {$pihakName} berhasil dikirim dan sedang ditinjau oleh Admin.",
+                'type' => 'creator_applied',
                 'is_read' => false,
                 'created_at' => now(),
             ]);
@@ -147,7 +125,7 @@ class ProfileController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Pengajuan Kreator berhasil disetujui.',
+                'message' => 'Pengajuan Kreator berhasil dikirim.',
                 'data' => $user
             ]);
 
@@ -155,7 +133,7 @@ class ProfileController extends Controller
             \Illuminate\Support\Facades\DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal memproses pengajuan kreator: ' . $e->getMessage()
+                'message' => 'Gagal mengirim pengajuan kreator: ' . $e->getMessage()
             ], 500);
         }
     }

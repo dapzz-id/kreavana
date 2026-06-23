@@ -21,9 +21,9 @@ class UserSeeder extends Seeder
                 'name' => 'Admin Kreavana',
                 'username' => 'admin',
                 'password' => Hash::make('password123'),
-                'role' => 'creator',
+                'role' => 'admin',
                 'selected_pihak' => 'kreator',
-                'is_creator_approved' => 1,
+                'is_creator_approved' => 0,
             ]
         );
 

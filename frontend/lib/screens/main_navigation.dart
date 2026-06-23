@@ -8,6 +8,8 @@ import 'explore_screen.dart';
 import 'notifications_screen.dart';
 import 'profile_screen.dart';
 import 'login_screen.dart';
+import 'admin_dashboard_screen.dart';
+import 'admin_verification_screen.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -90,7 +92,9 @@ class _MainNavigationState extends State<MainNavigation> {
     required bool isDark,
     bool isCollapsed = false,
   }) {
-    final isSelected = _currentIndex == index;
+    final screensCount = _currentUser.isAdmin ? 4 : 5;
+    final activeIndex = _currentIndex >= screensCount ? 0 : _currentIndex;
+    final isSelected = activeIndex == index;
     final activeColor = theme.colorScheme.primary;
 
     return Padding(
@@ -102,8 +106,14 @@ class _MainNavigationState extends State<MainNavigation> {
             setState(() {
               _currentIndex = index;
             });
-            if (index == 3 || index == 4) {
-              _refreshProfile();
+            if (_currentUser.isAdmin) {
+              if (index == 2 || index == 3) {
+                _refreshProfile();
+              }
+            } else {
+              if (index == 3 || index == 4) {
+                _refreshProfile();
+              }
             }
           },
           borderRadius: BorderRadius.circular(12),
@@ -154,24 +164,37 @@ class _MainNavigationState extends State<MainNavigation> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 900;
 
-    final List<Widget> screens = [
-      DashboardScreen(
-        user: _currentUser,
-        onUserUpdated: _onUserUpdated,
-      ),
-      ExploreScreen(
-        user: _currentUser,
-      ),
-      const DirectMessageScreen(),
-      NotificationsScreen(
-        userId: _currentUser.id,
-      ),
-      ProfileScreen(
-        user: _currentUser,
-        onUserUpdated: _onUserUpdated,
-        onLogout: _onLogout,
-      ),
-    ];
+    final List<Widget> screens = _currentUser.isAdmin
+        ? [
+            AdminDashboardScreen(user: _currentUser),
+            const AdminVerificationScreen(),
+            NotificationsScreen(userId: _currentUser.id),
+            ProfileScreen(
+              user: _currentUser,
+              onUserUpdated: _onUserUpdated,
+              onLogout: _onLogout,
+            ),
+          ]
+        : [
+            DashboardScreen(
+              user: _currentUser,
+              onUserUpdated: _onUserUpdated,
+            ),
+            ExploreScreen(
+              user: _currentUser,
+            ),
+            const DirectMessageScreen(),
+            NotificationsScreen(
+              userId: _currentUser.id,
+            ),
+            ProfileScreen(
+              user: _currentUser,
+              onUserUpdated: _onUserUpdated,
+              onLogout: _onLogout,
+            ),
+          ];
+
+    final activeIndex = _currentIndex >= screens.length ? 0 : _currentIndex;
 
     if (isDesktop) {
       final sidebarWidth = _isSidebarCollapsed ? 78.0 : 260.0;
@@ -254,53 +277,92 @@ class _MainNavigationState extends State<MainNavigation> {
                   // Nav Items
                   Expanded(
                     child: ListView(
-                      children: [
-                        _buildSidebarItem(
-                          icon: Icons.dashboard_outlined,
-                          activeIcon: Icons.dashboard,
-                          label: 'Dashboard',
-                          index: 0,
-                          theme: theme,
-                          isDark: isDark,
-                          isCollapsed: _isSidebarCollapsed,
-                        ),
-                        _buildSidebarItem(
-                          icon: Icons.explore_outlined,
-                          activeIcon: Icons.explore,
-                          label: 'Jelajahi',
-                          index: 1,
-                          theme: theme,
-                          isDark: isDark,
-                          isCollapsed: _isSidebarCollapsed,
-                        ),
-                        _buildSidebarItem(
-                          icon: Icons.chat_bubble_outline,
-                          activeIcon: Icons.chat_bubble,
-                          label: 'Pesan',
-                          index: 2,
-                          theme: theme,
-                          isDark: isDark,
-                          isCollapsed: _isSidebarCollapsed,
-                        ),
-                        _buildSidebarItem(
-                          icon: Icons.notifications_none_outlined,
-                          activeIcon: Icons.notifications,
-                          label: 'Notifikasi',
-                          index: 3,
-                          theme: theme,
-                          isDark: isDark,
-                          isCollapsed: _isSidebarCollapsed,
-                        ),
-                        _buildSidebarItem(
-                          icon: Icons.person_outline,
-                          activeIcon: Icons.person,
-                          label: 'Profil Saya',
-                          index: 4,
-                          theme: theme,
-                          isDark: isDark,
-                          isCollapsed: _isSidebarCollapsed,
-                        ),
-                      ],
+                      children: _currentUser.isAdmin
+                          ? [
+                              _buildSidebarItem(
+                                icon: Icons.admin_panel_settings_outlined,
+                                activeIcon: Icons.admin_panel_settings,
+                                label: 'Dasbor Admin',
+                                index: 0,
+                                theme: theme,
+                                isDark: isDark,
+                                isCollapsed: _isSidebarCollapsed,
+                              ),
+                              _buildSidebarItem(
+                                icon: Icons.verified_user_outlined,
+                                activeIcon: Icons.verified_user,
+                                label: 'Verifikasi Kreator',
+                                index: 1,
+                                theme: theme,
+                                isDark: isDark,
+                                isCollapsed: _isSidebarCollapsed,
+                              ),
+                              _buildSidebarItem(
+                                icon: Icons.notifications_none_outlined,
+                                activeIcon: Icons.notifications,
+                                label: 'Notifikasi',
+                                index: 2,
+                                theme: theme,
+                                isDark: isDark,
+                                isCollapsed: _isSidebarCollapsed,
+                              ),
+                              _buildSidebarItem(
+                                icon: Icons.person_outline,
+                                activeIcon: Icons.person,
+                                label: 'Profil Saya',
+                                index: 3,
+                                theme: theme,
+                                isDark: isDark,
+                                isCollapsed: _isSidebarCollapsed,
+                              ),
+                            ]
+                          : [
+                              _buildSidebarItem(
+                                icon: Icons.dashboard_outlined,
+                                activeIcon: Icons.dashboard,
+                                label: 'Dashboard',
+                                index: 0,
+                                theme: theme,
+                                isDark: isDark,
+                                isCollapsed: _isSidebarCollapsed,
+                              ),
+                              _buildSidebarItem(
+                                icon: Icons.explore_outlined,
+                                activeIcon: Icons.explore,
+                                label: 'Jelajahi',
+                                index: 1,
+                                theme: theme,
+                                isDark: isDark,
+                                isCollapsed: _isSidebarCollapsed,
+                              ),
+                              _buildSidebarItem(
+                                icon: Icons.chat_bubble_outline,
+                                activeIcon: Icons.chat_bubble,
+                                label: 'Pesan',
+                                index: 2,
+                                theme: theme,
+                                isDark: isDark,
+                                isCollapsed: _isSidebarCollapsed,
+                              ),
+                              _buildSidebarItem(
+                                icon: Icons.notifications_none_outlined,
+                                activeIcon: Icons.notifications,
+                                label: 'Notifikasi',
+                                index: 3,
+                                theme: theme,
+                                isDark: isDark,
+                                isCollapsed: _isSidebarCollapsed,
+                              ),
+                              _buildSidebarItem(
+                                icon: Icons.person_outline,
+                                activeIcon: Icons.person,
+                                label: 'Profil Saya',
+                                index: 4,
+                                theme: theme,
+                                isDark: isDark,
+                                isCollapsed: _isSidebarCollapsed,
+                              ),
+                            ],
                     ),
                   ),
                   
@@ -405,7 +467,7 @@ class _MainNavigationState extends State<MainNavigation> {
                         ),
                       ),
                       child: IndexedStack(
-                        index: _currentIndex,
+                        index: activeIndex,
                         children: screens,
                       ),
                     ),
@@ -422,47 +484,76 @@ class _MainNavigationState extends State<MainNavigation> {
     return Scaffold(
       extendBody: true,
       body: IndexedStack(
-        index: _currentIndex,
+        index: activeIndex,
         children: screens,
       ),
       bottomNavigationBar: CustomDiamondBottomBar(
-        currentIndex: _currentIndex,
+        currentIndex: activeIndex,
         isDark: isDark,
         onTap: (index) {
           setState(() {
             _currentIndex = index;
           });
-          if (index == 3 || index == 4) {
-            _refreshProfile();
+          if (_currentUser.isAdmin) {
+            if (index == 2 || index == 3) {
+              _refreshProfile();
+            }
+          } else {
+            if (index == 3 || index == 4) {
+              _refreshProfile();
+            }
           }
         },
-        items: [
-          CustomNavItem(
-            icon: Icons.dashboard_outlined,
-            activeIcon: Icons.dashboard,
-            label: 'Dashboard',
-          ),
-          CustomNavItem(
-            icon: Icons.explore_outlined,
-            activeIcon: Icons.explore,
-            label: 'Jelajahi',
-          ),
-          CustomNavItem(
-            icon: Icons.chat_bubble_outline,
-            activeIcon: Icons.chat_bubble,
-            label: 'Pesan',
-          ),
-          CustomNavItem(
-            icon: Icons.notifications_none_outlined,
-            activeIcon: Icons.notifications,
-            label: 'Notifikasi',
-          ),
-          CustomNavItem(
-            icon: Icons.person_outline,
-            activeIcon: Icons.person,
-            label: 'Profil',
-          ),
-        ],
+        items: _currentUser.isAdmin
+            ? [
+                CustomNavItem(
+                  icon: Icons.admin_panel_settings_outlined,
+                  activeIcon: Icons.admin_panel_settings,
+                  label: 'Admin',
+                ),
+                CustomNavItem(
+                  icon: Icons.verified_user_outlined,
+                  activeIcon: Icons.verified_user,
+                  label: 'Verifikasi',
+                ),
+                CustomNavItem(
+                  icon: Icons.notifications_none_outlined,
+                  activeIcon: Icons.notifications,
+                  label: 'Notifikasi',
+                ),
+                CustomNavItem(
+                  icon: Icons.person_outline,
+                  activeIcon: Icons.person,
+                  label: 'Profil',
+                ),
+              ]
+            : [
+                CustomNavItem(
+                  icon: Icons.dashboard_outlined,
+                  activeIcon: Icons.dashboard,
+                  label: 'Dashboard',
+                ),
+                CustomNavItem(
+                  icon: Icons.explore_outlined,
+                  activeIcon: Icons.explore,
+                  label: 'Jelajahi',
+                ),
+                CustomNavItem(
+                  icon: Icons.chat_bubble_outline,
+                  activeIcon: Icons.chat_bubble,
+                  label: 'Pesan',
+                ),
+                CustomNavItem(
+                  icon: Icons.notifications_none_outlined,
+                  activeIcon: Icons.notifications,
+                  label: 'Notifikasi',
+                ),
+                CustomNavItem(
+                  icon: Icons.person_outline,
+                  activeIcon: Icons.person,
+                  label: 'Profil',
+                ),
+              ],
       ),
     );
   }
