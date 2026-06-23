@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             UserSeeder::class,
+            RemainingTablesSeeder::class,
         ]);
 
         // 1. Create main user

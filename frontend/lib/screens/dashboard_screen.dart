@@ -86,7 +86,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _currentRole = widget.user.role == 'creator' ? 'creator' : 'user';
+    _currentRole = (widget.user.role == 'creator' && widget.user.isCreatorApproved) ? 'creator' : 'user';
     _selectedPihak = widget.user.selectedPihak;
     _loadDashboardData();
   }
@@ -94,11 +94,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void didUpdateWidget(covariant DashboardScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // If user model was updated in parent (e.g. role changed to creator), update local state
+    // If user model was updated in parent (e.g. role changed or approval status changed), update local state
     if (widget.user.role != oldWidget.user.role ||
+        widget.user.isCreatorApproved != oldWidget.user.isCreatorApproved ||
         widget.user.selectedPihak != oldWidget.user.selectedPihak) {
       setState(() {
-        _currentRole = widget.user.role == 'creator' ? 'creator' : 'user';
+        _currentRole = (widget.user.role == 'creator' && widget.user.isCreatorApproved) ? 'creator' : 'user';
         _selectedPihak = widget.user.selectedPihak;
       });
       _loadDashboardData();
@@ -239,8 +240,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: Colors.transparent,
-              backgroundImage: const AssetImage('assets/brandlogo.png'),
+              backgroundColor: isDark ? AppTheme.cardBg : Colors.grey.shade200,
+              backgroundImage: widget.user.avatarUrl != null && widget.user.avatarUrl!.isNotEmpty
+                  ? NetworkImage(widget.user.avatarUrl!)
+                  : const AssetImage('assets/brandlogo.png') as ImageProvider,
             ),
             const SizedBox(width: 10),
             Column(
@@ -275,26 +278,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onPressed: _loadDashboardData,
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(65),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: RoleToggle(
-              currentRole: _currentRole,
-              isCreator: widget.user.role == 'creator' && widget.user.isCreatorApproved,
-              onRoleChanged: _onRoleChanged,
-              onApplyPressed: () {
-                // Navigate to profile tab to apply
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Silakan ajukan menjadi Creator melalui Tab Profil.'),
-                    behavior: SnackBarBehavior.floating,
+        bottom: (widget.user.role == 'creator' && widget.user.isCreatorApproved)
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(65),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: RoleToggle(
+                    currentRole: _currentRole,
+                    isCreator: true,
+                    onRoleChanged: _onRoleChanged,
                   ),
-                );
-              },
-            ),
-          ),
-        ),
+                ),
+              )
+            : null,
       ),
       body: RefreshIndicator(
         onRefresh: _loadDashboardData,
