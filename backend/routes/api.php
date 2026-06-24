@@ -2,17 +2,19 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ChatController;
-use App\Http\Controllers\MessageController;
-use App\Http\Controllers\GroupController;
 
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\CallController;
-use App\Http\Controllers\AdminController;
+use App\Http\Controllers\{
+    ChatController,
+    MessageController,
+    GroupController,
+    UserController,
+    AuthController,
+    DashboardController,
+    ProfileController,
+    NotificationController,
+    CallController,
+    AdminController,
+};
 
 Route::get('/user', function (Request $request) {
     return $request->user();
