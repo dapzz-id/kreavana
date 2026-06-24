@@ -19,50 +19,83 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 // Auth Routes
-Route::post('auth/login', [AuthController::class, 'login']);
-Route::post('auth/register', [AuthController::class, 'register']);
-Route::post('auth/refresh', [AuthController::class, 'refresh']); // Moved out of auth:api so expired tokens can be refreshed
+Route::prefix('auth')->controller(AuthController::class)->group(function() {
+    Route::post('login', 'login');
+    Route::post('register', 'register');
+    Route::post('refresh', 'refresh');
+});
 
 Route::group(['middleware' => 'auth:api'], function() {
-    Route::post('auth/logout', [AuthController::class, 'logout']);
-    Route::get('auth/me', [AuthController::class, 'me']);
+    Route::prefix('auth')->controller(AuthController::class)->group(function() {
+        Route::post('logout', 'logout');
+        Route::get('me', 'me');
+    });
 
     // Dashboard Routes
-    Route::get('dashboard/stats', [DashboardController::class, 'stats']);
-    Route::get('dashboard/opportunities', [DashboardController::class, 'opportunities']);
+    Route::prefix('dashboard')->controller(DashboardController::class)->group(function() {
+        Route::get('stats', 'stats');
+        Route::get('opportunities', 'opportunities');
+    });
 
     // Profile Routes
-    Route::get('profile', [ProfileController::class, 'getProfile']);
-    Route::put('profile', [ProfileController::class, 'updateProfile']);
-    Route::post('profile/apply-creator', [ProfileController::class, 'applyCreator']);
+    Route::prefix('profile')->controller(ProfileController::class)->group(function() {
+        Route::get('/', 'getProfile');
+        Route::put('/', 'updateProfile');
+        Route::post('apply-creator', 'applyCreator');
+    });
 
     // Notifications Routes
-    Route::get('notifications', [NotificationController::class, 'index']);
-    Route::put('notifications/read', [NotificationController::class, 'markAsRead']);
+    Route::prefix('notifications')->controller(NotificationController::class)->group(function() {
+        Route::get('/', 'index');
+        Route::put('read', 'markAsRead');
+    });
 
     // Call Signaling Route
-    Route::post('call/signal', [CallController::class, 'signal']);
+    Route::prefix('call')->controller(CallController::class)->group(function() {
+        Route::post('signal', 'signal');
+    });
 
     // Chat Routes
-    Route::get('/users/search', [UserController::class, 'search']);
-    Route::get('/chats', [ChatController::class, 'index']);
-    Route::post('/chats/personal', [ChatController::class, 'startPersonalChat']);
-    Route::get('/chats/{chat}/messages', [MessageController::class, 'index']);
-    Route::post('/chats/{chat}/messages', [MessageController::class, 'store']);
-    Route::post('/chats/{chat}/read', [ChatController::class, 'markAsRead']);
+    Route::prefix('users')->group(function() {
+        Route::get('search', [UserController::class, 'search']);
+    });
+
+    Route::prefix('chats')->controller(ChatController::class)->group(function() {
+        Route::get('/', 'index');
+        Route::post('personal', 'startPersonalChat');
+        
+        Route::prefix('{chat}')->controller(MessageController::class)->group(function() {
+            Route::get('messages', 'index');
+            Route::post('messages', 'store');
+        });
+
+        Route::post('{chat}/read', 'markAsRead');
+    });
 
     // Group & Invitations
-    Route::get('/invitations', [GroupController::class, 'getInvitations']);
-    Route::post('/invitations/{chat}/respond', [GroupController::class, 'respondInvitation']);
-    Route::post('/groups', [GroupController::class, 'store']);
-    Route::get('/groups/{chat}/members', [GroupController::class, 'members']);
-    Route::post('/groups/{chat}/members', [GroupController::class, 'addMember']);
-    Route::delete('/groups/{chat}/members/{userId}', [GroupController::class, 'kickMember']);
-    Route::put('/groups/{chat}/members/{userId}/admin', [GroupController::class, 'makeAdmin']);
-    Route::post('/groups/{chat}/leave', [GroupController::class, 'leaveGroup']);
-    Route::put('/groups/{chat}/settings', [GroupController::class, 'updateSettings']);
+    Route::prefix('invitations')->controller(GroupController::class)->group(function() {
+        Route::get('/', 'getInvitations');
+        Route::post('{chat}/respond', 'respondInvitation');
+    });
+
+    Route::prefix('groups')->controller(GroupController::class)->group(function() {
+        Route::post('/', 'store');
+        Route::prefix('{chat}')->group(function () {
+            Route::get('members', 'members');
+            Route::post('members', 'addMember');
+            Route::delete('members/{userId}', 'kickMember');
+            Route::put('members/{userId}/admin', 'makeAdmin');
+            Route::post('leave', 'leaveGroup');
+            Route::put('settings', 'updateSettings');
+        });
+    });
+
     // Admin Routes
-    Route::get('admin/applications', [AdminController::class, 'getApplications']);
-    Route::post('admin/applications/{id}/approve', [AdminController::class, 'approveApplication']);
-    Route::post('admin/applications/{id}/reject', [AdminController::class, 'rejectApplication']);
+    Route::prefix('admin')->group(function() {
+        Route::prefix('applications')->controller(AdminController::class)->group(function() {
+            Route::get('/', 'getApplications');
+            Route::post('{id}/approve', 'approveApplication');
+            Route::post('{id}/reject', 'rejectApplication');
+        });
+    });
 });
