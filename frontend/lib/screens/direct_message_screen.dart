@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
 import '../services/chat_service.dart';
 import '../services/call_service.dart';
 import 'call_screen.dart';
