@@ -21,18 +21,18 @@ class UserSeeder extends Seeder
                 'name' => 'Admin Kreavana',
                 'username' => 'admin',
                 'password' => Hash::make('password123'),
-                'role' => 'creator',
+                'role' => 'admin',
                 'selected_pihak' => 'kreator',
-                'is_creator_approved' => 1,
+                'is_creator_approved' => 0,
             ]
         );
 
-        // 2. Demo User
+        // 2. User Kreavana
         User::updateOrCreate(
-            ['email' => 'demo@kreavana.id'],
+            ['email' => 'user@kreavana.id'],
             [
-                'name' => 'Demo User',
-                'username' => 'demo',
+                'name' => 'User Kreavana',
+                'username' => 'user',
                 'password' => Hash::make('password123'),
                 'role' => 'user',
                 'selected_pihak' => 'kreator',
@@ -40,15 +40,15 @@ class UserSeeder extends Seeder
             ]
         );
 
-        // 3. Demo Creator
+        // 3. Creator Kreavana
         User::updateOrCreate(
             ['email' => 'creator@kreavana.id'],
             [
-                'name' => 'Demo Creator',
+                'name' => 'Creator Kreavana',
                 'username' => 'creator',
                 'password' => Hash::make('password123'),
                 'role' => 'creator',
-                'selected_pihak' => 'eo',
+                'selected_pihak' => 'kreator',
                 'is_creator_approved' => 1,
             ]
         );

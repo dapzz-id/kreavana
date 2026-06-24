@@ -764,16 +764,8 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor: widget.chat['isGroup']
-                    ? theme.colorScheme.tertiaryContainer
-                    : theme.colorScheme.primaryContainer,
-                child: Icon(
-                  widget.chat['isGroup'] ? Icons.group : Icons.person,
-                  size: 20,
-                  color: widget.chat['isGroup']
-                      ? theme.colorScheme.onTertiaryContainer
-                      : theme.colorScheme.onPrimaryContainer,
-                ),
+                backgroundColor: Colors.transparent,
+                backgroundImage: const AssetImage('assets/brandlogo.png'),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -854,7 +846,7 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         children: [
           Expanded(
             child: Container(
-              color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : ListView.builder(
@@ -894,7 +886,7 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                               boxShadow: [
                                 if (!isMe)
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
+                                    color: Colors.black.withValues(alpha: 0.05),
                                     blurRadius: 5,
                                     offset: const Offset(0, 2),
                                   ),
@@ -918,7 +910,7 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                                     fontSize: 10,
                                     color: isMe
                                         ? theme.colorScheme.onPrimary
-                                              .withOpacity(0.7)
+                                              .withValues(alpha: 0.7)
                                         : theme.colorScheme.onSurfaceVariant,
                                   ),
                                 ),
@@ -939,7 +931,7 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
               color: theme.colorScheme.surface,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   offset: const Offset(0, -2),
                   blurRadius: 5,
                 ),
@@ -962,7 +954,7 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: theme.colorScheme.surfaceVariant.withOpacity(
+                      fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 
                         0.5,
                       ),
                       contentPadding: const EdgeInsets.symmetric(
@@ -1240,7 +1232,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
           const SizedBox(height: 20),
           Divider(
             thickness: 8,
-            color: theme.colorScheme.surfaceVariant.withOpacity(0.4),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
           ),
 
           // Pengaturan
@@ -1252,7 +1244,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             ),
             trailing: Switch(
               value: onlyAdminCanAdd,
-              activeColor: theme.colorScheme.primary,
+              activeThumbColor: theme.colorScheme.primary,
               onChanged: (val) {
                 ChatService.updateGroupSettings(
                   widget.chat['id'].toString(),
@@ -1267,7 +1259,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
           ),
           Divider(
             thickness: 8,
-            color: theme.colorScheme.surfaceVariant.withOpacity(0.4),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
           ),
 
           // Daftar Anggota
@@ -1331,7 +1323,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             ...members.map(
               (m) => ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: theme.colorScheme.surfaceVariant,
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
                   backgroundImage: NetworkImage(
                     'https://ui-avatars.com/api/?name=${m['name']}&background=random',
                   ),

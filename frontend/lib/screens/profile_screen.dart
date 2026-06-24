@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:io' as io;
+import 'package:flutter/foundation.dart';
+import 'package:file_picker/file_picker.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/profile_service.dart';
@@ -64,6 +68,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
           widget.onUserUpdated(result['user']);
         }
       });
+    }
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+      );
+
+      if (result != null && (result.files.single.path != null || (kIsWeb && result.files.single.bytes != null))) {
+        setState(() => _isLoading = true);
+        
+        Uint8List fileBytes;
+        if (kIsWeb) {
+          fileBytes = result.files.single.bytes!;
+        } else {
+          final file = io.File(result.files.single.path!);
+          fileBytes = await file.readAsBytes();
+        }
+
+        final extension = result.files.single.extension ?? 'png';
+        final base64String = base64Encode(fileBytes);
+        final dataUrl = 'data:image/$extension;base64,$base64String';
+
+        final response = await ProfileService.updateProfile(
+          userId: widget.user.id,
+          avatarUrl: dataUrl,
+        );
+
+        if (mounted) {
+          setState(() => _isLoading = false);
+          if (response['success'] == true) {
+            widget.onUserUpdated(response['user']);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Foto profil berhasil diperbarui.'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(response['message'] ?? 'Gagal mengupload foto profil.'),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.red.shade700,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
     }
   }
 
@@ -194,17 +260,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Column(
                     children: [
                       // Profile Header Icon
-                      CircleAvatar(
-                        radius: 45,
-                        backgroundColor: theme.colorScheme.primary.withValues(
-                          alpha: 0.1,
-                        ),
-                        child: Icon(
-                          widget.user.role == 'creator'
-                              ? Icons.verified_user_rounded
-                              : Icons.account_circle_outlined,
-                          size: 55,
-                          color: theme.colorScheme.primary,
+                      GestureDetector(
+                        onTap: _pickAndUploadAvatar,
+                        child: Stack(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                                  width: 4,
+                                ),
+                              ),
+                              child: CircleAvatar(
+                                radius: 48,
+                                backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                backgroundImage: widget.user.avatarUrl != null && widget.user.avatarUrl!.isNotEmpty
+                                    ? NetworkImage(widget.user.avatarUrl!)
+                                    : null,
+                                child: widget.user.avatarUrl == null || widget.user.avatarUrl!.isEmpty
+                                    ? Icon(
+                                        widget.user.role == 'creator'
+                                            ? Icons.verified_user_rounded
+                                            : Icons.account_circle_outlined,
+                                        size: 50,
+                                        color: theme.colorScheme.primary,
+                                      )
+                                    : null,
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primary,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.1),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt_rounded,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -233,21 +342,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: widget.user.role == 'creator'
-                              ? Colors.green.shade100.withValues(alpha: 0.8)
-                              : Colors.grey.shade200,
+                          color: widget.user.isAdmin
+                              ? Colors.red.shade100.withValues(alpha: 0.8)
+                              : (widget.user.role == 'creator'
+                                  ? Colors.green.shade100.withValues(alpha: 0.8)
+                                  : Colors.grey.shade200),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          widget.user.role == 'creator'
-                              ? 'CREATOR / MITRA'
-                              : 'KLIEN / USER',
+                          widget.user.isAdmin
+                              ? 'ADMINISTRATOR'
+                              : (widget.user.role == 'creator' ? 'CREATOR / MITRA' : 'KLIEN / USER'),
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: widget.user.role == 'creator'
-                                ? Colors.green.shade800
-                                : Colors.grey.shade700,
+                            color: widget.user.isAdmin
+                                ? Colors.red.shade800
+                                : (widget.user.role == 'creator'
+                                    ? Colors.green.shade800
+                                    : Colors.grey.shade700),
                           ),
                         ),
                       ),
@@ -355,12 +468,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 24),
 
-                      // Creator Application Card
-                      CreatorApplicationCard(
-                        user: widget.user,
-                        application: _latestApplication,
-                        onApply: _handleApplyCreator,
-                      ),
+                      if (!widget.user.isAdmin) ...[
+                        // Creator Application Card
+                        CreatorApplicationCard(
+                          user: widget.user,
+                          application: _latestApplication,
+                          onApply: _handleApplyCreator,
+                        ),
+                      ],
                     ],
                   ),
                 ),

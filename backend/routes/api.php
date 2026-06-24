@@ -12,12 +12,11 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CallController;
+use App\Http\Controllers\AdminController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
-
-
 
 // Auth Routes
 Route::post('auth/login', [AuthController::class, 'login']);
@@ -62,4 +61,8 @@ Route::group(['middleware' => 'auth:api'], function() {
     Route::put('/groups/{chat}/members/{userId}/admin', [GroupController::class, 'makeAdmin']);
     Route::post('/groups/{chat}/leave', [GroupController::class, 'leaveGroup']);
     Route::put('/groups/{chat}/settings', [GroupController::class, 'updateSettings']);
+    // Admin Routes
+    Route::get('admin/applications', [AdminController::class, 'getApplications']);
+    Route::post('admin/applications/{id}/approve', [AdminController::class, 'approveApplication']);
+    Route::post('admin/applications/{id}/reject', [AdminController::class, 'rejectApplication']);
 });

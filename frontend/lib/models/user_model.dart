@@ -81,6 +81,7 @@ class UserModel {
   }
 
   bool get isCreator => role == 'creator' && isCreatorApproved;
+  bool get isAdmin => role == 'admin';
 }
 
 class PihakCategory {

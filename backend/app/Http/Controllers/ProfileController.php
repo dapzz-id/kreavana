@@ -34,7 +34,32 @@ class ProfileController extends Controller
         if ($request->has('name')) $user->name = $request->name;
         if ($request->has('phone')) $user->phone = $request->phone;
         if ($request->has('selected_pihak')) $user->selected_pihak = $request->selected_pihak;
-        if ($request->has('avatar_url')) $user->avatar_url = $request->avatar_url;
+        
+        if ($request->has('avatar_url')) {
+            $avatarUrl = $request->avatar_url;
+            if (str_starts_with($avatarUrl, 'data:image')) {
+                // Parse base64
+                if (preg_match('/^data:image\/(\w+);base64,/', $avatarUrl, $type)) {
+                    $data = substr($avatarUrl, strpos($avatarUrl, ',') + 1);
+                    $type = strtolower($type[1]); // png, jpg, jpeg, gif
+                    if (in_array($type, ['jpg', 'jpeg', 'gif', 'png'])) {
+                        $data = str_replace(' ', '+', $data);
+                        $data = base64_decode($data);
+                        if ($data !== false) {
+                            $fileName = 'avatar_' . $user->id . '_' . time() . '.' . $type;
+                            $dirPath = public_path('avatars');
+                            if (!file_exists($dirPath)) {
+                                mkdir($dirPath, 0755, true);
+                            }
+                            file_put_contents($dirPath . '/' . $fileName, $data);
+                            $user->avatar_url = url('avatars/' . $fileName);
+                        }
+                    }
+                }
+            } else {
+                $user->avatar_url = $avatarUrl;
+            }
+        }
 
         $user->save();
 
@@ -52,35 +77,64 @@ class ProfileController extends Controller
         $request->validate([
             'pihak_category' => 'required|string',
             'skill_description' => 'required|string',
-            'portfolio_link' => 'nullable|url',
+            'portfolio_link' => 'nullable|string',
             'experience' => 'nullable|string',
         ]);
 
-        // Cek apakah sudah ada aplikasi pending
+        // Check if there is already a pending application
         $existing = CreatorApplication::where('user_id', $user->id)
-            ->where('pihak_category', $request->pihak_category)
             ->where('status', 'pending')
             ->first();
 
         if ($existing) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda sudah memiliki pengajuan yang sedang diproses untuk kategori ini.'
-            ], 400);
+                'message' => 'Anda sudah memiliki pengajuan kreator yang sedang diproses.'
+            ], 422);
         }
 
-        CreatorApplication::create([
-            'user_id' => $user->id,
-            'pihak_category' => $request->pihak_category,
-            'skill_description' => $request->skill_description,
-            'portfolio_link' => $request->portfolio_link,
-            'experience' => $request->experience,
-            'status' => 'pending'
-        ]);
+        try {
+            \Illuminate\Support\Facades\DB::beginTransaction();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Pengajuan kreator berhasil dikirim dan sedang menunggu persetujuan admin.'
-        ]);
+            // 1. Create creator application as pending
+            $app = CreatorApplication::create([
+                'user_id' => $user->id,
+                'pihak_category' => $request->pihak_category,
+                'skill_description' => $request->skill_description,
+                'portfolio_link' => $request->portfolio_link,
+                'experience' => $request->experience,
+                'status' => 'pending',
+                'applied_at' => now(),
+            ]);
+
+            // Get category name
+            $cat = \App\Models\PihakCategory::where('slug', $request->pihak_category)->first();
+            $pihakName = $cat ? $cat->name : ucfirst($request->pihak_category);
+
+            // 2. Send submission confirmation notification
+            \App\Models\Notification::create([
+                'user_id' => $user->id,
+                'title' => 'Pengajuan Kreator Dikirim',
+                'message' => "Pengajuan Anda sebagai Kreator kategori {$pihakName} berhasil dikirim dan sedang ditinjau oleh Admin.",
+                'type' => 'creator_applied',
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pengajuan Kreator berhasil dikirim.',
+                'data' => $user
+            ]);
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengirim pengajuan kreator: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
