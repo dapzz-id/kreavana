@@ -9,3 +9,9 @@
 ## Panduan Menjalankan Frontend
 1. Untuk menjalankan frontend jalankan `flutter run`
 2. Ganti IP pada file `lib/services/api_service.dart` dengan IP Local kamu.
+
+## Panduan Build APK
+1. Menggunakan kode `flutter build apk --obfuscate --split-debug-info=./debug_info --release --android-skip-build-dependency-validation` untuk build apk rilis.
+2. Menggunakan kode `flutter build apk --debug` untuk build apk debug.
+3. Menggunakan kode `flutter build appbundle --obfuscate --split-debug-info=./debug_info --release --android-skip-build-dependency-validation` untuk build appbundle rilis.
+4. Menggunakan kode `flutter build appbundle --debug` untuk build appbundle debug.

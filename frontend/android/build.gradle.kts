@@ -1,3 +1,14 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.github.megatronking.stringfog:gradle-plugin:5.2.0")
+        classpath("com.github.megatronking.stringfog:xor:5.0.0")
+    }
+}
+
 allprojects {
     repositories {
         google()

@@ -1,4 +1,4 @@
-package com.example.kreavana
+package cv.alamkreasi.kreavana
 
 import io.flutter.embedding.android.FlutterActivity
 
