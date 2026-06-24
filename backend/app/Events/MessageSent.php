@@ -10,18 +10,20 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class NotificationSent implements ShouldBroadcastNow
+class MessageSent implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $notification;
+    public $message;
+    public $chatId;
 
     /**
      * Create a new event instance.
      */
-    public function __construct($notification)
+    public function __construct($message, $chatId)
     {
-        $this->notification = $notification;
+        $this->message = $message;
+        $this->chatId = $chatId;
     }
 
     /**
@@ -32,12 +34,12 @@ class NotificationSent implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new Channel('user.' . $this->notification->user_id),
+            new Channel('chat.' . $this->chatId),
         ];
     }
 
     public function broadcastAs()
     {
-        return 'notification.sent';
+        return 'message.sent';
     }
 }

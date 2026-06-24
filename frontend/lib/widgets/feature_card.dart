@@ -31,10 +31,10 @@ class FeatureCard extends StatelessWidget {
         boxShadow: !isDark
             ? [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
+                  color: Colors.black.withValues(alpha: 0.02),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
-                )
+                ),
               ]
             : null,
       ),
@@ -58,7 +58,7 @@ class FeatureCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: accentColor.withOpacity(0.1),
+                        color: accentColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -76,7 +76,9 @@ class FeatureCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? theme.colorScheme.secondary : Colors.green.shade700,
+                          color: isDark
+                              ? theme.colorScheme.secondary
+                              : Colors.green.shade700,
                         ),
                       ),
                   ],
@@ -111,24 +113,38 @@ class FeatureCard extends StatelessWidget {
                 Row(
                   children: [
                     if (opportunity.location != null) ...[
-                      const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 14,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           opportunity.location!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
                         ),
                       ),
                     ],
                     const SizedBox(width: 8),
                     if (opportunity.deadline != null) ...[
-                      const Icon(Icons.calendar_month_outlined, size: 14, color: Colors.grey),
+                      const Icon(
+                        Icons.calendar_month_outlined,
+                        size: 14,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         opportunity.deadline!,
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
                       ),
                     ],
                   ],

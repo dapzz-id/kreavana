@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../app/theme.dart';
 import '../widgets/gradient_button.dart';
 import '../widgets/social_button.dart';
 import '../widgets/auth_divider.dart';
@@ -38,17 +37,11 @@ class _RegisterScreenState extends State<RegisterScreen>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
-    _fadeAnim = CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOut,
-    );
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.05),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOutCubic,
-    ));
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
+    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+        );
     _animController.forward();
   }
 
@@ -89,9 +82,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           );
 
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (_) => const LoginScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -126,7 +117,10 @@ class _RegisterScreenState extends State<RegisterScreen>
           children: [
             Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 28,
+                  vertical: 24,
+                ),
                 child: FadeTransition(
                   opacity: _fadeAnim,
                   child: SlideTransition(
@@ -181,7 +175,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                               ),
                               decoration: InputDecoration(
                                 labelText: 'Nama Lengkap',
-                                floatingLabelBehavior: FloatingLabelBehavior.auto,
+                                floatingLabelBehavior:
+                                    FloatingLabelBehavior.auto,
                                 labelStyle: TextStyle(color: textMutedColor),
                                 floatingLabelStyle: TextStyle(
                                   color: colorScheme.primary,
@@ -194,8 +189,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 ),
                                 filled: true,
                                 fillColor: isDark
-                                    ? colorScheme.surfaceContainerHighest.withOpacity(0.5)
-                                    : colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                    ? colorScheme.surfaceContainerHighest
+                                          .withValues(alpha: 0.5)
+                                    : colorScheme.surfaceContainerHighest
+                                          .withValues(alpha: 0.3),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
@@ -237,7 +234,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                               ),
                               decoration: InputDecoration(
                                 labelText: 'Username',
-                                floatingLabelBehavior: FloatingLabelBehavior.auto,
+                                floatingLabelBehavior:
+                                    FloatingLabelBehavior.auto,
                                 labelStyle: TextStyle(color: textMutedColor),
                                 floatingLabelStyle: TextStyle(
                                   color: colorScheme.primary,
@@ -250,8 +248,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 ),
                                 filled: true,
                                 fillColor: isDark
-                                    ? colorScheme.surfaceContainerHighest.withOpacity(0.5)
-                                    : colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                    ? colorScheme.surfaceContainerHighest
+                                          .withValues(alpha: 0.5)
+                                    : colorScheme.surfaceContainerHighest
+                                          .withValues(alpha: 0.3),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
@@ -282,7 +282,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 if (value.trim().length < 3) {
                                   return 'Username minimal 3 karakter';
                                 }
-                                if (!RegExp(r'^[a-zA-Z0-9_\.]+$').hasMatch(value.trim())) {
+                                if (!RegExp(
+                                  r'^[a-zA-Z0-9_\.]+$',
+                                ).hasMatch(value.trim())) {
                                   return 'Hanya huruf, angka, titik, atau underscore';
                                 }
                                 return null;
@@ -299,7 +301,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                               ),
                               decoration: InputDecoration(
                                 labelText: 'Alamat Email',
-                                floatingLabelBehavior: FloatingLabelBehavior.auto,
+                                floatingLabelBehavior:
+                                    FloatingLabelBehavior.auto,
                                 labelStyle: TextStyle(color: textMutedColor),
                                 floatingLabelStyle: TextStyle(
                                   color: colorScheme.primary,
@@ -312,8 +315,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 ),
                                 filled: true,
                                 fillColor: isDark
-                                    ? colorScheme.surfaceContainerHighest.withOpacity(0.5)
-                                    : colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                    ? colorScheme.surfaceContainerHighest
+                                          .withValues(alpha: 0.5)
+                                    : colorScheme.surfaceContainerHighest
+                                          .withValues(alpha: 0.3),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
@@ -342,7 +347,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 if (value == null || value.trim().isEmpty) {
                                   return 'Masukkan alamat email';
                                 }
-                                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                                if (!RegExp(
+                                  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                ).hasMatch(value)) {
                                   return 'Format email tidak valid';
                                 }
                                 return null;
@@ -359,7 +366,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                               ),
                               decoration: InputDecoration(
                                 labelText: 'Kata Sandi',
-                                floatingLabelBehavior: FloatingLabelBehavior.auto,
+                                floatingLabelBehavior:
+                                    FloatingLabelBehavior.auto,
                                 labelStyle: TextStyle(color: textMutedColor),
                                 floatingLabelStyle: TextStyle(
                                   color: colorScheme.primary,
@@ -386,8 +394,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 ),
                                 filled: true,
                                 fillColor: isDark
-                                    ? colorScheme.surfaceContainerHighest.withOpacity(0.5)
-                                    : colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                    ? colorScheme.surfaceContainerHighest
+                                          .withValues(alpha: 0.5)
+                                    : colorScheme.surfaceContainerHighest
+                                          .withValues(alpha: 0.3),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
@@ -433,7 +443,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                               ),
                               decoration: InputDecoration(
                                 labelText: 'Konfirmasi Kata Sandi',
-                                floatingLabelBehavior: FloatingLabelBehavior.auto,
+                                floatingLabelBehavior:
+                                    FloatingLabelBehavior.auto,
                                 labelStyle: TextStyle(color: textMutedColor),
                                 floatingLabelStyle: TextStyle(
                                   color: colorScheme.primary,
@@ -454,14 +465,17 @@ class _RegisterScreenState extends State<RegisterScreen>
                                   ),
                                   onPressed: () {
                                     setState(() {
-                                      _obscureConfirmPassword = !_obscureConfirmPassword;
+                                      _obscureConfirmPassword =
+                                          !_obscureConfirmPassword;
                                     });
                                   },
                                 ),
                                 filled: true,
                                 fillColor: isDark
-                                    ? colorScheme.surfaceContainerHighest.withOpacity(0.5)
-                                    : colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                    ? colorScheme.surfaceContainerHighest
+                                          .withValues(alpha: 0.5)
+                                    : colorScheme.surfaceContainerHighest
+                                          .withValues(alpha: 0.3),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
@@ -534,26 +548,42 @@ class _RegisterScreenState extends State<RegisterScreen>
                                   onTap: () {
                                     Navigator.of(context).pushReplacement(
                                       PageRouteBuilder(
-                                        pageBuilder: (context, animation, secondaryAnimation) =>
-                                            const LoginScreen(),
-                                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                          return FadeTransition(
-                                            opacity: animation,
-                                            child: child,
-                                          );
-                                        },
-                                        transitionDuration: const Duration(milliseconds: 300),
+                                        pageBuilder:
+                                            (
+                                              context,
+                                              animation,
+                                              secondaryAnimation,
+                                            ) => const LoginScreen(),
+                                        transitionsBuilder:
+                                            (
+                                              context,
+                                              animation,
+                                              secondaryAnimation,
+                                              child,
+                                            ) {
+                                              return FadeTransition(
+                                                opacity: animation,
+                                                child: child,
+                                              );
+                                            },
+                                        transitionDuration: const Duration(
+                                          milliseconds: 300,
+                                        ),
                                       ),
                                     );
                                   },
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                      vertical: 2,
+                                    ),
                                     child: Text(
                                       'Masuk di sini',
-                                      style: theme.textTheme.bodyMedium?.copyWith(
-                                        color: colorScheme.primary,
-                                        fontWeight: FontWeight.w700,
-                                      ),
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: colorScheme.primary,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                     ),
                                   ),
                                 ),
@@ -567,7 +597,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                 ),
               ),
             ),
-            
+
             // Theme Toggle Button
             Positioned(
               top: 16,
@@ -578,11 +608,13 @@ class _RegisterScreenState extends State<RegisterScreen>
                   color: colorScheme.onSurfaceVariant,
                 ),
                 style: IconButton.styleFrom(
-                  backgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                  backgroundColor: colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.5),
                 ),
                 onPressed: () {
-                  themeNotifier.value =
-                      isDark ? ThemeMode.light : ThemeMode.dark;
+                  themeNotifier.value = isDark
+                      ? ThemeMode.light
+                      : ThemeMode.dark;
                 },
               ),
             ),

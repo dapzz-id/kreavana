@@ -7,7 +7,6 @@ class AiMatchingBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -23,10 +22,10 @@ class AiMatchingBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF8B5CF6).withOpacity(0.3),
+            color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 8),
-          )
+          ),
         ],
       ),
       child: Material(
@@ -46,7 +45,7 @@ class AiMatchingBanner extends StatelessWidget {
                   child: Icon(
                     Icons.auto_awesome,
                     size: 100,
-                    color: Colors.white.withOpacity(0.12),
+                    color: Colors.white.withValues(alpha: 0.12),
                   ),
                 ),
                 Column(
@@ -60,7 +59,7 @@ class AiMatchingBanner extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: const Row(
@@ -101,7 +100,7 @@ class AiMatchingBanner extends StatelessWidget {
                       'Rekomendasi pintar berdasarkan kategori & portofolio Anda.',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                       ),
                     ),
                     const SizedBox(height: 14),

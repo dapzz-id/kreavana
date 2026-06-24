@@ -29,10 +29,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       final data = await NotificationService.fetchNotifications();
       if (mounted) {
         setState(() {
-          _notifications = data.map((item) => NotificationModel.fromJson(item)).toList();
+          _notifications = data
+              .map((item) => NotificationModel.fromJson(item))
+              .toList();
           _isLoading = false;
         });
-        
+
         // Mark notifications as read automatically when screen is opened
         NotificationService.markAsRead();
       }
@@ -101,128 +103,143 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _notifications.isEmpty
-                    ? ListView(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.notifications_none_outlined,
-                                  size: 70,
-                                  color: Colors.grey.shade400,
-                                ),
-                                const SizedBox(height: 16),
-                                const Text(
-                                  'Belum Ada Notifikasi',
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Notifikasi terbaru mengenai aktivitas dan akun Anda akan ditampilkan disini.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
+                ? ListView(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 80,
+                          horizontal: 24,
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.notifications_none_outlined,
+                              size: 70,
+                              color: Colors.grey.shade400,
                             ),
-                          ),
-                        ],
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-                        itemCount: _notifications.length,
-                        itemBuilder: (context, index) {
-                          final notif = _notifications[index];
-                          final typeColor = _getColor(notif.type, context);
-
-                          return InkWell(
-                            onTap: () {
-                              if (notif.type == 'group_invite') {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const GroupInvitationsScreen(),
-                                  ),
-                                ).then((_) => _loadNotifications());
-                              }
-                            },
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: isDark ? AppTheme.cardBg : Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-                                  width: 1,
-                                ),
-                                boxShadow: !isDark
-                                    ? [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.01),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 4),
-                                        )
-                                      ]
-                                    : null,
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: typeColor.withOpacity(0.1),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      _getIcon(notif.type),
-                                      color: typeColor,
-                                      size: 22,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          notif.title,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          notif.message,
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            height: 1.3,
-                                            color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          notif.createdAt ?? '',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Belum Ada Notifikasi',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                          );
-                        },
+                            const SizedBox(height: 6),
+                            Text(
+                              'Notifikasi terbaru mengenai aktivitas dan akun Anda akan ditampilkan disini.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark
+                                    ? AppTheme.textMuted
+                                    : Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                    ],
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                    itemCount: _notifications.length,
+                    itemBuilder: (context, index) {
+                      final notif = _notifications[index];
+                      final typeColor = _getColor(notif.type, context);
+
+                      return InkWell(
+                        onTap: () {
+                          if (notif.type == 'group_invite') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const GroupInvitationsScreen(),
+                              ),
+                            ).then((_) => _loadNotifications());
+                          }
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppTheme.cardBg : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark
+                                  ? AppTheme.inputBorder
+                                  : Colors.grey.shade200,
+                              width: 1,
+                            ),
+                            boxShadow: !isDark
+                                ? [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.01,
+                                      ),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: typeColor.withValues(alpha: 0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  _getIcon(notif.type),
+                                  color: typeColor,
+                                  size: 22,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      notif.title,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      notif.message,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        height: 1.3,
+                                        color: isDark
+                                            ? AppTheme.textMuted
+                                            : Colors.grey.shade700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      notif.createdAt ?? '',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ),
       ),

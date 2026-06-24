@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../app/theme.dart';
 import '../widgets/gradient_button.dart';
 import '../widgets/social_button.dart';
 import '../widgets/auth_divider.dart';
@@ -7,6 +6,8 @@ import '../main.dart';
 import 'register_screen.dart';
 import 'main_navigation.dart';
 import '../services/auth_service.dart';
+import '../services/call_service.dart';
+import '../services/push_notification_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -36,17 +37,11 @@ class _LoginScreenState extends State<LoginScreen>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
-    _fadeAnim = CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOut,
-    );
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.05),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOutCubic,
-    ));
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
+    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+        );
     _animController.forward();
   }
 
@@ -81,6 +76,9 @@ class _LoginScreenState extends State<LoginScreen>
             ),
           );
 
+          CallService().initPusher();
+          PushNotificationService.initialize();
+
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
               builder: (_) => MainNavigation(initialUser: result['user']),
@@ -107,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    
+
     // Warna teks dan border yang lebih soft untuk Material 3
     final textMutedColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
     final borderColor = isDark ? Colors.white24 : Colors.black12;
@@ -119,7 +117,10 @@ class _LoginScreenState extends State<LoginScreen>
           children: [
             Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 28,
+                  vertical: 24,
+                ),
                 child: FadeTransition(
                   opacity: _fadeAnim,
                   child: SlideTransition(
@@ -174,8 +175,12 @@ class _LoginScreenState extends State<LoginScreen>
                               ),
                               decoration: InputDecoration(
                                 labelText: 'Username atau Email',
-                                floatingLabelBehavior: FloatingLabelBehavior.auto,
-                                labelStyle: TextStyle(color: textMutedColor, fontSize: 14),
+                                floatingLabelBehavior:
+                                    FloatingLabelBehavior.auto,
+                                labelStyle: TextStyle(
+                                  color: textMutedColor,
+                                  fontSize: 14,
+                                ),
                                 floatingLabelStyle: TextStyle(
                                   color: colorScheme.primary,
                                   fontWeight: FontWeight.w600,
@@ -186,9 +191,11 @@ class _LoginScreenState extends State<LoginScreen>
                                   size: 22,
                                 ),
                                 filled: true,
-                                fillColor: isDark 
-                                    ? colorScheme.surfaceContainerHighest.withOpacity(0.5) 
-                                    : colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                fillColor: isDark
+                                    ? colorScheme.surfaceContainerHighest
+                                          .withValues(alpha: 0.5)
+                                    : colorScheme.surfaceContainerHighest
+                                          .withValues(alpha: 0.3),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
@@ -234,8 +241,12 @@ class _LoginScreenState extends State<LoginScreen>
                               ),
                               decoration: InputDecoration(
                                 labelText: 'Kata Sandi',
-                                floatingLabelBehavior: FloatingLabelBehavior.auto,
-                                labelStyle: TextStyle(color: textMutedColor, fontSize: 14),
+                                floatingLabelBehavior:
+                                    FloatingLabelBehavior.auto,
+                                labelStyle: TextStyle(
+                                  color: textMutedColor,
+                                  fontSize: 14,
+                                ),
                                 floatingLabelStyle: TextStyle(
                                   color: colorScheme.primary,
                                   fontWeight: FontWeight.w600,
@@ -260,9 +271,11 @@ class _LoginScreenState extends State<LoginScreen>
                                   },
                                 ),
                                 filled: true,
-                                fillColor: isDark 
-                                    ? colorScheme.surfaceContainerHighest.withOpacity(0.5) 
-                                    : colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                fillColor: isDark
+                                    ? colorScheme.surfaceContainerHighest
+                                          .withValues(alpha: 0.5)
+                                    : colorScheme.surfaceContainerHighest
+                                          .withValues(alpha: 0.3),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
@@ -321,9 +334,10 @@ class _LoginScreenState extends State<LoginScreen>
                                     ),
                                     Text(
                                       'Ingat saya',
-                                      style: theme.textTheme.bodyMedium?.copyWith(
-                                        color: colorScheme.onSurface,
-                                      ),
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: colorScheme.onSurface,
+                                          ),
                                     ),
                                   ],
                                 ),
@@ -333,7 +347,9 @@ class _LoginScreenState extends State<LoginScreen>
                                   },
                                   style: TextButton.styleFrom(
                                     foregroundColor: colorScheme.primary,
-                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
                                   ),
                                   child: const Text(
                                     'Lupa kata sandi?',
@@ -383,26 +399,42 @@ class _LoginScreenState extends State<LoginScreen>
                                   onTap: () {
                                     Navigator.of(context).pushReplacement(
                                       PageRouteBuilder(
-                                        pageBuilder: (context, animation, secondaryAnimation) =>
-                                            const RegisterScreen(),
-                                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                          return FadeTransition(
-                                            opacity: animation,
-                                            child: child,
-                                          );
-                                        },
-                                        transitionDuration: const Duration(milliseconds: 300),
+                                        pageBuilder:
+                                            (
+                                              context,
+                                              animation,
+                                              secondaryAnimation,
+                                            ) => const RegisterScreen(),
+                                        transitionsBuilder:
+                                            (
+                                              context,
+                                              animation,
+                                              secondaryAnimation,
+                                              child,
+                                            ) {
+                                              return FadeTransition(
+                                                opacity: animation,
+                                                child: child,
+                                              );
+                                            },
+                                        transitionDuration: const Duration(
+                                          milliseconds: 300,
+                                        ),
                                       ),
                                     );
                                   },
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                      vertical: 2,
+                                    ),
                                     child: Text(
                                       'Daftar di sini',
-                                      style: theme.textTheme.bodyMedium?.copyWith(
-                                        color: colorScheme.primary,
-                                        fontWeight: FontWeight.w700,
-                                      ),
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: colorScheme.primary,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                     ),
                                   ),
                                 ),
@@ -416,7 +448,7 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
             ),
-            
+
             // Theme Toggle Button
             Positioned(
               top: 16,
@@ -427,11 +459,13 @@ class _LoginScreenState extends State<LoginScreen>
                   color: colorScheme.onSurfaceVariant,
                 ),
                 style: IconButton.styleFrom(
-                  backgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                  backgroundColor: colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.5),
                 ),
                 onPressed: () {
-                  themeNotifier.value =
-                      isDark ? ThemeMode.light : ThemeMode.dark;
+                  themeNotifier.value = isDark
+                      ? ThemeMode.light
+                      : ThemeMode.dark;
                 },
               ),
             ),

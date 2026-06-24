@@ -74,7 +74,15 @@ class AuthController extends Controller
 
     public function refresh()
     {
-        return $this->respondWithToken(Auth::guard('api')->refresh());
+        try {
+            return $this->respondWithToken(Auth::guard('api')->refresh());
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token tidak dapat direfresh atau sesi telah habis.',
+                'error' => $e->getMessage()
+            ], 401);
+        }
     }
 
     protected function respondWithToken($token)

@@ -11,36 +11,21 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\CallController;
+
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-// Menggunakan user ID 1 untuk prototyping
-Route::get('/users/search', [UserController::class, 'search']);
 
-Route::get('/chats', [ChatController::class, 'index']);
-Route::post('/chats/personal', [ChatController::class, 'startPersonalChat']);
-Route::get('/chats/{chat}/messages', [MessageController::class, 'index']);
-Route::post('/chats/{chat}/messages', [MessageController::class, 'store']);
-
-Route::get('/invitations', [GroupController::class, 'getInvitations']);
-Route::post('/invitations/{chat}/respond', [GroupController::class, 'respondInvitation']);
-
-Route::post('/groups', [GroupController::class, 'store']);
-Route::get('/groups/{chat}/members', [GroupController::class, 'members']);
-Route::post('/groups/{chat}/members', [GroupController::class, 'addMember']);
-Route::delete('/groups/{chat}/members/{userId}', [GroupController::class, 'kickMember']);
-Route::put('/groups/{chat}/members/{userId}/admin', [GroupController::class, 'makeAdmin']);
-Route::post('/groups/{chat}/leave', [GroupController::class, 'leaveGroup']);
-Route::put('/groups/{chat}/settings', [GroupController::class, 'updateSettings']);
 
 // Auth Routes
 Route::post('auth/login', [AuthController::class, 'login']);
 Route::post('auth/register', [AuthController::class, 'register']);
+Route::post('auth/refresh', [AuthController::class, 'refresh']); // Moved out of auth:api so expired tokens can be refreshed
 
 Route::group(['middleware' => 'auth:api'], function() {
     Route::post('auth/logout', [AuthController::class, 'logout']);
-    Route::post('auth/refresh', [AuthController::class, 'refresh']);
     Route::get('auth/me', [AuthController::class, 'me']);
 
     // Dashboard Routes
@@ -55,4 +40,26 @@ Route::group(['middleware' => 'auth:api'], function() {
     // Notifications Routes
     Route::get('notifications', [NotificationController::class, 'index']);
     Route::put('notifications/read', [NotificationController::class, 'markAsRead']);
+
+    // Call Signaling Route
+    Route::post('call/signal', [CallController::class, 'signal']);
+
+    // Chat Routes
+    Route::get('/users/search', [UserController::class, 'search']);
+    Route::get('/chats', [ChatController::class, 'index']);
+    Route::post('/chats/personal', [ChatController::class, 'startPersonalChat']);
+    Route::get('/chats/{chat}/messages', [MessageController::class, 'index']);
+    Route::post('/chats/{chat}/messages', [MessageController::class, 'store']);
+    Route::post('/chats/{chat}/read', [ChatController::class, 'markAsRead']);
+
+    // Group & Invitations
+    Route::get('/invitations', [GroupController::class, 'getInvitations']);
+    Route::post('/invitations/{chat}/respond', [GroupController::class, 'respondInvitation']);
+    Route::post('/groups', [GroupController::class, 'store']);
+    Route::get('/groups/{chat}/members', [GroupController::class, 'members']);
+    Route::post('/groups/{chat}/members', [GroupController::class, 'addMember']);
+    Route::delete('/groups/{chat}/members/{userId}', [GroupController::class, 'kickMember']);
+    Route::put('/groups/{chat}/members/{userId}/admin', [GroupController::class, 'makeAdmin']);
+    Route::post('/groups/{chat}/leave', [GroupController::class, 'leaveGroup']);
+    Route::put('/groups/{chat}/settings', [GroupController::class, 'updateSettings']);
 });

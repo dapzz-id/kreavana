@@ -47,10 +47,10 @@ class RoleToggle extends StatelessWidget {
                   boxShadow: currentRole == 'user' && !isDark
                       ? [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
-                          )
+                          ),
                         ]
                       : null,
                 ),
@@ -61,14 +61,16 @@ class RoleToggle extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       color: currentRole == 'user'
                           ? (isDark ? Colors.white : theme.colorScheme.primary)
-                          : (isDark ? AppTheme.textMuted : Colors.grey.shade600),
+                          : (isDark
+                                ? AppTheme.textMuted
+                                : Colors.grey.shade600),
                     ),
                   ),
                 ),
               ),
             ),
           ),
-          
+
           // Toggle Creator Role
           Expanded(
             child: GestureDetector(
@@ -90,10 +92,10 @@ class RoleToggle extends StatelessWidget {
                   boxShadow: currentRole == 'creator' && !isDark
                       ? [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
-                          )
+                          ),
                         ]
                       : null,
                 ),
@@ -106,8 +108,12 @@ class RoleToggle extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: currentRole == 'creator'
-                              ? (isDark ? Colors.white : theme.colorScheme.secondary)
-                              : (isDark ? AppTheme.textMuted : Colors.grey.shade600),
+                              ? (isDark
+                                    ? Colors.white
+                                    : theme.colorScheme.secondary)
+                              : (isDark
+                                    ? AppTheme.textMuted
+                                    : Colors.grey.shade600),
                         ),
                       ),
                       if (!isCreator) ...[
@@ -115,7 +121,9 @@ class RoleToggle extends StatelessWidget {
                         Icon(
                           Icons.lock_outline,
                           size: 14,
-                          color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                          color: isDark
+                              ? AppTheme.textMuted
+                              : Colors.grey.shade600,
                         ),
                       ],
                     ],

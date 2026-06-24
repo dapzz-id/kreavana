@@ -7,15 +7,21 @@ use App\Models\Chat;
 
 class ChatController extends Controller
 {
-    // Hardcode user_id = 1 for prototyping
-    public function index()
+    public function index(Request $request)
     {
-        $userId = 1;
+        $userId = $request->user()->id;
         $chats = Chat::whereHas('participants', function ($q) use ($userId) {
             $q->where('user_id', $userId)->where('status', 'joined');
-        })->with(['participants.user', 'messages' => function($q) {
+        })
+        ->with(['participants.user', 'messages' => function($q) {
             $q->latest()->take(1);
-        }])->get();
+        }])
+        ->withCount(['messages as unread_count' => function ($query) use ($userId) {
+            $query->where('user_id', '!=', $userId)
+                  ->whereRaw('messages.created_at > COALESCE((SELECT last_read_at FROM chat_participants WHERE chat_participants.chat_id = messages.chat_id AND chat_participants.user_id = ? LIMIT 1), "2000-01-01 00:00:00")', [$userId]);
+        }])
+        ->orderBy('updated_at', 'desc')
+        ->get();
 
         $formatted = $chats->map(function ($chat) use ($userId) {
             $name = $chat->name;
@@ -30,11 +36,13 @@ class ChatController extends Controller
             return [
                 'id' => $chat->id,
                 'name' => $name,
+                'user_id' => $chat->type === 'personal' && isset($otherParticipant) ? $otherParticipant->user_id : null,
                 'isGroup' => $chat->type === 'group',
                 'onlyAdminCanAdd' => (bool) $chat->only_admin_can_add,
                 'lastMessage' => $lastMessage ? $lastMessage->message : 'Belum ada pesan',
                 'time' => $lastMessage ? $lastMessage->created_at->format('H:i') : '',
-                'unread' => $unread,
+                'unread' => $chat->unread_count > 0,
+                'unread_count' => $chat->unread_count,
             ];
         });
 
@@ -45,7 +53,7 @@ class ChatController extends Controller
     {
         $request->validate(['user_id' => 'required|exists:users,id']);
         
-        $userId = 1;
+        $userId = $request->user()->id;
         $targetUserId = $request->user_id;
 
         if ($userId == $targetUserId) {
@@ -73,11 +81,20 @@ class ChatController extends Controller
         return response()->json([
             'id' => $chat->id,
             'name' => $targetUser->name,
+            'user_id' => $targetUser->id,
             'isGroup' => false,
             'onlyAdminCanAdd' => false,
             'lastMessage' => 'Belum ada pesan',
             'time' => '',
             'unread' => false,
+            'unread_count' => 0,
         ]);
+    }
+
+    public function markAsRead(Request $request, Chat $chat)
+    {
+        $userId = $request->user()->id;
+        $chat->participants()->where('user_id', $userId)->update(['last_read_at' => now()]);
+        return response()->json(['message' => 'Chat marked as read']);
     }
 }

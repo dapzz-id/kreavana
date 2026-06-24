@@ -95,16 +95,16 @@ class GroupController extends Controller
         return response()->json(['message' => 'Anggota dijadikan admin']);
     }
 
-    public function leaveGroup(Chat $chat)
+    public function leaveGroup(Request $request, Chat $chat)
     {
-        $userId = 1;
+        $userId = $request->user()->id;
         $chat->participants()->where('user_id', $userId)->delete();
         return response()->json(['message' => 'Keluar dari grup']);
     }
 
-    public function getInvitations()
+    public function getInvitations(Request $request)
     {
-        $userId = 1;
+        $userId = $request->user()->id;
         $invitations = ChatParticipant::where('user_id', $userId)
             ->where('status', 'pending')
             ->with('chat')
@@ -121,7 +121,7 @@ class GroupController extends Controller
 
     public function respondInvitation(Request $request, Chat $chat)
     {
-        $userId = 1;
+        $userId = $request->user()->id;
         $request->validate(['accept' => 'required|boolean']);
         
         if ($request->accept) {

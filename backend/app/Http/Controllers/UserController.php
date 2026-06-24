@@ -14,8 +14,8 @@ class UserController extends Controller
             return response()->json([]);
         }
 
-        // Hardcode current user id = 1
-        $currentUserId = 1;
+        // Use the authenticated user ID
+        $currentUserId = $request->user()->id;
 
         $users = User::where('id', '!=', $currentUserId)
             ->where(function($q) use ($query) {

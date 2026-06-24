@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import '../services/chat_service.dart';
+import '../services/call_service.dart';
+import 'call_screen.dart';
 
 class DirectMessageScreen extends StatefulWidget {
   const DirectMessageScreen({super.key});
@@ -12,7 +15,8 @@ class DirectMessageScreen extends StatefulWidget {
 class _DirectMessageScreenState extends State<DirectMessageScreen> {
   // State untuk melacak obrolan yang dipilih di tampilan Master-Detail (Desktop/Web)
   Map<String, dynamic>? selectedChat;
-  final GlobalKey<ChatListSectionState> chatListKey = GlobalKey<ChatListSectionState>();
+  final GlobalKey<ChatListSectionState> chatListKey =
+      GlobalKey<ChatListSectionState>();
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +69,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                   MaterialPageRoute(
                     builder: (context) => Scaffold(
                       body: ChatDetailSection(
-                        chat: chat, 
+                        chat: chat,
                         isMobile: true,
                         onMessageSent: () {
                           chatListKey.currentState?.loadChats();
@@ -90,22 +94,25 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.chat_bubble_outline,
-              size: 100, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
+          Icon(
+            Icons.chat_bubble_outline,
+            size: 100,
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+          ),
           const SizedBox(height: 16),
           Text(
             'Kreavana Chat',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             'Pilih obrolan untuk mulai mengirim pesan',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -117,7 +124,11 @@ class ChatListSection extends StatefulWidget {
   final Function(Map<String, dynamic>) onChatSelected;
   final Map<String, dynamic>? selectedChat;
 
-  const ChatListSection({super.key, required this.onChatSelected, this.selectedChat});
+  const ChatListSection({
+    super.key,
+    required this.onChatSelected,
+    this.selectedChat,
+  });
 
   @override
   State<ChatListSection> createState() => ChatListSectionState();
@@ -134,24 +145,52 @@ class ChatListSectionState extends State<ChatListSection> {
   List<Map<String, dynamic>> _searchResults = [];
   List<Map<String, dynamic>> _invitations = [];
 
+  StreamSubscription? _messageSubscription;
+  final Set<String> _subscribedChats = {};
+
   @override
   void initState() {
     super.initState();
     loadChats();
+    _messageSubscription = ChatService.messageStream.listen((msg) {
+      if (mounted) loadChats();
+    });
+  }
+
+  @override
+  void dispose() {
+    _messageSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> loadChats() async {
     try {
       final chats = await ChatService.fetchChats();
       final invs = await ChatService.fetchInvitations();
-      setState(() {
-        _personalChats = chats.where((c) => c['isGroup'] == false).map((c) => Map<String, dynamic>.from(c)).toList();
-        _groupChats = chats.where((c) => c['isGroup'] == true).map((c) => Map<String, dynamic>.from(c)).toList();
-        _invitations = invs.map((i) => Map<String, dynamic>.from(i)).toList();
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _personalChats = chats
+              .where((c) => c['isGroup'] == false)
+              .map((c) => Map<String, dynamic>.from(c))
+              .toList();
+          _groupChats = chats
+              .where((c) => c['isGroup'] == true)
+              .map((c) => Map<String, dynamic>.from(c))
+              .toList();
+          _invitations = invs.map((i) => Map<String, dynamic>.from(i)).toList();
+          isLoading = false;
+        });
+
+        for (var chat in chats) {
+          final chatId = chat['id'].toString();
+          if (!_subscribedChats.contains(chatId)) {
+            _subscribedChats.add(chatId);
+            ChatService.subscribeToChat(chatId);
+          }
+        }
+      }
     } catch (e) {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
       print('Error loading chats: $e');
     }
   }
@@ -176,7 +215,10 @@ class ChatListSectionState extends State<ChatListSection> {
                     IconButton(
                       icon: const Icon(Icons.check, color: Colors.green),
                       onPressed: () {
-                        ChatService.respondInvitation(inv['chat_id'].toString(), true).then((_) {
+                        ChatService.respondInvitation(
+                          inv['chat_id'].toString(),
+                          true,
+                        ).then((_) {
                           Navigator.pop(context);
                           loadChats();
                         });
@@ -185,7 +227,10 @@ class ChatListSectionState extends State<ChatListSection> {
                     IconButton(
                       icon: const Icon(Icons.close, color: Colors.red),
                       onPressed: () {
-                        ChatService.respondInvitation(inv['chat_id'].toString(), false).then((_) {
+                        ChatService.respondInvitation(
+                          inv['chat_id'].toString(),
+                          false,
+                        ).then((_) {
                           Navigator.pop(context);
                           loadChats();
                         });
@@ -222,17 +267,24 @@ class ChatListSectionState extends State<ChatListSection> {
           ),
           FilledButton(
             onPressed: () {
-                if (groupNameController.text.isNotEmpty) {
-                  ChatService.createGroup(groupNameController.text).then((newGroup) {
-                    setState(() {
-                      _groupChats.insert(0, Map<String, dynamic>.from(newGroup));
+              if (groupNameController.text.isNotEmpty) {
+                ChatService.createGroup(groupNameController.text)
+                    .then((newGroup) {
+                      setState(() {
+                        _groupChats.insert(
+                          0,
+                          Map<String, dynamic>.from(newGroup),
+                        );
+                      });
+                      widget.onChatSelected(
+                        Map<String, dynamic>.from(newGroup),
+                      );
+                    })
+                    .catchError((e) {
+                      print('Error creating group: $e');
                     });
-                    widget.onChatSelected(Map<String, dynamic>.from(newGroup));
-                  }).catchError((e) {
-                    print('Error creating group: $e');
-                  });
-                  Navigator.pop(context);
-                }
+                Navigator.pop(context);
+              }
             },
             child: const Text('Buat'),
           ),
@@ -248,28 +300,37 @@ class ChatListSectionState extends State<ChatListSection> {
     List<Map<String, dynamic>> additionalResults = [];
 
     if (searchQuery.isNotEmpty) {
-      chats = chats.where((chat) => chat['name'].toString().toLowerCase().contains(searchQuery.toLowerCase())).toList();
-      
+      chats = chats
+          .where(
+            (chat) => chat['name'].toString().toLowerCase().contains(
+              searchQuery.toLowerCase(),
+            ),
+          )
+          .toList();
+
       if (viewType == 'personal') {
-          // Tambahkan hasil pencarian dari database yang belum ada di daftar chat
-          for (var user in _searchResults) {
-              bool exists = _personalChats.any((c) => c['name'] == user['name']);
-              if (!exists) {
-                  additionalResults.add({
-                      'isNewUser': true,
-                      'userId': user['id'],
-                      'name': user['name'],
-                      'email': user['email']
-                  });
-              }
+        // Tambahkan hasil pencarian dari database yang belum ada di daftar chat
+        for (var user in _searchResults) {
+          bool exists = _personalChats.any((c) => c['name'] == user['name']);
+          if (!exists) {
+            additionalResults.add({
+              'isNewUser': true,
+              'userId': user['id'],
+              'name': user['name'],
+              'email': user['email'],
+            });
           }
+        }
       }
     }
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text('Obrolan', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Obrolan',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
@@ -286,23 +347,33 @@ class ChatListSectionState extends State<ChatListSection> {
                   top: 8,
                   child: Container(
                     padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                    child: Text('${_invitations.length}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '${_invitations.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
         ],
       ),
       body: Column(
         children: [
           // Pencarian Material 3
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ),
             child: SearchBar(
               hintText: 'Cari akun atau pesan...',
               leading: const Padding(
@@ -311,7 +382,9 @@ class ChatListSectionState extends State<ChatListSection> {
               ),
               elevation: const WidgetStatePropertyAll(0),
               backgroundColor: WidgetStatePropertyAll(
-                Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
               ),
               onChanged: (value) async {
                 setState(() {
@@ -319,39 +392,46 @@ class ChatListSectionState extends State<ChatListSection> {
                   isSearching = true;
                 });
                 if (value.isNotEmpty) {
-                    try {
-                        final results = await ChatService.searchUsers(value);
-                        setState(() {
-                            _searchResults = results.map((r) => Map<String, dynamic>.from(r)).toList();
-                            isSearching = false;
-                        });
-                    } catch (e) {
-                        setState(() => isSearching = false);
-                    }
-                } else {
+                  try {
+                    final results = await ChatService.searchUsers(value);
                     setState(() {
-                        _searchResults = [];
-                        isSearching = false;
+                      _searchResults = results
+                          .map((r) => Map<String, dynamic>.from(r))
+                          .toList();
+                      isSearching = false;
                     });
+                  } catch (e) {
+                    setState(() => isSearching = false);
+                  }
+                } else {
+                  setState(() {
+                    _searchResults = [];
+                    isSearching = false;
+                  });
                 }
               },
             ),
           ),
           // Pemilihan Tipe Obrolan menggunakan SegmentedButton
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ),
             child: SizedBox(
               width: double.infinity,
               child: SegmentedButton<String>(
                 segments: const [
                   ButtonSegment(
-                      value: 'personal',
-                      label: Text('Personal'),
-                      icon: Icon(Icons.person_outline)),
+                    value: 'personal',
+                    label: Text('Personal'),
+                    icon: Icon(Icons.person_outline),
+                  ),
                   ButtonSegment(
-                      value: 'group',
-                      label: Text('Grup'),
-                      icon: Icon(Icons.groups_outlined)),
+                    value: 'group',
+                    label: Text('Grup'),
+                    icon: Icon(Icons.groups_outlined),
+                  ),
                 ],
                 selected: {viewType},
                 onSelectionChanged: (Set<String> newSelection) {
@@ -365,111 +445,178 @@ class ChatListSectionState extends State<ChatListSection> {
           const SizedBox(height: 8),
           // Daftar Obrolan
           Expanded(
-            child: isLoading ? const Center(child: CircularProgressIndicator()) : ListView.builder(
-              itemCount: chats.length + additionalResults.length,
-              itemBuilder: (context, index) {
-                if (index >= chats.length) {
-                  final user = additionalResults[index - chats.length];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
-                    child: ListTile(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      leading: CircleAvatar(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        child: Icon(Icons.person_add, color: Theme.of(context).colorScheme.onPrimary),
-                      ),
-                      title: Text('Mulai obrolan dengan "${user['name']}"'),
-                      subtitle: Text(user['email']),
-                      onTap: () async {
-                          try {
-                              final newChat = await ChatService.startPersonalChat(user['userId']);
-                              setState(() {
-                                  _personalChats.insert(0, Map<String, dynamic>.from(newChat));
-                                  searchQuery = '';
-                                  _searchResults = [];
-                              });
-                              widget.onChatSelected(Map<String, dynamic>.from(newChat));
-                          } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Gagal memulai obrolan')),
-                              );
-                          }
-                      },
-                    ),
-                  );
-                }
-
-                final chat = chats[index];
-                final isSelected = widget.selectedChat?['id'] == chat['id'];
-
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
-                  child: ListTile(
-                    selected: isSelected,
-                    selectedTileColor: Theme.of(context).colorScheme.secondaryContainer,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    leading: Stack(
-                      children: [
-                        CircleAvatar(
-                          radius: 24,
-                          backgroundColor: chat['isGroup']
-                              ? Theme.of(context).colorScheme.tertiaryContainer
-                              : Theme.of(context).colorScheme.primaryContainer,
-                          child: Icon(
-                            chat['isGroup'] ? Icons.group : Icons.person,
-                            color: chat['isGroup']
-                                ? Theme.of(context).colorScheme.onTertiaryContainer
-                                : Theme.of(context).colorScheme.onPrimaryContainer,
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    itemCount: chats.length + additionalResults.length,
+                    itemBuilder: (context, index) {
+                      if (index >= chats.length) {
+                        final user = additionalResults[index - chats.length];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8.0,
+                            vertical: 2.0,
                           ),
-                        ),
-                        if (chat['unread'])
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              width: 14,
-                              height: 14,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: Theme.of(context).colorScheme.surface, width: 2),
+                          child: ListTile(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            leading: CircleAvatar(
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
+                              child: Icon(
+                                Icons.person_add,
+                                color: Theme.of(context).colorScheme.onPrimary,
                               ),
                             ),
+                            title: Text(
+                              'Mulai obrolan dengan "${user['name']}"',
+                            ),
+                            subtitle: Text(user['email']),
+                            onTap: () async {
+                              try {
+                                final newChat =
+                                    await ChatService.startPersonalChat(
+                                      user['userId'],
+                                    );
+                                setState(() {
+                                  _personalChats.insert(
+                                    0,
+                                    Map<String, dynamic>.from(newChat),
+                                  );
+                                  searchQuery = '';
+                                  _searchResults = [];
+                                });
+                                widget.onChatSelected(
+                                  Map<String, dynamic>.from(newChat),
+                                );
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Gagal memulai obrolan'),
+                                  ),
+                                );
+                              }
+                            },
                           ),
-                      ],
-                    ),
-                    title: Text(
-                      chat['name'],
-                      style: TextStyle(
-                        fontWeight: chat['unread'] ? FontWeight.bold : FontWeight.normal,
-                      ),
-                    ),
-                    subtitle: Text(
-                      chat['lastMessage'],
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: chat['unread']
-                            ? Theme.of(context).colorScheme.onSurface
-                            : Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontWeight: chat['unread'] ? FontWeight.w500 : FontWeight.normal,
-                      ),
-                    ),
-                    trailing: Text(
-                      chat['time'],
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: chat['unread']
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontWeight: chat['unread'] ? FontWeight.bold : FontWeight.normal,
+                        );
+                      }
+
+                      final chat = chats[index];
+                      final isSelected =
+                          widget.selectedChat?['id'] == chat['id'];
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8.0,
+                          vertical: 2.0,
+                        ),
+                        child: ListTile(
+                          selected: isSelected,
+                          selectedTileColor: Theme.of(
+                            context,
+                          ).colorScheme.secondaryContainer,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                    ),
-                    onTap: () => widget.onChatSelected(chat),
+                          leading: Stack(
+                            children: [
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundColor: chat['isGroup']
+                                    ? Theme.of(
+                                        context,
+                                      ).colorScheme.tertiaryContainer
+                                    : Theme.of(
+                                        context,
+                                      ).colorScheme.primaryContainer,
+                                child: Icon(
+                                  chat['isGroup'] ? Icons.group : Icons.person,
+                                  color: chat['isGroup']
+                                      ? Theme.of(
+                                          context,
+                                        ).colorScheme.onTertiaryContainer
+                                      : Theme.of(
+                                          context,
+                                        ).colorScheme.onPrimaryContainer,
+                                ),
+                              ),
+                              if (chat['unread'])
+                                Positioned(
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    width: 18,
+                                    height: 18,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.error,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.surface,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        '${chat['unread_count']}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          title: Text(
+                            chat['name'],
+                            style: TextStyle(
+                              fontWeight: chat['unread']
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                          subtitle: Text(
+                            chat['lastMessage'],
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: chat['unread']
+                                  ? Theme.of(context).colorScheme.onSurface
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                              fontWeight: chat['unread']
+                                  ? FontWeight.w500
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                          trailing: Text(
+                            chat['time'],
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: chat['unread']
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                  fontWeight: chat['unread']
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                          ),
+                          onTap: () => widget.onChatSelected(chat),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
@@ -488,7 +635,13 @@ class ChatDetailSection extends StatefulWidget {
   final VoidCallback? onMessageSent;
   final VoidCallback? onChatLeft;
 
-  const ChatDetailSection({super.key, required this.chat, this.isMobile = false, this.onMessageSent, this.onChatLeft});
+  const ChatDetailSection({
+    super.key,
+    required this.chat,
+    this.isMobile = false,
+    this.onMessageSent,
+    this.onChatLeft,
+  });
 
   @override
   State<ChatDetailSection> createState() => _ChatDetailSectionState();
@@ -499,30 +652,57 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
   List<Map<String, dynamic>> _messages = [];
   bool isLoading = true;
 
+  StreamSubscription? _messageSubscription;
+
   @override
   void initState() {
     super.initState();
+    ChatService.markAsRead(widget.chat['id'].toString());
     _loadMessages();
+    _messageSubscription = ChatService.messageStream.listen((msg) {
+      if (msg['chat_id'] == widget.chat['id'].toString()) {
+        if (mounted) {
+          ChatService.markAsRead(widget.chat['id'].toString());
+          setState(() {
+            if (!_messages.any((m) => m['id'] == msg['id'])) {
+              _messages.insert(0, Map<String, dynamic>.from(msg));
+            }
+          });
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _messageSubscription?.cancel();
+    _messageController.dispose();
+    super.dispose();
   }
 
   @override
   void didUpdateWidget(ChatDetailSection oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.chat['id'] != widget.chat['id']) {
+      ChatService.markAsRead(widget.chat['id'].toString());
       _loadMessages();
     }
   }
 
   Future<void> _loadMessages() async {
-    setState(() => isLoading = true);
+    if (mounted) setState(() => isLoading = true);
     try {
-      final msgs = await ChatService.fetchMessages(widget.chat['id'].toString());
-      setState(() {
-        _messages = msgs.map((m) => Map<String, dynamic>.from(m)).toList();
-        isLoading = false;
-      });
+      final msgs = await ChatService.fetchMessages(
+        widget.chat['id'].toString(),
+      );
+      if (mounted) {
+        setState(() {
+          _messages = msgs.map((m) => Map<String, dynamic>.from(m)).toList();
+          isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
       print('Error loading messages: $e');
     }
   }
@@ -532,7 +712,10 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
       final text = _messageController.text;
       _messageController.clear();
       try {
-        final newMsg = await ChatService.sendMessage(widget.chat['id'].toString(), text);
+        final newMsg = await ChatService.sendMessage(
+          widget.chat['id'].toString(),
+          text,
+        );
         setState(() {
           _messages.insert(0, Map<String, dynamic>.from(newMsg));
         });
@@ -599,10 +782,15 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                   children: [
                     Text(
                       widget.chat['name'],
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
-                      widget.chat['isGroup'] ? 'Ketuk untuk info grup' : 'Online',
+                      widget.chat['isGroup']
+                          ? 'Ketuk untuk info grup'
+                          : 'Online',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.primary,
                       ),
@@ -614,28 +802,50 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.call_outlined),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CallScreen(chat: widget.chat, isVideo: false),
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.videocam_outlined),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CallScreen(chat: widget.chat, isVideo: true),
-                ),
-              );
-            },
-          ),
+          if (!widget.chat['isGroup']) ...[
+            IconButton(
+              icon: const Icon(Icons.call_outlined),
+              onPressed: () async {
+                final callService = CallService();
+                final receiverId = widget.chat['user_id'] ?? 0;
+                await callService.startCall(receiverId, false);
+
+                if (context.mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CallScreen(
+                        callService: callService,
+                        remoteUserName: widget.chat['name'] ?? 'User',
+                        remoteAvatarUrl: widget.chat['avatar_url'] ?? '',
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.videocam_outlined),
+              onPressed: () async {
+                final callService = CallService();
+                final receiverId = widget.chat['user_id'] ?? 0;
+                await callService.startCall(receiverId, true);
+
+                if (context.mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CallScreen(
+                        callService: callService,
+                        remoteUserName: widget.chat['name'] ?? 'User',
+                        remoteAvatarUrl: widget.chat['avatar_url'] ?? '',
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
           IconButton(icon: const Icon(Icons.info_outline), onPressed: () {}),
           if (widget.isMobile) const SizedBox(width: 8),
         ],
@@ -645,70 +855,86 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
           Expanded(
             child: Container(
               color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
-              child: isLoading ? const Center(child: CircularProgressIndicator()) : ListView.builder(
-                reverse: true,
-                padding: const EdgeInsets.all(16.0),
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  final message = _messages[index];
-                  final isMe = message['isMe'];
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ListView.builder(
+                      reverse: true,
+                      padding: const EdgeInsets.all(16.0),
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final message = _messages[index];
+                        final isMe = message['isMe'];
 
-                  return Align(
-                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 12.0),
-                      constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(context).size.width * 0.75,
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                      decoration: BoxDecoration(
-                        color: isMe
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(20).copyWith(
-                          bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(20),
-                          bottomLeft: !isMe ? const Radius.circular(4) : const Radius.circular(20),
-                        ),
-                        boxShadow: [
-                          if (!isMe)
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 5,
-                              offset: const Offset(0, 2),
+                        return Align(
+                          alignment: isMe
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 12.0),
+                            constraints: BoxConstraints(
+                              maxWidth:
+                                  MediaQuery.of(context).size.width * 0.75,
                             ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            message['text'],
-                            style: TextStyle(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                              vertical: 12.0,
+                            ),
+                            decoration: BoxDecoration(
                               color: isMe
-                                  ? theme.colorScheme.onPrimary
-                                  : theme.colorScheme.onSurface,
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.surface,
+                              borderRadius: BorderRadius.circular(20).copyWith(
+                                bottomRight: isMe
+                                    ? const Radius.circular(4)
+                                    : const Radius.circular(20),
+                                bottomLeft: !isMe
+                                    ? const Radius.circular(4)
+                                    : const Radius.circular(20),
+                              ),
+                              boxShadow: [
+                                if (!isMe)
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 5,
+                                    offset: const Offset(0, 2),
+                                  ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  message['text'],
+                                  style: TextStyle(
+                                    color: isMe
+                                        ? theme.colorScheme.onPrimary
+                                        : theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  message['time'],
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: isMe
+                                        ? theme.colorScheme.onPrimary
+                                              .withOpacity(0.7)
+                                        : theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            message['time'],
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: isMe
-                                  ? theme.colorScheme.onPrimary.withOpacity(0.7)
-                                  : theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 12.0,
+            ),
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
               boxShadow: [
@@ -736,9 +962,13 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: theme.colorScheme.surfaceVariant.withOpacity(0.5),
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                      fillColor: theme.colorScheme.surfaceVariant.withOpacity(
+                        0.5,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20.0,
+                        vertical: 10.0,
+                      ),
                     ),
                     onSubmitted: (_) => _sendMessage(),
                   ),
@@ -756,281 +986,6 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class CallScreen extends StatefulWidget {
-  final Map<String, dynamic> chat;
-  final bool isVideo;
-
-  const CallScreen({super.key, required this.chat, this.isVideo = false});
-
-  @override
-  State<CallScreen> createState() => _CallScreenState();
-}
-
-class _CallScreenState extends State<CallScreen> {
-  late bool isVideoActive;
-  bool isMuted = false;
-  bool isSpeaker = false;
-  CameraController? _cameraController;
-
-  @override
-  void initState() {
-    super.initState();
-    isVideoActive = widget.isVideo;
-    // Jika video call, otomatis loudspeaker menyala
-    if (isVideoActive) {
-      isSpeaker = true;
-      _initializeCamera();
-    }
-  }
-
-  @override
-  void dispose() {
-    _cameraController?.dispose();
-    super.dispose();
-  }
-
-  Future<void> _initializeCamera() async {
-    try {
-      final cameras = await availableCameras();
-      if (cameras.isNotEmpty) {
-        final frontCamera = cameras.firstWhere(
-            (c) => c.lensDirection == CameraLensDirection.front,
-            orElse: () => cameras.first);
-
-        _cameraController = CameraController(
-          frontCamera,
-          ResolutionPreset.medium,
-          enableAudio: false,
-        );
-
-        await _cameraController!.initialize();
-        if (mounted) setState(() {});
-      }
-    } catch (e) {
-      debugPrint('Error initializing camera: $e');
-    }
-  }
-
-  void _toggleMute() => setState(() => isMuted = !isMuted);
-  void _toggleSpeaker() => setState(() => isSpeaker = !isSpeaker);
-  void _toggleVideo() {
-    setState(() {
-      isVideoActive = !isVideoActive;
-      if (isVideoActive) {
-        isSpeaker = true;
-        if (_cameraController == null) _initializeCamera();
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Background Dinamis
-          if (isVideoActive)
-            Container(
-              decoration: const BoxDecoration(
-                color: Colors.black87,
-                image: DecorationImage(
-                  // Gambar latar belakang simulasi kamera video call
-                  image: NetworkImage('https://images.unsplash.com/photo-1573164713988-8665fc963095?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'),
-                  fit: BoxFit.cover,
-                  colorFilter: ColorFilter.mode(Colors.black45, BlendMode.darken),
-                ),
-              ),
-            )
-          else
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    theme.colorScheme.primaryContainer,
-                    theme.colorScheme.surface,
-                    theme.colorScheme.surfaceVariant,
-                  ],
-                ),
-              ),
-            ),
-            
-          // PIP (Picture-in-Picture) Kamera Asli Kita saat Video Call
-          if (isVideoActive)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 20,
-              right: 20,
-              child: Container(
-                width: 110,
-                height: 160,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: Colors.black54,
-                  border: Border.all(color: Colors.white24, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: _cameraController != null && _cameraController!.value.isInitialized
-                      ? AspectRatio(
-                          aspectRatio: 110 / 160,
-                          child: CameraPreview(_cameraController!),
-                        )
-                      : const Center(
-                          child: SizedBox(
-                            width: 24, height: 24,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                          ),
-                        ),
-                ),
-              ),
-            ),
-
-          // Konten Utama
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const SizedBox(height: 40),
-                Text(
-                  widget.chat['name'],
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    color: isVideoActive ? Colors.white : theme.colorScheme.onSurface,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '00:24', // Simulasi durasi panggilan berjalan
-                  style: TextStyle(
-                    color: isVideoActive ? Colors.white70 : theme.colorScheme.onSurface.withOpacity(0.7),
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                if (!isVideoActive) ...[
-                  const SizedBox(height: 80),
-                  // Avatar Profile membesar saat Voice Call
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: theme.colorScheme.primary.withOpacity(0.1),
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: theme.colorScheme.primary.withOpacity(0.2),
-                      ),
-                      child: CircleAvatar(
-                        radius: 80,
-                        backgroundColor: theme.colorScheme.primary,
-                        backgroundImage: widget.chat['isGroup'] 
-                            ? null 
-                            // Random avatar sesuai nama untuk simulasi profil
-                            : NetworkImage('https://ui-avatars.com/api/?name=${widget.chat['name']}&background=random&size=200'),
-                        child: widget.chat['isGroup'] 
-                            ? Icon(Icons.group, size: 80, color: theme.colorScheme.onPrimary)
-                            : null,
-                      ),
-                    ),
-                  ),
-                ],
-                const Spacer(),
-                
-                // Papan Kontrol Bawah (Bottom Controls)
-                Container(
-                  margin: const EdgeInsets.all(24),
-                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: isVideoActive ? Colors.black.withOpacity(0.6) : theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(40),
-                    boxShadow: [
-                      if (!isVideoActive)
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildControlButton(
-                        icon: isMuted ? Icons.mic_off : Icons.mic,
-                        isActive: isMuted,
-                        onPressed: _toggleMute,
-                      ),
-                      _buildControlButton(
-                        icon: isVideoActive ? Icons.videocam : Icons.videocam_off,
-                        isActive: isVideoActive, // Jika nyala (true), indikator tombol juga akan nyala (putih)
-                        onPressed: _toggleVideo,
-                      ),
-                      _buildControlButton(
-                        icon: isSpeaker ? Icons.volume_up : Icons.volume_down,
-                        isActive: isSpeaker,
-                        onPressed: _toggleSpeaker,
-                      ),
-                      FloatingActionButton(
-                        heroTag: null,
-                        backgroundColor: Colors.redAccent,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        onPressed: () => Navigator.pop(context),
-                        child: const Icon(Icons.call_end, color: Colors.white, size: 28),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildControlButton({
-    required IconData icon,
-    required bool isActive,
-    required VoidCallback onPressed,
-  }) {
-    final theme = Theme.of(context);
-    // Logika pewarnaan stateful
-    final bgColor = isVideoActive 
-        ? (isActive ? Colors.white : Colors.white24)
-        : (isActive ? theme.colorScheme.primary : theme.colorScheme.surfaceVariant);
-        
-    final iconColor = isVideoActive
-        ? (isActive ? Colors.black : Colors.white)
-        : (isActive ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant);
-
-    return GestureDetector(
-      onTap: onPressed,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: bgColor,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: iconColor, size: 28),
       ),
     );
   }
@@ -1060,7 +1015,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
 
   Future<void> _loadMembers() async {
     try {
-      final msgs = await ChatService.fetchGroupMembers(widget.chat['id'].toString());
+      final msgs = await ChatService.fetchGroupMembers(
+        widget.chat['id'].toString(),
+      );
       setState(() {
         members = msgs.map((m) => Map<String, dynamic>.from(m)).toList();
         isLoading = false;
@@ -1083,9 +1040,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
           builder: (context, setStateDialog) {
             List<dynamic> displayList = List.from(selectedUsers);
             for (var result in searchResults) {
-               if (!displayList.any((u) => u['id'] == result['id'])) {
-                  displayList.add(result);
-               }
+              if (!displayList.any((u) => u['id'] == result['id'])) {
+                displayList.add(result);
+              }
             }
 
             return AlertDialog(
@@ -1101,16 +1058,18 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                       decoration: InputDecoration(
                         hintText: 'Cari Nama Anggota...',
                         prefixIcon: const Icon(Icons.search),
-                        suffixIcon: controller.text.isNotEmpty ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            controller.clear();
-                            setStateDialog(() {
-                              searchResults = [];
-                              isSearching = false;
-                            });
-                          },
-                        ) : null,
+                        suffixIcon: controller.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  controller.clear();
+                                  setStateDialog(() {
+                                    searchResults = [];
+                                    isSearching = false;
+                                  });
+                                },
+                              )
+                            : null,
                       ),
                       onChanged: (value) async {
                         setStateDialog(() {
@@ -1118,7 +1077,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                         });
                         if (value.isNotEmpty) {
                           try {
-                            final results = await ChatService.searchUsers(value);
+                            final results = await ChatService.searchUsers(
+                              value,
+                            );
                             setStateDialog(() {
                               searchResults = results;
                               isSearching = false;
@@ -1137,8 +1098,13 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                     const SizedBox(height: 8),
                     if (isSearching)
                       const CircularProgressIndicator()
-                    else if (controller.text.isNotEmpty && searchResults.isEmpty && selectedUsers.isEmpty)
-                      const Text('Pengguna tidak ditemukan', style: TextStyle(color: Colors.red))
+                    else if (controller.text.isNotEmpty &&
+                        searchResults.isEmpty &&
+                        selectedUsers.isEmpty)
+                      const Text(
+                        'Pengguna tidak ditemukan',
+                        style: TextStyle(color: Colors.red),
+                      )
                     else if (displayList.isNotEmpty)
                       Expanded(
                         child: ListView.builder(
@@ -1146,15 +1112,25 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                           itemCount: displayList.length,
                           itemBuilder: (context, index) {
                             final user = displayList[index];
-                            final isAlreadyMember = members.any((m) => m['id'] == user['id']);
-                            final isSelected = selectedUsers.any((u) => u['id'] == user['id']);
+                            final isAlreadyMember = members.any(
+                              (m) => m['id'] == user['id'],
+                            );
+                            final isSelected = selectedUsers.any(
+                              (u) => u['id'] == user['id'],
+                            );
 
                             return ListTile(
-                              leading: const CircleAvatar(child: Icon(Icons.person)),
+                              leading: const CircleAvatar(
+                                child: Icon(Icons.person),
+                              ),
                               title: Text(user['name']),
-                              subtitle: Text(isAlreadyMember ? 'Sudah berada di dalam grup' : user['email']),
+                              subtitle: Text(
+                                isAlreadyMember
+                                    ? 'Sudah berada di dalam grup'
+                                    : user['email'],
+                              ),
                               enabled: !isAlreadyMember,
-                              trailing: isAlreadyMember 
+                              trailing: isAlreadyMember
                                   ? const Icon(Icons.groups, color: Colors.grey)
                                   : Checkbox(
                                       value: isSelected,
@@ -1163,20 +1139,26 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                                           if (val == true) {
                                             selectedUsers.add(user);
                                           } else {
-                                            selectedUsers.removeWhere((u) => u['id'] == user['id']);
+                                            selectedUsers.removeWhere(
+                                              (u) => u['id'] == user['id'],
+                                            );
                                           }
                                         });
                                       },
                                     ),
-                              onTap: isAlreadyMember ? null : () {
-                                setStateDialog(() {
-                                  if (isSelected) {
-                                    selectedUsers.removeWhere((u) => u['id'] == user['id']);
-                                  } else {
-                                    selectedUsers.add(user);
-                                  }
-                                });
-                              },
+                              onTap: isAlreadyMember
+                                  ? null
+                                  : () {
+                                      setStateDialog(() {
+                                        if (isSelected) {
+                                          selectedUsers.removeWhere(
+                                            (u) => u['id'] == user['id'],
+                                          );
+                                        } else {
+                                          selectedUsers.add(user);
+                                        }
+                                      });
+                                    },
                             );
                           },
                         ),
@@ -1185,14 +1167,20 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                 ),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Batal'),
+                ),
                 FilledButton(
                   onPressed: selectedUsers.isEmpty
                       ? null
                       : () async {
                           for (var user in selectedUsers) {
                             try {
-                              await ChatService.addGroupMember(widget.chat['id'].toString(), user['id']);
+                              await ChatService.addGroupMember(
+                                widget.chat['id'].toString(),
+                                user['id'],
+                              );
                             } catch (e) {
                               print('Failed to add ${user['id']}: $e');
                             }
@@ -1206,14 +1194,14 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             );
           },
         );
-      }
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
@@ -1227,32 +1215,49 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             child: CircleAvatar(
               radius: 60,
               backgroundColor: theme.colorScheme.tertiaryContainer,
-              child: Icon(Icons.group, size: 60, color: theme.colorScheme.onTertiaryContainer),
+              child: Icon(
+                Icons.group,
+                size: 60,
+                color: theme.colorScheme.onTertiaryContainer,
+              ),
             ),
           ),
           const SizedBox(height: 16),
           Center(
             child: Text(
               widget.chat['name'],
-              style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           Center(
-            child: Text('Grup · ${members.length} Anggota', style: const TextStyle(color: Colors.grey)),
+            child: Text(
+              'Grup · ${members.length} Anggota',
+              style: const TextStyle(color: Colors.grey),
+            ),
           ),
           const SizedBox(height: 20),
-          Divider(thickness: 8, color: theme.colorScheme.surfaceVariant.withOpacity(0.4)),
-          
+          Divider(
+            thickness: 8,
+            color: theme.colorScheme.surfaceVariant.withOpacity(0.4),
+          ),
+
           // Pengaturan
           ListTile(
             leading: const Icon(Icons.security),
             title: const Text('Pengaturan Grup'),
-            subtitle: const Text('Hanya Admin yang dapat menambahkan anggota baru'),
+            subtitle: const Text(
+              'Hanya Admin yang dapat menambahkan anggota baru',
+            ),
             trailing: Switch(
               value: onlyAdminCanAdd,
               activeColor: theme.colorScheme.primary,
               onChanged: (val) {
-                ChatService.updateGroupSettings(widget.chat['id'].toString(), val).then((_) {
+                ChatService.updateGroupSettings(
+                  widget.chat['id'].toString(),
+                  val,
+                ).then((_) {
                   setState(() {
                     onlyAdminCanAdd = val;
                   });
@@ -1260,35 +1265,58 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
               },
             ),
           ),
-          Divider(thickness: 8, color: theme.colorScheme.surfaceVariant.withOpacity(0.4)),
-          
+          Divider(
+            thickness: 8,
+            color: theme.colorScheme.surfaceVariant.withOpacity(0.4),
+          ),
+
           // Daftar Anggota
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 12.0,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('${members.length} Anggota', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.primary)),
+                Text(
+                  '${members.length} Anggota',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
                 const Icon(Icons.search, color: Colors.grey),
               ],
             ),
           ),
-          
+
           // Tombol Tambah Anggota
           ListTile(
             leading: CircleAvatar(
               backgroundColor: theme.colorScheme.primary,
               child: Icon(Icons.person_add, color: theme.colorScheme.onPrimary),
             ),
-            title: const Text('Tambah Anggota', style: TextStyle(fontWeight: FontWeight.w500)),
+            title: const Text(
+              'Tambah Anggota',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
             onTap: () {
               if (onlyAdminCanAdd) {
                 // Check if I am admin
-                final myMember = members.firstWhere((m) => m['name'] == 'Anda', orElse: () => {'isAdmin': false});
+                final myMember = members.firstWhere(
+                  (m) => m['name'] == 'Anda',
+                  orElse: () => {'isAdmin': false},
+                );
                 final isMeAdmin = myMember['isAdmin'];
                 if (!isMeAdmin) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Hanya Admin yang dapat menambahkan anggota!')),
+                    const SnackBar(
+                      content: Text(
+                        'Hanya Admin yang dapat menambahkan anggota!',
+                      ),
+                    ),
                   );
                   return;
                 }
@@ -1296,57 +1324,95 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
               _addMember();
             },
           ),
-          
-          if (isLoading) const Center(child: CircularProgressIndicator())
-          else ...members.map((m) => ListTile(
-            leading: CircleAvatar(
-              backgroundColor: theme.colorScheme.surfaceVariant,
-              backgroundImage: NetworkImage('https://ui-avatars.com/api/?name=${m['name']}&background=random'),
-            ),
-            title: Text(m['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: m['name'] == 'Anda' ? const Text('Ponsel ini') : null,
-            trailing: m['isAdmin'] 
-                ? Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.tertiaryContainer,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text('Admin', style: TextStyle(color: theme.colorScheme.onTertiaryContainer, fontSize: 12, fontWeight: FontWeight.bold)),
-                  ) 
-                : null,
-            onTap: m['name'] == 'Anda' ? null : () {
-              final myMember = members.firstWhere((memb) => memb['name'] == 'Anda', orElse: () => {'isAdmin': false});
-              if (myMember['isAdmin']) {
-                showModalBottomSheet(
-                  context: context,
-                  builder: (context) => SafeArea(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ListTile(
-                          leading: const Icon(Icons.admin_panel_settings),
-                          title: const Text('Jadikan Admin'),
-                          onTap: () {
-                            Navigator.pop(context);
-                            ChatService.makeAdmin(widget.chat['id'].toString(), m['id'].toString()).then((_) => _loadMembers());
-                          },
-                        ),
-                        ListTile(
-                          leading: const Icon(Icons.person_remove, color: Colors.red),
-                          title: const Text('Keluarkan dari Grup', style: TextStyle(color: Colors.red)),
-                          onTap: () {
-                            Navigator.pop(context);
-                            ChatService.kickMember(widget.chat['id'].toString(), m['id'].toString()).then((_) => _loadMembers());
-                          },
-                        ),
-                      ],
-                    ),
+
+          if (isLoading)
+            const Center(child: CircularProgressIndicator())
+          else
+            ...members.map(
+              (m) => ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: theme.colorScheme.surfaceVariant,
+                  backgroundImage: NetworkImage(
+                    'https://ui-avatars.com/api/?name=${m['name']}&background=random',
                   ),
-                );
-              }
-            },
-          )),
+                ),
+                title: Text(
+                  m['name'],
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: m['name'] == 'Anda' ? const Text('Ponsel ini') : null,
+                trailing: m['isAdmin']
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.tertiaryContainer,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Admin',
+                          style: TextStyle(
+                            color: theme.colorScheme.onTertiaryContainer,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      )
+                    : null,
+                onTap: m['name'] == 'Anda'
+                    ? null
+                    : () {
+                        final myMember = members.firstWhere(
+                          (memb) => memb['name'] == 'Anda',
+                          orElse: () => {'isAdmin': false},
+                        );
+                        if (myMember['isAdmin']) {
+                          showModalBottomSheet(
+                            context: context,
+                            builder: (context) => SafeArea(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ListTile(
+                                    leading: const Icon(
+                                      Icons.admin_panel_settings,
+                                    ),
+                                    title: const Text('Jadikan Admin'),
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      ChatService.makeAdmin(
+                                        widget.chat['id'].toString(),
+                                        m['id'].toString(),
+                                      ).then((_) => _loadMembers());
+                                    },
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(
+                                      Icons.person_remove,
+                                      color: Colors.red,
+                                    ),
+                                    title: const Text(
+                                      'Keluarkan dari Grup',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      ChatService.kickMember(
+                                        widget.chat['id'].toString(),
+                                        m['id'].toString(),
+                                      ).then((_) => _loadMembers());
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+                      },
+              ),
+            ),
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -1358,7 +1424,10 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                 });
               },
               icon: const Icon(Icons.exit_to_app, color: Colors.red),
-              label: const Text('Keluar dari Grup', style: TextStyle(color: Colors.red)),
+              label: const Text(
+                'Keluar dari Grup',
+                style: TextStyle(color: Colors.red),
+              ),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Colors.red),
               ),
@@ -1370,4 +1439,3 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
     );
   }
 }
-

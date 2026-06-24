@@ -92,7 +92,9 @@ class _MainNavigationState extends State<MainNavigation> {
             children: [
               Icon(
                 isSelected ? activeIcon : icon,
-                color: isSelected ? activeColor : (isDark ? Colors.white70 : Colors.grey.shade700),
+                color: isSelected
+                    ? activeColor
+                    : (isDark ? Colors.white70 : Colors.grey.shade700),
                 size: 22,
               ),
               const SizedBox(width: 16),
@@ -101,7 +103,9 @@ class _MainNavigationState extends State<MainNavigation> {
                 style: TextStyle(
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                   fontSize: 14,
-                  color: isSelected ? activeColor : (isDark ? Colors.white70 : Colors.grey.shade800),
+                  color: isSelected
+                      ? activeColor
+                      : (isDark ? Colors.white70 : Colors.grey.shade800),
                 ),
               ),
             ],
@@ -115,22 +119,15 @@ class _MainNavigationState extends State<MainNavigation> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 900;
 
     final List<Widget> screens = [
-      DashboardScreen(
-        user: _currentUser,
-        onUserUpdated: _onUserUpdated,
-      ),
-      ExploreScreen(
-        user: _currentUser,
-      ),
+      DashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated),
+      ExploreScreen(user: _currentUser),
       const DirectMessageScreen(),
-      NotificationsScreen(
-        userId: _currentUser.id,
-      ),
+      NotificationsScreen(userId: _currentUser.id),
       ProfileScreen(
         user: _currentUser,
         onUserUpdated: _onUserUpdated,
@@ -150,7 +147,9 @@ class _MainNavigationState extends State<MainNavigation> {
                 color: isDark ? const Color(0xFF141221) : Colors.white,
                 border: Border(
                   right: BorderSide(
-                    color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
+                    color: isDark
+                        ? const Color(0xFF2D2A3E)
+                        : Colors.grey.shade200,
                     width: 1,
                   ),
                 ),
@@ -235,7 +234,9 @@ class _MainNavigationState extends State<MainNavigation> {
                     decoration: BoxDecoration(
                       border: Border(
                         top: BorderSide(
-                          color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
+                          color: isDark
+                              ? const Color(0xFF2D2A3E)
+                              : Colors.grey.shade200,
                         ),
                       ),
                     ),
@@ -243,12 +244,18 @@ class _MainNavigationState extends State<MainNavigation> {
                       children: [
                         CircleAvatar(
                           radius: 18,
-                          backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+                          backgroundColor: theme.colorScheme.primary.withValues(
+                            alpha: 0.2,
+                          ),
                           backgroundImage: _currentUser.avatarUrl != null
                               ? NetworkImage(_currentUser.avatarUrl!)
                               : null,
                           child: _currentUser.avatarUrl == null
-                              ? Icon(Icons.person, size: 20, color: theme.colorScheme.primary)
+                              ? Icon(
+                                  Icons.person,
+                                  size: 20,
+                                  color: theme.colorScheme.primary,
+                                )
                               : null,
                         ),
                         const SizedBox(width: 10),
@@ -272,20 +279,28 @@ class _MainNavigationState extends State<MainNavigation> {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                  color: isDark
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600,
                                 ),
                               ),
                             ],
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.logout_rounded, color: Colors.redAccent, size: 20),
+                          icon: const Icon(
+                            Icons.logout_rounded,
+                            color: Colors.redAccent,
+                            size: 20,
+                          ),
                           onPressed: () {
                             showDialog(
                               context: context,
                               builder: (context) => AlertDialog(
                                 title: const Text('Keluar Akun'),
-                                content: const Text('Apakah Anda yakin ingin keluar dari Kreavana?'),
+                                content: const Text(
+                                  'Apakah Anda yakin ingin keluar dari Kreavana?',
+                                ),
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(context),
@@ -296,7 +311,10 @@ class _MainNavigationState extends State<MainNavigation> {
                                       Navigator.pop(context);
                                       _onLogout();
                                     },
-                                    child: const Text('Keluar', style: TextStyle(color: Colors.red)),
+                                    child: const Text(
+                                      'Keluar',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -312,7 +330,9 @@ class _MainNavigationState extends State<MainNavigation> {
             // Page body (Centered max-width constraint for desktop look)
             Expanded(
               child: Container(
-                color: isDark ? theme.scaffoldBackgroundColor : const Color(0xFFF8FAFC),
+                color: isDark
+                    ? theme.scaffoldBackgroundColor
+                    : const Color(0xFFF8FAFC),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1200),
@@ -321,11 +341,15 @@ class _MainNavigationState extends State<MainNavigation> {
                         color: theme.scaffoldBackgroundColor,
                         border: Border(
                           left: BorderSide(
-                            color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
+                            color: isDark
+                                ? const Color(0xFF2D2A3E)
+                                : Colors.grey.shade200,
                             width: 1,
                           ),
                           right: BorderSide(
-                            color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
+                            color: isDark
+                                ? const Color(0xFF2D2A3E)
+                                : Colors.grey.shade200,
                             width: 1,
                           ),
                         ),
@@ -347,10 +371,7 @@ class _MainNavigationState extends State<MainNavigation> {
     // Mobile Layout
     return Scaffold(
       extendBody: true,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: screens,
-      ),
+      body: IndexedStack(index: _currentIndex, children: screens),
       bottomNavigationBar: CustomDiamondBottomBar(
         currentIndex: _currentIndex,
         isDark: isDark,

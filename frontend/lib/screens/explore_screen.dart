@@ -75,10 +75,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
         _filteredOpportunities = _opportunities;
       } else {
         _filteredOpportunities = _opportunities
-            .where((op) =>
-                op.title.toLowerCase().contains(query) ||
-                (op.description?.toLowerCase().contains(query) ?? false) ||
-                (op.location?.toLowerCase().contains(query) ?? false))
+            .where(
+              (op) =>
+                  op.title.toLowerCase().contains(query) ||
+                  (op.description?.toLowerCase().contains(query) ?? false) ||
+                  (op.location?.toLowerCase().contains(query) ?? false),
+            )
             .toList();
       }
     });
@@ -127,7 +129,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1200),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: SearchBar(
                   controller: _searchController,
                   hintText: 'Cari peluang, lokasi, atau deskripsi...',
@@ -139,7 +144,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         onPressed: () {
                           _searchController.clear();
                         },
-                      )
+                      ),
                   ],
                   elevation: WidgetStateProperty.all(0),
                   backgroundColor: WidgetStateProperty.all(
@@ -149,7 +154,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                       side: BorderSide(
-                        color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                        color: isDark
+                            ? AppTheme.inputBorder
+                            : Colors.grey.shade200,
                       ),
                     ),
                   ),
@@ -182,11 +189,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       child: FilterChip(
                         label: Text(opt['name']!),
                         selected: isSelected,
-                        selectedColor: itemColor.withOpacity(0.2),
+                        selectedColor: itemColor.withValues(alpha: 0.2),
                         checkmarkColor: itemColor,
                         labelStyle: TextStyle(
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          color: isSelected ? itemColor : (isDark ? Colors.white70 : Colors.black87),
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: isSelected
+                              ? itemColor
+                              : (isDark ? Colors.white70 : Colors.black87),
                         ),
                         onSelected: (val) {
                           setState(() {
@@ -200,7 +211,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         side: BorderSide(
                           color: isSelected
                               ? itemColor
-                              : (isDark ? AppTheme.inputBorder : Colors.grey.shade300),
+                              : (isDark
+                                    ? AppTheme.inputBorder
+                                    : Colors.grey.shade300),
                         ),
                       ),
                     );
@@ -215,81 +228,91 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : _filteredOpportunities.isEmpty
-                          ? ListView(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(48.0),
-                                  child: Column(
-                                    children: [
-                                      Icon(Icons.search_off_outlined,
-                                          size: 60, color: Colors.grey.shade400),
-                                      const SizedBox(height: 16),
-                                      const Text(
-                                        'Peluang tidak ditemukan',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        'Coba gunakan filter lain atau ubah kata pencarian Anda.',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ],
+                      ? ListView(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(48.0),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.search_off_outlined,
+                                    size: 60,
+                                    color: Colors.grey.shade400,
                                   ),
-                                ),
-                              ],
-                            )
-                          : isDesktop
-                              ? GridView.builder(
-                                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 2,
-                                    crossAxisSpacing: 16,
-                                    mainAxisSpacing: 16,
-                                    childAspectRatio: 2.5,
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'Peluang tidak ditemukan',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
                                   ),
-                                  itemCount: _filteredOpportunities.length,
-                                  itemBuilder: (context, index) {
-                                    final op = _filteredOpportunities[index];
-                                    return FeatureCard(
-                                      opportunity: op,
-                                      accentColor: _getPihakColor(op.pihakSlug),
-                                      onTap: () {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Membuka detail "${op.title}"...'),
-                                            behavior: SnackBarBehavior.floating,
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  },
-                                )
-                              : ListView.builder(
-                                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-                                  itemCount: _filteredOpportunities.length,
-                                  itemBuilder: (context, index) {
-                                    final op = _filteredOpportunities[index];
-                                    return FeatureCard(
-                                      opportunity: op,
-                                      accentColor: _getPihakColor(op.pihakSlug),
-                                      onTap: () {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Membuka detail "${op.title}"...'),
-                                            behavior: SnackBarBehavior.floating,
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  },
-                                ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Coba gunakan filter lain atau ubah kata pencarian Anda.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: isDark
+                                          ? AppTheme.textMuted
+                                          : Colors.grey.shade600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      : isDesktop
+                      ? GridView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                                childAspectRatio: 2.5,
+                              ),
+                          itemCount: _filteredOpportunities.length,
+                          itemBuilder: (context, index) {
+                            final op = _filteredOpportunities[index];
+                            return FeatureCard(
+                              opportunity: op,
+                              accentColor: _getPihakColor(op.pihakSlug),
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Membuka detail "${op.title}"...',
+                                    ),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                          itemCount: _filteredOpportunities.length,
+                          itemBuilder: (context, index) {
+                            final op = _filteredOpportunities[index];
+                            return FeatureCard(
+                              opportunity: op,
+                              accentColor: _getPihakColor(op.pihakSlug),
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Membuka detail "${op.title}"...',
+                                    ),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
                 ),
               ),
             ],

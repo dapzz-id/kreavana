@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'app/theme.dart';
 import 'models/user_model.dart';
 import 'services/auth_service.dart';
 import 'services/push_notification_service.dart';
+import 'services/call_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_navigation.dart';
+import 'widgets/global_call_overlay.dart';
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Transparent status bar for all pages on mobile
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+    statusBarBrightness: Brightness.light,
+  ));
+
   await PushNotificationService.initialize();
   
   UserModel? initialUser;
@@ -17,6 +28,9 @@ void main() async {
     final loggedIn = await AuthService.isLoggedIn();
     if (loggedIn) {
       initialUser = await AuthService.getCurrentUser();
+      if (initialUser != null) {
+        CallService().initPusher();
+      }
     }
   } catch (_) {
     // Session load failed, proceed to login screen
@@ -44,6 +58,14 @@ class KreavanaApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: currentMode,
+          builder: (context, child) {
+            return Stack(
+              children: [
+                child ?? const SizedBox.shrink(),
+                const GlobalCallOverlay(),
+              ],
+            );
+          },
           home: initialUser != null
               ? MainNavigation(initialUser: initialUser!)
               : const LoginScreen(),

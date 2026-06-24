@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../services/chat_service.dart';
-import '../app/theme.dart';
 
 class GroupInvitationsScreen extends StatefulWidget {
   const GroupInvitationsScreen({super.key});

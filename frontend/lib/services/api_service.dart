@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
@@ -10,16 +9,13 @@ class ApiService {
   static final http.Client _client = http.Client();
 
   // Secara dinamis mendeteksi platform:
-  // - Flutter Web / Windows / macOS: menggunakan localhost:8000 (Laravel Default)
-  // - Android Emulator: menggunakan 10.0.2.2:8000
+  // - Flutter Web / Windows / macOS / Android Asli: menggunakan IP komputer di jaringan lokal
+  // Ganti IP di bawah ini dengan IPv4 komputer Anda jika berubah
+  static const String hostIp = '192.168.0.103';
+  static const String keyPusher = 'cuzkfya73cpnszss3vc2';
+
   static String get baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:8000/api';
-    }
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8000/api';
-    }
-    return 'http://localhost:8000/api';
+    return 'http://$hostIp:8000/api';
   }
 
   static bool _isRefreshing = false;

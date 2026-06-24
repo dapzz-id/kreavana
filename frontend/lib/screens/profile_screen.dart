@@ -117,10 +117,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (result['success'] == true) {
         // Refresh local profile
         _loadProfileDetails();
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Pengajuan Kreator untuk Kategori ${category.toUpperCase()} berhasil disetujui!'),
+            content: Text(
+              'Pengajuan Kreator untuk Kategori ${category.toUpperCase()} berhasil disetujui!',
+            ),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.green.shade700,
           ),
@@ -157,7 +159,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 context: context,
                 builder: (context) => AlertDialog(
                   title: const Text('Keluar Akun'),
-                  content: const Text('Apakah Anda yakin ingin keluar dari Kreavana?'),
+                  content: const Text(
+                    'Apakah Anda yakin ingin keluar dari Kreavana?',
+                  ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
@@ -168,7 +172,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Navigator.pop(context);
                         widget.onLogout();
                       },
-                      child: const Text('Keluar', style: TextStyle(color: Colors.red)),
+                      child: const Text(
+                        'Keluar',
+                        style: TextStyle(color: Colors.red),
+                      ),
                     ),
                   ],
                 ),
@@ -189,7 +196,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       // Profile Header Icon
                       CircleAvatar(
                         radius: 45,
-                        backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                        backgroundColor: theme.colorScheme.primary.withValues(
+                          alpha: 0.1,
+                        ),
                         child: Icon(
                           widget.user.role == 'creator'
                               ? Icons.verified_user_rounded
@@ -201,7 +210,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 12),
                       Text(
                         widget.user.name,
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -209,20 +221,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: widget.user.role == 'creator'
-                              ? Colors.green.shade100.withOpacity(0.8)
+                              ? Colors.green.shade100.withValues(alpha: 0.8)
                               : Colors.grey.shade200,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          widget.user.role == 'creator' ? 'CREATOR / MITRA' : 'KLIEN / USER',
+                          widget.user.role == 'creator'
+                              ? 'CREATOR / MITRA'
+                              : 'KLIEN / USER',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -241,7 +260,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: isDark ? AppTheme.cardBg : Colors.white,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                            color: isDark
+                                ? AppTheme.inputBorder
+                                : Colors.grey.shade200,
                             width: 1,
                           ),
                         ),
@@ -250,7 +271,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           children: [
                             const Text(
                               'Informasi Pribadi',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             const SizedBox(height: 16),
                             TextFormField(
@@ -282,11 +306,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               decoration: InputDecoration(
                                 labelText: 'Username',
                                 filled: true,
-                                fillColor: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
+                                fillColor: isDark
+                                    ? Colors.grey.shade900
+                                    : Colors.grey.shade50,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                prefixIcon: const Icon(Icons.alternate_email_rounded),
+                                prefixIcon: const Icon(
+                                  Icons.alternate_email_rounded,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -296,7 +324,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               decoration: InputDecoration(
                                 labelText: 'Email',
                                 filled: true,
-                                fillColor: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
+                                fillColor: isDark
+                                    ? Colors.grey.shade900
+                                    : Colors.grey.shade50,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),

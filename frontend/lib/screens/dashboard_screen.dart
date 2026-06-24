@@ -178,9 +178,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       SnackBar(
         content: Text('Fitur "$action" berhasil dipicu! (Demo)'),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -199,9 +197,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.08),
+            color: color.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withOpacity(0.15)),
+            border: Border.all(color: color.withValues(alpha: 0.15)),
           ),
           child: Row(
             children: [
@@ -239,7 +237,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: pihakColor.withOpacity(0.2),
+              backgroundColor: pihakColor.withValues(alpha: 0.2),
               backgroundImage: widget.user.avatarUrl != null
                   ? NetworkImage(widget.user.avatarUrl!)
                   : null,
@@ -253,7 +251,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text(
                   'Halo, ${widget.user.name}',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   '@${widget.user.username}',
@@ -286,13 +287,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: RoleToggle(
               currentRole: _currentRole,
-              isCreator: widget.user.role == 'creator' && widget.user.isCreatorApproved,
+              isCreator:
+                  widget.user.role == 'creator' &&
+                  widget.user.isCreatorApproved,
               onRoleChanged: _onRoleChanged,
               onApplyPressed: () {
                 // Navigate to profile tab to apply
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Silakan ajukan menjadi Creator melalui Tab Profil.'),
+                    content: Text(
+                      'Silakan ajukan menjadi Creator melalui Tab Profil.',
+                    ),
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
@@ -333,13 +338,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? itemColor.withOpacity(0.15)
-                              : (isDark ? AppTheme.cardBg : Colors.grey.shade100),
+                              ? itemColor.withValues(alpha: 0.15)
+                              : (isDark
+                                    ? AppTheme.cardBg
+                                    : Colors.grey.shade100),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: isSelected
                                 ? itemColor
-                                : (isDark ? AppTheme.inputBorder : Colors.transparent),
+                                : (isDark
+                                      ? AppTheme.inputBorder
+                                      : Colors.transparent),
                             width: 1.5,
                           ),
                         ),
@@ -348,7 +357,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           children: [
                             Icon(
                               item['icon'] as IconData,
-                              color: isSelected ? itemColor : Colors.grey.shade600,
+                              color: isSelected
+                                  ? itemColor
+                                  : Colors.grey.shade600,
                               size: 24,
                             ),
                             const SizedBox(height: 6),
@@ -359,10 +370,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 10,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                                 color: isSelected
                                     ? (isDark ? Colors.white : itemColor)
-                                    : (isDark ? AppTheme.textMuted : Colors.grey.shade700),
+                                    : (isDark
+                                          ? AppTheme.textMuted
+                                          : Colors.grey.shade700),
                               ),
                             ),
                           ],
@@ -377,14 +392,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
               // 2. Stats Grid
               Text(
                 'Statistik ${_pihakList.firstWhere((e) => e['slug'] == _selectedPihak)['name']} (${_currentRole == 'creator' ? 'Creator' : 'Klien'})',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 12),
               _isLoading
-                  ? const Center(child: Padding(
-                      padding: EdgeInsets.all(24.0),
-                      child: CircularProgressIndicator(),
-                    ))
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
                   : GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
@@ -418,7 +438,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           AiMatchingBanner(
-                            onTap: () => _showDummyActionMessage('Pencarian Pintar AI'),
+                            onTap: () =>
+                                _showDummyActionMessage('Pencarian Pintar AI'),
                           ),
                           const SizedBox(height: 24),
                           Row(
@@ -426,15 +447,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             children: [
                               const Text(
                                 'Peluang & Kolaborasi Terbaru',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               TextButton(
                                 onPressed: () {
-                                  _showDummyActionMessage('Lihat Semua Peluang');
+                                  _showDummyActionMessage(
+                                    'Lihat Semua Peluang',
+                                  );
                                 },
                                 child: Text(
                                   'Lihat Semua',
-                                  style: TextStyle(color: pihakColor, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    color: pihakColor,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ],
@@ -443,37 +472,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           _isLoading
                               ? const SizedBox()
                               : _opportunities.isEmpty
-                                  ? Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.all(24),
-                                      decoration: BoxDecoration(
-                                        color: isDark ? AppTheme.cardBg : Colors.grey.shade100,
-                                        borderRadius: BorderRadius.circular(16),
+                              ? Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(24),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? AppTheme.cardBg
+                                        : Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: const Column(
+                                    children: [
+                                      Icon(
+                                        Icons.work_off_outlined,
+                                        color: Colors.grey,
+                                        size: 40,
                                       ),
-                                      child: const Column(
-                                        children: [
-                                          Icon(Icons.work_off_outlined, color: Colors.grey, size: 40),
-                                          SizedBox(height: 10),
-                                          Text(
-                                            'Belum ada peluang tersedia di kategori ini.',
-                                            style: TextStyle(color: Colors.grey, fontSize: 13),
-                                          ),
-                                        ],
+                                      SizedBox(height: 10),
+                                      Text(
+                                        'Belum ada peluang tersedia di kategori ini.',
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 13,
+                                        ),
                                       ),
-                                    )
-                                  : ListView.builder(
-                                      shrinkWrap: true,
-                                      physics: const NeverScrollableScrollPhysics(),
-                                      itemCount: _opportunities.length,
-                                      itemBuilder: (context, index) {
-                                        final op = _opportunities[index];
-                                        return FeatureCard(
-                                          opportunity: op,
-                                          accentColor: pihakColor,
-                                          onTap: () => _showDummyActionMessage(op.title),
-                                        );
-                                      },
-                                    ),
+                                    ],
+                                  ),
+                                )
+                              : ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: _opportunities.length,
+                                  itemBuilder: (context, index) {
+                                    final op = _opportunities[index];
+                                    return FeatureCard(
+                                      opportunity: op,
+                                      accentColor: pihakColor,
+                                      onTap: () =>
+                                          _showDummyActionMessage(op.title),
+                                    );
+                                  },
+                                ),
                         ],
                       ),
                     ),
@@ -486,7 +525,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           const Text(
                             'Tindakan Cepat',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           Container(
@@ -495,7 +537,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               color: isDark ? AppTheme.cardBg : Colors.white,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                                color: isDark
+                                    ? AppTheme.inputBorder
+                                    : Colors.grey.shade200,
                               ),
                             ),
                             child: Column(
@@ -505,19 +549,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         label: 'Update Portofolio',
                                         icon: Icons.portrait,
                                         color: pihakColor,
-                                        onTap: () => _showDummyActionMessage('Update Portofolio'),
+                                        onTap: () => _showDummyActionMessage(
+                                          'Update Portofolio',
+                                        ),
                                       ),
                                       _buildSidebarQuickAction(
                                         label: 'Cari Proyek',
                                         icon: Icons.search,
                                         color: Colors.teal,
-                                        onTap: () => _showDummyActionMessage('Cari Proyek'),
+                                        onTap: () => _showDummyActionMessage(
+                                          'Cari Proyek',
+                                        ),
                                       ),
                                       _buildSidebarQuickAction(
                                         label: 'Kirim Proposal',
                                         icon: Icons.send,
                                         color: Colors.amber.shade700,
-                                        onTap: () => _showDummyActionMessage('Kirim Proposal'),
+                                        onTap: () => _showDummyActionMessage(
+                                          'Kirim Proposal',
+                                        ),
                                       ),
                                     ]
                                   : [
@@ -525,19 +575,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         label: 'Buat Peluang',
                                         icon: Icons.add_circle_outline,
                                         color: pihakColor,
-                                        onTap: () => _showDummyActionMessage('Buat Peluang'),
+                                        onTap: () => _showDummyActionMessage(
+                                          'Buat Peluang',
+                                        ),
                                       ),
                                       _buildSidebarQuickAction(
                                         label: 'Cari Vendor',
                                         icon: Icons.people_alt_outlined,
                                         color: Colors.purple,
-                                        onTap: () => _showDummyActionMessage('Cari Vendor'),
+                                        onTap: () => _showDummyActionMessage(
+                                          'Cari Vendor',
+                                        ),
                                       ),
                                       _buildSidebarQuickAction(
                                         label: 'Undang Kolaborasi',
                                         icon: Icons.handshake_outlined,
                                         color: Colors.teal,
-                                        onTap: () => _showDummyActionMessage('Undang Kolaborasi'),
+                                        onTap: () => _showDummyActionMessage(
+                                          'Undang Kolaborasi',
+                                        ),
                                       ),
                                     ],
                             ),
@@ -553,14 +609,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     // 3. AI Banner
                     AiMatchingBanner(
-                      onTap: () => _showDummyActionMessage('Pencarian Pintar AI'),
+                      onTap: () =>
+                          _showDummyActionMessage('Pencarian Pintar AI'),
                     ),
                     const SizedBox(height: 24),
 
                     // 4. Quick Actions
                     const Text(
                       'Tindakan Cepat',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -571,19 +631,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 label: 'Update Portofolio',
                                 icon: Icons.portrait,
                                 color: pihakColor,
-                                onTap: () => _showDummyActionMessage('Update Portofolio'),
+                                onTap: () => _showDummyActionMessage(
+                                  'Update Portofolio',
+                                ),
                               ),
                               QuickActionButton(
                                 label: 'Cari Proyek',
                                 icon: Icons.search,
                                 color: Colors.teal,
-                                onTap: () => _showDummyActionMessage('Cari Proyek'),
+                                onTap: () =>
+                                    _showDummyActionMessage('Cari Proyek'),
                               ),
                               QuickActionButton(
                                 label: 'Kirim Proposal',
                                 icon: Icons.send,
                                 color: Colors.amber.shade700,
-                                onTap: () => _showDummyActionMessage('Kirim Proposal'),
+                                onTap: () =>
+                                    _showDummyActionMessage('Kirim Proposal'),
                               ),
                             ]
                           : [
@@ -591,19 +655,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 label: 'Buat Peluang',
                                 icon: Icons.add_circle_outline,
                                 color: pihakColor,
-                                onTap: () => _showDummyActionMessage('Buat Peluang'),
+                                onTap: () =>
+                                    _showDummyActionMessage('Buat Peluang'),
                               ),
                               QuickActionButton(
                                 label: 'Cari Vendor',
                                 icon: Icons.people_alt_outlined,
                                 color: Colors.purple,
-                                onTap: () => _showDummyActionMessage('Cari Vendor'),
+                                onTap: () =>
+                                    _showDummyActionMessage('Cari Vendor'),
                               ),
                               QuickActionButton(
                                 label: 'Undang Kolaborasi',
                                 icon: Icons.handshake_outlined,
                                 color: Colors.teal,
-                                onTap: () => _showDummyActionMessage('Undang Kolaborasi'),
+                                onTap: () => _showDummyActionMessage(
+                                  'Undang Kolaborasi',
+                                ),
                               ),
                             ],
                     ),
@@ -615,7 +683,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       children: [
                         const Text(
                           'Peluang & Kolaborasi Terbaru',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         TextButton(
                           onPressed: () {
@@ -623,7 +694,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           },
                           child: Text(
                             'Lihat Semua',
-                            style: TextStyle(color: pihakColor, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              color: pihakColor,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -632,37 +706,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     _isLoading
                         ? const SizedBox()
                         : _opportunities.isEmpty
-                            ? Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(24),
-                                decoration: BoxDecoration(
-                                  color: isDark ? AppTheme.cardBg : Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(16),
+                        ? Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? AppTheme.cardBg
+                                  : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Column(
+                              children: [
+                                Icon(
+                                  Icons.work_off_outlined,
+                                  color: Colors.grey,
+                                  size: 40,
                                 ),
-                                child: const Column(
-                                  children: [
-                                    Icon(Icons.work_off_outlined, color: Colors.grey, size: 40),
-                                    SizedBox(height: 10),
-                                    Text(
-                                      'Belum ada peluang tersedia di kategori ini.',
-                                      style: TextStyle(color: Colors.grey, fontSize: 13),
-                                    ),
-                                  ],
+                                SizedBox(height: 10),
+                                Text(
+                                  'Belum ada peluang tersedia di kategori ini.',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 13,
+                                  ),
                                 ),
-                              )
-                            : ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: _opportunities.length,
-                                itemBuilder: (context, index) {
-                                  final op = _opportunities[index];
-                                  return FeatureCard(
-                                    opportunity: op,
-                                    accentColor: pihakColor,
-                                    onTap: () => _showDummyActionMessage(op.title),
-                                  );
-                                },
-                              ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _opportunities.length,
+                            itemBuilder: (context, index) {
+                              final op = _opportunities[index];
+                              return FeatureCard(
+                                opportunity: op,
+                                accentColor: pihakColor,
+                                onTap: () => _showDummyActionMessage(op.title),
+                              );
+                            },
+                          ),
                   ],
                 ),
             ],

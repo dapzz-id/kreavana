@@ -44,18 +44,20 @@ class CustomDiamondBottomBar extends StatelessWidget {
               color: bgColor,
               borderRadius: BorderRadius.circular(28),
               border: Border.all(
-                color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey.shade200,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.grey.shade200,
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.12),
+                  color: Colors.black.withValues(alpha: 0.12),
                   blurRadius: 24,
                   spreadRadius: 2,
                   offset: const Offset(0, -4),
                 ),
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
+                  color: Colors.black.withValues(alpha: 0.06),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -127,7 +129,7 @@ class CustomDiamondBottomBar extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -143,10 +145,10 @@ class CustomDiamondBottomBar extends StatelessWidget {
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: primaryColor.withOpacity(0.35),
+                            color: primaryColor.withValues(alpha: 0.35),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
-                          )
+                          ),
                         ],
                       ),
                       child: Transform.rotate(

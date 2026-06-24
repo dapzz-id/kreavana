@@ -10,7 +10,8 @@ class CreatorApplicationCard extends StatefulWidget {
     required String skills,
     required String portfolio,
     required String experience,
-  }) onApply;
+  })
+  onApply;
 
   const CreatorApplicationCard({
     super.key,
@@ -71,7 +72,7 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.green.shade50.withOpacity(isDark ? 0.1 : 0.9),
+          color: Colors.green.shade50.withValues(alpha: isDark ? 0.1 : 0.9),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.green.shade300, width: 1),
         ),
@@ -80,7 +81,11 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
           children: [
             Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.green.shade700, size: 28),
+                Icon(
+                  Icons.check_circle,
+                  color: Colors.green.shade700,
+                  size: 28,
+                ),
                 const SizedBox(width: 10),
                 Text(
                   'Kreator Aktif',
@@ -105,7 +110,9 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
               'Anda sekarang dapat beralih ke mode Creator di halaman Dashboard untuk melihat statistik proyek, mengelola portofolio, dan menerima tawaran kolaborasi.',
               style: TextStyle(
                 fontSize: 13,
-                color: isDark ? Colors.white60 : Colors.green.shade800.withOpacity(0.8),
+                color: isDark
+                    ? Colors.white60
+                    : Colors.green.shade800.withValues(alpha: 0.8),
               ),
             ),
           ],
@@ -119,7 +126,7 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.amber.shade50.withOpacity(isDark ? 0.1 : 0.9),
+          color: Colors.amber.shade50.withValues(alpha: isDark ? 0.1 : 0.9),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.amber.shade300, width: 1),
         ),
@@ -128,7 +135,11 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
           children: [
             Row(
               children: [
-                Icon(Icons.hourglass_empty, color: Colors.amber.shade700, size: 28),
+                Icon(
+                  Icons.hourglass_empty,
+                  color: Colors.amber.shade700,
+                  size: 28,
+                ),
                 const SizedBox(width: 10),
                 Text(
                   'Pengajuan Diproses',
@@ -171,10 +182,10 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
         boxShadow: !isDark
             ? [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
+                  color: Colors.black.withValues(alpha: 0.02),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
-                )
+                ),
               ]
             : null,
       ),
@@ -196,7 +207,7 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Dropdown Kategori Pihak
             DropdownButtonFormField<String>(
               value: _selectedCategory,
@@ -205,7 +216,10 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
               items: _categories.map((cat) {
                 return DropdownMenuItem<String>(
@@ -267,7 +281,8 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
               maxLines: 2,
               decoration: InputDecoration(
                 labelText: 'Pengalaman (Opsional)',
-                hintText: 'Sebutkan beberapa proyek atau pekerjaan sebelumnya...',
+                hintText:
+                    'Sebutkan beberapa proyek atau pekerjaan sebelumnya...',
                 alignLabelWithHint: true,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
