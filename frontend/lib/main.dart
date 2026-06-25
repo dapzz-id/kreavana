@@ -36,6 +36,15 @@ void main() async {
     // Session load failed, proceed to login screen
   }
 
+  FlutterError.onError = (FlutterErrorDetails details) {
+    // Ignore GPU context lost errors
+    if (details.toString().contains('context') || 
+        details.toString().contains('LateInitializationError')) {
+      return;
+    }
+    FlutterError.presentError(details);
+  };
+
   runApp(KreavanaApp(initialUser: initialUser));
 }
 

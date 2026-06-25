@@ -94,7 +94,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void didUpdateWidget(covariant DashboardScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // If user model was updated in parent (e.g. role changed or approval status changed), update local state
     if (widget.user.role != oldWidget.user.role ||
         widget.user.isCreatorApproved != oldWidget.user.isCreatorApproved ||
         widget.user.selectedPihak != oldWidget.user.selectedPihak) {
@@ -135,17 +134,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _onPihakSelected(String pihakSlug) async {
-    setState(() {
-      _selectedPihak = pihakSlug;
-    });
+    setState(() => _selectedPihak = pihakSlug);
 
-    // Update selected_pihak on server
     await ProfileService.updateProfile(
       userId: widget.user.id,
       selectedPihak: pihakSlug,
     );
 
-    // Refresh user model in parent
     final updatedUser = widget.user.copyWith(selectedPihak: pihakSlug);
     widget.onUserUpdated(updatedUser);
 
@@ -153,11 +148,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _onRoleChanged(String role) async {
-    setState(() {
-      _currentRole = role;
-    });
+    setState(() => _currentRole = role);
 
-    // Update role locally and refresh stats
     await ProfileService.updateProfile(
       userId: widget.user.id,
       selectedPihak: _selectedPihak,
@@ -206,20 +198,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Icon(icon, color: color, size: 20),
               const SizedBox(width: 14),
-              Text(
-                label,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: color,
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: color,
+                  ),
                 ),
               ),
-              const Spacer(),
               Icon(Icons.chevron_right, color: color, size: 16),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  // ── Helper: mobile quick-action row ────────────────────────────────────────
+  // Membungkus setiap QuickActionButton dengan Expanded agar Row tidak overflow
+  // di layar sempit. mainAxisAlignment dibiarkan start karena Expanded
+  // sudah mendistribusikan ruang secara merata.
+  Widget _buildMobileQuickActions(List<Widget> buttons) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: buttons
+          .map((btn) => Expanded(child: btn))
+          .toList(),
     );
   }
 
@@ -249,10 +255,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text(
                   'Halo, ${widget.user.name}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                 ),
                 Text(
                   '@${widget.user.username}',
@@ -267,9 +270,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         actions: [
           IconButton(
-            icon: Icon(
-              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-            ),
+            icon: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
             onPressed: () {
               themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
             },
@@ -326,16 +327,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         decoration: BoxDecoration(
                           color: isSelected
                               ? itemColor.withValues(alpha: 0.15)
-                              : (isDark
-                                    ? AppTheme.cardBg
-                                    : Colors.grey.shade100),
+                              : (isDark ? AppTheme.cardBg : Colors.grey.shade100),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: isSelected
                                 ? itemColor
-                                : (isDark
-                                      ? AppTheme.inputBorder
-                                      : Colors.transparent),
+                                : (isDark ? AppTheme.inputBorder : Colors.transparent),
                             width: 1.5,
                           ),
                         ),
@@ -344,9 +341,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           children: [
                             Icon(
                               item['icon'] as IconData,
-                              color: isSelected
-                                  ? itemColor
-                                  : Colors.grey.shade600,
+                              color: isSelected ? itemColor : Colors.grey.shade600,
                               size: 24,
                             ),
                             const SizedBox(height: 6),
@@ -357,14 +352,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 10,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                 color: isSelected
                                     ? (isDark ? Colors.white : itemColor)
-                                    : (isDark
-                                          ? AppTheme.textMuted
-                                          : Colors.grey.shade700),
+                                    : (isDark ? AppTheme.textMuted : Colors.grey.shade700),
                               ),
                             ),
                           ],
@@ -379,10 +370,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               // 2. Stats Grid
               Text(
                 'Statistik ${_pihakList.firstWhere((e) => e['slug'] == _selectedPihak)['name']} (${_currentRole == 'creator' ? 'Creator' : 'Klien'})',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               _isLoading
@@ -418,15 +406,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Left Column (Opportunities & AI Banner)
+                    // Left Column
                     Expanded(
                       flex: 2,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           AiMatchingBanner(
-                            onTap: () =>
-                                _showDummyActionMessage('Pencarian Pintar AI'),
+                            onTap: () => _showDummyActionMessage('Pencarian Pintar AI'),
                           ),
                           const SizedBox(height: 24),
                           Row(
@@ -434,23 +421,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             children: [
                               const Text(
                                 'Peluang & Kolaborasi Terbaru',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                               ),
                               TextButton(
-                                onPressed: () {
-                                  _showDummyActionMessage(
-                                    'Lihat Semua Peluang',
-                                  );
-                                },
+                                onPressed: () => _showDummyActionMessage('Lihat Semua Peluang'),
                                 child: Text(
                                   'Lihat Semua',
-                                  style: TextStyle(
-                                    color: pihakColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: TextStyle(color: pihakColor, fontWeight: FontWeight.bold),
                                 ),
                               ),
                             ],
@@ -459,47 +436,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           _isLoading
                               ? const SizedBox()
                               : _opportunities.isEmpty
-                              ? Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(24),
-                                  decoration: BoxDecoration(
-                                    color: isDark
-                                        ? AppTheme.cardBg
-                                        : Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: const Column(
-                                    children: [
-                                      Icon(
-                                        Icons.work_off_outlined,
-                                        color: Colors.grey,
-                                        size: 40,
-                                      ),
-                                      SizedBox(height: 10),
-                                      Text(
-                                        'Belum ada peluang tersedia di kategori ini.',
-                                        style: TextStyle(
-                                          color: Colors.grey,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              : ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: _opportunities.length,
-                                  itemBuilder: (context, index) {
-                                    final op = _opportunities[index];
-                                    return FeatureCard(
-                                      opportunity: op,
-                                      accentColor: pihakColor,
-                                      onTap: () =>
-                                          _showDummyActionMessage(op.title),
-                                    );
-                                  },
-                                ),
+                                  ? _buildEmptyOpportunity(isDark)
+                                  : ListView.builder(
+                                      shrinkWrap: true,
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      itemCount: _opportunities.length,
+                                      itemBuilder: (context, index) {
+                                        final op = _opportunities[index];
+                                        return FeatureCard(
+                                          opportunity: op,
+                                          accentColor: pihakColor,
+                                          onTap: () => _showDummyActionMessage(op.title),
+                                        );
+                                      },
+                                    ),
                         ],
                       ),
                     ),
@@ -512,10 +462,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           const Text(
                             'Tindakan Cepat',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 12),
                           Container(
@@ -524,9 +471,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               color: isDark ? AppTheme.cardBg : Colors.white,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: isDark
-                                    ? AppTheme.inputBorder
-                                    : Colors.grey.shade200,
+                                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
                               ),
                             ),
                             child: Column(
@@ -536,25 +481,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         label: 'Update Portofolio',
                                         icon: Icons.portrait,
                                         color: pihakColor,
-                                        onTap: () => _showDummyActionMessage(
-                                          'Update Portofolio',
-                                        ),
+                                        onTap: () => _showDummyActionMessage('Update Portofolio'),
                                       ),
                                       _buildSidebarQuickAction(
                                         label: 'Cari Proyek',
                                         icon: Icons.search,
                                         color: Colors.teal,
-                                        onTap: () => _showDummyActionMessage(
-                                          'Cari Proyek',
-                                        ),
+                                        onTap: () => _showDummyActionMessage('Cari Proyek'),
                                       ),
                                       _buildSidebarQuickAction(
                                         label: 'Kirim Proposal',
                                         icon: Icons.send,
                                         color: Colors.amber.shade700,
-                                        onTap: () => _showDummyActionMessage(
-                                          'Kirim Proposal',
-                                        ),
+                                        onTap: () => _showDummyActionMessage('Kirim Proposal'),
                                       ),
                                     ]
                                   : [
@@ -562,25 +501,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         label: 'Buat Peluang',
                                         icon: Icons.add_circle_outline,
                                         color: pihakColor,
-                                        onTap: () => _showDummyActionMessage(
-                                          'Buat Peluang',
-                                        ),
+                                        onTap: () => _showDummyActionMessage('Buat Peluang'),
                                       ),
                                       _buildSidebarQuickAction(
                                         label: 'Cari Vendor',
                                         icon: Icons.people_alt_outlined,
                                         color: Colors.purple,
-                                        onTap: () => _showDummyActionMessage(
-                                          'Cari Vendor',
-                                        ),
+                                        onTap: () => _showDummyActionMessage('Cari Vendor'),
                                       ),
                                       _buildSidebarQuickAction(
                                         label: 'Undang Kolaborasi',
                                         icon: Icons.handshake_outlined,
                                         color: Colors.teal,
-                                        onTap: () => _showDummyActionMessage(
-                                          'Undang Kolaborasi',
-                                        ),
+                                        onTap: () => _showDummyActionMessage('Undang Kolaborasi'),
                                       ),
                                     ],
                             ),
@@ -596,45 +529,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     // 3. AI Banner
                     AiMatchingBanner(
-                      onTap: () =>
-                          _showDummyActionMessage('Pencarian Pintar AI'),
+                      onTap: () => _showDummyActionMessage('Pencarian Pintar AI'),
                     ),
                     const SizedBox(height: 24),
 
                     // 4. Quick Actions
+                    // FIX: tiap QuickActionButton dibungkus Expanded via _buildMobileQuickActions
                     const Text(
                       'Tindakan Cepat',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: _currentRole == 'creator'
+                    _buildMobileQuickActions(
+                      _currentRole == 'creator'
                           ? [
                               QuickActionButton(
                                 label: 'Update Portofolio',
                                 icon: Icons.portrait,
                                 color: pihakColor,
-                                onTap: () => _showDummyActionMessage(
-                                  'Update Portofolio',
-                                ),
+                                onTap: () => _showDummyActionMessage('Update Portofolio'),
                               ),
                               QuickActionButton(
                                 label: 'Cari Proyek',
                                 icon: Icons.search,
                                 color: Colors.teal,
-                                onTap: () =>
-                                    _showDummyActionMessage('Cari Proyek'),
+                                onTap: () => _showDummyActionMessage('Cari Proyek'),
                               ),
                               QuickActionButton(
                                 label: 'Kirim Proposal',
                                 icon: Icons.send,
                                 color: Colors.amber.shade700,
-                                onTap: () =>
-                                    _showDummyActionMessage('Kirim Proposal'),
+                                onTap: () => _showDummyActionMessage('Kirim Proposal'),
                               ),
                             ]
                           : [
@@ -642,23 +567,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 label: 'Buat Peluang',
                                 icon: Icons.add_circle_outline,
                                 color: pihakColor,
-                                onTap: () =>
-                                    _showDummyActionMessage('Buat Peluang'),
+                                onTap: () => _showDummyActionMessage('Buat Peluang'),
                               ),
                               QuickActionButton(
                                 label: 'Cari Vendor',
                                 icon: Icons.people_alt_outlined,
                                 color: Colors.purple,
-                                onTap: () =>
-                                    _showDummyActionMessage('Cari Vendor'),
+                                onTap: () => _showDummyActionMessage('Cari Vendor'),
                               ),
                               QuickActionButton(
                                 label: 'Undang Kolaborasi',
                                 icon: Icons.handshake_outlined,
                                 color: Colors.teal,
-                                onTap: () => _showDummyActionMessage(
-                                  'Undang Kolaborasi',
-                                ),
+                                onTap: () => _showDummyActionMessage('Undang Kolaborasi'),
                               ),
                             ],
                     ),
@@ -668,23 +589,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Peluang & Kolaborasi Terbaru',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                        const Expanded(
+                          child: Text(
+                            'Peluang & Kolaborasi Terbaru',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         TextButton(
-                          onPressed: () {
-                            _showDummyActionMessage('Lihat Semua Peluang');
-                          },
+                          onPressed: () => _showDummyActionMessage('Lihat Semua Peluang'),
                           child: Text(
                             'Lihat Semua',
-                            style: TextStyle(
-                              color: pihakColor,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(color: pihakColor, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
@@ -693,51 +609,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     _isLoading
                         ? const SizedBox()
                         : _opportunities.isEmpty
-                        ? Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? AppTheme.cardBg
-                                  : Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: const Column(
-                              children: [
-                                Icon(
-                                  Icons.work_off_outlined,
-                                  color: Colors.grey,
-                                  size: 40,
-                                ),
-                                SizedBox(height: 10),
-                                Text(
-                                  'Belum ada peluang tersedia di kategori ini.',
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: _opportunities.length,
-                            itemBuilder: (context, index) {
-                              final op = _opportunities[index];
-                              return FeatureCard(
-                                opportunity: op,
-                                accentColor: pihakColor,
-                                onTap: () => _showDummyActionMessage(op.title),
-                              );
-                            },
-                          ),
+                            ? _buildEmptyOpportunity(isDark)
+                            : ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _opportunities.length,
+                                itemBuilder: (context, index) {
+                                  final op = _opportunities[index];
+                                  return FeatureCard(
+                                    opportunity: op,
+                                    accentColor: pihakColor,
+                                    onTap: () => _showDummyActionMessage(op.title),
+                                  );
+                                },
+                              ),
                   ],
                 ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyOpportunity(bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardBg : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.work_off_outlined, color: Colors.grey, size: 40),
+          SizedBox(height: 10),
+          Text(
+            'Belum ada peluang tersedia di kategori ini.',
+            style: TextStyle(color: Colors.grey, fontSize: 13),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

@@ -11,7 +11,7 @@ class ApiService {
   // Secara dinamis mendeteksi platform:
   // - Flutter Web / Windows / macOS / Android Asli: menggunakan IP komputer di jaringan lokal
   // Ganti IP di bawah ini dengan IPv4 komputer Anda jika berubah
-  static const String hostIp = '192.168.0.103';
+  static const String hostIp = '10.110.212.165';
   static const String keyPusher = 'cuzkfya73cpnszss3vc2';
 
   static String get baseUrl {
