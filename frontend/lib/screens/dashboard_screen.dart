@@ -4,11 +4,16 @@ import '../models/user_model.dart';
 import '../models/opportunity_model.dart';
 import '../services/dashboard_service.dart';
 import '../services/profile_service.dart';
+import '../services/opportunity_service.dart';
 import '../widgets/role_toggle.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/quick_action_button.dart';
 import '../widgets/feature_card.dart';
 import '../widgets/ai_matching_banner.dart';
+import 'peluang_lokasi_screen.dart';
+import 'peluang_proyek_screen.dart';
+import '../widgets/opportunity_detail_sheet.dart';
+import '../widgets/dashboard_stats_charts.dart';
 import '../main.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -30,6 +35,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late String _selectedPihak;
   bool _isLoading = false;
   List<Map<String, String>> _stats = [];
+  Map<String, List<Map<String, String>>> _allPihakStats = {};
   List<OpportunityModel> _opportunities = [];
 
   final List<Map<String, dynamic>> _pihakList = [
@@ -109,20 +115,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final statsData = await DashboardService.getStats(
-        pihak: _selectedPihak,
-        roleType: _currentRole,
-      );
+      final slugs = _pihakList.map((p) => p['slug'] as String).toList();
 
-      final opportunitiesData = await DashboardService.getOpportunities(
-        pihak: _selectedPihak,
-        limit: 5,
-      );
+      final results = await Future.wait([
+        DashboardService.getStats(
+          pihak: _selectedPihak,
+          roleType: _currentRole,
+        ),
+        DashboardService.getAllPihakStats(
+          pihakSlugs: slugs,
+          roleType: _currentRole,
+        ),
+        DashboardService.getOpportunities(
+          pihak: _selectedPihak,
+          limit: 5,
+        ),
+      ]);
 
       if (mounted) {
         setState(() {
-          _stats = statsData;
-          _opportunities = opportunitiesData;
+          _stats = results[0] as List<Map<String, String>>;
+          _allPihakStats = results[1] as Map<String, List<Map<String, String>>>;
+          _opportunities = results[2] as List<OpportunityModel>;
           _isLoading = false;
         });
       }
@@ -169,11 +183,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _showDummyActionMessage(String action) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Fitur "$action" berhasil dipicu! (Demo)'),
+        content: Text('Fitur "$action" segera hadir!'),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
+  }
+
+  void _navigateToPeluangLokasi() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PeluangLokasiScreen(
+          user: widget.user,
+          pihakSlug: _selectedPihak,
+        ),
+      ),
+    );
+  }
+
+  void _navigateToPeluangProyek() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PeluangProyekScreen(
+          user: widget.user,
+          pihakSlug: _selectedPihak,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openOpportunityDetail(OpportunityModel op) async {
+    var detail = op;
+    final fetched = await OpportunityService.getDetail(op.id);
+    if (fetched != null) detail = fetched;
+    if (mounted) {
+      OpportunityDetailSheet.show(
+        context,
+        opportunity: detail,
+        currentUserId: widget.user.id,
+      );
+    }
   }
 
   Widget _buildSidebarQuickAction({
@@ -400,6 +449,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         );
                       },
                     ),
+              if (!_isLoading && _allPihakStats.isNotEmpty) ...[
+                const SizedBox(height: 28),
+                DashboardStatsCharts(
+                  pihakList: _pihakList,
+                  allPihakStats: _allPihakStats,
+                  selectedPihak: _selectedPihak,
+                  currentRole: _currentRole,
+                  isDark: isDark,
+                ),
+              ],
               const SizedBox(height: 24),
 
               if (isDesktop)
@@ -424,7 +483,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                               ),
                               TextButton(
-                                onPressed: () => _showDummyActionMessage('Lihat Semua Peluang'),
+                                onPressed: _navigateToPeluangProyek,
                                 child: Text(
                                   'Lihat Semua',
                                   style: TextStyle(color: pihakColor, fontWeight: FontWeight.bold),
@@ -446,7 +505,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         return FeatureCard(
                                           opportunity: op,
                                           accentColor: pihakColor,
-                                          onTap: () => _showDummyActionMessage(op.title),
+                                          onTap: () => _openOpportunityDetail(op),
                                         );
                                       },
                                     ),
@@ -478,42 +537,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               children: _currentRole == 'creator'
                                   ? [
                                       _buildSidebarQuickAction(
-                                        label: 'Update Portofolio',
-                                        icon: Icons.portrait,
-                                        color: pihakColor,
-                                        onTap: () => _showDummyActionMessage('Update Portofolio'),
+                                        label: 'Peluang Lokasi',
+                                        icon: Icons.map_outlined,
+                                        color: Colors.teal,
+                                        onTap: _navigateToPeluangLokasi,
                                       ),
                                       _buildSidebarQuickAction(
                                         label: 'Cari Proyek',
                                         icon: Icons.search,
-                                        color: Colors.teal,
-                                        onTap: () => _showDummyActionMessage('Cari Proyek'),
+                                        color: pihakColor,
+                                        onTap: _navigateToPeluangProyek,
                                       ),
                                       _buildSidebarQuickAction(
-                                        label: 'Kirim Proposal',
-                                        icon: Icons.send,
-                                        color: Colors.amber.shade700,
-                                        onTap: () => _showDummyActionMessage('Kirim Proposal'),
+                                        label: 'Update Portofolio',
+                                        icon: Icons.portrait,
+                                        color: Colors.purple,
+                                        onTap: () => _showDummyActionMessage('Update Portofolio'),
                                       ),
                                     ]
                                   : [
                                       _buildSidebarQuickAction(
-                                        label: 'Buat Peluang',
-                                        icon: Icons.add_circle_outline,
+                                        label: 'Peluang Lokasi',
+                                        icon: Icons.map_outlined,
+                                        color: Colors.teal,
+                                        onTap: _navigateToPeluangLokasi,
+                                      ),
+                                      _buildSidebarQuickAction(
+                                        label: 'Peluang Proyek',
+                                        icon: Icons.work_outline,
                                         color: pihakColor,
-                                        onTap: () => _showDummyActionMessage('Buat Peluang'),
+                                        onTap: _navigateToPeluangProyek,
                                       ),
                                       _buildSidebarQuickAction(
                                         label: 'Cari Vendor',
                                         icon: Icons.people_alt_outlined,
                                         color: Colors.purple,
                                         onTap: () => _showDummyActionMessage('Cari Vendor'),
-                                      ),
-                                      _buildSidebarQuickAction(
-                                        label: 'Undang Kolaborasi',
-                                        icon: Icons.handshake_outlined,
-                                        color: Colors.teal,
-                                        onTap: () => _showDummyActionMessage('Undang Kolaborasi'),
                                       ),
                                     ],
                             ),
@@ -544,42 +603,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       _currentRole == 'creator'
                           ? [
                               QuickActionButton(
-                                label: 'Update Portofolio',
-                                icon: Icons.portrait,
-                                color: pihakColor,
-                                onTap: () => _showDummyActionMessage('Update Portofolio'),
+                                label: 'Peluang Lokasi',
+                                icon: Icons.map_outlined,
+                                color: Colors.teal,
+                                onTap: _navigateToPeluangLokasi,
                               ),
                               QuickActionButton(
                                 label: 'Cari Proyek',
                                 icon: Icons.search,
-                                color: Colors.teal,
-                                onTap: () => _showDummyActionMessage('Cari Proyek'),
+                                color: pihakColor,
+                                onTap: _navigateToPeluangProyek,
                               ),
                               QuickActionButton(
-                                label: 'Kirim Proposal',
-                                icon: Icons.send,
-                                color: Colors.amber.shade700,
-                                onTap: () => _showDummyActionMessage('Kirim Proposal'),
+                                label: 'Portofolio',
+                                icon: Icons.portrait,
+                                color: Colors.purple,
+                                onTap: () => _showDummyActionMessage('Update Portofolio'),
                               ),
                             ]
                           : [
                               QuickActionButton(
-                                label: 'Buat Peluang',
-                                icon: Icons.add_circle_outline,
+                                label: 'Peluang Lokasi',
+                                icon: Icons.map_outlined,
+                                color: Colors.teal,
+                                onTap: _navigateToPeluangLokasi,
+                              ),
+                              QuickActionButton(
+                                label: 'Peluang Proyek',
+                                icon: Icons.work_outline,
                                 color: pihakColor,
-                                onTap: () => _showDummyActionMessage('Buat Peluang'),
+                                onTap: _navigateToPeluangProyek,
                               ),
                               QuickActionButton(
                                 label: 'Cari Vendor',
                                 icon: Icons.people_alt_outlined,
                                 color: Colors.purple,
                                 onTap: () => _showDummyActionMessage('Cari Vendor'),
-                              ),
-                              QuickActionButton(
-                                label: 'Undang Kolaborasi',
-                                icon: Icons.handshake_outlined,
-                                color: Colors.teal,
-                                onTap: () => _showDummyActionMessage('Undang Kolaborasi'),
                               ),
                             ],
                     ),
@@ -619,7 +678,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   return FeatureCard(
                                     opportunity: op,
                                     accentColor: pihakColor,
-                                    onTap: () => _showDummyActionMessage(op.title),
+                                    onTap: () => _openOpportunityDetail(op),
                                   );
                                 },
                               ),

@@ -14,6 +14,7 @@ use App\Http\Controllers\{
     NotificationController,
     CallController,
     AdminController,
+    OpportunityController,
 };
 
 Route::get('/user', function (Request $request) {
@@ -37,6 +38,15 @@ Route::group(['middleware' => 'auth:api'], function() {
     Route::prefix('dashboard')->controller(DashboardController::class)->group(function() {
         Route::get('stats', 'stats');
         Route::get('opportunities', 'opportunities');
+    });
+
+    // Opportunity Routes (Peluang Lokasi & Proyek)
+    Route::prefix('opportunities')->controller(OpportunityController::class)->group(function() {
+        Route::get('/', 'index');
+        Route::get('map', 'mapLocations');
+        Route::post('report', 'submitReport');
+        Route::post('/', 'store');
+        Route::get('{id}', 'show');
     });
 
     // Profile Routes

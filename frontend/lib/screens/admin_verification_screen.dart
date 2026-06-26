@@ -257,6 +257,75 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
               style: const TextStyle(fontSize: 12, height: 1.3),
             ),
           ],
+          if (app.nik != null || app.fullNameKtp != null) ...[
+            const Divider(height: 24),
+            Row(
+              children: [
+                Icon(Icons.badge, size: 18, color: Colors.teal.shade700),
+                const SizedBox(width: 8),
+                const Text(
+                  'Verifikasi KTP',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (app.fullNameKtp != null)
+              Text('Nama: ${app.fullNameKtp}', style: const TextStyle(fontSize: 12)),
+            if (app.nik != null)
+              Text('NIK: ${app.nik}', style: const TextStyle(fontSize: 12)),
+            if (app.birthPlace != null || app.birthDate != null)
+              Text(
+                'Lahir: ${app.birthPlace ?? ''}${app.birthDate != null ? ', ${app.birthDate}' : ''}',
+                style: const TextStyle(fontSize: 12),
+              ),
+            if (app.addressKtp != null)
+              Text('Alamat: ${app.addressKtp}', style: const TextStyle(fontSize: 12)),
+            if (app.ktpPhotoUrl != null && app.ktpPhotoUrl!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Text(
+                'Foto KTP:',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+              ),
+              const SizedBox(height: 4),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  app.ktpPhotoUrl!,
+                  height: 140,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 80,
+                    color: Colors.grey.shade200,
+                    child: const Center(child: Text('Foto KTP tidak dapat dimuat')),
+                  ),
+                ),
+              ),
+            ],
+            if (app.selfiePhotoUrl != null && app.selfiePhotoUrl!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Text(
+                'Foto Selfie + KTP:',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+              ),
+              const SizedBox(height: 4),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  app.selfiePhotoUrl!,
+                  height: 140,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 80,
+                    color: Colors.grey.shade200,
+                    child: const Center(child: Text('Foto Selfie tidak dapat dimuat')),
+                  ),
+                ),
+              ),
+            ],
+          ],
           if (app.adminNote != null && app.adminNote!.isNotEmpty) ...[
             const SizedBox(height: 12),
             Container(

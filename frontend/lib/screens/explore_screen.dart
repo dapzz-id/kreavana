@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../models/opportunity_model.dart';
-import '../services/dashboard_service.dart';
+import '../services/opportunity_service.dart';
 import '../widgets/feature_card.dart';
+import '../widgets/opportunity_detail_sheet.dart';
+import 'peluang_lokasi_screen.dart';
+import 'peluang_proyek_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
   final UserModel user;
@@ -14,7 +17,9 @@ class ExploreScreen extends StatefulWidget {
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
 
-class _ExploreScreenState extends State<ExploreScreen> {
+class _ExploreScreenState extends State<ExploreScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   String _selectedPihak = 'all';
   bool _isLoading = false;
   List<OpportunityModel> _opportunities = [];
@@ -36,12 +41,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     _loadOpportunities();
     _searchController.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -49,7 +56,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Future<void> _loadOpportunities() async {
     setState(() => _isLoading = true);
     try {
-      final list = await DashboardService.getOpportunities(
+      final list = await OpportunityService.getOpportunities(
         pihak: _selectedPihak,
         limit: 30,
       );
@@ -84,6 +91,21 @@ class _ExploreScreenState extends State<ExploreScreen> {
             .toList();
       }
     });
+  }
+
+  Future<void> _openDetail(OpportunityModel opp) async {
+    var detail = opp;
+    if (opp.poster == null) {
+      final fetched = await OpportunityService.getDetail(opp.id);
+      if (fetched != null) detail = fetched;
+    }
+    if (mounted) {
+      OpportunityDetailSheet.show(
+        context,
+        opportunity: detail,
+        currentUserId: widget.user.id,
+      );
+    }
   }
 
   Color _getPihakColor(String slug) {
@@ -123,29 +145,35 @@ class _ExploreScreenState extends State<ExploreScreen> {
           'Jelajahi Kolaborasi',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1200),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
+        bottom: TabBar(
+          controller: _tabController,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          tabs: const [
+            Tab(icon: Icon(Icons.map_outlined, size: 18), text: 'Peluang Lokasi'),
+            Tab(icon: Icon(Icons.work_outline, size: 18), text: 'Peluang Proyek'),
+            Tab(icon: Icon(Icons.grid_view, size: 18), text: 'Semua'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          PeluangLokasiScreen(
+            user: widget.user,
+            pihakSlug: _selectedPihak,
+          ),
+          PeluangProyekScreen(
+            user: widget.user,
+            pihakSlug: _selectedPihak,
+          ),
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: SearchBar(
                   controller: _searchController,
                   hintText: 'Cari peluang, lokasi, atau deskripsi...',
                   leading: const Icon(Icons.search, color: Colors.grey),
-                  trailing: [
-                    if (_searchController.text.isNotEmpty)
-                      IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.grey),
-                        onPressed: () {
-                          _searchController.clear();
-                        },
-                      ),
-                  ],
                   elevation: WidgetStateProperty.all(0),
                   backgroundColor: WidgetStateProperty.all(
                     isDark ? AppTheme.cardBg : Colors.grey.shade100,
@@ -162,19 +190,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   ),
                 ),
               ),
-            ),
-          ),
-        ),
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1200),
-          child: Column(
-            children: [
-              // Filter Horizontal Bar
-              Container(
+              SizedBox(
                 height: 50,
-                margin: const EdgeInsets.only(top: 8, bottom: 4),
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -185,139 +202,88 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     final itemColor = _getPihakColor(opt['slug']!);
 
                     return Padding(
-                      padding: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.only(right: 8, top: 8),
                       child: FilterChip(
                         label: Text(opt['name']!),
                         selected: isSelected,
                         selectedColor: itemColor.withValues(alpha: 0.2),
                         checkmarkColor: itemColor,
-                        labelStyle: TextStyle(
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          color: isSelected
-                              ? itemColor
-                              : (isDark ? Colors.white70 : Colors.black87),
-                        ),
-                        onSelected: (val) {
-                          setState(() {
-                            _selectedPihak = opt['slug']!;
-                          });
+                        onSelected: (_) {
+                          setState(() => _selectedPihak = opt['slug']!);
                           _loadOpportunities();
                         },
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        side: BorderSide(
-                          color: isSelected
-                              ? itemColor
-                              : (isDark
-                                    ? AppTheme.inputBorder
-                                    : Colors.grey.shade300),
-                        ),
                       ),
                     );
                   },
                 ),
               ),
-
-              // Opportunities list or grid
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: _loadOpportunities,
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : _filteredOpportunities.isEmpty
-                      ? ListView(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(48.0),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    Icons.search_off_outlined,
-                                    size: 60,
-                                    color: Colors.grey.shade400,
+                          ? ListView(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(48),
+                                  child: Column(
+                                    children: [
+                                      Icon(Icons.search_off_outlined,
+                                          size: 60,
+                                          color: Colors.grey.shade400),
+                                      const SizedBox(height: 16),
+                                      const Text(
+                                        'Peluang tidak ditemukan',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    'Peluang tidak ditemukan',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
+                                ),
+                              ],
+                            )
+                          : isDesktop
+                              ? GridView.builder(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    crossAxisSpacing: 16,
+                                    mainAxisSpacing: 16,
+                                    childAspectRatio: 2.5,
                                   ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    'Coba gunakan filter lain atau ubah kata pencarian Anda.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: isDark
-                                          ? AppTheme.textMuted
-                                          : Colors.grey.shade600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        )
-                      : isDesktop
-                      ? GridView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 16,
-                                mainAxisSpacing: 16,
-                                childAspectRatio: 2.5,
-                              ),
-                          itemCount: _filteredOpportunities.length,
-                          itemBuilder: (context, index) {
-                            final op = _filteredOpportunities[index];
-                            return FeatureCard(
-                              opportunity: op,
-                              accentColor: _getPihakColor(op.pihakSlug),
-                              onTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Membuka detail "${op.title}"...',
-                                    ),
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-                          itemCount: _filteredOpportunities.length,
-                          itemBuilder: (context, index) {
-                            final op = _filteredOpportunities[index];
-                            return FeatureCard(
-                              opportunity: op,
-                              accentColor: _getPihakColor(op.pihakSlug),
-                              onTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Membuka detail "${op.title}"...',
-                                    ),
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
+                                  itemCount: _filteredOpportunities.length,
+                                  itemBuilder: (context, index) {
+                                    final op = _filteredOpportunities[index];
+                                    return FeatureCard(
+                                      opportunity: op,
+                                      accentColor: _getPihakColor(op.pihakSlug),
+                                      onTap: () => _openDetail(op),
+                                    );
+                                  },
+                                )
+                              : ListView.builder(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                                  itemCount: _filteredOpportunities.length,
+                                  itemBuilder: (context, index) {
+                                    final op = _filteredOpportunities[index];
+                                    return FeatureCard(
+                                      opportunity: op,
+                                      accentColor: _getPihakColor(op.pihakSlug),
+                                      onTap: () => _openDetail(op),
+                                    );
+                                  },
+                                ),
                 ),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }

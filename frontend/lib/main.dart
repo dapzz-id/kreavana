@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app/theme.dart';
@@ -21,8 +22,9 @@ void main() async {
     statusBarBrightness: Brightness.light,
   ));
 
-  await PushNotificationService.initialize();
-  
+  // Inisialisasi notifikasi di background — jangan blokir splash/login.
+  unawaited(PushNotificationService.initialize());
+
   UserModel? initialUser;
   try {
     final loggedIn = await AuthService.isLoggedIn();

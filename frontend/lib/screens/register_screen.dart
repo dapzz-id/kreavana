@@ -85,11 +85,14 @@ class _RegisterScreenState extends State<RegisterScreen>
             MaterialPageRoute(builder: (_) => const LoginScreen()),
           );
         } else {
+          final message = result['message']?.toString() ??
+              'Pendaftaran gagal. Coba lagi.';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message'] ?? 'Pendaftaran gagal.'),
+              content: Text(message),
               backgroundColor: Theme.of(context).colorScheme.error,
               behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 5),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),

@@ -117,7 +117,14 @@ class CreatorApplication {
   final String skillDescription;
   final String? portfolioLink;
   final String? experience;
-  final String status; // 'pending', 'approved', 'rejected'
+  final String? ktpPhotoUrl;
+  final String? selfiePhotoUrl;
+  final String? nik;
+  final String? fullNameKtp;
+  final String? birthPlace;
+  final String? birthDate;
+  final String? addressKtp;
+  final String status;
   final String? adminNote;
   final String? appliedAt;
 
@@ -128,6 +135,13 @@ class CreatorApplication {
     required this.skillDescription,
     this.portfolioLink,
     this.experience,
+    this.ktpPhotoUrl,
+    this.selfiePhotoUrl,
+    this.nik,
+    this.fullNameKtp,
+    this.birthPlace,
+    this.birthDate,
+    this.addressKtp,
     this.status = 'pending',
     this.adminNote,
     this.appliedAt,
@@ -143,6 +157,13 @@ class CreatorApplication {
       skillDescription: json['skill_description'] ?? '',
       portfolioLink: json['portfolio_link'],
       experience: json['experience'],
+      ktpPhotoUrl: json['ktp_photo_url'],
+      selfiePhotoUrl: json['selfie_photo_url'],
+      nik: json['nik'],
+      fullNameKtp: json['full_name_ktp'],
+      birthPlace: json['birth_place'],
+      birthDate: json['birth_date']?.toString(),
+      addressKtp: json['address_ktp'],
       status: json['status'] ?? 'pending',
       adminNote: json['admin_note'],
       appliedAt: json['applied_at'],

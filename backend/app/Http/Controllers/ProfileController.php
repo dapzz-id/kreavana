@@ -13,9 +13,19 @@ class ProfileController extends Controller
     public function getProfile()
     {
         $user = Auth::guard('api')->user();
+
+        $application = CreatorApplication::where('user_id', $user->id)
+            ->orderBy('applied_at', 'desc')
+            ->first();
+
+        $userData = $user->toArray();
+        if ($application) {
+            $userData['application'] = $application;
+        }
+
         return response()->json([
             'success' => true,
-            'data' => $user
+            'data' => $userData,
         ]);
     }
 
@@ -23,12 +33,12 @@ class ProfileController extends Controller
     {
         $user = Auth::guard('api')->user();
 
-        // Validasi opsional
         $request->validate([
-            'name' => 'sometimes|string|max:100',
-            'phone' => 'nullable|string|max:20',
+            'name' => 'sometimes|string|min:2|max:100',
+            'phone' => 'nullable|regex:/^(\+62|62|0)8[0-9]{8,11}$/',
             'selected_pihak' => 'sometimes|string|max:50',
-            // avatar ditangani terpisah atau via base64/url
+        ], [
+            'phone.regex' => 'Nomor telepon tidak valid.',
         ]);
 
         if ($request->has('name')) $user->name = $request->name;
@@ -75,10 +85,24 @@ class ProfileController extends Controller
         $user = Auth::guard('api')->user();
 
         $request->validate([
-            'pihak_category' => 'required|string',
-            'skill_description' => 'required|string',
-            'portfolio_link' => 'nullable|string',
-            'experience' => 'nullable|string',
+            'pihak_category' => 'required|string|max:50',
+            'skill_description' => 'required|string|min:20|max:2000',
+            'portfolio_link' => 'required|url|max:255',
+            'experience' => 'nullable|string|max:2000',
+            'nik' => 'required|regex:/^\d{16}$/',
+            'full_name_ktp' => 'required|string|min:3|max:150|regex:/^[A-Za-z\s\.\',-]+$/',
+            'birth_place' => 'required|string|min:2|max:100|regex:/^[A-Za-z\s\.\',-]+$/',
+            'birth_date' => 'required|date|date_format:Y-m-d|before:today',
+            'address_ktp' => 'required|string|min:10|max:500',
+            'ktp_photo_url' => 'required|string',
+            'selfie_photo_url' => 'required|string',
+        ], [
+            'nik.regex' => 'NIK harus 16 digit angka.',
+            'full_name_ktp.regex' => 'Nama KTP hanya boleh huruf dan spasi.',
+            'birth_place.regex' => 'Tempat lahir hanya boleh huruf.',
+            'birth_date.before' => 'Tanggal lahir tidak valid.',
+            'portfolio_link.url' => 'Link portfolio harus URL valid (https://...).',
+            'skill_description.min' => 'Deskripsi keahlian minimal 20 karakter.',
         ]);
 
         // Check if there is already a pending application
@@ -96,13 +120,35 @@ class ProfileController extends Controller
         try {
             \Illuminate\Support\Facades\DB::beginTransaction();
 
-            // 1. Create creator application as pending
+            $ktpPhotoUrl = $this->saveKtpPhoto($user, $request->ktp_photo_url);
+            $selfiePhotoUrl = $this->saveSelfiePhoto($user, $request->selfie_photo_url);
+
+            if (empty($ktpPhotoUrl)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Foto KTP gagal diupload. Pastikan format JPG/PNG dan ukuran tidak terlalu besar.',
+                ], 422);
+            }
+
+            if (empty($selfiePhotoUrl)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Foto selfie gagal diupload. Pastikan format JPG/PNG dan ukuran tidak terlalu besar.',
+                ], 422);
+            }
             $app = CreatorApplication::create([
                 'user_id' => $user->id,
                 'pihak_category' => $request->pihak_category,
                 'skill_description' => $request->skill_description,
                 'portfolio_link' => $request->portfolio_link,
                 'experience' => $request->experience,
+                'ktp_photo_url' => $ktpPhotoUrl,
+                'selfie_photo_url' => $selfiePhotoUrl,
+                'nik' => $request->nik,
+                'full_name_ktp' => $request->full_name_ktp,
+                'birth_place' => $request->birth_place,
+                'birth_date' => $request->birth_date,
+                'address_ktp' => $request->address_ktp,
                 'status' => 'pending',
                 'applied_at' => now(),
             ]);
@@ -136,5 +182,59 @@ class ProfileController extends Controller
                 'message' => 'Gagal mengirim pengajuan kreator: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    private function saveKtpPhoto(User $user, string $ktpPhotoUrl): ?string
+    {
+        if (!str_starts_with($ktpPhotoUrl, 'data:image')) {
+            return $ktpPhotoUrl;
+        }
+
+        if (preg_match('/^data:image\/(\w+);base64,/', $ktpPhotoUrl, $type)) {
+            $data = substr($ktpPhotoUrl, strpos($ktpPhotoUrl, ',') + 1);
+            $ext = strtolower($type[1]);
+            if (in_array($ext, ['jpg', 'jpeg', 'gif', 'png'])) {
+                $data = str_replace(' ', '+', $data);
+                $decoded = base64_decode($data);
+                if ($decoded !== false) {
+                    $fileName = 'ktp_' . $user->id . '_' . time() . '.' . $ext;
+                    $dirPath = public_path('ktp');
+                    if (!file_exists($dirPath)) {
+                        mkdir($dirPath, 0755, true);
+                    }
+                    file_put_contents($dirPath . '/' . $fileName, $decoded);
+                    return url('ktp/' . $fileName);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function saveSelfiePhoto(User $user, string $selfiePhotoUrl): ?string
+    {
+        if (!str_starts_with($selfiePhotoUrl, 'data:image')) {
+            return $selfiePhotoUrl;
+        }
+
+        if (preg_match('/^data:image\/(\w+);base64,/', $selfiePhotoUrl, $type)) {
+            $data = substr($selfiePhotoUrl, strpos($selfiePhotoUrl, ',') + 1);
+            $ext = strtolower($type[1]);
+            if (in_array($ext, ['jpg', 'jpeg', 'gif', 'png'])) {
+                $data = str_replace(' ', '+', $data);
+                $decoded = base64_decode($data);
+                if ($decoded !== false) {
+                    $fileName = 'selfie_' . $user->id . '_' . time() . '.' . $ext;
+                    $dirPath = public_path('selfie');
+                    if (!file_exists($dirPath)) {
+                        mkdir($dirPath, 0755, true);
+                    }
+                    file_put_contents($dirPath . '/' . $fileName, $decoded);
+                    return url('selfie/' . $fileName);
+                }
+            }
+        }
+
+        return null;
     }
 }

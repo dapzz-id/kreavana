@@ -27,6 +27,31 @@ class DashboardService {
     return _getFallbackStats(pihak, roleType);
   }
 
+  /// Ambil statistik untuk semua kategori pihak sekaligus
+  static Future<Map<String, List<Map<String, String>>>> getAllPihakStats({
+    required List<String> pihakSlugs,
+    required String roleType,
+  }) async {
+    final results = await Future.wait(
+      pihakSlugs.map(
+        (slug) => getStats(pihak: slug, roleType: roleType),
+      ),
+    );
+
+    return {
+      for (var i = 0; i < pihakSlugs.length; i++) pihakSlugs[i]: results[i],
+    };
+  }
+
+  /// Parse nilai statistik ke angka untuk grafik
+  static double parseStatNumeric(String raw) {
+    var s = raw.replaceAll('%', '').trim();
+    if (RegExp(r'^\d{1,3}(\.\d{3})+$').hasMatch(s)) {
+      s = s.replaceAll('.', '');
+    }
+    return double.tryParse(s.replaceAll(',', '.')) ?? 0;
+  }
+
   /// Ambil peluang/opportunities berdasarkan pihak
   static Future<List<OpportunityModel>> getOpportunities({
     required String pihak,

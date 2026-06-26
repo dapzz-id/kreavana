@@ -12,12 +12,17 @@ class Opportunity extends Model
         'title',
         'description',
         'pihak_slug',
+        'type',
         'location',
+        'latitude',
+        'longitude',
+        'location_category',
+        'address',
         'deadline',
         'budget_range',
         'status',
         'posted_by',
-        'created_at'
+        'created_at',
     ];
 
     protected $casts = [

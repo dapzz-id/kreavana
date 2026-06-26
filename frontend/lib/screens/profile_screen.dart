@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:io' as io;
 import 'package:flutter/foundation.dart';
@@ -7,6 +8,7 @@ import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/profile_service.dart';
 import '../widgets/creator_application_card.dart';
+import '../utils/form_validators.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserModel user;
@@ -168,6 +170,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String skills,
     required String portfolio,
     required String experience,
+    required String nik,
+    required String fullNameKtp,
+    required String addressKtp,
+    required String ktpPhotoBase64,
+    required String selfiePhotoBase64,
+    required String birthPlace,
+    required String birthDate,
   }) async {
     setState(() => _isLoading = true);
     final result = await ProfileService.applyAsCreator(
@@ -176,18 +185,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
       skillDescription: skills,
       portfolioLink: portfolio,
       experience: experience,
+      nik: nik,
+      fullNameKtp: fullNameKtp,
+      addressKtp: addressKtp,
+      ktpPhotoBase64: ktpPhotoBase64,
+      selfiePhotoBase64: selfiePhotoBase64,
+      birthPlace: birthPlace,
+      birthDate: birthDate,
     );
 
     if (mounted) {
       setState(() => _isLoading = false);
       if (result['success'] == true) {
-        // Refresh local profile
         _loadProfileDetails();
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Pengajuan Kreator untuk Kategori ${category.toUpperCase()} berhasil disetujui!',
+              'Pengajuan Kreator berhasil dikirim! Menunggu verifikasi admin.',
             ),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.green.shade700,
@@ -404,13 +419,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             TextFormField(
                               controller: _phoneController,
                               keyboardType: TextInputType.phone,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(15),
+                              ],
                               decoration: InputDecoration(
                                 labelText: 'Nomor Telepon',
+                                hintText: '081234567890',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 prefixIcon: const Icon(Icons.phone_outlined),
                               ),
+                              validator: FormValidators.phone,
                             ),
                             const SizedBox(height: 16),
                             TextFormField(

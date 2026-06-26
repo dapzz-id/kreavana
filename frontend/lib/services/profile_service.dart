@@ -68,11 +68,18 @@ class ProfileService {
     }
   }
 
-  /// Mengajukan permohonan untuk menjadi Creator (Auto-approved di backend untuk demo)
+  /// Mengajukan permohonan untuk menjadi Creator (verifikasi KTP + review admin)
   static Future<Map<String, dynamic>> applyAsCreator({
     required int userId,
     required String pihakCategory,
     required String skillDescription,
+    required String nik,
+    required String fullNameKtp,
+    required String addressKtp,
+    required String ktpPhotoBase64,
+    required String selfiePhotoBase64,
+    required String birthPlace,
+    required String birthDate,
     String? portfolioLink,
     String? experience,
   }) async {
@@ -80,6 +87,13 @@ class ProfileService {
       'user_id': userId,
       'pihak_category': pihakCategory,
       'skill_description': skillDescription,
+      'nik': nik,
+      'full_name_ktp': fullNameKtp,
+      'address_ktp': addressKtp,
+      'ktp_photo_url': ktpPhotoBase64,
+      'selfie_photo_url': selfiePhotoBase64,
+      'birth_place': birthPlace,
+      'birth_date': birthDate,
       if (portfolioLink != null) 'portfolio_link': portfolioLink,
       if (experience != null) 'experience': experience,
     };
