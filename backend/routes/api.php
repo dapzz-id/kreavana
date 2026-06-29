@@ -15,6 +15,7 @@ use App\Http\Controllers\{
     CallController,
     AdminController,
     OpportunityController,
+    WalletController,
 };
 
 Route::get('/user', function (Request $request) {
@@ -38,6 +39,15 @@ Route::group(['middleware' => 'auth:api'], function() {
     Route::prefix('dashboard')->controller(DashboardController::class)->group(function() {
         Route::get('stats', 'stats');
         Route::get('opportunities', 'opportunities');
+    });
+
+    // Wallet Routes
+    Route::prefix('wallet')->controller(WalletController::class)->group(function() {
+        Route::get('info', 'info');
+        Route::post('topup', 'topup');
+        Route::post('topup/simulate', 'simulatePay');
+        Route::post('transfer', 'transfer');
+        Route::post('withdraw', 'withdraw');
     });
 
     // Opportunity Routes (Peluang Lokasi & Proyek)

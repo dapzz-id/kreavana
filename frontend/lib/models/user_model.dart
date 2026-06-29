@@ -9,6 +9,7 @@ class UserModel {
   final String selectedPihak;
   final bool isCreatorApproved;
   final String? createdAt;
+  final double balance;
 
   UserModel({
     required this.id,
@@ -21,6 +22,7 @@ class UserModel {
     this.selectedPihak = 'kreator',
     this.isCreatorApproved = false,
     this.createdAt,
+    this.balance = 0.0,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -37,6 +39,7 @@ class UserModel {
           json['is_creator_approved'] == true ||
           json['is_creator_approved'] == '1',
       createdAt: json['created_at'],
+      balance: json['balance'] != null ? double.parse(json['balance'].toString()) : 0.0,
     );
   }
 
@@ -52,6 +55,7 @@ class UserModel {
       'selected_pihak': selectedPihak,
       'is_creator_approved': isCreatorApproved ? 1 : 0,
       'created_at': createdAt,
+      'balance': balance,
     };
   }
 
@@ -65,6 +69,7 @@ class UserModel {
     String? role,
     String? selectedPihak,
     bool? isCreatorApproved,
+    double? balance,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -77,6 +82,7 @@ class UserModel {
       selectedPihak: selectedPihak ?? this.selectedPihak,
       isCreatorApproved: isCreatorApproved ?? this.isCreatorApproved,
       createdAt: createdAt,
+      balance: balance ?? this.balance,
     );
   }
 
