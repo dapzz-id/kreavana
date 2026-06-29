@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/chat_service.dart';
 import '../services/call_service.dart';
+import '../services/auth_service.dart';
 import 'call_screen.dart';
+import 'transfer_screen.dart';
 
 class DirectMessageScreen extends StatefulWidget {
   const DirectMessageScreen({super.key});
@@ -725,6 +727,21 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     }
   }
 
+  Future<void> _sendSystemMessage(String text) async {
+    try {
+      final newMsg = await ChatService.sendMessage(
+        widget.chat['id'].toString(),
+        text,
+      );
+      setState(() {
+        _messages.insert(0, Map<String, dynamic>.from(newMsg));
+      });
+      widget.onMessageSent?.call();
+    } catch (e) {
+      print('Error sending system message: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -941,7 +958,81 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline),
                   color: theme.colorScheme.primary,
-                  onPressed: () {},
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (context) {
+                        return SafeArea(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ListTile(
+                                leading: Icon(
+                                  Icons.payment_rounded,
+                                  color: theme.colorScheme.primary,
+                                ),
+                                title: const Text('Kirim Saldo / Pembayaran'),
+                                subtitle: const Text(
+                                  'Kirim pembayaran instan ke lawan obrolan (pajak 5%)',
+                                ),
+                                onTap: () async {
+                                  Navigator.pop(context); // Close sheet
+                                  if (widget.chat['isGroup'] == true) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Kirim saldo hanya didukung untuk obrolan personal.',
+                                        ),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  final currentUser = await AuthService.getCurrentUser();
+                                  if (currentUser == null) return;
+
+                                  final partnerUsername = widget.chat['username'];
+                                  if (partnerUsername == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Gagal menemukan username lawan bicara.',
+                                        ),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  final transferResult = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => TransferScreen(
+                                        user: currentUser,
+                                        preFilledUsername: partnerUsername,
+                                      ),
+                                    ),
+                                  );
+
+                                  if (transferResult is Map && transferResult['success'] == true) {
+                                    final double amt = transferResult['amount'];
+                                    final double fee = transferResult['fee'];
+                                    final amtStr = amt.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+                                    final feeStr = fee.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+                                    
+                                    _sendSystemMessage(
+                                      '💸 Pembayaran Berhasil sebesar Rp $amtStr. (Pajak Platform 5%: Rp $feeStr)',
+                                    );
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
                 ),
                 Expanded(
                   child: TextField(

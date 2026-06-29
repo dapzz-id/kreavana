@@ -35,6 +35,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: surfaceLight,
+      cardColor: Colors.white,
       fontFamily: 'Roboto',
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -123,6 +124,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: surfaceDark,
+      cardColor: cardDark,
       fontFamily: 'Roboto',
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

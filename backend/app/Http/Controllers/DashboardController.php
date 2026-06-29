@@ -28,11 +28,12 @@ class DashboardController extends Controller
             return DashboardStat::where('pihak_slug', $pihakSlug)
                 ->where('role_type', $roleType)
                 ->orderBy('display_order')
-                ->get();
+                ->get()
+                ->toArray();
         });
 
         // Fallback if DB is empty for this category
-        if ($stats->isEmpty()) {
+        if (empty($stats)) {
             $fallback = [
                 'kreator' => [
                     'user' => [

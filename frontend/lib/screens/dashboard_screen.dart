@@ -14,7 +14,8 @@ import 'peluang_lokasi_screen.dart';
 import 'peluang_proyek_screen.dart';
 import '../widgets/opportunity_detail_sheet.dart';
 import '../widgets/dashboard_stats_charts.dart';
-import '../main.dart';
+import '../services/theme_transition_service.dart';
+import 'wallet_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -37,6 +38,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<Map<String, String>> _stats = [];
   Map<String, List<Map<String, String>>> _allPihakStats = {};
   List<OpportunityModel> _opportunities = [];
+
+  /// Key used to find the theme-toggle button's screen position for the
+  /// circular reveal animation origin.
+  final GlobalKey _themeBtnKey = GlobalKey();
 
   final List<Map<String, dynamic>> _pihakList = [
     {
@@ -130,6 +135,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           pihak: _selectedPihak,
           limit: 5,
         ),
+        ProfileService.getProfile(widget.user.id),
       ]);
 
       if (mounted) {
@@ -139,6 +145,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _opportunities = results[2] as List<OpportunityModel>;
           _isLoading = false;
         });
+
+        final profileRes = results[3] as Map<String, dynamic>;
+        if (profileRes['success'] == true) {
+          widget.onUserUpdated(profileRes['user']);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -265,6 +276,99 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  String _formatRupiah(double val) {
+    final str = val.toStringAsFixed(0);
+    final reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
+    return 'Rp ' + str.replaceAllMapped(reg, (Match m) => '${m[1]}.');
+  }
+
+  Widget _buildWalletCard(ThemeData theme, bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF312E81), const Color(0xFF1E1B4B)]
+              : [const Color(0xFF4F46E5), const Color(0xFF3730A3)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4F46E5).withValues(alpha: isDark ? 0.15 : 0.25),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(
+                      Icons.account_balance_wallet_rounded,
+                      color: Colors.white70,
+                      size: 16,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'Saldo Dompet',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _formatRupiah(widget.user.balance),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => WalletScreen(
+                    user: widget.user,
+                    onUserUpdated: widget.onUserUpdated,
+                  ),
+                ),
+              ).then((_) => _loadDashboardData());
+            },
+            icon: const Icon(Icons.keyboard_arrow_right_rounded, size: 18),
+            label: const Text('Detail'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white.withValues(alpha: 0.15),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Helper: mobile quick-action row ────────────────────────────────────────
   // Membungkus setiap QuickActionButton dengan Expanded agar Row tidak overflow
   // di layar sempit. mainAxisAlignment dibiarkan start karena Expanded
@@ -318,11 +422,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
-            onPressed: () {
-              themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
-            },
+          Builder(
+            builder: (btnCtx) => IconButton(
+              key: _themeBtnKey,
+              icon: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (child, anim) => RotationTransition(
+                  turns: Tween(begin: 0.75, end: 1.0).animate(anim),
+                  child: FadeTransition(opacity: anim, child: child),
+                ),
+                child: Icon(
+                  isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                  key: ValueKey(isDark),
+                ),
+              ),
+              onPressed: () {
+                final box = _themeBtnKey.currentContext?.findRenderObject()
+                    as RenderBox?;
+                final origin = box != null
+                    ? box.localToGlobal(box.size.center(Offset.zero))
+                    : const Offset(0, 0);
+                ThemeTransitionService.animateToggle(
+                  origin: origin,
+                  toDark: !isDark,
+                );
+              },
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
@@ -351,6 +476,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildWalletCard(theme, isDark),
+              const SizedBox(height: 24),
+
               // 1. Category Selection Slider
               const Text(
                 'Kategori Pihak / Peran',

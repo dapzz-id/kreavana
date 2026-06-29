@@ -188,11 +188,12 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                               final color = _markerColor(loc.locationCategory);
                               return Marker(
                                 point: LatLng(loc.latitude!, loc.longitude!),
-                                width: 48,
-                                height: 48,
+                                width: 120,
+                                height: 65,
                                 child: GestureDetector(
                                   onTap: () => _onMarkerTap(loc),
                                   child: Column(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Container(
                                         padding: const EdgeInsets.all(6),
@@ -210,14 +211,17 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                                         child: const Icon(
                                           Icons.location_on,
                                           color: Colors.white,
-                                          size: 22,
+                                          size: 20,
                                         ),
                                       ),
+                                      const SizedBox(height: 2),
                                       Container(
-                                        margin: const EdgeInsets.only(top: 2),
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 6,
-                                          vertical: 2,
+                                          vertical: 3,
+                                        ),
+                                        constraints: const BoxConstraints(
+                                          maxWidth: 110,
                                         ),
                                         decoration: BoxDecoration(
                                           color: isDark
@@ -225,21 +229,32 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                                               : Colors.white,
                                           borderRadius:
                                               BorderRadius.circular(6),
+                                          border: Border.all(
+                                            color: isDark
+                                                ? AppTheme.inputBorder
+                                                : Colors.grey.shade300,
+                                            width: 0.5,
+                                          ),
                                           boxShadow: [
                                             BoxShadow(
                                               color: Colors.black
                                                   .withValues(alpha: 0.1),
                                               blurRadius: 4,
+                                              offset: const Offset(0, 1),
                                             ),
                                           ],
                                         ),
                                         child: Text(
-                                          loc.title.length > 12
-                                              ? '${loc.title.substring(0, 12)}...'
-                                              : loc.title,
-                                          style: const TextStyle(
+                                          loc.title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
                                             fontSize: 9,
                                             fontWeight: FontWeight.bold,
+                                            color: isDark
+                                                ? Colors.white
+                                                : Colors.black87,
                                           ),
                                         ),
                                       ),

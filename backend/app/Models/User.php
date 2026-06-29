@@ -12,7 +12,7 @@ use Illuminate\Notifications\Notifiable;
 
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
-#[Fillable(['name', 'username', 'email', 'password', 'avatar_url', 'phone', 'role', 'selected_pihak', 'is_creator_approved'])]
+#[Fillable(['name', 'username', 'email', 'password', 'avatar_url', 'phone', 'role', 'selected_pihak', 'is_creator_approved', 'balance'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements JWTSubject
 {
