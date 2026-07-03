@@ -14,6 +14,7 @@ import 'peluang_lokasi_screen.dart';
 import 'peluang_proyek_screen.dart';
 import '../widgets/opportunity_detail_sheet.dart';
 import '../widgets/dashboard_stats_charts.dart';
+import '../widgets/skeleton_box.dart';
 import '../main.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -423,11 +424,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 12),
               _isLoading
-                  ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24.0),
-                        child: CircularProgressIndicator(),
+                  ? GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: isDesktop ? 4 : 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: isDesktop ? 2.2 : 1.5,
                       ),
+                      itemCount: 4,
+                      itemBuilder: (context, index) => const StatCardSkeleton(),
                     )
                   : GridView.builder(
                       shrinkWrap: true,
@@ -493,7 +500,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                           const SizedBox(height: 8),
                           _isLoading
-                              ? const SizedBox()
+                              ? ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: 3,
+                                  itemBuilder: (context, index) => const FeatureCardSkeleton(),
+                                )
                               : _opportunities.isEmpty
                                   ? _buildEmptyOpportunity(isDark)
                                   : ListView.builder(
@@ -666,7 +678,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(height: 8),
                     _isLoading
-                        ? const SizedBox()
+                        ? ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: 3,
+                            itemBuilder: (context, index) => const FeatureCardSkeleton(),
+                          )
                         : _opportunities.isEmpty
                             ? _buildEmptyOpportunity(isDark)
                             : ListView.builder(

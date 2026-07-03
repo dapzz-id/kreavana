@@ -3,6 +3,7 @@ import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/admin_service.dart';
 import '../widgets/stat_card.dart';
+import '../widgets/skeleton_box.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -123,10 +124,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
               // GridView stats
               _isLoading
-                  ? const Center(child: Padding(
-                      padding: EdgeInsets.all(24.0),
-                      child: CircularProgressIndicator(),
-                    ))
+                  ? GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: MediaQuery.of(context).size.width > 900 ? 4 : 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: MediaQuery.of(context).size.width > 900 ? 2.2 : 1.5,
+                      ),
+                      itemCount: 4,
+                      itemBuilder: (context, index) => const StatCardSkeleton(),
+                    )
                   : GridView.count(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),

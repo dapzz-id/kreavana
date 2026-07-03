@@ -58,8 +58,13 @@ class AuthService {
 
   /// Logout dan clear session
   static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    final sessionToken = prefs.getString('session_token') ?? '';
+
     // Optionally call logout endpoint
-    await ApiService.post('auth/logout', {});
+    await ApiService.post('auth/logout', {
+      'session_token': sessionToken
+    });
     await clearSession();
   }
 

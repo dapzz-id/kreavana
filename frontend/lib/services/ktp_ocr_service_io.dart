@@ -103,7 +103,7 @@ class KtpOcrService {
 
     if (fullName == null && nik != null) {
       for (var i = 0; i < lines.length; i++) {
-        if (lines[i].contains(nik!) && i + 1 < lines.length) {
+        if (lines[i].contains(nik) && i + 1 < lines.length) {
           final candidate = lines[i + 1];
           if (!RegExp(r'^\d').hasMatch(candidate) && candidate.length > 3) {
             fullName = candidate;

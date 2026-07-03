@@ -5,6 +5,7 @@ import '../models/opportunity_model.dart';
 import '../services/opportunity_service.dart';
 import '../widgets/feature_card.dart';
 import '../widgets/opportunity_detail_sheet.dart';
+import '../widgets/skeleton_box.dart';
 
 class PeluangProyekScreen extends StatefulWidget {
   final UserModel user;
@@ -160,7 +161,23 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
       body: RefreshIndicator(
         onRefresh: _loadProjects,
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? isDesktop
+                ? GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 2.5,
+                    ),
+                    itemCount: 6,
+                    itemBuilder: (context, index) => const FeatureCardSkeleton(),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                    itemCount: 4,
+                    itemBuilder: (context, index) => const FeatureCardSkeleton(),
+                  )
             : _filtered.isEmpty
                 ? ListView(
                     children: [

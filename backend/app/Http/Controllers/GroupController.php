@@ -10,11 +10,15 @@ class GroupController extends Controller
 {
     public function store(Request $request)
     {
-        $request->validate(['name' => 'required|string']);
+        $request->validate([
+            'name' => 'required|string',
+            'description' => 'nullable|string'
+        ]);
         
         $chat = Chat::create([
             'type' => 'group',
             'name' => $request->name,
+            'description' => $request->description,
             'only_admin_can_add' => false
         ]);
         
@@ -27,6 +31,7 @@ class GroupController extends Controller
         return response()->json([
             'id' => $chat->id,
             'name' => $chat->name,
+            'description' => $chat->description,
             'isGroup' => true,
             'onlyAdminCanAdd' => false,
             'lastMessage' => 'Grup dibuat',
@@ -81,6 +86,28 @@ class GroupController extends Controller
         $request->validate(['only_admin_can_add' => 'required|boolean']);
         $chat->update(['only_admin_can_add' => $request->only_admin_can_add]);
         return response()->json(['message' => 'Pengaturan berhasil diperbarui']);
+    }
+
+    public function updateGroupDetails(Request $request, Chat $chat)
+    {
+        $request->validate([
+            'name' => 'required|string',
+            'description' => 'nullable|string',
+        ]);
+        
+        $chat->update([
+            'name' => $request->name,
+            'description' => $request->description,
+        ]);
+        
+        return response()->json([
+            'message' => 'Detail grup berhasil diperbarui',
+            'chat' => [
+                'id' => $chat->id,
+                'name' => $chat->name,
+                'description' => $chat->description,
+            ]
+        ]);
     }
 
     public function kickMember(Chat $chat, $userId)

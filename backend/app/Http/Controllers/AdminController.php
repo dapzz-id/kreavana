@@ -17,13 +17,6 @@ class AdminController extends Controller
     {
         $user = Auth::guard('api')->user();
 
-        if ($user->role !== 'admin') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized. Admin access only.'
-            ], 403);
-        }
-
         $status = $request->query('status'); // optional filter: pending, approved, rejected
 
         $query = CreatorApplication::with('user');
@@ -43,13 +36,6 @@ class AdminController extends Controller
     public function approveApplication($id)
     {
         $adminUser = Auth::guard('api')->user();
-
-        if ($adminUser->role !== 'admin') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized. Admin access only.'
-            ], 403);
-        }
 
         $application = CreatorApplication::find($id);
 
@@ -143,13 +129,6 @@ class AdminController extends Controller
     public function rejectApplication(Request $request, $id)
     {
         $adminUser = Auth::guard('api')->user();
-
-        if ($adminUser->role !== 'admin') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized. Admin access only.'
-            ], 403);
-        }
 
         $request->validate([
             'admin_note' => 'required|string|max:500',
