@@ -7,6 +7,7 @@ import '../widgets/feature_card.dart';
 import '../widgets/opportunity_detail_sheet.dart';
 import 'peluang_lokasi_screen.dart';
 import 'peluang_proyek_screen.dart';
+import '../widgets/skeleton_box.dart';
 
 class ExploreScreen extends StatefulWidget {
   final UserModel user;
@@ -221,7 +222,26 @@ class _ExploreScreenState extends State<ExploreScreen>
                 child: RefreshIndicator(
                   onRefresh: _loadOpportunities,
                   child: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
+                      ? isDesktop
+                          ? GridView.builder(
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                                childAspectRatio: 2.5,
+                              ),
+                              itemCount: 6,
+                              itemBuilder: (context, index) =>
+                                  const FeatureCardSkeleton(),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                              itemCount: 4,
+                              itemBuilder: (context, index) =>
+                                  const FeatureCardSkeleton(),
+                            )
                       : _filteredOpportunities.isEmpty
                           ? ListView(
                               children: [

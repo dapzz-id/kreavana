@@ -62,12 +62,27 @@ class ApiService {
     return 'Koneksi gagal. Periksa internet dan pastikan server backend aktif.';
   }
 
+  static Future<bool>? _refreshFuture;
+
   static Future<bool> _refreshToken() async {
-    if (_isRefreshing) return false;
+    if (_isRefreshing && _refreshFuture != null) {
+      return await _refreshFuture!;
+    }
+
     _isRefreshing = true;
+    _refreshFuture = _doRefreshToken();
+    final result = await _refreshFuture!;
+    
+    _isRefreshing = false;
+    _refreshFuture = null;
+    return result;
+  }
+
+  static Future<bool> _doRefreshToken() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final oldToken = prefs.getString('auth_token') ?? '';
+      final sessionToken = prefs.getString('session_token') ?? '';
+      final refreshToken = prefs.getString('refresh_token') ?? '';
 
       final uri = Uri.parse('$baseUrl/auth/refresh');
       final response = await _client
@@ -75,8 +90,12 @@ class ApiService {
             uri,
             headers: {
               'Accept': 'application/json',
-              'Authorization': 'Bearer $oldToken',
+              'Content-Type': 'application/json; charset=utf-8',
             },
+            body: jsonEncode({
+              'session_token': sessionToken,
+              'refresh_token': refreshToken,
+            }),
           )
           .timeout(requestTimeout);
 
@@ -95,12 +114,10 @@ class ApiService {
           if (newTokens['session_token'] != null) {
             await prefs.setString('session_token', newTokens['session_token']);
           }
-          _isRefreshing = false;
           return true;
         }
       }
     } catch (_) {}
-    _isRefreshing = false;
     await _forceLogout();
     return false;
   }

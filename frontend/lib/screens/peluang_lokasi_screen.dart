@@ -6,6 +6,7 @@ import '../models/user_model.dart';
 import '../models/opportunity_model.dart';
 import '../services/opportunity_service.dart';
 import '../widgets/opportunity_detail_sheet.dart';
+import '../widgets/skeleton_box.dart';
 
 class PeluangLokasiScreen extends StatefulWidget {
   final UserModel user;
@@ -163,7 +164,53 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
           ),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? Stack(
+                    children: [
+                      // Tampilkan peta kosong sebagai background saat loading
+                      FlutterMap(
+                        options: const MapOptions(
+                          initialCenter: LatLng(-2.5, 118.0),
+                          initialZoom: 5.0,
+                        ),
+                        children: [
+                          TileLayer(
+                            urlTemplate:
+                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            userAgentPackageName: 'com.kreavana.app',
+                          ),
+                        ],
+                      ),
+                      // Overlay skeleton card di tengah peta
+                      Center(
+                        child: Container(
+                          margin: const EdgeInsets.all(24),
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF1E1E2C)
+                                : Colors.white.withOpacity(0.95),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 12,
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              SkeletonBox(width: 48, height: 48, shape: BoxShape.circle),
+                              SizedBox(height: 12),
+                              SkeletonBox(width: 140, height: 18, borderRadius: 6),
+                              SizedBox(height: 8),
+                              SkeletonBox(width: 100, height: 14, borderRadius: 4),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
                 : Stack(
                     children: [
                       FlutterMap(

@@ -9,6 +9,7 @@ import '../models/user_model.dart';
 import '../services/profile_service.dart';
 import '../widgets/creator_application_card.dart';
 import '../utils/form_validators.dart';
+import '../widgets/skeleton_box.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserModel user;
@@ -266,7 +267,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
       body: _isLoading && _latestApplication == null
-          ? const Center(child: CircularProgressIndicator())
+          ? const ProfileSkeleton()
           : Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 700),

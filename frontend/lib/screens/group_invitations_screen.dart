@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/chat_service.dart';
+import '../widgets/skeleton_box.dart';
 
 class GroupInvitationsScreen extends StatefulWidget {
   const GroupInvitationsScreen({super.key});
@@ -56,7 +57,11 @@ class _GroupInvitationsScreenState extends State<GroupInvitationsScreen> {
         title: const Text('Undangan Grup'),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: 4,
+              itemBuilder: (context, index) => const ChatListSkeleton(),
+            )
           : _invitations.isEmpty
               ? const Center(child: Text('Tidak ada undangan pending.'))
               : ListView.builder(

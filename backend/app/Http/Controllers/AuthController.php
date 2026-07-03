@@ -65,31 +65,80 @@ class AuthController extends Controller
         ]);
     }
 
-    public function logout()
+    public function logout(Request $request)
     {
+        $sessionToken = $request->input('session_token');
+        if ($sessionToken) {
+            \App\Models\UserSession::where('session_token', $sessionToken)->delete();
+        }
+        
         Auth::guard('api')->logout();
 
         return response()->json(['success' => true, 'message' => 'Successfully logged out']);
     }
 
-    public function refresh()
+    public function refresh(Request $request)
     {
-        try {
-            return $this->respondWithToken(Auth::guard('api')->refresh());
-        } catch (\Exception $e) {
+        $sessionToken = $request->input('session_token');
+        $refreshToken = $request->input('refresh_token');
+
+        if (!$sessionToken || !$refreshToken) {
             return response()->json([
                 'success' => false,
-                'message' => 'Token tidak dapat direfresh atau sesi telah habis.',
-                'error' => $e->getMessage()
+                'message' => 'Sesi tidak valid.'
             ], 401);
         }
+
+        $session = \App\Models\UserSession::where('session_token', $sessionToken)
+            ->where('refresh_token', $refreshToken)
+            ->first();
+
+        if (!$session || $session->expires_at < now()) {
+            if ($session) $session->delete();
+            return response()->json([
+                'success' => false,
+                'message' => 'Sesi telah habis, silakan login kembali.'
+            ], 401);
+        }
+
+        $user = $session->user;
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User tidak ditemukan.'
+            ], 401);
+        }
+
+        // Generate new JWT access token
+        $token = Auth::guard('api')->login($user);
+
+        // Rotate refresh token
+        $newRefreshToken = Str::random(60);
+        $session->update([
+            'refresh_token' => $newRefreshToken
+        ]);
+
+        return $this->respondWithToken($token, $session->session_token, $newRefreshToken);
     }
 
-    protected function respondWithToken($token)
+    protected function respondWithToken($token, $sessionToken = null, $refreshToken = null)
     {
         $user = Auth::guard('api')->user();
         $user->id = (int)$user->id;
         $user->is_creator_approved = (int)$user->is_creator_approved;
+
+        if (!$sessionToken || !$refreshToken) {
+            $sessionToken = Str::random(60);
+            $refreshToken = Str::random(60);
+
+            // Create new session
+            \App\Models\UserSession::create([
+                'user_id' => $user->id,
+                'session_token' => $sessionToken,
+                'refresh_token' => $refreshToken,
+                'expires_at' => now()->addDays(7),
+            ]);
+        }
 
         return response()->json([
             'success' => true,
@@ -97,8 +146,8 @@ class AuthController extends Controller
             'data' => [
                 'token' => $token, // Backward compatibility with old api
                 'access_token' => $token,
-                'refresh_token' => $token, // Use same token or implement proper refresh logic in frontend
-                'session_token' => Str::random(60),
+                'refresh_token' => $refreshToken,
+                'session_token' => $sessionToken,
                 'token_type' => 'bearer',
                 'expires_in' => Auth::guard('api')->factory()->getTTL() * 60,
                 'user' => $user

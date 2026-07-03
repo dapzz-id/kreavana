@@ -1,0 +1,94 @@
+<?php
+
+namespace Tests\Feature;
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+
+class RoleAuthTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Create test users
+        User::create([
+            'name' => 'Test User',
+            'username' => 'testuser',
+            'email' => 'user@test.com',
+            'password' => Hash::make('password123'),
+            'role' => 'user'
+        ]);
+
+        User::create([
+            'name' => 'Test Creator',
+            'username' => 'testcreator',
+            'email' => 'creator@test.com',
+            'password' => Hash::make('password123'),
+            'role' => 'creator'
+        ]);
+
+        User::create([
+            'name' => 'Test Admin',
+            'username' => 'testadmin',
+            'email' => 'admin@test.com',
+            'password' => Hash::make('password123'),
+            'role' => 'admin'
+        ]);
+    }
+
+    public function test_user_login()
+    {
+        $response = $this->postJson('/api/auth/user/login', [
+            'email' => 'user@test.com',
+            'password' => 'password123'
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure(['data' => ['token', 'user']]);
+    }
+
+    public function test_creator_login_success()
+    {
+        $response = $this->postJson('/api/auth/creator/login', [
+            'email' => 'creator@test.com',
+            'password' => 'password123'
+        ]);
+
+        $response->assertStatus(200);
+    }
+
+    public function test_creator_login_fails_for_user()
+    {
+        $response = $this->postJson('/api/auth/creator/login', [
+            'email' => 'user@test.com',
+            'password' => 'password123'
+        ]);
+
+        $response->assertStatus(403);
+    }
+
+    public function test_admin_login_success()
+    {
+        $response = $this->postJson('/api/auth/admin/login', [
+            'email' => 'admin@test.com',
+            'password' => 'password123'
+        ]);
+
+        $response->assertStatus(200);
+    }
+
+    public function test_admin_login_fails_for_creator()
+    {
+        $response = $this->postJson('/api/auth/admin/login', [
+            'email' => 'creator@test.com',
+            'password' => 'password123'
+        ]);
+
+        $response->assertStatus(403);
+    }
+}

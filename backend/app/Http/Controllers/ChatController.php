@@ -36,6 +36,7 @@ class ChatController extends Controller
             return [
                 'id' => $chat->id,
                 'name' => $name,
+                'description' => $chat->description,
                 'user_id' => $chat->type === 'personal' && isset($otherParticipant) ? $otherParticipant->user_id : null,
                 'isGroup' => $chat->type === 'group',
                 'onlyAdminCanAdd' => (bool) $chat->only_admin_can_add,

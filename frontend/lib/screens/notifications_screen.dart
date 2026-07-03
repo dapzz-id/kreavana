@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../services/notification_service.dart';
 import '../models/notification_model.dart';
+import '../widgets/skeleton_box.dart';
 import 'group_invitations_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -101,7 +102,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           child: RefreshIndicator(
             onRefresh: _loadNotifications,
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                    itemCount: 5,
+                    itemBuilder: (context, index) => const NotificationSkeleton(),
+                  )
                 : _notifications.isEmpty
                 ? ListView(
                     children: [

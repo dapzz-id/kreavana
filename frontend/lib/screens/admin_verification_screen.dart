@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/admin_service.dart';
+import '../widgets/skeleton_box.dart';
 
 class AdminVerificationScreen extends StatefulWidget {
   const AdminVerificationScreen({super.key});
@@ -439,7 +440,11 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
         ),
       ),
       body: _isLoading && _pendingApps.isEmpty && _approvedApps.isEmpty
-          ? const Center(child: CircularProgressIndicator())
+          ? ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: 4,
+              itemBuilder: (context, index) => const AdminAppSkeleton(),
+            )
           : TabBarView(
               controller: _tabController,
               children: [

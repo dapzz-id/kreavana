@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/chat_service.dart';
 import '../services/call_service.dart';
+import '../widgets/skeleton_box.dart';
 import 'call_screen.dart';
 
 class DirectMessageScreen extends StatefulWidget {
@@ -138,6 +139,7 @@ class ChatListSectionState extends State<ChatListSection> {
   String searchQuery = '';
   bool isLoading = true;
   bool isSearching = false;
+  final FocusNode _searchFocusNode = FocusNode();
 
   List<Map<String, dynamic>> _personalChats = [];
   List<Map<String, dynamic>> _groupChats = [];
@@ -159,6 +161,7 @@ class ChatListSectionState extends State<ChatListSection> {
   @override
   void dispose() {
     _messageSubscription?.cancel();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -247,17 +250,33 @@ class ChatListSectionState extends State<ChatListSection> {
 
   void _showCreateGroupDialog() {
     final TextEditingController groupNameController = TextEditingController();
+    final TextEditingController groupDescController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Buat Grup Baru'),
-        content: TextField(
-          controller: groupNameController,
-          decoration: const InputDecoration(
-            labelText: 'Nama Grup',
-            hintText: 'Masukkan nama grup',
-            border: OutlineInputBorder(),
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: groupNameController,
+              decoration: const InputDecoration(
+                labelText: 'Nama Grup',
+                hintText: 'Masukkan nama grup',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: groupDescController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Deskripsi Grup (Opsional)',
+                hintText: 'Tuliskan tujuan atau deskripsi grup...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -266,23 +285,12 @@ class ChatListSectionState extends State<ChatListSection> {
           ),
           FilledButton(
             onPressed: () {
-              if (groupNameController.text.isNotEmpty) {
-                ChatService.createGroup(groupNameController.text)
-                    .then((newGroup) {
-                      setState(() {
-                        _groupChats.insert(
-                          0,
-                          Map<String, dynamic>.from(newGroup),
-                        );
-                      });
-                      widget.onChatSelected(
-                        Map<String, dynamic>.from(newGroup),
-                      );
-                    })
-                    .catchError((e) {
-                      print('Error creating group: $e');
-                    });
+              if (groupNameController.text.trim().isNotEmpty) {
                 Navigator.pop(context);
+                _createGroup(
+                  groupNameController.text.trim(),
+                  groupDescController.text.trim(),
+                );
               }
             },
             child: const Text('Buat'),
@@ -290,6 +298,25 @@ class ChatListSectionState extends State<ChatListSection> {
         ],
       ),
     );
+  }
+
+  void _createGroup(String name, String description) {
+    setState(() => isLoading = true);
+    ChatService.createGroup(name, description).then((newGroup) {
+      setState(() {
+        isLoading = false;
+        _groupChats.insert(
+          0,
+          Map<String, dynamic>.from(newGroup),
+        );
+      });
+      widget.onChatSelected(
+        Map<String, dynamic>.from(newGroup),
+      );
+    }).catchError((e) {
+      setState(() => isLoading = false);
+      print('Error creating group: $e');
+    });
   }
 
   @override
@@ -374,6 +401,7 @@ class ChatListSectionState extends State<ChatListSection> {
               vertical: 8.0,
             ),
             child: SearchBar(
+              focusNode: _searchFocusNode,
               hintText: 'Cari akun atau pesan...',
               leading: const Padding(
                 padding: EdgeInsets.only(left: 8.0),
@@ -445,7 +473,10 @@ class ChatListSectionState extends State<ChatListSection> {
           // Daftar Obrolan
           Expanded(
             child: isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? ListView.builder(
+                    itemCount: 7,
+                    itemBuilder: (context, index) => const ChatListSkeleton(),
+                  )
                 : ListView.builder(
                     itemCount: chats.length + additionalResults.length,
                     itemBuilder: (context, index) {
@@ -619,10 +650,18 @@ class ChatListSectionState extends State<ChatListSection> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: null,
-        onPressed: viewType == 'group' ? _showCreateGroupDialog : () {},
-        child: Icon(viewType == 'group' ? Icons.group_add : Icons.chat),
+      floatingActionButton: Padding(
+        // Angkat FAB hanya di layar mobile agar tidak tertutup bottom navbar
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).size.width < 800 ? 95 : 0),
+        child: FloatingActionButton(
+          heroTag: null,
+          onPressed: viewType == 'group' 
+              ? _showCreateGroupDialog 
+              : () {
+                  _searchFocusNode.requestFocus();
+                },
+          child: Icon(viewType == 'group' ? Icons.group_add : Icons.chat),
+        ),
       ),
     );
   }
@@ -847,7 +886,31 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
             child: Container(
               color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
               child: isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? ListView.builder(
+                      reverse: true,
+                      padding: const EdgeInsets.all(16.0),
+                      itemCount: 8,
+                      itemBuilder: (context, index) {
+                        // Selang-seling kiri dan kanan seperti bubble chat
+                        final isRight = index % 3 != 0;
+                        return Align(
+                          alignment: isRight
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.of(context).size.width * 0.65,
+                            ),
+                            child: SkeletonBox(
+                              width: isRight ? 180 : 220,
+                              height: 44,
+                              borderRadius: 16,
+                            ),
+                          ),
+                        );
+                      },
+                    )
                   : ListView.builder(
                       reverse: true,
                       padding: const EdgeInsets.all(16.0),
@@ -996,11 +1059,15 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
   bool onlyAdminCanAdd = false;
   List<Map<String, dynamic>> members = [];
   bool isLoading = true;
+  late String groupName;
+  late String groupDescription;
 
   @override
   void initState() {
     super.initState();
     onlyAdminCanAdd = widget.chat['onlyAdminCanAdd'] ?? false;
+    groupName = widget.chat['name'] ?? 'Grup';
+    groupDescription = widget.chat['description'] ?? '';
     _loadMembers();
   }
 
@@ -1016,6 +1083,76 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
     } catch (e) {
       setState(() => isLoading = false);
     }
+  }
+
+  void _showEditGroupDialog() {
+    final nameController = TextEditingController(text: groupName);
+    final descController = TextEditingController(text: groupDescription);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Info Grup'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Nama Grup',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: descController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Deskripsi Grup',
+                hintText: 'Tuliskan deskripsi atau tujuan grup...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final name = nameController.text.trim();
+              if (name.isEmpty) return;
+              Navigator.pop(context);
+              try {
+                await ChatService.updateGroupDetails(
+                  widget.chat['id'].toString(),
+                  name,
+                  descController.text.trim(),
+                );
+                setState(() {
+                  groupName = name;
+                  groupDescription = descController.text.trim();
+                });
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Info grup berhasil diperbarui!')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Gagal memperbarui info grup.')),
+                  );
+                }
+              }
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _addMember() {
@@ -1198,6 +1335,15 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
       appBar: AppBar(
         title: const Text('Info Grup'),
         backgroundColor: theme.colorScheme.surface,
+        actions: [
+          // Tombol edit hanya muncul jika user adalah admin
+          if (members.any((m) => m['name'] == 'Anda' && m['isAdmin'] == true))
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: 'Edit Nama & Deskripsi',
+              onPressed: _showEditGroupDialog,
+            ),
+        ],
       ),
       body: ListView(
         children: [
@@ -1216,7 +1362,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
           const SizedBox(height: 16),
           Center(
             child: Text(
-              widget.chat['name'],
+              groupName,
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -1228,6 +1374,23 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
               style: const TextStyle(color: Colors.grey),
             ),
           ),
+          // Tampilkan deskripsi jika ada
+          if (groupDescription.isNotEmpty) ...
+            [
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Text(
+                  groupDescription,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+            ],
           const SizedBox(height: 20),
           Divider(
             thickness: 8,
@@ -1317,7 +1480,13 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
           ),
 
           if (isLoading)
-            const Center(child: CircularProgressIndicator())
+            ...List.generate(
+              4,
+              (i) => const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: ChatListSkeleton(),
+              ),
+            )
           else
             ...members.map(
               (m) => ListTile(

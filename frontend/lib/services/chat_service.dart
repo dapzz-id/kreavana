@@ -142,10 +142,9 @@ class ChatService {
     return {'success': false, 'message': 'Unknown error'};
   }
 
-  static Future<Map<String, dynamic>> createGroup(String name) async {
-    final response = await ApiService.post('groups', {'name': name});
-    if (response is Map<String, dynamic>) return response;
-    return {'success': false};
+  static Future<Map<String, dynamic>> createGroup(String name, String description) async {
+    final res = await ApiService.post('groups', {'name': name, 'description': description});
+    return res as Map<String, dynamic>;
   }
 
   static Future<List<dynamic>> fetchGroupMembers(String chatId) async {
@@ -182,6 +181,13 @@ class ChatService {
 
   static Future<void> kickMember(String chatId, String userId) async {
     await ApiService.delete('groups/$chatId/members/$userId');
+  }
+
+  static Future<void> updateGroupDetails(String chatId, String name, String description) async {
+    await ApiService.put('groups/$chatId/details', {
+      'name': name,
+      'description': description,
+    });
   }
 
   static Future<void> makeAdmin(String chatId, String userId) async {
