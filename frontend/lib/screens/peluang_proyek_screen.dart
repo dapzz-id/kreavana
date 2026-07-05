@@ -42,10 +42,18 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
 
   Future<void> _loadProjects() async {
     setState(() => _isLoading = true);
+    print(
+      'DEBUG PeluangProyekScreen: Loading projects for subRole: ${widget.subRoleSlug}',
+    );
     final list = await OpportunityService.getOpportunities(
       subRole: widget.subRoleSlug,
-      type: 'project',
     );
+    print('DEBUG PeluangProyekScreen: Loaded ${list.length} projects');
+    for (var project in list) {
+      print(
+        'DEBUG PeluangProyekScreen: - ${project.title} (${project.subRoleSlug})',
+      );
+    }
     if (mounted) {
       setState(() {
         _projects = list;
@@ -168,76 +176,81 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
         onRefresh: _loadProjects,
         child: _isLoading
             ? isDesktop
-                ? GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 2.5,
-                    ),
-                    itemCount: 6,
-                    itemBuilder: (context, index) => const FeatureCardSkeleton(),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-                    itemCount: 4,
-                    itemBuilder: (context, index) => const FeatureCardSkeleton(),
-                  )
+                  ? GridView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                            childAspectRatio: 2.5,
+                          ),
+                      itemCount: 6,
+                      itemBuilder: (context, index) =>
+                          const FeatureCardSkeleton(),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                      itemCount: 4,
+                      itemBuilder: (context, index) =>
+                          const FeatureCardSkeleton(),
+                    )
             : _filtered.isEmpty
-                ? ListView(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(48),
-                        child: Column(
-                          children: [
-                            Icon(Icons.work_off_outlined,
-                                size: 60, color: Colors.grey.shade400),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'Belum ada peluang proyek',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
+            ? ListView(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(48),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.work_off_outlined,
+                          size: 60,
+                          color: Colors.grey.shade400,
                         ),
-                      ),
-                    ],
-                  )
-                : isDesktop
-                    ? GridView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          childAspectRatio: 2.5,
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Belum ada peluang proyek',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
-                        itemCount: _filtered.length,
-                        itemBuilder: (context, index) {
-                          final op = _filtered[index];
-                          return FeatureCard(
-                            opportunity: op,
-                            accentColor: _getSubRoleColor(op.subRoleSlug),
-                            onTap: () => _openDetail(op),
-                          );
-                        },
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-                        itemCount: _filtered.length,
-                        itemBuilder: (context, index) {
-                          final op = _filtered[index];
-                          return FeatureCard(
-                            opportunity: op,
-                            accentColor: _getSubRoleColor(op.subRoleSlug),
-                            onTap: () => _openDetail(op),
-                          );
-                        },
-                      ),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            : isDesktop
+            ? GridView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 2.5,
+                ),
+                itemCount: _filtered.length,
+                itemBuilder: (context, index) {
+                  final op = _filtered[index];
+                  return FeatureCard(
+                    opportunity: op,
+                    accentColor: _getSubRoleColor(op.subRoleSlug),
+                    onTap: () => _openDetail(op),
+                  );
+                },
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                itemCount: _filtered.length,
+                itemBuilder: (context, index) {
+                  final op = _filtered[index];
+                  return FeatureCard(
+                    opportunity: op,
+                    accentColor: _getSubRoleColor(op.subRoleSlug),
+                    onTap: () => _openDetail(op),
+                  );
+                },
+              ),
       ),
     );
   }

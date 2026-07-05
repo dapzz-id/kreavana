@@ -1,6 +1,18 @@
 {
     "chat.tools.terminal.autoApprove": {
         "openspec": true,
-        ".\\vendor\\bin\\phpunit": true
+        ".\\vendor\\bin\\phpunit": true,
+        "/^cd /d c:\\\\Users\\\\jimab\\\\Downloads\\\\Projek LordDzik\\\\kreavana\\\\backend ; php -r \"echo 'redis_loaded='\\.\\(extension_loaded\\('redis'\\)\\?'yes':'no'\\)\\.PHP_EOL; echo 'predis_loaded='\\.\\(class_exists\\('Predis\\\\\\\\Client'\\)\\?'yes':'no'\\)\\.PHP_EOL;\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd c:\\\\Users\\\\jimab\\\\Downloads\\\\Projek\\\\ LordDzik\\\\kreavana\\\\backend ; php -r \"echo base64_encode\\(random_bytes\\(32\\)\\);\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Users\\\\jimab\\\\Downloads\\\\Projek LordDzik\\\\kreavana\\\\backend\" ; php artisan config:clear ; php artisan cache:clear$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
     }
 }
