@@ -6,7 +6,7 @@ import '../app/theme.dart';
 
 class OpportunityDetailSheet extends StatelessWidget {
   final OpportunityModel opportunity;
-  final int currentUserId;
+  final String currentUserId;
 
   const OpportunityDetailSheet({
     super.key,
@@ -17,7 +17,7 @@ class OpportunityDetailSheet extends StatelessWidget {
   static Future<void> show(
     BuildContext context, {
     required OpportunityModel opportunity,
-    required int currentUserId,
+    String? currentUserId,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -25,7 +25,7 @@ class OpportunityDetailSheet extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (_) => OpportunityDetailSheet(
         opportunity: opportunity,
-        currentUserId: currentUserId,
+        currentUserId: currentUserId ?? '',
       ),
     );
   }
@@ -71,10 +71,13 @@ class OpportunityDetailSheet extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 ...reasons.map(
+                  // ignore: deprecated_member_use
                   (r) => RadioListTile<String>(
                     title: Text(r, style: const TextStyle(fontSize: 13)),
                     value: r,
+                    // ignore: deprecated_member_use
                     groupValue: selectedReason,
+                    // ignore: deprecated_member_use
                     onChanged: (v) => setState(() => selectedReason = v!),
                     contentPadding: EdgeInsets.zero,
                     dense: true,
@@ -104,7 +107,7 @@ class OpportunityDetailSheet extends StatelessWidget {
                 Navigator.pop(ctx);
                 final result = await OpportunityService.submitReport(
                   targetType: 'opportunity',
-                  targetId: opportunity.id,
+                  targetId: opportunity.id ?? '',
                   reason: selectedReason,
                   description: descController.text.trim().isEmpty
                       ? null

@@ -8,6 +8,7 @@ import 'explore_screen.dart';
 import 'notifications_screen.dart';
 import 'profile_screen.dart';
 import 'login_screen.dart';
+import 'wallet_screen.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_verification_screen.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
@@ -36,11 +37,11 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   Future<void> _refreshProfile() async {
-    final result = await ProfileService.getProfile(_currentUser.id);
+    final result = await ProfileService.getProfile(_currentUser.id ?? '');
     if (mounted) {
       setState(() {
-        if (result['success'] == true) {
-          _currentUser = result['user'];
+        if (result.success == true && result.user != null) {
+          _currentUser = result.user!;
         }
       });
     }
@@ -184,7 +185,7 @@ class _MainNavigationState extends State<MainNavigation> {
         ? [
             AdminDashboardScreen(user: _currentUser),
             const AdminVerificationScreen(),
-            NotificationsScreen(userId: _currentUser.id),
+            NotificationsScreen(userId: _currentUser.id ?? ''),
             ProfileScreen(
               user: _currentUser,
               onUserUpdated: _onUserUpdated,
@@ -195,7 +196,7 @@ class _MainNavigationState extends State<MainNavigation> {
             DashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated),
             ExploreScreen(user: _currentUser),
             const DirectMessageScreen(),
-            NotificationsScreen(userId: _currentUser.id),
+            NotificationsScreen(userId: _currentUser.id ?? ''),
             ProfileScreen(
               user: _currentUser,
               onUserUpdated: _onUserUpdated,
@@ -407,6 +408,74 @@ class _MainNavigationState extends State<MainNavigation> {
                               ],
                       ),
                     ),
+
+                    // ── Top Up / Isi Saldo Button ────────────────────────
+                    _isSidebarCollapsed
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Tooltip(
+                              message: 'Isi Saldo',
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => WalletScreen(
+                                        user: _currentUser,
+                                        onUserUpdated: _onUserUpdated,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    Icons.add_card_rounded,
+                                    color: theme.colorScheme.primary,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        : Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => WalletScreen(
+                                        user: _currentUser,
+                                        onUserUpdated: _onUserUpdated,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.add_card_rounded, size: 18),
+                                label: const Text(
+                                  'Isi Saldo',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: theme.colorScheme.primary,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
 
                     // ── Bottom user card ───────────────────────────────
                     Divider(

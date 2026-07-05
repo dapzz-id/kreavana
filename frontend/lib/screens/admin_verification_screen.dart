@@ -57,7 +57,8 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
     }
   }
 
-  void _handleApprove(int id) async {
+  void _handleApprove(String? id) async {
+    if (id == null) return;
     setState(() => _isLoading = true);
     final result = await AdminService.approveApplication(id);
     if (mounted) {
@@ -77,7 +78,8 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
     }
   }
 
-  void _showRejectDialog(int id) {
+  void _showRejectDialog(String? id) {
+    if (id == null) return;
     _rejectNoteController.clear();
     showDialog(
       context: context,
@@ -126,7 +128,7 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
     );
   }
 
-  void _handleReject(int id, String note) async {
+  void _handleReject(String id, String note) async {
     setState(() => _isLoading = true);
     final result = await AdminService.rejectApplication(id, note);
     if (mounted) {
@@ -176,7 +178,7 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: theme.colorScheme.primary.withOpacity(0.08),
+                backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.08),
                 child: const Icon(Icons.person, color: Colors.blue),
               ),
               const SizedBox(width: 12),
@@ -185,7 +187,7 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      app.pihakCategory.toUpperCase(),
+                      app.subRoleCategory.toUpperCase(),
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
@@ -205,8 +207,8 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: app.status == 'approved'
-                      ? Colors.green.shade100.withOpacity(0.8)
-                      : (app.status == 'rejected' ? Colors.red.shade100.withOpacity(0.8) : Colors.orange.shade100.withOpacity(0.8)),
+                      ? Colors.green.shade100.withValues(alpha: 0.8)
+                      : (app.status == 'rejected' ? Colors.red.shade100.withValues(alpha: 0.8) : Colors.orange.shade100.withValues(alpha: 0.8)),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(

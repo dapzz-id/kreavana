@@ -3,15 +3,18 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class Opportunity extends Model
 {
+    use HasUuids;
+
     public $timestamps = false;
 
     protected $fillable = [
         'title',
         'description',
-        'pihak_slug',
+        'sub_role_slug',
         'type',
         'location',
         'latitude',

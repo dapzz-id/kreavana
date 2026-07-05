@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use App\Services\JtiService;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -24,13 +25,20 @@ class PermissionMiddleware
 
         if (!$user) {
             return response()->json([
-                'success' => false,
-                'message' => 'Unauthenticated.',
+                'status' => false,
+                'message' => 'Unauthorized',
             ], 401);
         }
 
-        // Ambil permissions dari JWT custom claims
         $payload = auth('api')->payload();
+        $jti = $payload->get('jti');
+        if (!$jti || !JtiService::exists($jti)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
         $tokenPermissions = $payload->get('permissions', []);
 
         if (!is_array($tokenPermissions)) {
@@ -41,8 +49,8 @@ class PermissionMiddleware
         foreach ($permissions as $permission) {
             if (!in_array($permission, $tokenPermissions)) {
                 return response()->json([
-                    'success' => false,
-                    'message' => 'Anda tidak memiliki permission untuk aksi ini.',
+                    'status' => false,
+                    'message' => 'Forbidden',
                 ], 403);
             }
         }

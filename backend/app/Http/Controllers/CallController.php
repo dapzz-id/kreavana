@@ -3,24 +3,21 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Http\Requests\CallSignalRequest;
 use App\Events\CallSignaling;
 use App\Models\User;
+use App\Traits\ApiResponse;
 use Illuminate\Support\Facades\Log;
 
 class CallController extends Controller
 {
+    use ApiResponse;
+
     /**
      * Send WebRTC Signaling data to the receiver via Laravel Reverb
      */
-    public function signal(Request $request)
+    public function signal(CallSignalRequest $request)
     {
-        $request->validate([
-            'receiver_id' => 'required|integer',
-            'call_id' => 'required|string',
-            'type' => 'required|string|in:offer,answer,candidate,reject,end,ringing,connected',
-            'data' => 'nullable|array'
-        ]);
-
         $caller = $request->user();
         $receiverId = $request->receiver_id;
 
@@ -32,7 +29,6 @@ class CallController extends Controller
             $data['callerAvatar'] = $caller->avatar_url ?? '';
         }
 
-        // Broadcast signal via Pusher / Reverb
         broadcast(new CallSignaling(
             $receiverId,
             $caller->id,
@@ -41,13 +37,11 @@ class CallController extends Controller
             $data
         ));
 
-        // If it's an offer, we might want to also trigger an FCM VoIP Push Notification 
-        // to wake up the receiver's phone if it's in the background.
         if ($request->type === 'offer') {
             $this->sendCallPushNotification($receiverId, $caller, $request->call_id, $request->data);
         }
 
-        return response()->json(['success' => true]);
+        return $this->successResponse('Signal berhasil dikirim');
     }
 
     /**
@@ -69,12 +63,10 @@ class CallController extends Controller
             $payload = [
                 'message' => [
                     'token' => $receiver->fcm_token,
-                    // Android-specific settings for high priority CallKit
                     'android' => [
                         'priority' => 'high',
-                        'ttl' => '0s', // deliver immediately or not at all
+                        'ttl' => '0s',
                     ],
-                    // APNs for iOS VoIP
                     'apns' => [
                         'headers' => [
                             'apns-priority' => '10',
@@ -86,11 +78,10 @@ class CallController extends Controller
                         ]
                     ],
                     'data' => [
-                        'type' => 'call', // custom type intercepted by flutter_callkit_incoming
+                        'type' => 'call',
                         'call_id' => $callId,
                         'caller_id' => (string) $caller->id,
                         'caller_name' => $caller->name,
-                        // 'caller_avatar' => $caller->avatar_url, // if available
                     ]
                 ]
             ];

@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class Message extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuids;
     
     protected $fillable = ['chat_id', 'user_id', 'message'];
     

@@ -3,14 +3,17 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class CreatorApplication extends Model
 {
+    use HasUuids;
+
     public $timestamps = false;
     
     protected $fillable = [
         'user_id',
-        'pihak_category',
+        'sub_role_slug',
         'skill_description',
         'portfolio_link',
         'experience',

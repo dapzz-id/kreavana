@@ -5,43 +5,43 @@ import '../services/dashboard_service.dart';
 import 'stat_card.dart';
 
 class DashboardStatsCharts extends StatelessWidget {
-  final List<Map<String, dynamic>> pihakList;
-  final Map<String, List<Map<String, String>>> allPihakStats;
-  final String selectedPihak;
+  final List<Map<String, dynamic>> subRoleList;
+  final Map<String, List<Map<String, String>>> allSubRoleStats;
+  final String selectedSubRole;
   final String currentRole;
   final bool isDark;
 
   const DashboardStatsCharts({
     super.key,
-    required this.pihakList,
-    required this.allPihakStats,
-    required this.selectedPihak,
+    required this.subRoleList,
+    required this.allSubRoleStats,
+    required this.selectedSubRole,
     required this.currentRole,
     required this.isDark,
   });
 
   List<Map<String, String>> _statsFor(String slug) =>
-      allPihakStats[slug] ?? [];
+      allSubRoleStats[slug] ?? [];
 
   Color _colorFor(String slug) {
-    final match = pihakList.firstWhere(
+    final match = subRoleList.firstWhere(
       (p) => p['slug'] == slug,
-      orElse: () => pihakList.first,
+      orElse: () => subRoleList.first,
     );
     return match['color'] as Color;
   }
 
   String _nameFor(String slug) {
-    final match = pihakList.firstWhere(
+    final match = subRoleList.firstWhere(
       (p) => p['slug'] == slug,
-      orElse: () => pihakList.first,
+      orElse: () => subRoleList.first,
     );
     return match['name'] as String;
   }
 
   @override
   Widget build(BuildContext context) {
-    final selectedStats = _statsFor(selectedPihak);
+    final selectedStats = _statsFor(selectedSubRole);
     final roleLabel = currentRole == 'creator' ? 'Creator' : 'Klien';
 
     return Column(
@@ -49,13 +49,13 @@ class DashboardStatsCharts extends StatelessWidget {
       children: [
         if (selectedStats.isNotEmpty) ...[
           Text(
-            'Grafik ${_nameFor(selectedPihak)} ($roleLabel)',
+            'Grafik ${_nameFor(selectedSubRole)} ($roleLabel)',
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           _SelectedCategoryChart(
             stats: selectedStats,
-            accentColor: _colorFor(selectedPihak),
+            accentColor: _colorFor(selectedSubRole),
             isDark: isDark,
           ),
           const SizedBox(height: 28),
@@ -66,7 +66,7 @@ class DashboardStatsCharts extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Metrik utama setiap kategori pihak/peran',
+          'Metrik utama setiap kategori subRole/peran',
           style: TextStyle(
             fontSize: 12,
             color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
@@ -74,9 +74,9 @@ class DashboardStatsCharts extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _AllCategoriesBarChart(
-          pihakList: pihakList,
-          allPihakStats: allPihakStats,
-          selectedPihak: selectedPihak,
+          subRoleList: subRoleList,
+          allSubRoleStats: allSubRoleStats,
+          selectedSubRole: selectedSubRole,
           isDark: isDark,
         ),
         const SizedBox(height: 28),
@@ -85,16 +85,16 @@ class DashboardStatsCharts extends StatelessWidget {
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        ...pihakList.map((pihak) {
-          final slug = pihak['slug'] as String;
+        ...subRoleList.map((subRole) {
+          final slug = subRole['slug'] as String;
           final stats = _statsFor(slug);
           if (stats.isEmpty) return const SizedBox.shrink();
           return _CategoryStatsPanel(
-            name: pihak['name'] as String,
+            name: subRole['name'] as String,
             slug: slug,
-            color: pihak['color'] as Color,
+            color: subRole['color'] as Color,
             stats: stats,
-            isSelected: slug == selectedPihak,
+            isSelected: slug == selectedSubRole,
             isDark: isDark,
           );
         }),
@@ -216,23 +216,23 @@ class _SelectedCategoryChart extends StatelessWidget {
 }
 
 class _AllCategoriesBarChart extends StatelessWidget {
-  final List<Map<String, dynamic>> pihakList;
-  final Map<String, List<Map<String, String>>> allPihakStats;
-  final String selectedPihak;
+  final List<Map<String, dynamic>> subRoleList;
+  final Map<String, List<Map<String, String>>> allSubRoleStats;
+  final String selectedSubRole;
   final bool isDark;
 
   const _AllCategoriesBarChart({
-    required this.pihakList,
-    required this.allPihakStats,
-    required this.selectedPihak,
+    required this.subRoleList,
+    required this.allSubRoleStats,
+    required this.selectedSubRole,
     required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
-    final entries = pihakList.map((p) {
+    final entries = subRoleList.map((p) {
       final slug = p['slug'] as String;
-      final stats = allPihakStats[slug] ?? [];
+      final stats = allSubRoleStats[slug] ?? [];
       final value = stats.isEmpty
           ? 0.0
           : DashboardService.parseStatNumeric(stats.first['value'] ?? '0');
@@ -295,10 +295,10 @@ class _AllCategoriesBarChart extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 8,
-                          fontWeight: e.slug == selectedPihak
+                          fontWeight: e.slug == selectedSubRole
                               ? FontWeight.bold
                               : FontWeight.normal,
-                          color: e.slug == selectedPihak
+                          color: e.slug == selectedSubRole
                               ? e.color
                               : (isDark ? Colors.white70 : Colors.grey.shade700),
                         ),
@@ -324,7 +324,7 @@ class _AllCategoriesBarChart extends StatelessWidget {
           ),
           barGroups: List.generate(entries.length, (i) {
             final e = entries[i];
-            final isSelected = e.slug == selectedPihak;
+            final isSelected = e.slug == selectedSubRole;
             return BarChartGroupData(
               x: i,
               barRods: [
@@ -488,7 +488,7 @@ class _MiniSparklineChart extends StatelessWidget {
             barWidth: 3,
             dotData: FlDotData(
               show: true,
-              getDotPainter: (spot, _, __, ___) => FlDotCirclePainter(
+              getDotPainter: (spot, _, _, _) => FlDotCirclePainter(
                 radius: 4,
                 color: color,
                 strokeWidth: 2,

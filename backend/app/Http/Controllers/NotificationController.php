@@ -3,34 +3,34 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-
 use Illuminate\Support\Facades\Auth;
-use App\Models\Notification;
+use App\Services\NotificationService;
+use App\Traits\ApiResponse;
 
 class NotificationController extends Controller
 {
+    use ApiResponse;
+
+    protected NotificationService $notificationService;
+
+    public function __construct(NotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
+
     public function index()
     {
         $user = Auth::guard('api')->user();
+        $notifications = $this->notificationService->getUserNotifications($user->id);
 
-        $notifications = Notification::where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        return response()->json([
-            'success' => true,
-            'data' => $notifications
-        ]);
+        return $this->successResponse('Notifikasi berhasil diambil', $notifications->toArray());
     }
 
     public function markAsRead(Request $request)
     {
         $user = Auth::guard('api')->user();
-        
-        Notification::where('user_id', $user->id)
-            ->where('is_read', false)
-            ->update(['is_read' => true]);
+        $this->notificationService->markAllAsRead($user->id);
 
-        return response()->json(['success' => true]);
+        return $this->successResponse('Semua notifikasi berhasil ditandai sudah dibaca');
     }
 }

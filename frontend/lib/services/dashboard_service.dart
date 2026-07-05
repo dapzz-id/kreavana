@@ -2,17 +2,17 @@ import '../models/opportunity_model.dart';
 import 'api_service.dart';
 
 class DashboardService {
-  /// Ambil stats dashboard berdasarkan pihak dan role
+  /// Ambil stats dashboard berdasarkan subRole dan role
   static Future<List<Map<String, String>>> getStats({
-    required String pihak,
+    required String subRole,
     required String roleType,
   }) async {
     final result = await ApiService.get('dashboard/stats', queryParams: {
-      'pihak_slug': pihak,
+      'sub_role_slug': subRole,
       'role_type': roleType,
     });
 
-    if (result['success'] == true && result['data'] != null) {
+    if (result['status'] == true && result['data'] != null) {
       final List<dynamic> data = result['data'];
       return data
           .map((item) => {
@@ -24,22 +24,22 @@ class DashboardService {
     }
 
     // Fallback data jika API gagal
-    return _getFallbackStats(pihak, roleType);
+    return _getFallbackStats(subRole, roleType);
   }
 
-  /// Ambil statistik untuk semua kategori pihak sekaligus
-  static Future<Map<String, List<Map<String, String>>>> getAllPihakStats({
-    required List<String> pihakSlugs,
+  /// Ambil statistik untuk semua kategori subRole sekaligus
+  static Future<Map<String, List<Map<String, String>>>> getAllSubRoleStats({
+    required List<String> subRoleSlugs,
     required String roleType,
   }) async {
     final results = await Future.wait(
-      pihakSlugs.map(
-        (slug) => getStats(pihak: slug, roleType: roleType),
+      subRoleSlugs.map(
+        (slug) => getStats(subRole: slug, roleType: roleType),
       ),
     );
 
     return {
-      for (var i = 0; i < pihakSlugs.length; i++) pihakSlugs[i]: results[i],
+      for (var i = 0; i < subRoleSlugs.length; i++) subRoleSlugs[i]: results[i],
     };
   }
 
@@ -52,33 +52,33 @@ class DashboardService {
     return double.tryParse(s.replaceAll(',', '.')) ?? 0;
   }
 
-  /// Ambil peluang/opportunities berdasarkan pihak
+  /// Ambil peluang/opportunities berdasarkan subRole
   static Future<List<OpportunityModel>> getOpportunities({
-    required String pihak,
+    required String subRole,
     int limit = 5,
   }) async {
     final result =
         await ApiService.get('dashboard/opportunities', queryParams: {
-      'pihak_slug': pihak,
+      'sub_role_slug': subRole,
       'limit': limit.toString(),
     });
 
-    if (result['success'] == true && result['data'] != null) {
+    if (result['status'] == true && result['data'] != null) {
       final List<dynamic> data = result['data'];
       return data.map((item) => OpportunityModel.fromJson(item)).toList();
     }
 
     // Fallback data
-    return _getFallbackOpportunities(pihak);
+    return _getFallbackOpportunities(subRole);
   }
 
   // ============= FALLBACK DATA =============
   // Digunakan saat API belum tersedia / offline
 
   static List<Map<String, String>> _getFallbackStats(
-      String pihak, String roleType) {
+      String subRole, String roleType) {
     final statsMap = {
-      'kreator': {
+      'photographer': {
         'user': [
           {'label': 'Peluang Tersedia', 'value': '24', 'icon': 'work'},
           {'label': 'Kreator Aktif', 'value': '150', 'icon': 'people'},
@@ -92,7 +92,7 @@ class DashboardService {
           {'label': 'Rating Kamu', 'value': '4.8', 'icon': 'star'},
         ],
       },
-      'eo': {
+      'event_organizer': {
         'user': [
           {'label': 'Event Mendatang', 'value': '6', 'icon': 'event'},
           {'label': 'Vendor Tersedia', 'value': '120', 'icon': 'store'},
@@ -106,7 +106,7 @@ class DashboardService {
           {'label': 'Rating', 'value': '4.9', 'icon': 'star'},
         ],
       },
-      'wo': {
+      'wedding_organizer': {
         'user': [
           {'label': 'Paket Aktif', 'value': '8', 'icon': 'card_giftcard'},
           {'label': 'Vendor Favorit', 'value': '14', 'icon': 'favorite'},
@@ -120,7 +120,7 @@ class DashboardService {
           {'label': 'Rating', 'value': '4.9', 'icon': 'star'},
         ],
       },
-      'sekolah': {
+      'institution': {
         'user': [
           {'label': 'Alumni Terdaftar', 'value': '1.240', 'icon': 'school'},
           {'label': 'Lulusan Terserap', 'value': '68%', 'icon': 'trending_up'},
@@ -134,7 +134,7 @@ class DashboardService {
           {'label': 'Rating', 'value': '4.6', 'icon': 'star'},
         ],
       },
-      'umkm': {
+      'editor': {
         'user': [
           {'label': 'Proyek Aktif', 'value': '5', 'icon': 'business'},
           {'label': 'Konten Dibuat', 'value': '12', 'icon': 'photo_library'},
@@ -148,7 +148,7 @@ class DashboardService {
           {'label': 'Rating', 'value': '4.7', 'icon': 'star'},
         ],
       },
-      'pemerintah': {
+      'government': {
         'user': [
           {'label': 'Kegiatan Aktif', 'value': '12', 'icon': 'event'},
           {'label': 'Relawan', 'value': '320', 'icon': 'volunteer_activism'},
@@ -162,7 +162,7 @@ class DashboardService {
           {'label': 'Rating', 'value': '4.5', 'icon': 'star'},
         ],
       },
-      'komunitas': {
+      'community': {
         'user': [
           {'label': 'Anggota', 'value': '580', 'icon': 'groups'},
           {'label': 'Event Aktif', 'value': '6', 'icon': 'event'},
@@ -192,19 +192,19 @@ class DashboardService {
       },
     };
 
-    return statsMap[pihak]?[roleType] ??
-        statsMap['kreator']?['user'] ??
+    return statsMap[subRole]?[roleType] ??
+        statsMap['photographer']?['user'] ??
         [];
   }
 
-  static List<OpportunityModel> _getFallbackOpportunities(String pihak) {
+  static List<OpportunityModel> _getFallbackOpportunities(String subRole) {
     final Map<String, List<Map<String, dynamic>>> opportunitiesMap = {
-      'kreator': [
+      'photographer': [
         {
           'id': 1,
           'title': 'Fotografer Event Jakarta',
           'description': 'Dibutuhkan fotografer profesional untuk corporate event',
-          'pihak_slug': 'kreator',
+          'sub_role_slug': 'photographer',
           'location': 'Jakarta',
           'deadline': '2026-07-20',
           'budget_range': 'Rp 3-5 Juta',
@@ -215,7 +215,7 @@ class DashboardService {
           'id': 2,
           'title': 'Videografer Wedding Bandung',
           'description': 'Wedding videography untuk intimate wedding',
-          'pihak_slug': 'kreator',
+          'sub_role_slug': 'videographer',
           'location': 'Bandung',
           'deadline': '2026-07-25',
           'budget_range': 'Rp 5-8 Juta',
@@ -223,12 +223,12 @@ class DashboardService {
           'posted_by': 1,
         },
       ],
-      'eo': [
+      'event_organizer': [
         {
           'id': 3,
           'title': 'Konser Musik Akhir Tahun',
           'description': 'Butuh EO untuk konser musik 1000 orang',
-          'pihak_slug': 'eo',
+          'sub_role_slug': 'event_organizer',
           'location': 'Surabaya',
           'deadline': '2026-12-15',
           'budget_range': 'Rp 50-100 Juta',
@@ -236,12 +236,12 @@ class DashboardService {
           'posted_by': 1,
         },
       ],
-      'wo': [
+      'wedding_organizer': [
         {
           'id': 4,
           'title': 'Paket Wedding Premium',
           'description': 'Paket lengkap all-in wedding',
-          'pihak_slug': 'wo',
+          'sub_role_slug': 'wedding_organizer',
           'location': 'Bali',
           'deadline': '2026-08-10',
           'budget_range': 'Rp 80-150 Juta',
@@ -249,12 +249,12 @@ class DashboardService {
           'posted_by': 1,
         },
       ],
-      'sekolah': [
+      'institution': [
         {
           'id': 5,
           'title': 'Lomba Desain Poster',
           'description': 'Lomba desain poster nasional',
-          'pihak_slug': 'sekolah',
+          'sub_role_slug': 'institution',
           'location': 'Online',
           'deadline': '2026-07-18',
           'budget_range': 'Gratis',
@@ -262,12 +262,12 @@ class DashboardService {
           'posted_by': 1,
         },
       ],
-      'umkm': [
+      'editor': [
         {
           'id': 6,
           'title': 'Fotografi Produk UMKM',
           'description': 'Photo produk untuk katalog online',
-          'pihak_slug': 'umkm',
+          'sub_role_slug': 'editor',
           'location': 'Yogyakarta',
           'deadline': '2026-07-30',
           'budget_range': 'Rp 1-3 Juta',
@@ -275,12 +275,12 @@ class DashboardService {
           'posted_by': 1,
         },
       ],
-      'pemerintah': [
+      'government': [
         {
           'id': 7,
           'title': 'Festival Budaya Daerah',
           'description': 'Dokumentasi festival budaya',
-          'pihak_slug': 'pemerintah',
+          'sub_role_slug': 'government',
           'location': 'Semarang',
           'deadline': '2026-08-20',
           'budget_range': 'Rp 10-20 Juta',
@@ -288,12 +288,12 @@ class DashboardService {
           'posted_by': 1,
         },
       ],
-      'komunitas': [
+      'community': [
         {
           'id': 8,
           'title': 'Workshop Photography',
           'description': 'Workshop fotografi untuk pemula',
-          'pihak_slug': 'komunitas',
+          'sub_role_slug': 'community',
           'location': 'Jakarta',
           'deadline': '2026-07-18',
           'budget_range': 'Rp 150.000',
@@ -306,7 +306,7 @@ class DashboardService {
           'id': 9,
           'title': 'Pelatihan Digital Marketing',
           'description': 'Pelatihan untuk anggota organisasi',
-          'pihak_slug': 'organisasi',
+          'sub_role_slug': 'organisasi',
           'location': 'Online',
           'deadline': '2026-07-29',
           'budget_range': 'Gratis',
@@ -316,7 +316,7 @@ class DashboardService {
       ],
     };
 
-    final data = opportunitiesMap[pihak] ?? opportunitiesMap['kreator']!;
+    final data = opportunitiesMap[subRole] ?? opportunitiesMap['photographer']!;
     return data.map((item) => OpportunityModel.fromJson(item)).toList();
   }
 }

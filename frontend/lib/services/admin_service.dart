@@ -6,10 +6,10 @@ class AdminService {
   static Future<List<CreatorApplication>> getApplications({String? status}) async {
     try {
       final response = await ApiService.get('admin/applications', queryParams: {
-        if (status != null) 'status': status,
+        'status': ?status,
       });
 
-      if (response['success'] == true) {
+      if (response['status'] == true) {
         final List<dynamic> list = response['data'] ?? [];
         return list.map((json) => CreatorApplication.fromJson(json)).toList();
       }
@@ -20,7 +20,7 @@ class AdminService {
   }
 
   /// Menyetujui pengajuan creator
-  static Future<Map<String, dynamic>> approveApplication(int id) async {
+  static Future<Map<String, dynamic>> approveApplication(String id) async {
     try {
       final response = await ApiService.post('admin/applications/$id/approve', {});
       return response;
@@ -33,7 +33,7 @@ class AdminService {
   }
 
   /// Menolak pengajuan creator dengan alasan
-  static Future<Map<String, dynamic>> rejectApplication(int id, String note) async {
+  static Future<Map<String, dynamic>> rejectApplication(String id, String note) async {
     try {
       final response = await ApiService.post('admin/applications/$id/reject', {
         'admin_note': note,

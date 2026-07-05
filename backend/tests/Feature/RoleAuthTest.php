@@ -49,7 +49,7 @@ class RoleAuthTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJsonStructure(['data' => ['token', 'user']]);
+        $response->assertJsonStructure(['data' => ['access_token', 'token_type']]);
     }
 
     public function test_creator_login_success()
