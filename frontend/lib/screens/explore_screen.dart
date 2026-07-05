@@ -21,7 +21,7 @@ class ExploreScreen extends StatefulWidget {
 class _ExploreScreenState extends State<ExploreScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String _selectedPihak = 'all';
+  String _selectedSubRole = 'all';
   bool _isLoading = false;
   List<OpportunityModel> _opportunities = [];
   final TextEditingController _searchController = TextEditingController();
@@ -29,14 +29,17 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   final List<Map<String, String>> _filterOptions = [
     {'slug': 'all', 'name': 'Semua'},
-    {'slug': 'kreator', 'name': 'Kreator'},
-    {'slug': 'eo', 'name': 'Event Organizer'},
-    {'slug': 'wo', 'name': 'Wedding Organizer'},
-    {'slug': 'sekolah', 'name': 'Pendidikan'},
-    {'slug': 'umkm', 'name': 'UMKM/Bisnis'},
-    {'slug': 'pemerintah', 'name': 'Pemerintah'},
-    {'slug': 'komunitas', 'name': 'Komunitas'},
-    {'slug': 'organisasi', 'name': 'Organisasi'},
+    {'slug': 'institution', 'name': 'Institusi'},
+    {'slug': 'government', 'name': 'Pemerintah'},
+    {'slug': 'mc', 'name': 'MC'},
+    {'slug': 'singer', 'name': 'Penyanyi'},
+    {'slug': 'wedding_organizer', 'name': 'Wedding Organizer'},
+    {'slug': 'event_organizer', 'name': 'Event Organizer'},
+    {'slug': 'community', 'name': 'Komunitas'},
+    {'slug': 'makeup_artist', 'name': 'Makeup Artist'},
+    {'slug': 'photographer', 'name': 'Fotografer'},
+    {'slug': 'editor', 'name': 'Editor'},
+    {'slug': 'videographer', 'name': 'Videografer'},
   ];
 
   @override
@@ -58,7 +61,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     setState(() => _isLoading = true);
     try {
       final list = await OpportunityService.getOpportunities(
-        pihak: _selectedPihak,
+        subRole: _selectedSubRole,
         limit: 30,
       );
       if (mounted) {
@@ -97,7 +100,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   Future<void> _openDetail(OpportunityModel opp) async {
     var detail = opp;
     if (opp.poster == null) {
-      final fetched = await OpportunityService.getDetail(opp.id);
+      final fetched = await OpportunityService.getDetail(opp.id ?? '');
       if (fetched != null) detail = fetched;
     }
     if (mounted) {
@@ -109,24 +112,30 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
-  Color _getPihakColor(String slug) {
+  Color _getSubRoleColor(String slug) {
     switch (slug) {
-      case 'kreator':
-        return const Color(0xFFF97316);
-      case 'eo':
-        return const Color(0xFF3B82F6);
-      case 'wo':
-        return const Color(0xFF8B5CF6);
-      case 'sekolah':
+      case 'institution':
         return const Color(0xFF10B981);
-      case 'umkm':
-        return const Color(0xFF06B6D4);
-      case 'pemerintah':
+      case 'government':
         return const Color(0xFF1E3A8A);
-      case 'komunitas':
+      case 'mc':
+        return const Color(0xFFF59E0B);
+      case 'singer':
+        return const Color(0xFF8B5CF6);
+      case 'wedding_organizer':
+        return const Color(0xFFE11D48);
+      case 'event_organizer':
+        return const Color(0xFFF97316);
+      case 'community':
         return const Color(0xFFEC4899);
-      case 'organisasi':
-        return const Color(0xFF3F51B5);
+      case 'makeup_artist':
+        return const Color(0xFFD946EF);
+      case 'photographer':
+        return const Color(0xFF3B82F6);
+      case 'editor':
+        return const Color(0xFF14B8A6);
+      case 'videographer':
+        return const Color(0xFF0EA5E9);
       default:
         return Colors.indigo;
     }
@@ -161,11 +170,11 @@ class _ExploreScreenState extends State<ExploreScreen>
         children: [
           PeluangLokasiScreen(
             user: widget.user,
-            pihakSlug: _selectedPihak,
+            subRoleSlug: _selectedSubRole,
           ),
           PeluangProyekScreen(
             user: widget.user,
-            pihakSlug: _selectedPihak,
+            subRoleSlug: _selectedSubRole,
           ),
           Column(
             children: [
@@ -199,8 +208,8 @@ class _ExploreScreenState extends State<ExploreScreen>
                   itemCount: _filterOptions.length,
                   itemBuilder: (context, index) {
                     final opt = _filterOptions[index];
-                    final isSelected = _selectedPihak == opt['slug'];
-                    final itemColor = _getPihakColor(opt['slug']!);
+                    final isSelected = _selectedSubRole == opt['slug'];
+                    final itemColor = _getSubRoleColor(opt['slug']!);
 
                     return Padding(
                       padding: const EdgeInsets.only(right: 8, top: 8),
@@ -210,7 +219,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                         selectedColor: itemColor.withValues(alpha: 0.2),
                         checkmarkColor: itemColor,
                         onSelected: (_) {
-                          setState(() => _selectedPihak = opt['slug']!);
+                          setState(() => _selectedSubRole = opt['slug']!);
                           _loadOpportunities();
                         },
                       ),
@@ -281,7 +290,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     final op = _filteredOpportunities[index];
                                     return FeatureCard(
                                       opportunity: op,
-                                      accentColor: _getPihakColor(op.pihakSlug),
+                                      accentColor: _getSubRoleColor(op.subRoleSlug),
                                       onTap: () => _openDetail(op),
                                     );
                                   },
@@ -294,7 +303,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     final op = _filteredOpportunities[index];
                                     return FeatureCard(
                                       opportunity: op,
-                                      accentColor: _getPihakColor(op.pihakSlug),
+                                      accentColor: _getSubRoleColor(op.subRoleSlug),
                                       onTap: () => _openDetail(op),
                                     );
                                   },

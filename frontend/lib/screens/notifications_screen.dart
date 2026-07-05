@@ -6,7 +6,7 @@ import '../widgets/skeleton_box.dart';
 import 'group_invitations_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
-  final int userId;
+  final String userId;
 
   const NotificationsScreen({super.key, required this.userId});
 

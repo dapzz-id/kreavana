@@ -10,12 +10,12 @@ import '../widgets/skeleton_box.dart';
 
 class PeluangLokasiScreen extends StatefulWidget {
   final UserModel user;
-  final String pihakSlug;
+  final String subRoleSlug;
 
   const PeluangLokasiScreen({
     super.key,
     required this.user,
-    this.pihakSlug = 'all',
+    this.subRoleSlug = 'all',
   });
 
   @override
@@ -47,7 +47,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
   Future<void> _loadLocations() async {
     setState(() => _isLoading = true);
     final list = await OpportunityService.getMapLocations(
-      pihak: widget.pihakSlug,
+      subRole: widget.subRoleSlug,
     );
     if (mounted) {
       setState(() {
@@ -86,7 +86,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
   Future<void> _onMarkerTap(OpportunityModel opp) async {
     var detail = opp;
     if (opp.poster == null) {
-      final fetched = await OpportunityService.getDetail(opp.id);
+      final fetched = await OpportunityService.getDetail(opp.id ?? '');
       if (fetched != null) detail = fetched;
     }
     if (mounted) {
@@ -188,11 +188,11 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                           decoration: BoxDecoration(
                             color: Theme.of(context).brightness == Brightness.dark
                                 ? const Color(0xFF1E1E2C)
-                                : Colors.white.withOpacity(0.95),
+                                : Colors.white.withValues(alpha: 0.95),
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                                color: Colors.black.withValues(alpha: 0.1),
                                 blurRadius: 12,
                               ),
                             ],
@@ -235,11 +235,12 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                               final color = _markerColor(loc.locationCategory);
                               return Marker(
                                 point: LatLng(loc.latitude!, loc.longitude!),
-                                width: 48,
-                                height: 48,
+                                width: 120,
+                                height: 65,
                                 child: GestureDetector(
                                   onTap: () => _onMarkerTap(loc),
                                   child: Column(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Container(
                                         padding: const EdgeInsets.all(6),
@@ -257,14 +258,17 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                                         child: const Icon(
                                           Icons.location_on,
                                           color: Colors.white,
-                                          size: 22,
+                                          size: 20,
                                         ),
                                       ),
+                                      const SizedBox(height: 2),
                                       Container(
-                                        margin: const EdgeInsets.only(top: 2),
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 6,
-                                          vertical: 2,
+                                          vertical: 3,
+                                        ),
+                                        constraints: const BoxConstraints(
+                                          maxWidth: 110,
                                         ),
                                         decoration: BoxDecoration(
                                           color: isDark
@@ -272,21 +276,32 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                                               : Colors.white,
                                           borderRadius:
                                               BorderRadius.circular(6),
+                                          border: Border.all(
+                                            color: isDark
+                                                ? AppTheme.inputBorder
+                                                : Colors.grey.shade300,
+                                            width: 0.5,
+                                          ),
                                           boxShadow: [
                                             BoxShadow(
                                               color: Colors.black
                                                   .withValues(alpha: 0.1),
                                               blurRadius: 4,
+                                              offset: const Offset(0, 1),
                                             ),
                                           ],
                                         ),
                                         child: Text(
-                                          loc.title.length > 12
-                                              ? '${loc.title.substring(0, 12)}...'
-                                              : loc.title,
-                                          style: const TextStyle(
+                                          loc.title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
                                             fontSize: 9,
                                             fontWeight: FontWeight.bold,
+                                            color: isDark
+                                                ? Colors.white
+                                                : Colors.black87,
                                           ),
                                         ),
                                       ),

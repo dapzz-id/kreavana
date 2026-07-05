@@ -62,7 +62,7 @@ class FeatureCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        opportunity.pihakSlug.toUpperCase(),
+                        opportunity.subRoleSlug.toUpperCase(),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,

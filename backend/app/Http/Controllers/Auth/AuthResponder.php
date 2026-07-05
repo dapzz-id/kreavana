@@ -2,52 +2,53 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Models\AuthLog;
+use App\Models\User;
+use App\Services\JtiService;
+use App\Services\RefreshTokenRepository;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
-use App\Models\UserSession;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 trait AuthResponder
 {
     /**
-     * Generate token response dengan session management.
-     *
-     * @param  string  $token  JWT access token
-     * @param  string|null  $sessionToken  Existing session token (untuk refresh)
-     * @param  string|null  $refreshToken  Existing refresh token (untuk refresh)
-     * @return \Illuminate\Http\JsonResponse
+     * Generate a minimal access-token response and cookie-only refresh token.
      */
-    protected function respondWithToken($token, $sessionToken = null, $refreshToken = null)
+    protected function respondWithToken(string $token, ?User $user = null, ?string $refreshToken = null)
     {
-        $user = Auth::guard('api')->user();
-        $user->id = (int)$user->id;
-        $user->is_creator_approved = (int)$user->is_creator_approved;
+        $user ??= Auth::guard('api')->user();
+        $ttlSeconds = min(Auth::guard('api')->factory()->getTTL() * 60, (int) config('auth_tokens.access_ttl_minutes', 5) * 60);
 
-        if (!$sessionToken || !$refreshToken) {
-            $sessionToken = Str::random(60);
-            $refreshToken = Str::random(60);
-
-            // Create new session
-            UserSession::create([
-                'user_id' => $user->id,
-                'session_token' => $sessionToken,
-                'refresh_token' => $refreshToken,
-                'expires_at' => now()->addDays(7),
-            ]);
+        $payload = JWTAuth::setToken($token)->getPayload();
+        $jti = $payload->get('jti');
+        if ($jti) {
+            JtiService::store($jti, $ttlSeconds);
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Login berhasil.',
+        if (!$refreshToken && $user) {
+            $refreshToken = app(RefreshTokenRepository::class)->issue($user);
+        }
+
+        $response = response()->json([
+            'status' => true,
             'data' => [
-                'token' => $token, // Backward compatibility with old api
                 'access_token' => $token,
-                'refresh_token' => $refreshToken,
-                'session_token' => $sessionToken,
                 'token_type' => 'bearer',
-                'expires_in' => Auth::guard('api')->factory()->getTTL() * 60,
-                'user' => $user
+                'expires_in' => $ttlSeconds,
             ]
         ]);
+
+        return $response->cookie(
+            config('auth_tokens.refresh.cookie'),
+            (string) $refreshToken,
+            (int) config('auth_tokens.refresh.ttl_minutes'),
+            config('auth_tokens.refresh.path'),
+            null,
+            true,
+            true,
+            false,
+            config('auth_tokens.refresh.same_site')
+        );
     }
 
     /**
@@ -58,46 +59,40 @@ trait AuthResponder
      */
     protected function handleRefresh($request)
     {
-        $sessionToken = $request->input('session_token');
-        $refreshToken = $request->input('refresh_token');
-
-        if (!$sessionToken || !$refreshToken) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Sesi tidak valid.'
-            ], 401);
+        $refreshToken = $request->cookie(config('auth_tokens.refresh.cookie'));
+        if (!$refreshToken) {
+            return $this->genericUnauthorized();
         }
 
-        $session = UserSession::where('session_token', $sessionToken)
-            ->where('refresh_token', $refreshToken)
-            ->first();
-
-        if (!$session || $session->expires_at < now()) {
-            if ($session) $session->delete();
-            return response()->json([
-                'success' => false,
-                'message' => 'Sesi telah habis, silakan login kembali.'
-            ], 401);
+        $rotation = app(RefreshTokenRepository::class)->rotate($refreshToken);
+        if (!$rotation) {
+            AuthLog::create([
+                'user_id' => null,
+                'action' => 'refresh_failed',
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 255)
+            ]);
+            return $this->genericUnauthorized();
         }
 
-        $user = $session->user;
+        $this->revokeBearerJtiIfPresent();
+
+        $user = User::find($rotation['user_id']);
         if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User tidak ditemukan.'
-            ], 401);
+            return $this->genericUnauthorized();
         }
 
-        // Generate new JWT access token (claims will be refreshed from current DB state)
         $token = Auth::guard('api')->login($user);
+        $newRefreshToken = app(RefreshTokenRepository::class)->issue($user, $rotation['family_id']);
 
-        // Rotate refresh token
-        $newRefreshToken = Str::random(60);
-        $session->update([
-            'refresh_token' => $newRefreshToken
+        AuthLog::create([
+            'user_id' => $user->id,
+            'action' => 'refresh',
+            'ip_address' => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 255)
         ]);
 
-        return $this->respondWithToken($token, $session->session_token, $newRefreshToken);
+        return $this->respondWithToken($token, $user, $newRefreshToken);
     }
 
     /**
@@ -108,13 +103,45 @@ trait AuthResponder
      */
     protected function handleLogout($request)
     {
-        $sessionToken = $request->input('session_token');
-        if ($sessionToken) {
-            UserSession::where('session_token', $sessionToken)->delete();
+        app(RefreshTokenRepository::class)->revokeRaw($request->cookie(config('auth_tokens.refresh.cookie')));
+        $this->revokeBearerJtiIfPresent();
+
+        $user = Auth::guard('api')->user();
+        if ($user) {
+            AuthLog::create([
+                'user_id' => $user->id,
+                'action' => 'logout',
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 255)
+            ]);
         }
 
         Auth::guard('api')->logout();
 
-        return response()->json(['success' => true, 'message' => 'Successfully logged out']);
+        return response()->json(['status' => true])
+            ->withoutCookie(config('auth_tokens.refresh.cookie'), config('auth_tokens.refresh.path'));
+    }
+
+    protected function genericUnauthorized()
+    {
+        return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+    }
+
+    private function revokeBearerJtiIfPresent(): void
+    {
+        $oldToken = JWTAuth::getToken();
+        if (!$oldToken) {
+            return;
+        }
+
+        try {
+            $payload = JWTAuth::getPayload($oldToken);
+            $oldJti = $payload->get('jti');
+            $exp = $payload->get('exp');
+            if ($oldJti) {
+                JtiService::revoke($oldJti, $exp ? max(60, (int) $exp - time()) : null);
+            }
+        } catch (\Throwable) {
+        }
     }
 }

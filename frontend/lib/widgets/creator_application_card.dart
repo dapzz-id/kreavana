@@ -41,7 +41,7 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
   final _ktpFormKey = GlobalKey<FormState>();
   final _profileFormKey = GlobalKey<FormState>();
   int _currentStep = 0;
-  String _selectedCategory = 'kreator';
+  String _selectedCategory = 'institution';
   final _skillsController = TextEditingController();
   final _portfolioController = TextEditingController();
   final _experienceController = TextEditingController();
@@ -69,14 +69,17 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
   ];
 
   final List<Map<String, String>> _categories = [
-    {'slug': 'kreator', 'name': 'Kreator / Pekerja Seni'},
-    {'slug': 'eo', 'name': 'Event Organizer (EO)'},
-    {'slug': 'wo', 'name': 'Wedding Organizer (WO)'},
-    {'slug': 'sekolah', 'name': 'Sekolah / Kampus'},
-    {'slug': 'umkm', 'name': 'Perusahaan / UMKM'},
-    {'slug': 'pemerintah', 'name': 'Pemerintah / Instansi'},
-    {'slug': 'komunitas', 'name': 'Komunitas Sosial'},
-    {'slug': 'organisasi', 'name': 'Organisasi / Yayasan'},
+    {'slug': 'institution', 'name': 'Institution'},
+    {'slug': 'government', 'name': 'Government'},
+    {'slug': 'mc', 'name': 'MC'},
+    {'slug': 'singer', 'name': 'Singer'},
+    {'slug': 'wedding_organizer', 'name': 'Wedding Organizer'},
+    {'slug': 'event_organizer', 'name': 'Event Organizer'},
+    {'slug': 'community', 'name': 'Community'},
+    {'slug': 'makeup_artist', 'name': 'Makeup Artist'},
+    {'slug': 'photographer', 'name': 'Photographer'},
+    {'slug': 'editor', 'name': 'Editor'},
+    {'slug': 'videographer', 'name': 'Videographer'},
   ];
 
   @override
@@ -624,9 +627,9 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
       child: Column(
         children: [
           DropdownButtonFormField<String>(
-            value: _selectedCategory,
+            initialValue: _selectedCategory,
             decoration: InputDecoration(
-              labelText: 'Kategori Pihak *',
+              labelText: 'Kategori SubRole *',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             items: _categories

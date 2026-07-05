@@ -3,160 +3,103 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Services\GroupService;
+use App\Http\Requests\CreateGroupRequest;
+use App\Http\Requests\AddGroupMemberRequest;
+use App\Traits\ApiResponse;
 use App\Models\Chat;
-use App\Models\ChatParticipant;
 
 class GroupController extends Controller
 {
-    public function store(Request $request)
+    use ApiResponse;
+
+    protected GroupService $groupService;
+
+    public function __construct(GroupService $groupService)
     {
-        $request->validate([
-            'name' => 'required|string',
-            'description' => 'nullable|string'
-        ]);
-        
-        $chat = Chat::create([
-            'type' => 'group',
-            'name' => $request->name,
-            'description' => $request->description,
-            'only_admin_can_add' => false
-        ]);
-        
-        ChatParticipant::create([
-            'chat_id' => $chat->id,
-            'user_id' => 1,
-            'is_admin' => true
-        ]);
-        
-        return response()->json([
-            'id' => $chat->id,
-            'name' => $chat->name,
-            'description' => $chat->description,
-            'isGroup' => true,
-            'onlyAdminCanAdd' => false,
-            'lastMessage' => 'Grup dibuat',
-            'time' => 'Baru saja',
-            'unread' => false,
-        ]);
+        $this->groupService = $groupService;
+    }
+
+    public function store(CreateGroupRequest $request)
+    {
+        $userId = $request->user()->id;
+        $group = $this->groupService->createGroup($userId, $request->validated());
+
+        return $this->successResponse('Grup berhasil dibuat', $group, 201);
     }
 
     public function members(Chat $chat)
     {
-        $members = $chat->participants()->with('user')->where('status', 'joined')->get();
-        $formatted = $members->map(function($m) {
-            return [
-                'id' => $m->user->id,
-                'name' => $m->user_id === 1 ? 'Anda' : $m->user->name,
-                'isAdmin' => (bool) $m->is_admin,
-                'status' => $m->status
-            ];
-        });
-        
-        return response()->json($formatted);
+        $members = $this->groupService->getMembers($chat);
+
+        return $this->successResponse('Anggota grup berhasil diambil', $members);
     }
-    
-    public function addMember(Request $request, Chat $chat)
+
+    public function addMember(AddGroupMemberRequest $request, Chat $chat)
     {
-        $request->validate(['user_id' => 'required|exists:users,id']);
-        
-        $participant = ChatParticipant::firstOrCreate(
-            ['chat_id' => $chat->id, 'user_id' => $request->user_id],
-            ['status' => 'pending']
-        );
+        $this->groupService->addMember($chat, $request->user_id);
 
-        if ($participant->wasRecentlyCreated) {
-            $notification = \App\Models\Notification::create([
-                'user_id' => $request->user_id,
-                'title' => 'Undangan Grup',
-                'message' => 'Anda diundang ke grup "' . $chat->name . '"',
-                'type' => 'group_invite',
-                'data' => ['chat_id' => $chat->id],
-                'is_read' => false,
-                'created_at' => now(),
-            ]);
-
-            broadcast(new \App\Events\NotificationSent($notification));
-        }
-        
-        return response()->json(['message' => 'Undangan berhasil dikirim']);
+        return $this->successResponse('Undangan berhasil dikirim');
     }
-    
+
     public function updateSettings(Request $request, Chat $chat)
     {
         $request->validate(['only_admin_can_add' => 'required|boolean']);
-        $chat->update(['only_admin_can_add' => $request->only_admin_can_add]);
-        return response()->json(['message' => 'Pengaturan berhasil diperbarui']);
+        $this->groupService->updateSettings($chat, $request->only('only_admin_can_add'));
+
+        return $this->successResponse('Pengaturan berhasil diperbarui');
     }
 
     public function updateGroupDetails(Request $request, Chat $chat)
     {
         $request->validate([
-            'name' => 'required|string',
-            'description' => 'nullable|string',
+            'name' => 'required|string|max:100',
+            'description' => 'nullable|string|max:500',
         ]);
-        
-        $chat->update([
-            'name' => $request->name,
-            'description' => $request->description,
-        ]);
-        
-        return response()->json([
-            'message' => 'Detail grup berhasil diperbarui',
-            'chat' => [
-                'id' => $chat->id,
-                'name' => $chat->name,
-                'description' => $chat->description,
-            ]
-        ]);
+
+        $chatData = $this->groupService->updateDetails($chat, $request->only('name', 'description'));
+
+        return $this->successResponse('Detail grup berhasil diperbarui', $chatData);
     }
 
     public function kickMember(Chat $chat, $userId)
     {
-        $chat->participants()->where('user_id', $userId)->delete();
-        return response()->json(['message' => 'Anggota dikeluarkan']);
+        $this->groupService->kickMember($chat, $userId);
+
+        return $this->successResponse('Anggota dikeluarkan');
     }
 
     public function makeAdmin(Chat $chat, $userId)
     {
-        $chat->participants()->where('user_id', $userId)->update(['is_admin' => true]);
-        return response()->json(['message' => 'Anggota dijadikan admin']);
+        $this->groupService->makeAdmin($chat, $userId);
+
+        return $this->successResponse('Anggota dijadikan admin');
     }
 
     public function leaveGroup(Request $request, Chat $chat)
     {
         $userId = $request->user()->id;
-        $chat->participants()->where('user_id', $userId)->delete();
-        return response()->json(['message' => 'Keluar dari grup']);
+        $this->groupService->leaveGroup($chat, $userId);
+
+        return $this->successResponse('Berhasil keluar dari grup');
     }
 
     public function getInvitations(Request $request)
     {
         $userId = $request->user()->id;
-        $invitations = ChatParticipant::where('user_id', $userId)
-            ->where('status', 'pending')
-            ->with('chat')
-            ->get();
-            
-        $formatted = $invitations->map(function($inv) {
-            return [
-                'chat_id' => $inv->chat_id,
-                'group_name' => $inv->chat->name,
-            ];
-        });
-        return response()->json($formatted);
+        $invitations = $this->groupService->getInvitations($userId);
+
+        return $this->successResponse('Undangan berhasil diambil', $invitations);
     }
 
     public function respondInvitation(Request $request, Chat $chat)
     {
         $userId = $request->user()->id;
         $request->validate(['accept' => 'required|boolean']);
-        
-        if ($request->accept) {
-            $chat->participants()->where('user_id', $userId)->update(['status' => 'joined']);
-            return response()->json(['message' => 'Undangan diterima']);
-        } else {
-            $chat->participants()->where('user_id', $userId)->delete();
-            return response()->json(['message' => 'Undangan ditolak']);
-        }
+
+        $this->groupService->respondInvitation($chat, $userId, $request->accept);
+
+        $message = $request->accept ? 'Undangan diterima' : 'Undangan ditolak';
+        return $this->successResponse($message);
     }
 }

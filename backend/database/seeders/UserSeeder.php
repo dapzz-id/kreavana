@@ -22,7 +22,6 @@ class UserSeeder extends Seeder
                 'username' => 'admin',
                 'password' => Hash::make('password123'),
                 'role' => 'admin',
-                'selected_pihak' => 'kreator',
                 'is_creator_approved' => 0,
             ]
         );
@@ -35,21 +34,29 @@ class UserSeeder extends Seeder
                 'username' => 'user',
                 'password' => Hash::make('password123'),
                 'role' => 'user',
-                'selected_pihak' => 'kreator',
                 'is_creator_approved' => 0,
             ]
         );
 
         // 3. Creator Kreavana
-        User::updateOrCreate(
+        $creator = User::updateOrCreate(
             ['email' => 'creator@kreavana.id'],
             [
                 'name' => 'Creator Kreavana',
                 'username' => 'creator',
                 'password' => Hash::make('password123'),
                 'role' => 'creator',
-                'selected_pihak' => 'kreator',
+                'sub_role' => 'photographer',
                 'is_creator_approved' => 1,
+            ]
+        );
+
+        // Optionally, if user_sub_roles is used for dynamic creator roles
+        \App\Models\UserSubRole::updateOrCreate(
+            [
+                'user_id' => $creator->id,
+                'sub_role_slug' => 'photographer',
+                'role_type' => 'creator'
             ]
         );
     }

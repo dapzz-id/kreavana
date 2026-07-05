@@ -5,6 +5,7 @@ import '../models/opportunity_model.dart';
 import '../services/dashboard_service.dart';
 import '../services/profile_service.dart';
 import '../services/opportunity_service.dart';
+import '../services/request_pool.dart';
 import '../widgets/role_toggle.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/quick_action_button.dart';
@@ -15,7 +16,8 @@ import 'peluang_proyek_screen.dart';
 import '../widgets/opportunity_detail_sheet.dart';
 import '../widgets/dashboard_stats_charts.dart';
 import '../widgets/skeleton_box.dart';
-import '../main.dart';
+import '../services/theme_transition_service.dart';
+import 'wallet_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -33,68 +35,92 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late String _currentRole;
-  late String _selectedPihak;
+  late String _selectedSubRole;
   bool _isLoading = false;
   List<Map<String, String>> _stats = [];
-  Map<String, List<Map<String, String>>> _allPihakStats = {};
+  Map<String, List<Map<String, String>>> _allSubRoleStats = {};
   List<OpportunityModel> _opportunities = [];
 
-  final List<Map<String, dynamic>> _pihakList = [
+  /// Key used to find the theme-toggle button's screen position for the
+  /// circular reveal animation origin.
+  final GlobalKey _themeBtnKey = GlobalKey();
+
+  final List<Map<String, dynamic>> _subRoleList = [
     {
-      'slug': 'kreator',
-      'name': 'Kreator',
-      'icon': Icons.brush_outlined,
-      'color': const Color(0xFFF97316),
-    },
-    {
-      'slug': 'eo',
-      'name': 'Event Org',
-      'icon': Icons.event_note_outlined,
-      'color': const Color(0xFF3B82F6),
-    },
-    {
-      'slug': 'wo',
-      'name': 'Wedding Org',
-      'icon': Icons.favorite_border,
-      'color': const Color(0xFF8B5CF6),
-    },
-    {
-      'slug': 'sekolah',
-      'name': 'Pendidikan',
-      'icon': Icons.school_outlined,
+      'slug': 'institution',
+      'name': 'Institusi',
+      'icon': Icons.business_outlined,
       'color': const Color(0xFF10B981),
     },
     {
-      'slug': 'umkm',
-      'name': 'Bisnis/UMKM',
-      'icon': Icons.business_outlined,
-      'color': const Color(0xFF06B6D4),
-    },
-    {
-      'slug': 'pemerintah',
+      'slug': 'government',
       'name': 'Pemerintah',
       'icon': Icons.gavel_outlined,
       'color': const Color(0xFF1E3A8A),
     },
     {
-      'slug': 'komunitas',
+      'slug': 'mc',
+      'name': 'MC',
+      'icon': Icons.mic_outlined,
+      'color': const Color(0xFFF59E0B),
+    },
+    {
+      'slug': 'singer',
+      'name': 'Penyanyi',
+      'icon': Icons.music_note_outlined,
+      'color': const Color(0xFF8B5CF6),
+    },
+    {
+      'slug': 'wedding_organizer',
+      'name': 'Wedding Org',
+      'icon': Icons.favorite_border,
+      'color': const Color(0xFFE11D48),
+    },
+    {
+      'slug': 'event_organizer',
+      'name': 'Event Org',
+      'icon': Icons.event_note_outlined,
+      'color': const Color(0xFFF97316),
+    },
+    {
+      'slug': 'community',
       'name': 'Komunitas',
       'icon': Icons.groups_outlined,
       'color': const Color(0xFFEC4899),
     },
     {
-      'slug': 'organisasi',
-      'name': 'Organisasi',
-      'icon': Icons.corporate_fare_outlined,
-      'color': const Color(0xFF3F51B5),
+      'slug': 'makeup_artist',
+      'name': 'Makeup Artist',
+      'icon': Icons.face_retouching_natural,
+      'color': const Color(0xFFD946EF),
+    },
+    {
+      'slug': 'photographer',
+      'name': 'Fotografer',
+      'icon': Icons.camera_alt_outlined,
+      'color': const Color(0xFF3B82F6),
+    },
+    {
+      'slug': 'editor',
+      'name': 'Editor',
+      'icon': Icons.edit_outlined,
+      'color': const Color(0xFF14B8A6),
+    },
+    {
+      'slug': 'videographer',
+      'name': 'Videografer',
+      'icon': Icons.videocam_outlined,
+      'color': const Color(0xFF0EA5E9),
     },
   ];
 
   @override
   void initState() {
     super.initState();
-    _currentRole = (widget.user.role == 'creator' && widget.user.isCreatorApproved) ? 'creator' : 'user';
-    _selectedPihak = widget.user.selectedPihak;
+    _currentRole = widget.user.role;
+    final userSubRole = widget.user.subRole ?? '';
+    final slugs = _subRoleList.map((p) => p['slug'] as String).toList();
+    _selectedSubRole = slugs.contains(userSubRole) ? userSubRole : slugs.first;
     _loadDashboardData();
   }
 
@@ -102,11 +128,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void didUpdateWidget(covariant DashboardScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.user.role != oldWidget.user.role ||
-        widget.user.isCreatorApproved != oldWidget.user.isCreatorApproved ||
-        widget.user.selectedPihak != oldWidget.user.selectedPihak) {
+        widget.user.subRole != oldWidget.user.subRole) {
+      final userSubRole = widget.user.subRole ?? '';
+      final slugs = _subRoleList.map((p) => p['slug'] as String).toList();
       setState(() {
-        _currentRole = (widget.user.role == 'creator' && widget.user.isCreatorApproved) ? 'creator' : 'user';
-        _selectedPihak = widget.user.selectedPihak;
+        _currentRole = widget.user.role;
+        _selectedSubRole = slugs.contains(userSubRole) ? userSubRole : slugs.first;
       });
       _loadDashboardData();
     }
@@ -116,30 +143,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final slugs = _pihakList.map((p) => p['slug'] as String).toList();
+      final slugs = _subRoleList.map((p) => p['slug'] as String).toList();
 
-      final results = await Future.wait([
-        DashboardService.getStats(
-          pihak: _selectedPihak,
+      final results = await RequestPool.run([
+        () => DashboardService.getStats(
+          subRole: _selectedSubRole,
           roleType: _currentRole,
         ),
-        DashboardService.getAllPihakStats(
-          pihakSlugs: slugs,
+        () => DashboardService.getAllSubRoleStats(
+          subRoleSlugs: slugs,
           roleType: _currentRole,
         ),
-        DashboardService.getOpportunities(
-          pihak: _selectedPihak,
+        () => DashboardService.getOpportunities(
+          subRole: _selectedSubRole,
           limit: 5,
         ),
+        () => ProfileService.getProfile(widget.user.id ?? ''),
       ]);
 
       if (mounted) {
         setState(() {
           _stats = results[0] as List<Map<String, String>>;
-          _allPihakStats = results[1] as Map<String, List<Map<String, String>>>;
+          _allSubRoleStats =
+              results[1] as Map<String, List<Map<String, String>>>;
           _opportunities = results[2] as List<OpportunityModel>;
           _isLoading = false;
         });
+
+        final profileRes = results[3] as ProfileFetchResult;
+        if (profileRes.success == true && profileRes.user != null) {
+          widget.onUserUpdated(profileRes.user!);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -148,15 +182,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  void _onPihakSelected(String pihakSlug) async {
-    setState(() => _selectedPihak = pihakSlug);
+  void _onSubRoleSelected(String subRoleSlug) async {
+    setState(() => _selectedSubRole = subRoleSlug);
 
     await ProfileService.updateProfile(
-      userId: widget.user.id,
-      selectedPihak: pihakSlug,
+      userId: widget.user.id ?? '',
+      selectedSubRole: subRoleSlug,
     );
 
-    final updatedUser = widget.user.copyWith(selectedPihak: pihakSlug);
+    final updatedUser = widget.user.copyWith();
     widget.onUserUpdated(updatedUser);
 
     _loadDashboardData();
@@ -166,17 +200,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() => _currentRole = role);
 
     await ProfileService.updateProfile(
-      userId: widget.user.id,
-      selectedPihak: _selectedPihak,
+      userId: widget.user.id ?? '',
+      selectedSubRole: _selectedSubRole,
     );
 
     _loadDashboardData();
   }
 
-  Color _getCurrentPihakColor() {
-    final match = _pihakList.firstWhere(
-      (element) => element['slug'] == _selectedPihak,
-      orElse: () => _pihakList.first,
+  Color _getCurrentSubRoleColor() {
+    final match = _subRoleList.firstWhere(
+      (element) => element['slug'] == _selectedSubRole,
+      orElse: () => _subRoleList.first,
     );
     return match['color'] as Color;
   }
@@ -196,7 +230,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       MaterialPageRoute(
         builder: (_) => PeluangLokasiScreen(
           user: widget.user,
-          pihakSlug: _selectedPihak,
+          subRoleSlug: _selectedSubRole,
         ),
       ),
     );
@@ -207,7 +241,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       MaterialPageRoute(
         builder: (_) => PeluangProyekScreen(
           user: widget.user,
-          pihakSlug: _selectedPihak,
+          subRoleSlug: _selectedSubRole,
         ),
       ),
     );
@@ -215,7 +249,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _openOpportunityDetail(OpportunityModel op) async {
     var detail = op;
-    final fetched = await OpportunityService.getDetail(op.id);
+    final fetched = await OpportunityService.getDetail(op.id ?? '');
     if (fetched != null) detail = fetched;
     if (mounted) {
       OpportunityDetailSheet.show(
@@ -266,6 +300,101 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  String _formatRupiah(double val) {
+    final str = val.toStringAsFixed(0);
+    final reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
+    return 'Rp ${str.replaceAllMapped(reg, (Match m) => '${m[1]}.')}';
+  }
+
+  Widget _buildWalletCard(ThemeData theme, bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF312E81), const Color(0xFF1E1B4B)]
+              : [const Color(0xFF4F46E5), const Color(0xFF3730A3)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(
+              0xFF4F46E5,
+            ).withValues(alpha: isDark ? 0.15 : 0.25),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(
+                      Icons.account_balance_wallet_rounded,
+                      color: Colors.white70,
+                      size: 16,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'Saldo Dompet',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _formatRupiah(widget.user.balance),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => WalletScreen(
+                    user: widget.user,
+                    onUserUpdated: widget.onUserUpdated,
+                  ),
+                ),
+              ).then((_) => _loadDashboardData());
+            },
+            icon: const Icon(Icons.keyboard_arrow_right_rounded, size: 18),
+            label: const Text('Detail'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white.withValues(alpha: 0.15),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Helper: mobile quick-action row ────────────────────────────────────────
   // Membungkus setiap QuickActionButton dengan Expanded agar Row tidak overflow
   // di layar sempit. mainAxisAlignment dibiarkan start karena Expanded
@@ -273,9 +402,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildMobileQuickActions(List<Widget> buttons) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: buttons
-          .map((btn) => Expanded(child: btn))
-          .toList(),
+      children: buttons.map((btn) => Expanded(child: btn)).toList(),
     );
   }
 
@@ -283,7 +410,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final pihakColor = _getCurrentPihakColor();
+    final subRoleColor = _getCurrentSubRoleColor();
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 900;
 
@@ -295,7 +422,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             CircleAvatar(
               radius: 18,
               backgroundColor: isDark ? AppTheme.cardBg : Colors.grey.shade200,
-              backgroundImage: widget.user.avatarUrl != null && widget.user.avatarUrl!.isNotEmpty
+              backgroundImage:
+                  widget.user.avatarUrl != null &&
+                      widget.user.avatarUrl!.isNotEmpty
                   ? NetworkImage(widget.user.avatarUrl!)
                   : const AssetImage('assets/brandlogo.png') as ImageProvider,
             ),
@@ -305,7 +434,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text(
                   'Halo, ${widget.user.name}',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   '@${widget.user.username}',
@@ -319,11 +451,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
-            onPressed: () {
-              themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
-            },
+          Builder(
+            builder: (btnCtx) => IconButton(
+              key: _themeBtnKey,
+              icon: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (child, anim) => RotationTransition(
+                  turns: Tween(begin: 0.75, end: 1.0).animate(anim),
+                  child: FadeTransition(opacity: anim, child: child),
+                ),
+                child: Icon(
+                  isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                  key: ValueKey(isDark),
+                ),
+              ),
+              onPressed: () {
+                final box =
+                    _themeBtnKey.currentContext?.findRenderObject()
+                        as RenderBox?;
+                final origin = box != null
+                    ? box.localToGlobal(box.size.center(Offset.zero))
+                    : const Offset(0, 0);
+                ThemeTransitionService.animateToggle(
+                  origin: origin,
+                  toDark: !isDark,
+                );
+              },
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
@@ -334,7 +488,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ? PreferredSize(
                 preferredSize: const Size.fromHeight(65),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: RoleToggle(
                     currentRole: _currentRole,
                     isCreator: true,
@@ -352,9 +509,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildWalletCard(theme, isDark),
+              const SizedBox(height: 24),
+
               // 1. Category Selection Slider
               const Text(
-                'Kategori Pihak / Peran',
+                'Kategori SubRole / Peran',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
@@ -362,14 +522,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 height: 85,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: _pihakList.length,
+                  itemCount: _subRoleList.length,
                   itemBuilder: (context, index) {
-                    final item = _pihakList[index];
-                    final isSelected = item['slug'] == _selectedPihak;
+                    final item = _subRoleList[index];
+                    final isSelected = item['slug'] == _selectedSubRole;
                     final itemColor = item['color'] as Color;
 
                     return GestureDetector(
-                      onTap: () => _onPihakSelected(item['slug']),
+                      onTap: () => _onSubRoleSelected(item['slug']),
                       child: Container(
                         width: 75,
                         margin: const EdgeInsets.only(right: 12),
@@ -377,12 +537,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         decoration: BoxDecoration(
                           color: isSelected
                               ? itemColor.withValues(alpha: 0.15)
-                              : (isDark ? AppTheme.cardBg : Colors.grey.shade100),
+                              : (isDark
+                                    ? AppTheme.cardBg
+                                    : Colors.grey.shade100),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: isSelected
                                 ? itemColor
-                                : (isDark ? AppTheme.inputBorder : Colors.transparent),
+                                : (isDark
+                                      ? AppTheme.inputBorder
+                                      : Colors.transparent),
                             width: 1.5,
                           ),
                         ),
@@ -391,7 +555,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           children: [
                             Icon(
                               item['icon'] as IconData,
-                              color: isSelected ? itemColor : Colors.grey.shade600,
+                              color: isSelected
+                                  ? itemColor
+                                  : Colors.grey.shade600,
                               size: 24,
                             ),
                             const SizedBox(height: 6),
@@ -402,10 +568,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 10,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                                 color: isSelected
                                     ? (isDark ? Colors.white : itemColor)
-                                    : (isDark ? AppTheme.textMuted : Colors.grey.shade700),
+                                    : (isDark
+                                          ? AppTheme.textMuted
+                                          : Colors.grey.shade700),
                               ),
                             ),
                           ],
@@ -419,8 +589,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               // 2. Stats Grid
               Text(
-                'Statistik ${_pihakList.firstWhere((e) => e['slug'] == _selectedPihak)['name']} (${_currentRole == 'creator' ? 'Creator' : 'Klien'})',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                'Statistik ${(_subRoleList.firstWhere((e) => e['slug'] == _selectedSubRole, orElse: () => _subRoleList.first))['name']} (${_currentRole == 'creator' ? 'Creator' : 'Klien'})',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 12),
               _isLoading
@@ -452,16 +625,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           label: stat['label'] ?? '',
                           value: stat['value'] ?? '',
                           iconName: stat['icon'] ?? '',
-                          accentColor: pihakColor,
+                          accentColor: subRoleColor,
                         );
                       },
                     ),
-              if (!_isLoading && _allPihakStats.isNotEmpty) ...[
+              if (!_isLoading && _allSubRoleStats.isNotEmpty) ...[
                 const SizedBox(height: 28),
                 DashboardStatsCharts(
-                  pihakList: _pihakList,
-                  allPihakStats: _allPihakStats,
-                  selectedPihak: _selectedPihak,
+                  subRoleList: _subRoleList,
+                  allSubRoleStats: _allSubRoleStats,
+                  selectedSubRole: _selectedSubRole,
                   currentRole: _currentRole,
                   isDark: isDark,
                 ),
@@ -479,7 +652,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           AiMatchingBanner(
-                            onTap: () => _showDummyActionMessage('Pencarian Pintar AI'),
+                            onTap: () =>
+                                _showDummyActionMessage('Pencarian Pintar AI'),
                           ),
                           const SizedBox(height: 24),
                           Row(
@@ -487,13 +661,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             children: [
                               const Text(
                                 'Peluang & Kolaborasi Terbaru',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               TextButton(
                                 onPressed: _navigateToPeluangProyek,
                                 child: Text(
                                   'Lihat Semua',
-                                  style: TextStyle(color: pihakColor, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    color: subRoleColor,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ],
@@ -504,23 +684,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   shrinkWrap: true,
                                   physics: const NeverScrollableScrollPhysics(),
                                   itemCount: 3,
-                                  itemBuilder: (context, index) => const FeatureCardSkeleton(),
+                                  itemBuilder: (context, index) =>
+                                      const FeatureCardSkeleton(),
                                 )
                               : _opportunities.isEmpty
-                                  ? _buildEmptyOpportunity(isDark)
-                                  : ListView.builder(
-                                      shrinkWrap: true,
-                                      physics: const NeverScrollableScrollPhysics(),
-                                      itemCount: _opportunities.length,
-                                      itemBuilder: (context, index) {
-                                        final op = _opportunities[index];
-                                        return FeatureCard(
-                                          opportunity: op,
-                                          accentColor: pihakColor,
-                                          onTap: () => _openOpportunityDetail(op),
-                                        );
-                                      },
-                                    ),
+                              ? _buildEmptyOpportunity(isDark)
+                              : ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: _opportunities.length,
+                                  itemBuilder: (context, index) {
+                                    final op = _opportunities[index];
+                                    return FeatureCard(
+                                      opportunity: op,
+                                      accentColor: subRoleColor,
+                                      onTap: () => _openOpportunityDetail(op),
+                                    );
+                                  },
+                                ),
                         ],
                       ),
                     ),
@@ -533,7 +714,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           const Text(
                             'Tindakan Cepat',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           Container(
@@ -542,7 +726,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               color: isDark ? AppTheme.cardBg : Colors.white,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                                color: isDark
+                                    ? AppTheme.inputBorder
+                                    : Colors.grey.shade200,
                               ),
                             ),
                             child: Column(
@@ -557,14 +743,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       _buildSidebarQuickAction(
                                         label: 'Cari Proyek',
                                         icon: Icons.search,
-                                        color: pihakColor,
+                                        color: subRoleColor,
                                         onTap: _navigateToPeluangProyek,
                                       ),
                                       _buildSidebarQuickAction(
                                         label: 'Update Portofolio',
                                         icon: Icons.portrait,
                                         color: Colors.purple,
-                                        onTap: () => _showDummyActionMessage('Update Portofolio'),
+                                        onTap: () => _showDummyActionMessage(
+                                          'Update Portofolio',
+                                        ),
                                       ),
                                     ]
                                   : [
@@ -577,14 +765,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       _buildSidebarQuickAction(
                                         label: 'Peluang Proyek',
                                         icon: Icons.work_outline,
-                                        color: pihakColor,
+                                        color: subRoleColor,
                                         onTap: _navigateToPeluangProyek,
                                       ),
                                       _buildSidebarQuickAction(
                                         label: 'Cari Vendor',
                                         icon: Icons.people_alt_outlined,
                                         color: Colors.purple,
-                                        onTap: () => _showDummyActionMessage('Cari Vendor'),
+                                        onTap: () => _showDummyActionMessage(
+                                          'Cari Vendor',
+                                        ),
                                       ),
                                     ],
                             ),
@@ -600,7 +790,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     // 3. AI Banner
                     AiMatchingBanner(
-                      onTap: () => _showDummyActionMessage('Pencarian Pintar AI'),
+                      onTap: () =>
+                          _showDummyActionMessage('Pencarian Pintar AI'),
                     ),
                     const SizedBox(height: 24),
 
@@ -608,7 +799,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     // FIX: tiap QuickActionButton dibungkus Expanded via _buildMobileQuickActions
                     const Text(
                       'Tindakan Cepat',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     _buildMobileQuickActions(
@@ -623,14 +817,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               QuickActionButton(
                                 label: 'Cari Proyek',
                                 icon: Icons.search,
-                                color: pihakColor,
+                                color: subRoleColor,
                                 onTap: _navigateToPeluangProyek,
                               ),
                               QuickActionButton(
                                 label: 'Portofolio',
                                 icon: Icons.portrait,
                                 color: Colors.purple,
-                                onTap: () => _showDummyActionMessage('Update Portofolio'),
+                                onTap: () => _showDummyActionMessage(
+                                  'Update Portofolio',
+                                ),
                               ),
                             ]
                           : [
@@ -643,14 +839,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               QuickActionButton(
                                 label: 'Peluang Proyek',
                                 icon: Icons.work_outline,
-                                color: pihakColor,
+                                color: subRoleColor,
                                 onTap: _navigateToPeluangProyek,
                               ),
                               QuickActionButton(
                                 label: 'Cari Vendor',
                                 icon: Icons.people_alt_outlined,
                                 color: Colors.purple,
-                                onTap: () => _showDummyActionMessage('Cari Vendor'),
+                                onTap: () =>
+                                    _showDummyActionMessage('Cari Vendor'),
                               ),
                             ],
                     ),
@@ -663,15 +860,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         const Expanded(
                           child: Text(
                             'Peluang & Kolaborasi Terbaru',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         TextButton(
-                          onPressed: () => _showDummyActionMessage('Lihat Semua Peluang'),
+                          onPressed: () =>
+                              _showDummyActionMessage('Lihat Semua Peluang'),
                           child: Text(
                             'Lihat Semua',
-                            style: TextStyle(color: pihakColor, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              color: subRoleColor,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -682,23 +886,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             itemCount: 3,
-                            itemBuilder: (context, index) => const FeatureCardSkeleton(),
+                            itemBuilder: (context, index) =>
+                                const FeatureCardSkeleton(),
                           )
                         : _opportunities.isEmpty
-                            ? _buildEmptyOpportunity(isDark)
-                            : ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: _opportunities.length,
-                                itemBuilder: (context, index) {
-                                  final op = _opportunities[index];
-                                  return FeatureCard(
-                                    opportunity: op,
-                                    accentColor: pihakColor,
-                                    onTap: () => _openOpportunityDetail(op),
-                                  );
-                                },
-                              ),
+                        ? _buildEmptyOpportunity(isDark)
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _opportunities.length,
+                            itemBuilder: (context, index) {
+                              final op = _opportunities[index];
+                              return FeatureCard(
+                                opportunity: op,
+                                accentColor: subRoleColor,
+                                onTap: () => _openOpportunityDetail(op),
+                              );
+                            },
+                          ),
                   ],
                 ),
             ],

@@ -24,7 +24,7 @@ class PushNotificationService {
       final currentUser = await AuthService.getCurrentUser();
 
       if (token != null && currentUser != null) {
-        await _initPusher(token, currentUser.id);
+        await _initPusher(token, currentUser.id ?? '');
       }
     } catch (e) {
       debugPrint('Push Notification Init Error: $e');
@@ -38,7 +38,7 @@ class PushNotificationService {
     }
   }
 
-  static Future<void> _initPusher(String token, int userId) async {
+  static Future<void> _initPusher(String token, String userId) async {
     try {
       if (_pusher != null) {
         _pusher!.disconnect();
@@ -53,7 +53,7 @@ class PushNotificationService {
           key: ApiService.keyPusher,
         ),
         connectionErrorHandler: (exception, trace, refresh) {
-          print('Pusher notification connection error: $exception');
+          debugPrint('Pusher notification connection error: $exception');
           Future.delayed(const Duration(seconds: 5), refresh);
         },
       );
@@ -71,7 +71,7 @@ class PushNotificationService {
       });
       _pusher!.connect();
     } catch (e) {
-      print('Pusher init error: $e');
+      debugPrint('Pusher init error: $e');
     }
   }
 
@@ -84,7 +84,7 @@ class PushNotificationService {
         _showNotification(notif['title'] ?? 'Notifikasi', notif['message'] ?? 'Ada pemberitahuan baru');
       }
     } catch (e) {
-      print('Error parsing notification: $e');
+      debugPrint('Error parsing notification: $e');
     }
   }
 

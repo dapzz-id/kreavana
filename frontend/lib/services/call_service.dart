@@ -106,7 +106,7 @@ class CallService extends ChangeNotifier {
           debugPrint('Pusher Call Connection Event: Connected');
           
           // Subscribe to personal call channel (using public channel for prototyping)
-          final channel = _pusher!.publicChannel('call.${currentUser.id}');
+          final channel = _pusher!.publicChannel('call.${currentUser.id ?? ''}');
           channel.subscribe();
           
           channel.bind('call.signal').listen((callEvent) {

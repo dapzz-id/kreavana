@@ -1,70 +1,90 @@
 class UserModel {
-  final int id;
+  final String? id;
   final String name;
   final String username;
   final String email;
   final String? avatarUrl;
   final String? phone;
   final String role; // 'user' or 'creator'
-  final String selectedPihak;
+  final String? subRole;
   final bool isCreatorApproved;
   final String? createdAt;
+  final double balance;
+  final int followersCount;
+  final int followingCount;
+  final bool isFollowing;
 
   UserModel({
-    required this.id,
+    this.id,
     required this.name,
     required this.username,
     required this.email,
     this.avatarUrl,
     this.phone,
     this.role = 'user',
-    this.selectedPihak = 'kreator',
+    this.subRole,
     this.isCreatorApproved = false,
     this.createdAt,
+    this.balance = 0.0,
+    this.followersCount = 0,
+    this.followingCount = 0,
+    this.isFollowing = false,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
+      id: json['id']?.toString(),
       name: json['name'] ?? '',
       username: json['username'] ?? '',
       email: json['email'] ?? '',
       avatarUrl: json['avatar_url'],
       phone: json['phone'],
       role: json['role'] ?? 'user',
-      selectedPihak: json['selected_pihak'] ?? 'kreator',
+      subRole: json['sub_role'],
       isCreatorApproved: json['is_creator_approved'] == 1 ||
           json['is_creator_approved'] == true ||
           json['is_creator_approved'] == '1',
       createdAt: json['created_at'],
+      balance: json['balance'] != null ? double.parse(json['balance'].toString()) : 0.0,
+      followersCount: json['followers_count'] ?? 0,
+      followingCount: json['following_count'] ?? 0,
+      isFollowing: json['is_following'] ?? false,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      if (id != null) 'id': id,
       'name': name,
       'username': username,
       'email': email,
       'avatar_url': avatarUrl,
       'phone': phone,
       'role': role,
-      'selected_pihak': selectedPihak,
+      'sub_role': subRole,
       'is_creator_approved': isCreatorApproved ? 1 : 0,
       'created_at': createdAt,
+      'balance': balance,
+      'followers_count': followersCount,
+      'following_count': followingCount,
+      'is_following': isFollowing,
     };
   }
 
   UserModel copyWith({
-    int? id,
+    String? id,
     String? name,
     String? username,
     String? email,
     String? avatarUrl,
     String? phone,
     String? role,
-    String? selectedPihak,
+    String? subRole,
     bool? isCreatorApproved,
+    double? balance,
+    int? followersCount,
+    int? followingCount,
+    bool? isFollowing,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -74,9 +94,13 @@ class UserModel {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       phone: phone ?? this.phone,
       role: role ?? this.role,
-      selectedPihak: selectedPihak ?? this.selectedPihak,
+      subRole: subRole ?? this.subRole,
       isCreatorApproved: isCreatorApproved ?? this.isCreatorApproved,
       createdAt: createdAt,
+      balance: balance ?? this.balance,
+      followersCount: followersCount ?? this.followersCount,
+      followingCount: followingCount ?? this.followingCount,
+      isFollowing: isFollowing ?? this.isFollowing,
     );
   }
 
@@ -84,14 +108,14 @@ class UserModel {
   bool get isAdmin => role == 'admin';
 }
 
-class PihakCategory {
+class SubRoleCategory {
   final String slug;
   final String name;
   final String? description;
   final String? icon;
   final String? color;
 
-  PihakCategory({
+  SubRoleCategory({
     required this.slug,
     required this.name,
     this.description,
@@ -99,8 +123,8 @@ class PihakCategory {
     this.color,
   });
 
-  factory PihakCategory.fromJson(Map<String, dynamic> json) {
-    return PihakCategory(
+  factory SubRoleCategory.fromJson(Map<String, dynamic> json) {
+    return SubRoleCategory(
       slug: json['slug'] ?? '',
       name: json['name'] ?? '',
       description: json['description'],
@@ -111,9 +135,9 @@ class PihakCategory {
 }
 
 class CreatorApplication {
-  final int id;
-  final int userId;
-  final String pihakCategory;
+  final String? id;
+  final String? userId;
+  final String subRoleCategory;
   final String skillDescription;
   final String? portfolioLink;
   final String? experience;
@@ -129,9 +153,9 @@ class CreatorApplication {
   final String? appliedAt;
 
   CreatorApplication({
-    required this.id,
-    required this.userId,
-    required this.pihakCategory,
+    this.id,
+    this.userId,
+    required this.subRoleCategory,
     required this.skillDescription,
     this.portfolioLink,
     this.experience,
@@ -149,11 +173,9 @@ class CreatorApplication {
 
   factory CreatorApplication.fromJson(Map<String, dynamic> json) {
     return CreatorApplication(
-      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
-      userId: json['user_id'] is int
-          ? json['user_id']
-          : int.parse(json['user_id'].toString()),
-      pihakCategory: json['pihak_category'] ?? '',
+      id: json['id']?.toString(),
+      userId: json['user_id']?.toString(),
+      subRoleCategory: json['sub_role_category'] ?? '',
       skillDescription: json['skill_description'] ?? '',
       portfolioLink: json['portfolio_link'],
       experience: json['experience'],

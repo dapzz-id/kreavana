@@ -1,261 +1,116 @@
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/material.dart';
-import '../main.dart';
-import '../screens/login_screen.dart';
+import 'package:dio/dio.dart';
+import 'dio_client.dart';
 
 class ApiService {
-  static final http.Client _client = http.Client();
+  static Dio get _dio => DioClient.instance.dio;
 
-  /// Timeout agar UI tidak menunggu terlalu lama saat server offline.
-  static const Duration requestTimeout = Duration(seconds: 10);
+  static String get hostIp => Uri.parse(DioClient.baseUrl).host;
 
-  /// Override saat build: --dart-define=API_HOST=192.168.x.x
-  static const String _hostOverride = String.fromEnvironment(
-    'API_HOST',
-    defaultValue: '',
-  );
+  static String get keyPusher => 'cuzkfya73cpnszss3vc2';
 
-  static const int apiPort = 8000;
-  static const String keyPusher = 'cuzkfya73cpnszss3vc2';
-
-  /// Host backend otomatis per platform (Laragon/Windows = localhost).
-  static String get hostIp {
-    if (_hostOverride.isNotEmpty) return _hostOverride;
-
-    if (kIsWeb) return '127.0.0.1';
-
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        // Emulator Android → host PC. Perangkat fisik: set API_HOST via dart-define.
-        return '10.0.2.2';
-      case TargetPlatform.iOS:
-        return '127.0.0.1';
-      case TargetPlatform.windows:
-      case TargetPlatform.macOS:
-      case TargetPlatform.linux:
-        return '127.0.0.1';
-      default:
-        return '127.0.0.1';
-    }
-  }
-
-  static String get baseUrl => 'http://$hostIp:$apiPort/api';
-
-  static bool _isRefreshing = false;
-
-  static String _connectionErrorMessage(Object error) {
-    final text = error.toString().toLowerCase();
-    if (text.contains('timeout') ||
-        text.contains('semaphore') ||
-        text.contains('connection refused') ||
-        text.contains('failed host lookup') ||
-        text.contains('network is unreachable') ||
-        text.contains('socketexception')) {
-      return 'Tidak dapat terhubung ke server Kreavana.\n'
-          'Pastikan backend sudah jalan:\n'
-          'php artisan serve --host=0.0.0.0 --port=$apiPort\n'
-          '(Host: $hostIp:$apiPort)';
-    }
-    return 'Koneksi gagal. Periksa internet dan pastikan server backend aktif.';
-  }
-
-  static Future<bool>? _refreshFuture;
-
-  static Future<bool> _refreshToken() async {
-    if (_isRefreshing && _refreshFuture != null) {
-      return await _refreshFuture!;
-    }
-
-    _isRefreshing = true;
-    _refreshFuture = _doRefreshToken();
-    final result = await _refreshFuture!;
-    
-    _isRefreshing = false;
-    _refreshFuture = null;
-    return result;
-  }
-
-  static Future<bool> _doRefreshToken() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final sessionToken = prefs.getString('session_token') ?? '';
-      final refreshToken = prefs.getString('refresh_token') ?? '';
-
-      final uri = Uri.parse('$baseUrl/auth/refresh');
-      final response = await _client
-          .post(
-            uri,
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json; charset=utf-8',
-            },
-            body: jsonEncode({
-              'session_token': sessionToken,
-              'refresh_token': refreshToken,
-            }),
-          )
-          .timeout(requestTimeout);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success'] == true && data['data'] != null) {
-          final newTokens = data['data'];
-          await prefs.setString(
-            'auth_token',
-            newTokens['access_token'] ?? newTokens['token'] ?? '',
-          );
-          await prefs.setString(
-            'refresh_token',
-            newTokens['refresh_token'] ?? '',
-          );
-          if (newTokens['session_token'] != null) {
-            await prefs.setString('session_token', newTokens['session_token']);
-          }
-          return true;
-        }
-      }
-    } catch (_) {}
-    await _forceLogout();
-    return false;
-  }
-
-  static Future<void> _forceLogout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('auth_token');
-    await prefs.remove('refresh_token');
-    await prefs.remove('session_token');
-    await prefs.remove('user_data');
-
-    if (navigatorKey.currentContext != null) {
-      Navigator.of(navigatorKey.currentContext!).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
-    }
-  }
-
-  static Future<Map<String, String>> _getHeaders() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token') ?? '';
-    return {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Accept': 'application/json',
-      'Authorization': 'Bearer $token',
-    };
-  }
-
-  static Future<dynamic> _request(
-    String method,
+  static Future<Map<String, dynamic>> get(
     String endpoint, {
-    Map<String, String>? queryParams,
-    Map<String, dynamic>? body,
+    Map<String, dynamic>? queryParams,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/$endpoint').replace(
+      final response = await _dio.get(
+        '/$endpoint',
         queryParameters: queryParams,
       );
-
-      Future<http.Response> makeCall(Map<String, String> headers) {
-        switch (method) {
-          case 'POST':
-            return _client
-                .post(uri, headers: headers, body: jsonEncode(body))
-                .timeout(requestTimeout);
-          case 'PUT':
-            return _client
-                .put(uri, headers: headers, body: jsonEncode(body))
-                .timeout(requestTimeout);
-          case 'PATCH':
-            return _client
-                .patch(uri, headers: headers, body: jsonEncode(body))
-                .timeout(requestTimeout);
-          case 'DELETE':
-            return _client.delete(uri, headers: headers).timeout(requestTimeout);
-          case 'GET':
-          default:
-            return _client.get(uri, headers: headers).timeout(requestTimeout);
-        }
-      }
-
-      final headers = await _getHeaders();
-      final response = await makeCall(headers);
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return response.body.isNotEmpty
-            ? jsonDecode(response.body)
-            : {'success': true};
-      } else if (response.statusCode == 401) {
-        if (endpoint != 'auth/refresh') {
-          final refreshed = await _refreshToken();
-          if (refreshed) {
-            final newHeaders = await _getHeaders();
-            final retryResponse = await makeCall(newHeaders);
-            if (retryResponse.statusCode >= 200 &&
-                retryResponse.statusCode < 300) {
-              return retryResponse.body.isNotEmpty
-                  ? jsonDecode(retryResponse.body)
-                  : {'success': true};
-            }
-          }
-        }
-        return {
-          'success': false,
-          'message': 'Sesi telah habis, silakan login kembali.',
-        };
-      } else {
-        try {
-          final decoded = jsonDecode(response.body);
-          if (decoded is Map) {
-            if (decoded['message'] != null) {
-              return {
-                'success': false,
-                'message': decoded['message'].toString(),
-              };
-            }
-            if (decoded['errors'] is Map) {
-              final errors = decoded['errors'] as Map;
-              final first = errors.values.first;
-              final msg = first is List ? first.first.toString() : first.toString();
-              return {'success': false, 'message': msg};
-            }
-          }
-        } catch (_) {}
-        return {
-          'success': false,
-          'message': 'Server error: ${response.statusCode}',
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': _connectionErrorMessage(e),
-      };
+      return _formatResponse(response);
+    } on DioException catch (e) {
+      return _handleError(e);
     }
   }
 
-  static Future<dynamic> get(
-    String endpoint, {
-    Map<String, String>? queryParams,
-  }) {
-    return _request('GET', endpoint, queryParams: queryParams);
+  static Future<Map<String, dynamic>> post(
+    String endpoint,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final response = await _dio.post('/$endpoint', data: body);
+      return _formatResponse(response);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
   }
 
-  static Future<dynamic> post(String endpoint, Map<String, dynamic> body) {
-    return _request('POST', endpoint, body: body);
+  static Future<Map<String, dynamic>> put(
+    String endpoint,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final response = await _dio.put('/$endpoint', data: body);
+      return _formatResponse(response);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
   }
 
-  static Future<dynamic> put(String endpoint, Map<String, dynamic> body) {
-    return _request('PUT', endpoint, body: body);
+  static Future<Map<String, dynamic>> patch(
+    String endpoint,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final response = await _dio.patch('/$endpoint', data: body);
+      return _formatResponse(response);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
   }
 
-  static Future<dynamic> patch(String endpoint, Map<String, dynamic> body) {
-    return _request('PATCH', endpoint, body: body);
+  static Future<Map<String, dynamic>> delete(String endpoint) async {
+    try {
+      final response = await _dio.delete('/$endpoint');
+      return _formatResponse(response);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
   }
 
-  static Future<dynamic> delete(String endpoint) {
-    return _request('DELETE', endpoint);
+  static Map<String, dynamic> _formatResponse(Response response) {
+    if (response.data is Map<String, dynamic>) {
+      final data = response.data as Map<String, dynamic>;
+      if (!data.containsKey('status')) {
+        data['status'] = true;
+      }
+      return data;
+    }
+    return {'status': true, 'data': response.data};
+  }
+
+  static Map<String, dynamic> _handleError(DioException e) {
+    if (e.response != null) {
+      final statusCode = e.response!.statusCode;
+
+      if (statusCode == 401) {
+        return {
+          'status': false,
+          'message': 'Sesi tidak valid. Silakan masuk kembali.',
+        };
+      }
+
+      if (statusCode == 403) {
+        return {'status': false, 'message': 'Akses ditolak.'};
+      }
+
+      if (e.response!.data is Map<String, dynamic>) {
+        final data = e.response!.data as Map<String, dynamic>;
+        if (!data.containsKey('status')) {
+          data['status'] = false;
+        }
+        return data;
+      }
+      return {
+        'status': false,
+        'message': 'Error ${e.response!.statusCode}',
+        'data': e.response!.data,
+      };
+    }
+    return {
+      'status': false,
+      'message': 'Gagal terhubung ke server',
+      'error': e.message,
+    };
   }
 }

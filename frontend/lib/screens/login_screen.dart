@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/gradient_button.dart';
 import '../widgets/social_button.dart';
 import '../widgets/auth_divider.dart';
-import '../main.dart';
+import '../services/theme_transition_service.dart';
 import 'register_screen.dart';
 import 'main_navigation.dart';
 import '../services/auth_service.dart';
@@ -25,6 +25,8 @@ class _LoginScreenState extends State<LoginScreen>
   bool _obscurePassword = true;
   bool _isLoading = false;
   bool _rememberMe = false;
+
+  final GlobalKey _themeBtnKey = GlobalKey();
 
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
@@ -115,20 +117,21 @@ class _LoginScreenState extends State<LoginScreen>
       body: SafeArea(
         child: Stack(
           children: [
-            Center(
+            Positioned.fill(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 28,
                   vertical: 24,
                 ),
-                child: FadeTransition(
-                  opacity: _fadeAnim,
-                  child: SlideTransition(
-                    position: _slideAnim,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 420),
-                      child: Form(
-                        key: _formKey,
+                child: Center(
+                  child: FadeTransition(
+                    opacity: _fadeAnim,
+                    child: SlideTransition(
+                      position: _slideAnim,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 420),
+                        child: Form(
+                          key: _formKey,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -448,24 +451,40 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
             ),
+            ),
 
             // Theme Toggle Button
             Positioned(
               top: 16,
               right: 16,
               child: IconButton.filledTonal(
-                icon: Icon(
-                  isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                  color: colorScheme.onSurfaceVariant,
+                key: _themeBtnKey,
+                icon: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, anim) => RotationTransition(
+                    turns: Tween(begin: 0.75, end: 1.0).animate(anim),
+                    child: FadeTransition(opacity: anim, child: child),
+                  ),
+                  child: Icon(
+                    isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                    key: ValueKey(isDark),
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 style: IconButton.styleFrom(
                   backgroundColor: colorScheme.surfaceContainerHighest
                       .withValues(alpha: 0.5),
                 ),
                 onPressed: () {
-                  themeNotifier.value = isDark
-                      ? ThemeMode.light
-                      : ThemeMode.dark;
+                  final box = _themeBtnKey.currentContext?.findRenderObject()
+                      as RenderBox?;
+                  final origin = box != null
+                      ? box.localToGlobal(box.size.center(Offset.zero))
+                      : const Offset(0, 0);
+                  ThemeTransitionService.animateToggle(
+                    origin: origin,
+                    toDark: !isDark,
+                  );
                 },
               ),
             ),

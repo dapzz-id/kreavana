@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app/theme.dart';
 import 'models/user_model.dart';
+import 'services/auth_session_state.dart';
 import 'services/auth_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/call_service.dart';
@@ -16,11 +17,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Transparent status bar for all pages on mobile
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.dark,
-    statusBarBrightness: Brightness.light,
-  ));
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
+    ),
+  );
 
   // Inisialisasi notifikasi di background — jangan blokir splash/login.
   unawaited(PushNotificationService.initialize());
@@ -40,7 +43,7 @@ void main() async {
 
   FlutterError.onError = (FlutterErrorDetails details) {
     // Ignore GPU context lost errors
-    if (details.toString().contains('context') || 
+    if (details.toString().contains('context') ||
         details.toString().contains('LateInitializationError')) {
       return;
     }
@@ -77,9 +80,16 @@ class KreavanaApp extends StatelessWidget {
               ],
             );
           },
-          home: initialUser != null
-              ? MainNavigation(initialUser: initialUser!)
-              : const LoginScreen(),
+          home: ValueListenableBuilder<bool>(
+            valueListenable: authSignedOutNotifier,
+            builder: (context, isSignedOut, child) {
+              if (initialUser != null && !isSignedOut) {
+                return MainNavigation(initialUser: initialUser!);
+              }
+
+              return const LoginScreen();
+            },
+          ),
         );
       },
     );

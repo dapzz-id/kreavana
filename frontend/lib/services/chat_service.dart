@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'dart:async';
 import 'package:dart_pusher_channels/dart_pusher_channels.dart';
@@ -31,14 +32,14 @@ class ChatService {
         key: ApiService.keyPusher,
       ),
       connectionErrorHandler: (exception, trace, refresh) {
-        print('Pusher chat connection error: $exception');
+        debugPrint('Pusher chat connection error: $exception');
         _isConnected = false;
         Future.delayed(const Duration(seconds: 5), refresh);
       },
     );
 
     _pusher!.onConnectionEstablished.listen((event) {
-      print('✅ Pusher Chat Connection Established');
+      debugPrint('✅ Pusher Chat Connection Established');
       _isConnected = true;
       // Now subscribe to all channels that were queued while waiting for connection
       final pending = Set<String>.from(_pendingChatIds);
@@ -60,10 +61,10 @@ class ChatService {
 
     final channel = _pusher!.publicChannel('chat.$chatId');
     channel.subscribe();
-    print('📡 Subscribed to chat.$chatId (connected: $_isConnected)');
+    debugPrint('📡 Subscribed to chat.$chatId (connected: $_isConnected)');
 
     channel.bind('message.sent').listen((event) {
-      print('📨 Received message.sent event on chat.$chatId');
+      debugPrint('📨 Received message.sent event on chat.$chatId');
       if (event.data != null) {
         try {
           final data = event.data is String ? jsonDecode(event.data) : event.data;
@@ -73,7 +74,7 @@ class ChatService {
             _messageStreamController.add(Map<String, dynamic>.from(msg));
           }
         } catch (e) {
-          print('Error parsing message event: $e');
+          debugPrint('Error parsing message event: $e');
         }
       }
     });
@@ -92,10 +93,10 @@ class ChatService {
         _bindChannel(chatId);
       } else {
         _pendingChatIds.add(chatId);
-        print('⏳ Queued subscription for chat.$chatId (waiting for connection)');
+        debugPrint('⏳ Queued subscription for chat.$chatId (waiting for connection)');
       }
     } catch (e) {
-      print('Pusher chat error: $e');
+      debugPrint('Pusher chat error: $e');
     }
   }
 
@@ -120,8 +121,7 @@ class ChatService {
 
   static Future<List<dynamic>> fetchChats() async {
     final response = await ApiService.get('chats');
-    if (response is List) return response;
-    if (response is Map && response['success'] == true && response['data'] is List) {
+    if (response['status'] == true && response['data'] is List) {
       return response['data'];
     }
     return [];
@@ -129,8 +129,7 @@ class ChatService {
 
   static Future<List<dynamic>> fetchMessages(String chatId) async {
     final response = await ApiService.get('chats/$chatId/messages');
-    if (response is List) return response;
-    if (response is Map && response['success'] == true && response['data'] is List) {
+    if (response['status'] == true && response['data'] is List) {
       return response['data'];
     }
     return [];
@@ -138,25 +137,23 @@ class ChatService {
 
   static Future<Map<String, dynamic>> sendMessage(String chatId, String text) async {
     final response = await ApiService.post('chats/$chatId/messages', {'message': text});
-    if (response is Map<String, dynamic>) return response;
-    return {'success': false, 'message': 'Unknown error'};
+    return response;
   }
 
   static Future<Map<String, dynamic>> createGroup(String name, String description) async {
     final res = await ApiService.post('groups', {'name': name, 'description': description});
-    return res as Map<String, dynamic>;
+    return res;
   }
 
   static Future<List<dynamic>> fetchGroupMembers(String chatId) async {
     final response = await ApiService.get('groups/$chatId/members');
-    if (response is List) return response;
-    if (response is Map && response['success'] == true && response['data'] is List) {
+    if (response['status'] == true && response['data'] is List) {
       return response['data'];
     }
     return [];
   }
 
-  static Future<void> addGroupMember(String chatId, int userId) async {
+  static Future<void> addGroupMember(String chatId, String userId) async {
     await ApiService.post('groups/$chatId/members', {'user_id': userId});
   }
 
@@ -166,17 +163,15 @@ class ChatService {
 
   static Future<List<dynamic>> searchUsers(String query) async {
     final response = await ApiService.get('users/search?q=$query');
-    if (response is List) return response;
-    if (response is Map && response['success'] == true && response['data'] is List) {
+    if (response['status'] == true && response['data'] is List) {
       return response['data'];
     }
     return [];
   }
 
-  static Future<Map<String, dynamic>> startPersonalChat(int userId) async {
+  static Future<Map<String, dynamic>> startPersonalChat(String userId) async {
     final response = await ApiService.post('chats/personal', {'user_id': userId});
-    if (response is Map<String, dynamic>) return response;
-    throw Exception('Failed to start personal chat');
+    return response;
   }
 
   static Future<void> kickMember(String chatId, String userId) async {
@@ -200,8 +195,7 @@ class ChatService {
 
   static Future<List<dynamic>> fetchInvitations() async {
     final response = await ApiService.get('invitations');
-    if (response is List) return response;
-    if (response is Map && response['success'] == true && response['data'] is List) {
+    if (response['status'] == true && response['data'] is List) {
       return response['data'];
     }
     return [];

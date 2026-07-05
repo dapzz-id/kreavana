@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import '../services/call_service.dart';
 import '../services/pip_factory.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -10,11 +9,11 @@ class CallScreen extends StatefulWidget {
   final String remoteAvatarUrl;
 
   const CallScreen({
-    Key? key,
+    super.key,
     required this.callService,
     required this.remoteUserName,
     required this.remoteAvatarUrl,
-  }) : super(key: key);
+  });
 
   @override
   State<CallScreen> createState() => _CallScreenState();
@@ -104,6 +103,7 @@ class _CallScreenState extends State<CallScreen> with SingleTickerProviderStateM
 
     // Web / iOS fallback: use in-app overlay
     widget.callService.minimizeCall();
+    if (!mounted) return;
     if (Navigator.canPop(context)) {
       Navigator.pop(context);
     }

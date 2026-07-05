@@ -1,11 +1,11 @@
 class OpportunityPoster {
-  final int id;
+  final String? id;
   final String name;
   final String username;
   final String? phone;
   final String? email;
   final String? avatarUrl;
-  final String? selectedPihak;
+  final String? selectedSubRole;
 
   OpportunityPoster({
     required this.id,
@@ -14,27 +14,27 @@ class OpportunityPoster {
     this.phone,
     this.email,
     this.avatarUrl,
-    this.selectedPihak,
+    this.selectedSubRole,
   });
 
   factory OpportunityPoster.fromJson(Map<String, dynamic> json) {
     return OpportunityPoster(
-      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
+      id: json['id']?.toString(),
       name: json['name'] ?? '',
       username: json['username'] ?? '',
       phone: json['phone'],
       email: json['email'],
       avatarUrl: json['avatar_url'],
-      selectedPihak: json['selected_pihak'],
+      selectedSubRole: json['selected_sub_role'],
     );
   }
 }
 
 class OpportunityModel {
-  final int id;
+  final String? id;
   final String title;
   final String? description;
-  final String pihakSlug;
+  final String subRoleSlug;
   final String type; // 'location' | 'project'
   final String? location;
   final double? latitude;
@@ -44,7 +44,7 @@ class OpportunityModel {
   final String? deadline;
   final String? budgetRange;
   final String status;
-  final int postedBy;
+  final String? postedBy;
   final String? createdAt;
   final OpportunityPoster? poster;
 
@@ -52,7 +52,7 @@ class OpportunityModel {
     required this.id,
     required this.title,
     this.description,
-    required this.pihakSlug,
+    required this.subRoleSlug,
     this.type = 'project',
     this.location,
     this.latitude,
@@ -62,7 +62,7 @@ class OpportunityModel {
     this.deadline,
     this.budgetRange,
     this.status = 'open',
-    required this.postedBy,
+    this.postedBy,
     this.createdAt,
     this.poster,
   });
@@ -72,10 +72,10 @@ class OpportunityModel {
 
   factory OpportunityModel.fromJson(Map<String, dynamic> json) {
     return OpportunityModel(
-      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
+      id: json['id']?.toString(),
       title: json['title'] ?? '',
       description: json['description'],
-      pihakSlug: json['pihak_slug'] ?? '',
+      subRoleSlug: json['sub_role_slug'] ?? '',
       type: json['type'] ?? 'project',
       location: json['location'],
       latitude: json['latitude'] != null
@@ -93,9 +93,7 @@ class OpportunityModel {
       deadline: json['deadline']?.toString(),
       budgetRange: json['budget_range'],
       status: json['status'] ?? 'open',
-      postedBy: json['posted_by'] is int
-          ? json['posted_by']
-          : int.parse(json['posted_by'].toString()),
+      postedBy: json['posted_by']?.toString(),
       createdAt: json['created_at']?.toString(),
       poster: json['poster'] != null
           ? OpportunityPoster.fromJson(json['poster'])
