@@ -8,7 +8,7 @@
 
 ## Panduan Menjalankan Frontend
 1. Untuk menjalankan frontend jalankan `flutter run`
-2. Ganti IP pada file `lib/services/api_service.dart` dengan IP Local kamu.
+2. Ganti IP pada file `lib/services/dio_client.dart` dengan IP Local kamu.
 
 ## Panduan Build APK/AAB
 1. Menggunakan kode `flutter build apk --obfuscate --split-debug-info=./debug_info --release --android-skip-build-dependency-validation` untuk build apk rilis.
