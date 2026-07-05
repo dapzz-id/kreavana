@@ -7,19 +7,21 @@ class DashboardService {
     required String subRole,
     required String roleType,
   }) async {
-    final result = await ApiService.get('dashboard/stats', queryParams: {
-      'sub_role_slug': subRole,
-      'role_type': roleType,
-    });
+    final result = await ApiService.get(
+      'dashboard/stats',
+      queryParams: {'sub_role_slug': subRole, 'role_type': roleType},
+    );
 
     if (result['status'] == true && result['data'] != null) {
       final List<dynamic> data = result['data'];
       return data
-          .map((item) => {
-                'label': (item['label'] ?? item['stat_label'] ?? '').toString(),
-                'value': (item['value'] ?? item['stat_value'] ?? '').toString(),
-                'icon': (item['icon'] ?? item['stat_icon'] ?? '').toString(),
-              })
+          .map(
+            (item) => {
+              'label': (item['label'] ?? item['stat_label'] ?? '').toString(),
+              'value': (item['value'] ?? item['stat_value'] ?? '').toString(),
+              'icon': (item['icon'] ?? item['stat_icon'] ?? '').toString(),
+            },
+          )
           .toList();
     }
 
@@ -33,9 +35,7 @@ class DashboardService {
     required String roleType,
   }) async {
     final results = await Future.wait(
-      subRoleSlugs.map(
-        (slug) => getStats(subRole: slug, roleType: roleType),
-      ),
+      subRoleSlugs.map((slug) => getStats(subRole: slug, roleType: roleType)),
     );
 
     return {
@@ -57,17 +57,24 @@ class DashboardService {
     required String subRole,
     int limit = 5,
   }) async {
-    final result =
-        await ApiService.get('dashboard/opportunities', queryParams: {
-      'sub_role_slug': subRole,
-      'limit': limit.toString(),
-    });
+    print('DEBUG: Fetching opportunities for subRole: $subRole');
+    final result = await ApiService.get(
+      'dashboard/opportunities',
+      queryParams: {'sub_role_slug': subRole, 'limit': limit.toString()},
+    );
+
+    print('DEBUG: API result status: ${result['status']}');
+    print('DEBUG: API result data: ${result['data']}');
 
     if (result['status'] == true && result['data'] != null) {
       final List<dynamic> data = result['data'];
-      return data.map((item) => OpportunityModel.fromJson(item)).toList();
+      print('DEBUG: Parsed ${data.length} opportunities from API');
+      if (data.isNotEmpty) {
+        return data.map((item) => OpportunityModel.fromJson(item)).toList();
+      }
     }
 
+    print('DEBUG: Using fallback data for opportunities');
     // Fallback data
     return _getFallbackOpportunities(subRole);
   }
@@ -76,7 +83,9 @@ class DashboardService {
   // Digunakan saat API belum tersedia / offline
 
   static List<Map<String, String>> _getFallbackStats(
-      String subRole, String roleType) {
+    String subRole,
+    String roleType,
+  ) {
     final statsMap = {
       'photographer': {
         'user': [
@@ -203,7 +212,8 @@ class DashboardService {
         {
           'id': 1,
           'title': 'Fotografer Event Jakarta',
-          'description': 'Dibutuhkan fotografer profesional untuk corporate event',
+          'description':
+              'Dibutuhkan fotografer profesional untuk corporate event',
           'sub_role_slug': 'photographer',
           'location': 'Jakarta',
           'deadline': '2026-07-20',

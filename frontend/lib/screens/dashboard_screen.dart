@@ -133,7 +133,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final slugs = _subRoleList.map((p) => p['slug'] as String).toList();
       setState(() {
         _currentRole = widget.user.role;
-        _selectedSubRole = slugs.contains(userSubRole) ? userSubRole : slugs.first;
+        _selectedSubRole = slugs.contains(userSubRole)
+            ? userSubRole
+            : slugs.first;
       });
       _loadDashboardData();
     }
@@ -154,19 +156,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
           subRoleSlugs: slugs,
           roleType: _currentRole,
         ),
-        () => DashboardService.getOpportunities(
-          subRole: _selectedSubRole,
-          limit: 5,
-        ),
+        () => DashboardService.getOpportunities(subRole: 'all', limit: 5),
         () => ProfileService.getProfile(widget.user.id ?? ''),
       ]);
 
       if (mounted) {
+        final opportunities = results[2] as List<OpportunityModel>;
+        print('DEBUG: Opportunities loaded: ${opportunities.length}');
+        print('DEBUG: Selected subRole: $_selectedSubRole');
+        for (var opp in opportunities) {
+          print('DEBUG: Opportunity - ${opp.title} (${opp.subRoleSlug})');
+        }
+
         setState(() {
           _stats = results[0] as List<Map<String, String>>;
           _allSubRoleStats =
               results[1] as Map<String, List<Map<String, String>>>;
-          _opportunities = results[2] as List<OpportunityModel>;
+          _opportunities = opportunities;
           _isLoading = false;
         });
 
@@ -239,10 +245,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _navigateToPeluangProyek() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PeluangProyekScreen(
-          user: widget.user,
-          subRoleSlug: _selectedSubRole,
-        ),
+        builder: (_) =>
+            PeluangProyekScreen(user: widget.user, subRoleSlug: 'all'),
       ),
     );
   }
@@ -587,126 +591,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 24),
 
-              // 2. Stats Grid
-              Text(
-                'Statistik ${(_subRoleList.firstWhere((e) => e['slug'] == _selectedSubRole, orElse: () => _subRoleList.first))['name']} (${_currentRole == 'creator' ? 'Creator' : 'Klien'})',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _isLoading
-                  ? GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: isDesktop ? 4 : 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: isDesktop ? 2.2 : 1.5,
-                      ),
-                      itemCount: 4,
-                      itemBuilder: (context, index) => const StatCardSkeleton(),
-                    )
-                  : GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: isDesktop ? 4 : 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: isDesktop ? 2.2 : 1.5,
-                      ),
-                      itemCount: _stats.length > 4 ? 4 : _stats.length,
-                      itemBuilder: (context, index) {
-                        final stat = _stats[index];
-                        return StatCard(
-                          label: stat['label'] ?? '',
-                          value: stat['value'] ?? '',
-                          iconName: stat['icon'] ?? '',
-                          accentColor: subRoleColor,
-                        );
-                      },
-                    ),
-              if (!_isLoading && _allSubRoleStats.isNotEmpty) ...[
-                const SizedBox(height: 28),
-                DashboardStatsCharts(
-                  subRoleList: _subRoleList,
-                  allSubRoleStats: _allSubRoleStats,
-                  selectedSubRole: _selectedSubRole,
-                  currentRole: _currentRole,
-                  isDark: isDark,
-                ),
-              ],
-              const SizedBox(height: 24),
-
+              // AI Banner and Quick Actions Row for Desktop
               if (isDesktop)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Left Column
+                    // Left: AI Banner
                     Expanded(
                       flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AiMatchingBanner(
-                            onTap: () =>
-                                _showDummyActionMessage('Pencarian Pintar AI'),
-                          ),
-                          const SizedBox(height: 24),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Peluang & Kolaborasi Terbaru',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: _navigateToPeluangProyek,
-                                child: Text(
-                                  'Lihat Semua',
-                                  style: TextStyle(
-                                    color: subRoleColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          _isLoading
-                              ? ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: 3,
-                                  itemBuilder: (context, index) =>
-                                      const FeatureCardSkeleton(),
-                                )
-                              : _opportunities.isEmpty
-                              ? _buildEmptyOpportunity(isDark)
-                              : ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: _opportunities.length,
-                                  itemBuilder: (context, index) {
-                                    final op = _opportunities[index];
-                                    return FeatureCard(
-                                      opportunity: op,
-                                      accentColor: subRoleColor,
-                                      onTap: () => _openOpportunityDetail(op),
-                                    );
-                                  },
-                                ),
-                        ],
+                      child: AiMatchingBanner(
+                        onTap: () =>
+                            _showDummyActionMessage('Pencarian Pintar AI'),
                       ),
                     ),
                     const SizedBox(width: 24),
-                    // Right Column (Quick Actions)
+                    // Right: Quick Actions (vertical)
                     SizedBox(
                       width: 320,
                       child: Column(
@@ -783,77 +682,185 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                   ],
-                )
-              else
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 3. AI Banner
-                    AiMatchingBanner(
-                      onTap: () =>
-                          _showDummyActionMessage('Pencarian Pintar AI'),
-                    ),
-                    const SizedBox(height: 24),
+                ),
+              if (isDesktop) const SizedBox(height: 24),
 
-                    // 4. Quick Actions
-                    // FIX: tiap QuickActionButton dibungkus Expanded via _buildMobileQuickActions
+              // Peluang & Kolaborasi Terbaru for Desktop
+              if (isDesktop)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
                     const Text(
-                      'Tindakan Cepat',
+                      'Peluang & Kolaborasi Terbaru',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    _buildMobileQuickActions(
-                      _currentRole == 'creator'
-                          ? [
-                              QuickActionButton(
-                                label: 'Peluang Lokasi',
-                                icon: Icons.map_outlined,
-                                color: Colors.teal,
-                                onTap: _navigateToPeluangLokasi,
-                              ),
-                              QuickActionButton(
-                                label: 'Cari Proyek',
-                                icon: Icons.search,
-                                color: subRoleColor,
-                                onTap: _navigateToPeluangProyek,
-                              ),
-                              QuickActionButton(
-                                label: 'Portofolio',
-                                icon: Icons.portrait,
-                                color: Colors.purple,
-                                onTap: () => _showDummyActionMessage(
-                                  'Update Portofolio',
-                                ),
-                              ),
-                            ]
-                          : [
-                              QuickActionButton(
-                                label: 'Peluang Lokasi',
-                                icon: Icons.map_outlined,
-                                color: Colors.teal,
-                                onTap: _navigateToPeluangLokasi,
-                              ),
-                              QuickActionButton(
-                                label: 'Peluang Proyek',
-                                icon: Icons.work_outline,
-                                color: subRoleColor,
-                                onTap: _navigateToPeluangProyek,
-                              ),
-                              QuickActionButton(
-                                label: 'Cari Vendor',
-                                icon: Icons.people_alt_outlined,
-                                color: Colors.purple,
-                                onTap: () =>
-                                    _showDummyActionMessage('Cari Vendor'),
-                              ),
-                            ],
+                    TextButton(
+                      onPressed: _navigateToPeluangProyek,
+                      child: Text(
+                        'Lihat Semua',
+                        style: TextStyle(
+                          color: subRoleColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 28),
+                  ],
+                ),
+              if (isDesktop) const SizedBox(height: 8),
+              if (isDesktop)
+                _isLoading
+                    ? ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: 3,
+                        itemBuilder: (context, index) =>
+                            const FeatureCardSkeleton(),
+                      )
+                    : _opportunities.isEmpty
+                    ? _buildEmptyOpportunity(isDark)
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _opportunities.length,
+                        itemBuilder: (context, index) {
+                          final op = _opportunities[index];
+                          return FeatureCard(
+                            opportunity: op,
+                            accentColor: subRoleColor,
+                            onTap: () => _openOpportunityDetail(op),
+                          );
+                        },
+                      ),
+              if (isDesktop) const SizedBox(height: 24),
 
-                    // 5. Recent Opportunities
+              // Stats Grid for Desktop
+              if (isDesktop)
+                Text(
+                  'Statistik ${(_subRoleList.firstWhere((e) => e['slug'] == _selectedSubRole, orElse: () => _subRoleList.first))['name']} (${_currentRole == 'creator' ? 'Creator' : 'Klien'})',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              if (isDesktop) const SizedBox(height: 12),
+              if (isDesktop)
+                _isLoading
+                    ? GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 4,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 2.2,
+                            ),
+                        itemCount: 4,
+                        itemBuilder: (context, index) =>
+                            const StatCardSkeleton(),
+                      )
+                    : GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 4,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 2.2,
+                            ),
+                        itemCount: _stats.length > 4 ? 4 : _stats.length,
+                        itemBuilder: (context, index) {
+                          final stat = _stats[index];
+                          return StatCard(
+                            label: stat['label'] ?? '',
+                            value: stat['value'] ?? '',
+                            iconName: stat['icon'] ?? '',
+                            accentColor: subRoleColor,
+                          );
+                        },
+                      ),
+              if (isDesktop && !_isLoading && _allSubRoleStats.isNotEmpty) ...[
+                const SizedBox(height: 28),
+                DashboardStatsCharts(
+                  subRoleList: _subRoleList,
+                  allSubRoleStats: _allSubRoleStats,
+                  selectedSubRole: _selectedSubRole,
+                  currentRole: _currentRole,
+                  isDark: isDark,
+                ),
+              ],
+              if (isDesktop) const SizedBox(height: 24),
+
+              // 2. AI Banner (Mobile only)
+              if (!isDesktop)
+                AiMatchingBanner(
+                  onTap: () => _showDummyActionMessage('Pencarian Pintar AI'),
+                ),
+              if (!isDesktop) const SizedBox(height: 24),
+
+              // 3. Quick Actions (Mobile only)
+              if (!isDesktop) ...[
+                const Text(
+                  'Tindakan Cepat',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                _buildMobileQuickActions(
+                  _currentRole == 'creator'
+                      ? [
+                          QuickActionButton(
+                            label: 'Peluang Lokasi',
+                            icon: Icons.map_outlined,
+                            color: Colors.teal,
+                            onTap: _navigateToPeluangLokasi,
+                          ),
+                          QuickActionButton(
+                            label: 'Cari Proyek',
+                            icon: Icons.search,
+                            color: subRoleColor,
+                            onTap: _navigateToPeluangProyek,
+                          ),
+                          QuickActionButton(
+                            label: 'Portofolio',
+                            icon: Icons.portrait,
+                            color: Colors.purple,
+                            onTap: () =>
+                                _showDummyActionMessage('Update Portofolio'),
+                          ),
+                        ]
+                      : [
+                          QuickActionButton(
+                            label: 'Peluang Lokasi',
+                            icon: Icons.map_outlined,
+                            color: Colors.teal,
+                            onTap: _navigateToPeluangLokasi,
+                          ),
+                          QuickActionButton(
+                            label: 'Peluang Proyek',
+                            icon: Icons.work_outline,
+                            color: subRoleColor,
+                            onTap: _navigateToPeluangProyek,
+                          ),
+                          QuickActionButton(
+                            label: 'Cari Vendor',
+                            icon: Icons.people_alt_outlined,
+                            color: Colors.purple,
+                            onTap: () => _showDummyActionMessage('Cari Vendor'),
+                          ),
+                        ],
+                ),
+                const SizedBox(height: 28),
+              ],
+
+              // Recent Opportunities for Mobile
+              if (!isDesktop)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -868,8 +875,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                         TextButton(
-                          onPressed: () =>
-                              _showDummyActionMessage('Lihat Semua Peluang'),
+                          onPressed: _navigateToPeluangProyek,
                           child: Text(
                             'Lihat Semua',
                             style: TextStyle(
@@ -904,8 +910,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               );
                             },
                           ),
+                    const SizedBox(height: 24),
                   ],
                 ),
+
+              // 4. Stats Grid (Mobile only)
+              if (!isDesktop) ...[
+                Text(
+                  'Statistik ${(_subRoleList.firstWhere((e) => e['slug'] == _selectedSubRole, orElse: () => _subRoleList.first))['name']} (${_currentRole == 'creator' ? 'Creator' : 'Klien'})',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _isLoading
+                    ? GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 1.5,
+                            ),
+                        itemCount: 4,
+                        itemBuilder: (context, index) =>
+                            const StatCardSkeleton(),
+                      )
+                    : GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 1.5,
+                            ),
+                        itemCount: _stats.length > 4 ? 4 : _stats.length,
+                        itemBuilder: (context, index) {
+                          final stat = _stats[index];
+                          return StatCard(
+                            label: stat['label'] ?? '',
+                            value: stat['value'] ?? '',
+                            iconName: stat['icon'] ?? '',
+                            accentColor: subRoleColor,
+                          );
+                        },
+                      ),
+                if (!_isLoading && _allSubRoleStats.isNotEmpty) ...[
+                  const SizedBox(height: 28),
+                  DashboardStatsCharts(
+                    subRoleList: _subRoleList,
+                    allSubRoleStats: _allSubRoleStats,
+                    selectedSubRole: _selectedSubRole,
+                    currentRole: _currentRole,
+                    isDark: isDark,
+                  ),
+                ],
+                const SizedBox(height: 24),
+              ],
             ],
           ),
         ),
