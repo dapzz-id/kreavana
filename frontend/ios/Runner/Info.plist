@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Camera access is required to take photos of KTP for verification</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Photo library access is required to select KTP photos for verification</string>
 </dict>
 </plist>

@@ -154,14 +154,13 @@ class _MainNavigationState extends State<MainNavigation> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.w500,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w500,
                         fontSize: 14,
                         color: isSelected
                             ? activeColor
-                            : (isDark
-                                ? Colors.white70
-                                : Colors.grey.shade800),
+                            : (isDark ? Colors.white70 : Colors.grey.shade800),
                       ),
                     ),
                   ),
@@ -264,14 +263,16 @@ class _MainNavigationState extends State<MainNavigation> {
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
                                     onPressed: () => setState(
-                                        () => _isSidebarCollapsed = false),
+                                      () => _isSidebarCollapsed = false,
+                                    ),
                                   ),
                                 ),
                               ],
                             )
                           : Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
                               child: Row(
                                 children: [
                                   Image.asset(
@@ -301,7 +302,8 @@ class _MainNavigationState extends State<MainNavigation> {
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
                                     onPressed: () => setState(
-                                        () => _isSidebarCollapsed = true),
+                                      () => _isSidebarCollapsed = true,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -431,7 +433,9 @@ class _MainNavigationState extends State<MainNavigation> {
                                 child: Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                    color: theme.colorScheme.primary.withValues(
+                                      alpha: 0.1,
+                                    ),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Icon(
@@ -444,7 +448,10 @@ class _MainNavigationState extends State<MainNavigation> {
                             ),
                           )
                         : Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
                             child: SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
@@ -459,16 +466,24 @@ class _MainNavigationState extends State<MainNavigation> {
                                     ),
                                   );
                                 },
-                                icon: const Icon(Icons.add_card_rounded, size: 18),
+                                icon: const Icon(
+                                  Icons.add_card_rounded,
+                                  size: 18,
+                                ),
                                 label: const Text(
                                   'Isi Saldo',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
                                 ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: theme.colorScheme.primary,
                                   foregroundColor: Colors.white,
                                   elevation: 0,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -499,13 +514,14 @@ class _MainNavigationState extends State<MainNavigation> {
                                     backgroundColor: isDark
                                         ? const Color(0xFF2D2A3E)
                                         : Colors.grey.shade200,
-                                    backgroundImage: _currentUser.avatarUrl !=
-                                                null &&
+                                    backgroundImage:
+                                        _currentUser.avatarUrl != null &&
                                             _currentUser.avatarUrl!.isNotEmpty
                                         ? NetworkImage(_currentUser.avatarUrl!)
                                         : const AssetImage(
-                                                'assets/brandlogo.png')
-                                            as ImageProvider,
+                                                'assets/brandlogo.png',
+                                              )
+                                              as ImageProvider,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -533,13 +549,12 @@ class _MainNavigationState extends State<MainNavigation> {
                                   backgroundColor: isDark
                                       ? const Color(0xFF2D2A3E)
                                       : Colors.grey.shade200,
-                                  backgroundImage: _currentUser.avatarUrl !=
-                                              null &&
+                                  backgroundImage:
+                                      _currentUser.avatarUrl != null &&
                                           _currentUser.avatarUrl!.isNotEmpty
                                       ? NetworkImage(_currentUser.avatarUrl!)
-                                      : const AssetImage(
-                                              'assets/brandlogo.png')
-                                          as ImageProvider,
+                                      : const AssetImage('assets/brandlogo.png')
+                                            as ImageProvider,
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
@@ -572,8 +587,11 @@ class _MainNavigationState extends State<MainNavigation> {
                                   ),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.logout_rounded,
-                                      color: Colors.redAccent, size: 20),
+                                  icon: const Icon(
+                                    Icons.logout_rounded,
+                                    color: Colors.redAccent,
+                                    size: 20,
+                                  ),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(),
                                   onPressed: _showLogoutDialog,
@@ -591,10 +609,7 @@ class _MainNavigationState extends State<MainNavigation> {
             // AppBar sticky di-handle oleh masing-masing screen dengan
             // toolbarHeight: 88 agar sejajar dengan brand row sidebar.
             Expanded(
-              child: IndexedStack(
-                index: activeIndex,
-                children: screens,
-              ),
+              child: IndexedStack(index: activeIndex, children: screens),
             ),
           ],
         ),
@@ -603,10 +618,17 @@ class _MainNavigationState extends State<MainNavigation> {
 
     // ─── Mobile Layout ─────────────────────────────────────────────────
     return Scaffold(
-      extendBody: true,
-      body: IndexedStack(
-        index: activeIndex,
-        children: screens,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            Expanded(
+              child: IndexedStack(index: activeIndex, children: screens),
+            ),
+            // Add padding at bottom to account for nav bar height
+            const SizedBox(height: 0),
+          ],
+        ),
       ),
       bottomNavigationBar: CustomDiamondBottomBar(
         currentIndex: activeIndex,
