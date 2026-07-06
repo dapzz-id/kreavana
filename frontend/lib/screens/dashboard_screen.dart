@@ -594,7 +594,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               // AI Banner and Quick Actions Row for Desktop
               if (isDesktop)
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // Left: AI Banner
                     Expanded(

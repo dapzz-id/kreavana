@@ -103,20 +103,28 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final filtered = _filtered;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
 
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 75,
-        title: const Column(
+        toolbarHeight: isMobile ? 60 : 75,
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Peluang Lokasi',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: isMobile ? 16 : 18,
+              ),
             ),
             Text(
               'Content Opportunity Map',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.normal),
+              style: TextStyle(
+                fontSize: isMobile ? 10 : 11,
+                fontWeight: FontWeight.normal,
+              ),
             ),
           ],
         ),
@@ -130,26 +138,30 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
       body: Column(
         children: [
           SizedBox(
-            height: 44,
+            height: isMobile ? 40 : 44,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
               itemCount: _categories.length,
               itemBuilder: (context, index) {
                 final cat = _categories[index];
                 final isSelected = _selectedCategory == cat['slug'];
                 final color = cat['color'] as Color;
                 return Padding(
-                  padding: const EdgeInsets.only(right: 8),
+                  padding: EdgeInsets.only(right: isMobile ? 6 : 8),
                   child: FilterChip(
-                    label: Text(cat['name'] as String),
+                    label: Text(
+                      cat['name'] as String,
+                      style: TextStyle(fontSize: isMobile ? 11 : 12),
+                    ),
                     selected: isSelected,
                     selectedColor: color.withValues(alpha: 0.2),
                     checkmarkColor: color,
                     labelStyle: TextStyle(
-                      fontSize: 12,
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontSize: isMobile ? 11 : 12,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                       color: isSelected
                           ? color
                           : (isDark ? Colors.white70 : Colors.black87),
@@ -186,7 +198,8 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                           margin: const EdgeInsets.all(24),
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).brightness == Brightness.dark
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
                                 ? const Color(0xFF1E1E2C)
                                 : Colors.white.withValues(alpha: 0.95),
                             borderRadius: BorderRadius.circular(16),
@@ -200,11 +213,23 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: const [
-                              SkeletonBox(width: 48, height: 48, shape: BoxShape.circle),
+                              SkeletonBox(
+                                width: 48,
+                                height: 48,
+                                shape: BoxShape.circle,
+                              ),
                               SizedBox(height: 12),
-                              SkeletonBox(width: 140, height: 18, borderRadius: 6),
+                              SkeletonBox(
+                                width: 140,
+                                height: 18,
+                                borderRadius: 6,
+                              ),
                               SizedBox(height: 8),
-                              SkeletonBox(width: 100, height: 14, borderRadius: 4),
+                              SkeletonBox(
+                                width: 100,
+                                height: 14,
+                                borderRadius: 4,
+                              ),
                             ],
                           ),
                         ),
@@ -217,7 +242,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                         mapController: _mapController,
                         options: MapOptions(
                           initialCenter: const LatLng(-2.5, 118.0),
-                          initialZoom: 5.0,
+                          initialZoom: isMobile ? 4.5 : 5.0,
                           minZoom: 4,
                           maxZoom: 18,
                         ),
@@ -229,87 +254,101 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                           ),
                           MarkerLayer(
                             markers: filtered
-                                .where((l) =>
-                                    l.latitude != null && l.longitude != null)
+                                .where(
+                                  (l) =>
+                                      l.latitude != null && l.longitude != null,
+                                )
                                 .map((loc) {
-                              final color = _markerColor(loc.locationCategory);
-                              return Marker(
-                                point: LatLng(loc.latitude!, loc.longitude!),
-                                width: 120,
-                                height: 65,
-                                child: GestureDetector(
-                                  onTap: () => _onMarkerTap(loc),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(6),
-                                        decoration: BoxDecoration(
-                                          color: color,
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: color.withValues(alpha: 0.4),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 2),
+                                  final color = _markerColor(
+                                    loc.locationCategory,
+                                  );
+                                  final markerWidth = isMobile ? 90.0 : 120.0;
+                                  final markerHeight = isMobile ? 50.0 : 65.0;
+                                  return Marker(
+                                    point: LatLng(
+                                      loc.latitude!,
+                                      loc.longitude!,
+                                    ),
+                                    width: markerWidth,
+                                    height: markerHeight,
+                                    child: GestureDetector(
+                                      onTap: () => _onMarkerTap(loc),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            padding: EdgeInsets.all(
+                                              isMobile ? 4 : 6,
                                             ),
-                                          ],
-                                        ),
-                                        child: const Icon(
-                                          Icons.location_on,
-                                          color: Colors.white,
-                                          size: 20,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 3,
-                                        ),
-                                        constraints: const BoxConstraints(
-                                          maxWidth: 110,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: isDark
-                                              ? AppTheme.cardBg
-                                              : Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                          border: Border.all(
-                                            color: isDark
-                                                ? AppTheme.inputBorder
-                                                : Colors.grey.shade300,
-                                            width: 0.5,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black
-                                                  .withValues(alpha: 0.1),
-                                              blurRadius: 4,
-                                              offset: const Offset(0, 1),
+                                            decoration: BoxDecoration(
+                                              color: color,
+                                              shape: BoxShape.circle,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: color.withValues(
+                                                    alpha: 0.4,
+                                                  ),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
                                             ),
-                                          ],
-                                        ),
-                                        child: Text(
-                                          loc.title,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                            color: isDark
-                                                ? Colors.white
-                                                : Colors.black87,
+                                            child: Icon(
+                                              Icons.location_on,
+                                              color: Colors.white,
+                                              size: isMobile ? 16.0 : 20.0,
+                                            ),
                                           ),
-                                        ),
+                                          const SizedBox(height: 2),
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: isMobile ? 4 : 6,
+                                              vertical: isMobile ? 2 : 3,
+                                            ),
+                                            constraints: BoxConstraints(
+                                              maxWidth: isMobile ? 80 : 110,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: isDark
+                                                  ? AppTheme.cardBg
+                                                  : Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              border: Border.all(
+                                                color: isDark
+                                                    ? AppTheme.inputBorder
+                                                    : Colors.grey.shade300,
+                                                width: 0.5,
+                                              ),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withValues(alpha: 0.1),
+                                                  blurRadius: 4,
+                                                  offset: const Offset(0, 1),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Text(
+                                              loc.title,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: isMobile ? 8 : 9,
+                                                fontWeight: FontWeight.bold,
+                                                color: isDark
+                                                    ? Colors.white
+                                                    : Colors.black87,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }).toList(),
+                                    ),
+                                  );
+                                })
+                                .toList(),
                           ),
                         ],
                       ),
@@ -327,8 +366,11 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.map_outlined,
-                                    size: 48, color: Colors.grey.shade400),
+                                Icon(
+                                  Icons.map_outlined,
+                                  size: 48,
+                                  color: Colors.grey.shade400,
+                                ),
                                 const SizedBox(height: 8),
                                 const Text(
                                   'Belum ada lokasi di kategori ini',
@@ -339,13 +381,13 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                           ),
                         ),
                       Positioned(
-                        bottom: 16,
-                        left: 16,
-                        right: 16,
+                        bottom: isMobile ? 8 : 16,
+                        left: isMobile ? 12 : 16,
+                        right: isMobile ? 12 : 16,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isMobile ? 12 : 16,
+                            vertical: isMobile ? 10 : 12,
                           ),
                           decoration: BoxDecoration(
                             color: isDark
@@ -361,14 +403,19 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.touch_app,
-                                  size: 20, color: Colors.teal.shade600),
+                              Icon(
+                                Icons.touch_app,
+                                size: isMobile ? 18 : 20,
+                                color: Colors.teal.shade600,
+                              ),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
-                                  'Ketuk marker untuk lihat kontak pembuat & laporkan',
+                                  isMobile
+                                      ? 'Ket(marker untuk detail'
+                                      : 'Ketuk marker untuk lihat kontak pembuat & laporkan',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: isMobile ? 10 : 12,
                                     color: isDark
                                         ? AppTheme.textMuted
                                         : Colors.grey.shade700,
@@ -376,9 +423,9 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isMobile ? 8 : 10,
+                                  vertical: isMobile ? 3 : 4,
                                 ),
                                 decoration: BoxDecoration(
                                   color: Colors.teal.withValues(alpha: 0.12),
@@ -387,7 +434,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                                 child: Text(
                                   '${filtered.length} lokasi',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: isMobile ? 10 : 12,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.teal.shade700,
                                   ),

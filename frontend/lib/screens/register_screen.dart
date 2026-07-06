@@ -71,7 +71,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
       if (mounted) {
         setState(() => _isLoading = false);
-        if (result['success'] == true) {
+        if (result['status'] == true) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text('Pendaftaran berhasil! Silakan masuk.'),
@@ -87,8 +87,8 @@ class _RegisterScreenState extends State<RegisterScreen>
             MaterialPageRoute(builder: (_) => const LoginScreen()),
           );
         } else {
-          final message = result['message']?.toString() ??
-              'Pendaftaran gagal. Coba lagi.';
+          final message =
+              result['message']?.toString() ?? 'Pendaftaran gagal. Coba lagi.';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(message),
@@ -135,474 +135,475 @@ class _RegisterScreenState extends State<RegisterScreen>
                         constraints: const BoxConstraints(maxWidth: 420),
                         child: Form(
                           key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Logo
-                            Center(
-                              child: Image.asset(
-                                'assets/brandlogo.png',
-                                width: 84,
-                                height: 84,
-                                fit: BoxFit.contain,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Logo
+                              Center(
+                                child: Image.asset(
+                                  'assets/brandlogo.png',
+                                  width: 84,
+                                  height: 84,
+                                  fit: BoxFit.contain,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 24),
+                              const SizedBox(height: 24),
 
-                            // Title
-                            Center(
-                              child: Text(
-                                'Daftar Kreavana',
-                                style: theme.textTheme.headlineMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  color: colorScheme.onSurface,
-                                  letterSpacing: -0.5,
+                              // Title
+                              Center(
+                                child: Text(
+                                  'Daftar Kreavana',
+                                  style: theme.textTheme.headlineMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                        color: colorScheme.onSurface,
+                                        letterSpacing: -0.5,
+                                      ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Center(
-                              child: Text(
-                                'Buat akun baru untuk memulai.',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: textMutedColor,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                            const SizedBox(height: 36),
-
-                            // Name Field
-                            TextFormField(
-                              controller: _nameController,
-                              style: TextStyle(
-                                color: colorScheme.onSurface,
-                                fontSize: 15,
-                              ),
-                              decoration: InputDecoration(
-                                labelText: 'Nama Lengkap',
-                                floatingLabelBehavior:
-                                    FloatingLabelBehavior.auto,
-                                labelStyle: TextStyle(color: textMutedColor),
-                                floatingLabelStyle: TextStyle(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                prefixIcon: Icon(
-                                  Icons.person_outline_rounded,
-                                  color: textMutedColor,
-                                  size: 22,
-                                ),
-                                filled: true,
-                                fillColor: isDark
-                                    ? colorScheme.surfaceContainerHighest
-                                          .withValues(alpha: 0.5)
-                                    : colorScheme.surfaceContainerHighest
-                                          .withValues(alpha: 0.3),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: borderColor,
-                                    width: 1.0,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: colorScheme.primary,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 16,
-                                ),
-                              ),
-                              textInputAction: TextInputAction.next,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Masukkan nama lengkap';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Username Field
-                            TextFormField(
-                              controller: _usernameController,
-                              style: TextStyle(
-                                color: colorScheme.onSurface,
-                                fontSize: 15,
-                              ),
-                              decoration: InputDecoration(
-                                labelText: 'Username',
-                                floatingLabelBehavior:
-                                    FloatingLabelBehavior.auto,
-                                labelStyle: TextStyle(color: textMutedColor),
-                                floatingLabelStyle: TextStyle(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                prefixIcon: Icon(
-                                  Icons.alternate_email_rounded,
-                                  color: textMutedColor,
-                                  size: 22,
-                                ),
-                                filled: true,
-                                fillColor: isDark
-                                    ? colorScheme.surfaceContainerHighest
-                                          .withValues(alpha: 0.5)
-                                    : colorScheme.surfaceContainerHighest
-                                          .withValues(alpha: 0.3),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: borderColor,
-                                    width: 1.0,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: colorScheme.primary,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 16,
-                                ),
-                              ),
-                              textInputAction: TextInputAction.next,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Masukkan username';
-                                }
-                                if (value.trim().length < 3) {
-                                  return 'Username minimal 3 karakter';
-                                }
-                                if (!RegExp(
-                                  r'^[a-zA-Z0-9_\.]+$',
-                                ).hasMatch(value.trim())) {
-                                  return 'Hanya huruf, angka, titik, atau underscore';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Email Field
-                            TextFormField(
-                              controller: _emailController,
-                              style: TextStyle(
-                                color: colorScheme.onSurface,
-                                fontSize: 15,
-                              ),
-                              decoration: InputDecoration(
-                                labelText: 'Alamat Email',
-                                floatingLabelBehavior:
-                                    FloatingLabelBehavior.auto,
-                                labelStyle: TextStyle(color: textMutedColor),
-                                floatingLabelStyle: TextStyle(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                prefixIcon: Icon(
-                                  Icons.email_outlined,
-                                  color: textMutedColor,
-                                  size: 22,
-                                ),
-                                filled: true,
-                                fillColor: isDark
-                                    ? colorScheme.surfaceContainerHighest
-                                          .withValues(alpha: 0.5)
-                                    : colorScheme.surfaceContainerHighest
-                                          .withValues(alpha: 0.3),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: borderColor,
-                                    width: 1.0,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: colorScheme.primary,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 16,
-                                ),
-                              ),
-                              keyboardType: TextInputType.emailAddress,
-                              textInputAction: TextInputAction.next,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Masukkan alamat email';
-                                }
-                                if (!RegExp(
-                                  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                                ).hasMatch(value)) {
-                                  return 'Format email tidak valid';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Password Field
-                            TextFormField(
-                              controller: _passwordController,
-                              style: TextStyle(
-                                color: colorScheme.onSurface,
-                                fontSize: 15,
-                              ),
-                              decoration: InputDecoration(
-                                labelText: 'Kata Sandi',
-                                floatingLabelBehavior:
-                                    FloatingLabelBehavior.auto,
-                                labelStyle: TextStyle(color: textMutedColor),
-                                floatingLabelStyle: TextStyle(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                prefixIcon: Icon(
-                                  Icons.lock_outline_rounded,
-                                  color: textMutedColor,
-                                  size: 22,
-                                ),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscurePassword
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                    color: textMutedColor,
-                                    size: 22,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _obscurePassword = !_obscurePassword;
-                                    });
-                                  },
-                                ),
-                                filled: true,
-                                fillColor: isDark
-                                    ? colorScheme.surfaceContainerHighest
-                                          .withValues(alpha: 0.5)
-                                    : colorScheme.surfaceContainerHighest
-                                          .withValues(alpha: 0.3),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: borderColor,
-                                    width: 1.0,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: colorScheme.primary,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 16,
-                                ),
-                              ),
-                              obscureText: _obscurePassword,
-                              textInputAction: TextInputAction.next,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Masukkan kata sandi';
-                                }
-                                if (value.length < 8) {
-                                  return 'Kata sandi minimal 8 karakter';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Confirm Password Field
-                            TextFormField(
-                              controller: _confirmPasswordController,
-                              style: TextStyle(
-                                color: colorScheme.onSurface,
-                                fontSize: 15,
-                              ),
-                              decoration: InputDecoration(
-                                labelText: 'Konfirmasi Kata Sandi',
-                                floatingLabelBehavior:
-                                    FloatingLabelBehavior.auto,
-                                labelStyle: TextStyle(color: textMutedColor),
-                                floatingLabelStyle: TextStyle(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                prefixIcon: Icon(
-                                  Icons.lock_outline_rounded,
-                                  color: textMutedColor,
-                                  size: 22,
-                                ),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscureConfirmPassword
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                    color: textMutedColor,
-                                    size: 22,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _obscureConfirmPassword =
-                                          !_obscureConfirmPassword;
-                                    });
-                                  },
-                                ),
-                                filled: true,
-                                fillColor: isDark
-                                    ? colorScheme.surfaceContainerHighest
-                                          .withValues(alpha: 0.5)
-                                    : colorScheme.surfaceContainerHighest
-                                          .withValues(alpha: 0.3),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: borderColor,
-                                    width: 1.0,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: colorScheme.primary,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 16,
-                                ),
-                              ),
-                              obscureText: _obscureConfirmPassword,
-                              textInputAction: TextInputAction.done,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Ulangi kata sandi';
-                                }
-                                if (value != _passwordController.text) {
-                                  return 'Kata sandi tidak cocok';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 32),
-
-                            // Register Button
-                            GradientButton(
-                              text: 'Daftar Sekarang',
-                              onPressed: _handleRegister,
-                              isLoading: _isLoading,
-                            ),
-                            const SizedBox(height: 32),
-
-                            // Divider
-                            const AuthDivider(text: 'Atau daftar dengan'),
-                            const SizedBox(height: 24),
-
-                            // Google Button
-                            GoogleSignInButton(
-                              text: 'Lanjutkan dengan Google',
-                              onPressed: () {
-                                // Handle Google sign-in
-                              },
-                            ),
-                            const SizedBox(height: 32),
-
-                            // Footer Link
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Sudah punya akun? ',
+                              const SizedBox(height: 8),
+                              Center(
+                                child: Text(
+                                  'Buat akun baru untuk memulai.',
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     color: textMutedColor,
                                   ),
+                                  textAlign: TextAlign.center,
                                 ),
-                                InkWell(
-                                  borderRadius: BorderRadius.circular(4),
-                                  onTap: () {
-                                    Navigator.of(context).pushReplacement(
-                                      PageRouteBuilder(
-                                        pageBuilder:
-                                            (
-                                              context,
-                                              animation,
-                                              secondaryAnimation,
-                                            ) => const LoginScreen(),
-                                        transitionsBuilder:
-                                            (
-                                              context,
-                                              animation,
-                                              secondaryAnimation,
-                                              child,
-                                            ) {
-                                              return FadeTransition(
-                                                opacity: animation,
-                                                child: child,
-                                              );
-                                            },
-                                        transitionDuration: const Duration(
-                                          milliseconds: 300,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 4,
-                                      vertical: 2,
-                                    ),
-                                    child: Text(
-                                      'Masuk di sini',
-                                      style: theme.textTheme.bodyMedium
-                                          ?.copyWith(
-                                            color: colorScheme.primary,
-                                            fontWeight: FontWeight.w700,
-                                          ),
+                              ),
+                              const SizedBox(height: 36),
+
+                              // Name Field
+                              TextFormField(
+                                controller: _nameController,
+                                style: TextStyle(
+                                  color: colorScheme.onSurface,
+                                  fontSize: 15,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText: 'Nama Lengkap',
+                                  floatingLabelBehavior:
+                                      FloatingLabelBehavior.auto,
+                                  labelStyle: TextStyle(color: textMutedColor),
+                                  floatingLabelStyle: TextStyle(
+                                    color: colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.person_outline_rounded,
+                                    color: textMutedColor,
+                                    size: 22,
+                                  ),
+                                  filled: true,
+                                  fillColor: isDark
+                                      ? colorScheme.surfaceContainerHighest
+                                            .withValues(alpha: 0.5)
+                                      : colorScheme.surfaceContainerHighest
+                                            .withValues(alpha: 0.3),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide(
+                                      color: borderColor,
+                                      width: 1.0,
                                     ),
                                   ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide(
+                                      color: colorScheme.primary,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 16,
+                                  ),
                                 ),
-                              ],
-                            ),
-                          ],
+                                textInputAction: TextInputAction.next,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Masukkan nama lengkap';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 20),
+
+                              // Username Field
+                              TextFormField(
+                                controller: _usernameController,
+                                style: TextStyle(
+                                  color: colorScheme.onSurface,
+                                  fontSize: 15,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText: 'Username',
+                                  floatingLabelBehavior:
+                                      FloatingLabelBehavior.auto,
+                                  labelStyle: TextStyle(color: textMutedColor),
+                                  floatingLabelStyle: TextStyle(
+                                    color: colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.alternate_email_rounded,
+                                    color: textMutedColor,
+                                    size: 22,
+                                  ),
+                                  filled: true,
+                                  fillColor: isDark
+                                      ? colorScheme.surfaceContainerHighest
+                                            .withValues(alpha: 0.5)
+                                      : colorScheme.surfaceContainerHighest
+                                            .withValues(alpha: 0.3),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide(
+                                      color: borderColor,
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide(
+                                      color: colorScheme.primary,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 16,
+                                  ),
+                                ),
+                                textInputAction: TextInputAction.next,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Masukkan username';
+                                  }
+                                  if (value.trim().length < 3) {
+                                    return 'Username minimal 3 karakter';
+                                  }
+                                  if (!RegExp(
+                                    r'^[a-zA-Z0-9_\.]+$',
+                                  ).hasMatch(value.trim())) {
+                                    return 'Hanya huruf, angka, titik, atau underscore';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 20),
+
+                              // Email Field
+                              TextFormField(
+                                controller: _emailController,
+                                style: TextStyle(
+                                  color: colorScheme.onSurface,
+                                  fontSize: 15,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText: 'Alamat Email',
+                                  floatingLabelBehavior:
+                                      FloatingLabelBehavior.auto,
+                                  labelStyle: TextStyle(color: textMutedColor),
+                                  floatingLabelStyle: TextStyle(
+                                    color: colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.email_outlined,
+                                    color: textMutedColor,
+                                    size: 22,
+                                  ),
+                                  filled: true,
+                                  fillColor: isDark
+                                      ? colorScheme.surfaceContainerHighest
+                                            .withValues(alpha: 0.5)
+                                      : colorScheme.surfaceContainerHighest
+                                            .withValues(alpha: 0.3),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide(
+                                      color: borderColor,
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide(
+                                      color: colorScheme.primary,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 16,
+                                  ),
+                                ),
+                                keyboardType: TextInputType.emailAddress,
+                                textInputAction: TextInputAction.next,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Masukkan alamat email';
+                                  }
+                                  if (!RegExp(
+                                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                  ).hasMatch(value)) {
+                                    return 'Format email tidak valid';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 20),
+
+                              // Password Field
+                              TextFormField(
+                                controller: _passwordController,
+                                style: TextStyle(
+                                  color: colorScheme.onSurface,
+                                  fontSize: 15,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText: 'Kata Sandi',
+                                  floatingLabelBehavior:
+                                      FloatingLabelBehavior.auto,
+                                  labelStyle: TextStyle(color: textMutedColor),
+                                  floatingLabelStyle: TextStyle(
+                                    color: colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.lock_outline_rounded,
+                                    color: textMutedColor,
+                                    size: 22,
+                                  ),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: textMutedColor,
+                                      size: 22,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      });
+                                    },
+                                  ),
+                                  filled: true,
+                                  fillColor: isDark
+                                      ? colorScheme.surfaceContainerHighest
+                                            .withValues(alpha: 0.5)
+                                      : colorScheme.surfaceContainerHighest
+                                            .withValues(alpha: 0.3),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide(
+                                      color: borderColor,
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide(
+                                      color: colorScheme.primary,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 16,
+                                  ),
+                                ),
+                                obscureText: _obscurePassword,
+                                textInputAction: TextInputAction.next,
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Masukkan kata sandi';
+                                  }
+                                  if (value.length < 8) {
+                                    return 'Kata sandi minimal 8 karakter';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 20),
+
+                              // Confirm Password Field
+                              TextFormField(
+                                controller: _confirmPasswordController,
+                                style: TextStyle(
+                                  color: colorScheme.onSurface,
+                                  fontSize: 15,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText: 'Konfirmasi Kata Sandi',
+                                  floatingLabelBehavior:
+                                      FloatingLabelBehavior.auto,
+                                  labelStyle: TextStyle(color: textMutedColor),
+                                  floatingLabelStyle: TextStyle(
+                                    color: colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.lock_outline_rounded,
+                                    color: textMutedColor,
+                                    size: 22,
+                                  ),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureConfirmPassword
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: textMutedColor,
+                                      size: 22,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscureConfirmPassword =
+                                            !_obscureConfirmPassword;
+                                      });
+                                    },
+                                  ),
+                                  filled: true,
+                                  fillColor: isDark
+                                      ? colorScheme.surfaceContainerHighest
+                                            .withValues(alpha: 0.5)
+                                      : colorScheme.surfaceContainerHighest
+                                            .withValues(alpha: 0.3),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide(
+                                      color: borderColor,
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide(
+                                      color: colorScheme.primary,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 16,
+                                  ),
+                                ),
+                                obscureText: _obscureConfirmPassword,
+                                textInputAction: TextInputAction.done,
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Ulangi kata sandi';
+                                  }
+                                  if (value != _passwordController.text) {
+                                    return 'Kata sandi tidak cocok';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 32),
+
+                              // Register Button
+                              GradientButton(
+                                text: 'Daftar Sekarang',
+                                onPressed: _handleRegister,
+                                isLoading: _isLoading,
+                              ),
+                              const SizedBox(height: 32),
+
+                              // Divider
+                              const AuthDivider(text: 'Atau daftar dengan'),
+                              const SizedBox(height: 24),
+
+                              // Google Button
+                              GoogleSignInButton(
+                                text: 'Lanjutkan dengan Google',
+                                onPressed: () {
+                                  // Handle Google sign-in
+                                },
+                              ),
+                              const SizedBox(height: 32),
+
+                              // Footer Link
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Sudah punya akun? ',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: textMutedColor,
+                                    ),
+                                  ),
+                                  InkWell(
+                                    borderRadius: BorderRadius.circular(4),
+                                    onTap: () {
+                                      Navigator.of(context).pushReplacement(
+                                        PageRouteBuilder(
+                                          pageBuilder:
+                                              (
+                                                context,
+                                                animation,
+                                                secondaryAnimation,
+                                              ) => const LoginScreen(),
+                                          transitionsBuilder:
+                                              (
+                                                context,
+                                                animation,
+                                                secondaryAnimation,
+                                                child,
+                                              ) {
+                                                return FadeTransition(
+                                                  opacity: animation,
+                                                  child: child,
+                                                );
+                                              },
+                                          transitionDuration: const Duration(
+                                            milliseconds: 300,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 2,
+                                      ),
+                                      child: Text(
+                                        'Masuk di sini',
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                              color: colorScheme.primary,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
             ),
 
             Positioned(
@@ -627,8 +628,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                       .withValues(alpha: 0.5),
                 ),
                 onPressed: () {
-                  final box = _themeBtnKey.currentContext?.findRenderObject()
-                      as RenderBox?;
+                  final box =
+                      _themeBtnKey.currentContext?.findRenderObject()
+                          as RenderBox?;
                   final origin = box != null
                       ? box.localToGlobal(box.size.center(Offset.zero))
                       : const Offset(0, 0);
