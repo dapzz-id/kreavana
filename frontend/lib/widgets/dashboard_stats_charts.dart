@@ -349,8 +349,9 @@ class _AllCategoriesBarChart extends StatelessWidget {
                           reservedSize: isMobile ? 40 : 56,
                           getTitlesWidget: (i, _) {
                             final index = i.toInt();
-                            if (index >= entries.length)
+                            if (index >= entries.length) {
                               return const SizedBox.shrink();
+                            }
                             final e = entries[index];
                             return Padding(
                               padding: EdgeInsets.only(top: isMobile ? 4 : 6),
@@ -447,8 +448,9 @@ class _AllCategoriesBarChart extends StatelessWidget {
                       reservedSize: isMobile ? 40 : 56,
                       getTitlesWidget: (i, _) {
                         final index = i.toInt();
-                        if (index >= entries.length)
+                        if (index >= entries.length) {
                           return const SizedBox.shrink();
+                        }
                         final e = entries[index];
                         return Padding(
                           padding: EdgeInsets.only(top: isMobile ? 4 : 6),

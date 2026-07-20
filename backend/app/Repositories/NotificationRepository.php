@@ -10,4 +10,13 @@ class NotificationRepository extends BaseRepository
     {
         parent::__construct($model);
     }
+
+    public function getRecentByUser(string $userId, int $limit = 5)
+    {
+        return $this->model
+            ->where('user_id', $userId)
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get();
+    }
 }

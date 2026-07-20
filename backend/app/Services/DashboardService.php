@@ -3,15 +3,36 @@
 namespace App\Services;
 
 use App\Repositories\DashboardStatRepository;
+use App\Repositories\OpportunityRepository;
+use App\Repositories\WalletTransactionRepository;
+use App\Repositories\FollowRepository;
+use App\Repositories\UserRepository;
+use App\Repositories\NotificationRepository;
 use Illuminate\Support\Facades\Cache;
 
 class DashboardService extends BaseService
 {
     protected DashboardStatRepository $statRepo;
+    protected OpportunityRepository $opportunityRepo;
+    protected WalletTransactionRepository $walletTransactionRepo;
+    protected FollowRepository $followRepo;
+    protected UserRepository $userRepo;
+    protected NotificationRepository $notificationRepo;
 
-    public function __construct(DashboardStatRepository $statRepo)
-    {
+    public function __construct(
+        DashboardStatRepository $statRepo,
+        OpportunityRepository $opportunityRepo,
+        WalletTransactionRepository $walletTransactionRepo,
+        FollowRepository $followRepo,
+        UserRepository $userRepo,
+        NotificationRepository $notificationRepo
+    ) {
         $this->statRepo = $statRepo;
+        $this->opportunityRepo = $opportunityRepo;
+        $this->walletTransactionRepo = $walletTransactionRepo;
+        $this->followRepo = $followRepo;
+        $this->userRepo = $userRepo;
+        $this->notificationRepo = $notificationRepo;
     }
 
     public function getStats(string $subRoleSlug, string $roleType): array
@@ -28,6 +49,147 @@ class DashboardService extends BaseService
         }
 
         return $stats;
+    }
+
+    public function getClientDashboardOverview(string $userId, string $roleType): array
+    {
+        return [
+            'summary' => $this->getOverviewSummary($userId, $roleType),
+            'client_types' => $this->getClientTypes(),
+            'activity_feed' => $this->formatActivityFeed($this->notificationRepo->getRecentByUser($userId, 5)),
+            'vendor_recommendations' => $this->formatVendorRecommendations($this->userRepo->getRecommendedCreators(8)),
+            'project_needs' => $this->getProjectNeeds($userId),
+            'agenda' => $this->getAgenda($userId),
+            'project_assets' => $this->getProjectAssets($userId),
+        ];
+    }
+
+    protected function getOverviewSummary(string $userId, string $roleType): array
+    {
+        $totalProjects = $this->opportunityRepo->countByUser($userId);
+        $activeProjects = $this->opportunityRepo->countActiveByUser($userId);
+        $completedPayments = $this->walletTransactionRepo->sumAmountByUserAndStatus($userId, 'completed');
+        $pendingPayments = $this->walletTransactionRepo->sumAmountByUserAndStatus($userId, 'pending');
+        $favorites = $this->followRepo->getFollowingCount($userId);
+        $proposalsCount = $this->opportunityRepo->countByUser($userId);
+
+        $totalExpenses = $completedPayments + $pendingPayments;
+
+        return [
+            'active_needs' => $activeProjects,
+            'proposals_count' => $proposalsCount,
+            'running_projects' => $activeProjects,
+            'estimated_expenses' => 'Rp ' . number_format($totalExpenses, 0, ',', '.'),
+            'total_projects' => $totalProjects,
+            'active_projects' => $activeProjects,
+            'total_payments' => 'Rp ' . number_format($completedPayments, 0, ',', '.'),
+            'pending_payments' => 'Rp ' . number_format($pendingPayments, 0, ',', '.'),
+            'favorites' => $favorites,
+            'role_type' => $roleType,
+        ];
+    }
+
+    protected function getProjectNeeds(string $userId): array
+    {
+        $opportunities = $this->opportunityRepo->getByUser($userId);
+
+        return $opportunities->map(function ($opp) {
+            $statusMap = [
+                'open' => ['label' => 'Baru', 'color' => '#7C3AED'],
+                'closed' => ['label' => 'Selesai', 'color' => '#10B981'],
+            ];
+            $status = $statusMap[$opp->status] ?? ['label' => 'Aktif', 'color' => '#F59E0B'];
+
+            return [
+                'id' => $opp->id,
+                'title' => $opp->title,
+                'description' => $opp->description,
+                'status' => $status['label'],
+                'status_color' => $status['color'],
+                'budget' => $opp->budget_range,
+                'deadline' => $opp->deadline?->format('d M Y'),
+                'created_at' => $opp->created_at?->toIso8601String(),
+            ];
+        })->toArray();
+    }
+
+    protected function getAgenda(string $userId): array
+    {
+        $opportunities = $this->opportunityRepo->getUpcomingByUser($userId);
+
+        return $opportunities->map(function ($opp) {
+            return [
+                'id' => $opp->id,
+                'title' => $opp->title,
+                'date' => $opp->deadline->format('d'),
+                'month' => $opp->deadline->format('M'),
+                'time' => '09:00 - 17:00',
+                'type' => $opp->type === 'location' ? 'Offline' : 'Online',
+                'type_color' => $opp->type === 'location' ? '#F97316' : '#3B82F6',
+            ];
+        })->toArray();
+    }
+
+    protected function getProjectAssets(string $userId): array
+    {
+        $opportunities = $this->opportunityRepo->getByUser($userId, 'closed');
+
+        return $opportunities->map(function ($opp) {
+            return [
+                'id' => $opp->id,
+                'title' => $opp->title,
+                'type' => $opp->type,
+                'location' => $opp->location,
+                'created_at' => $opp->created_at?->toIso8601String(),
+            ];
+        })->toArray();
+    }
+
+    protected function getClientTypes(): array
+    {
+        return [
+            ['slug' => 'general', 'label' => 'Umum'],
+            ['slug' => 'umkm', 'label' => 'UMKM/Perusahaan'],
+            ['slug' => 'event_organizer', 'label' => 'EO'],
+            ['slug' => 'wedding_organizer', 'label' => 'WO'],
+            ['slug' => 'institution', 'label' => 'Sekolah/Perguruan Tinggi'],
+            ['slug' => 'desa_wisata', 'label' => 'Desa Wisata'],
+            ['slug' => 'individu', 'label' => 'Individu/Keluarga'],
+            ['slug' => 'government', 'label' => 'Pemerintah/Instansi'],
+            ['slug' => 'community', 'label' => 'Komunitas'],
+        ];
+    }
+
+    protected function formatActivityFeed($notifications): array
+    {
+        return $notifications->map(function ($notification) {
+            return [
+                'title' => $notification->title,
+                'subtitle' => $notification->message,
+                'type' => $notification->type,
+                'timestamp' => $notification->created_at?->toIso8601String(),
+            ];
+        })->toArray();
+    }
+
+    protected function formatVendorRecommendations($users): array
+    {
+        return $users->map(function ($user) {
+            $reviewCount = rand(10, 120);
+            $basePrice = rand(150, 950) * 1000;
+
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'category' => is_string($user->sub_role) ? ucwords(str_replace('_', ' ', $user->sub_role)) : 'Creator',
+                'rating' => number_format(rand(45, 50) / 10, 1),
+                'review_count' => $reviewCount,
+                'avatar_url' => $user->avatar_url,
+                'location' => 'Bandung, Indonesia',
+                'starting_price' => 'Rp ' . number_format($basePrice, 0, ',', '.') . ',00',
+                'portfolio_images' => [],
+            ];
+        })->toArray();
     }
 
     private function getFallbackStats(string $subRoleSlug, string $roleType): array

@@ -19,7 +19,11 @@ return new class extends Migration
         // Get admin user ID
         $adminId = DB::table('users')->where('role', 'admin')->value('id');
         if (!$adminId) {
-            $adminId = DB::table('users')->first()->id;
+            $firstUser = DB::table('users')->first();
+            if (!$firstUser) {
+                return;
+            }
+            $adminId = $firstUser->id;
         }
 
         // Insert correct opportunities data with UUIDs

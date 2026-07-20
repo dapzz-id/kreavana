@@ -45,4 +45,17 @@ class DashboardController extends Controller
 
         return $this->successResponse('Peluang berhasil diambil', $opportunities->toArray());
     }
+
+    public function overview(Request $request)
+    {
+        $user = auth('api')->user();
+        if (!$user) {
+            return $this->errorResponse('User tidak ditemukan.', 401);
+        }
+
+        $roleType = $request->query('role_type', $user->role ?? 'user');
+        $overview = $this->dashboardService->getClientDashboardOverview($user->id, $roleType);
+
+        return $this->successResponse('Ringkasan dashboard klien berhasil diambil', $overview);
+    }
 }

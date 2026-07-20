@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 
 #[Fillable([
@@ -19,7 +20,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 ])]
 class WalletTransaction extends Model
 {
-    use HasUuids;
+    use HasUuids, HasFactory;
 
     /**
      * Get the user that owns the transaction.

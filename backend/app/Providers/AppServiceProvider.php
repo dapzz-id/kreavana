@@ -29,8 +29,8 @@ class AppServiceProvider extends ServiceProvider
 
     private function validateAuthConfiguration(): void
     {
-        if (config('database.redis.client') !== 'phpredis') {
-            throw new RuntimeException('Authentication requires REDIS_CLIENT=phpredis.');
+        if (! in_array(config('database.redis.client'), ['phpredis', 'predis'], true)) {
+            throw new RuntimeException('Authentication requires REDIS_CLIENT=phpredis or REDIS_CLIENT=predis.');
         }
 
         if (! app()->environment('production')) {

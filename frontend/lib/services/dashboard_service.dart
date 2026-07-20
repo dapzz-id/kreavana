@@ -29,6 +29,39 @@ class DashboardService {
     return _getFallbackStats(subRole, roleType);
   }
 
+  static Future<Map<String, dynamic>> getClientDashboardOverview({
+    required String roleType,
+  }) async {
+    final result = await ApiService.get(
+      'client-dashboard/overview',
+      queryParams: {'role_type': roleType},
+    );
+
+    if (result['status'] == true && result['data'] != null) {
+      return result['data'] as Map<String, dynamic>;
+    }
+
+    return {
+      'summary': {
+        'active_needs': 0,
+        'proposals_count': 0,
+        'running_projects': 0,
+        'estimated_expenses': 'Rp 0',
+        'total_projects': 0,
+        'active_projects': 0,
+        'total_payments': 'Rp 0',
+        'pending_payments': 'Rp 0',
+        'favorites': 0,
+      },
+      'client_types': [],
+      'activity_feed': [],
+      'vendor_recommendations': [],
+      'project_needs': [],
+      'agenda': [],
+      'project_assets': [],
+    };
+  }
+
   /// Ambil statistik untuk semua kategori subRole sekaligus
   static Future<Map<String, List<Map<String, String>>>> getAllSubRoleStats({
     required List<String> subRoleSlugs,

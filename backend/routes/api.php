@@ -62,6 +62,7 @@ Route::middleware('auth:api')->group(function () {
     // Dashboard
     Route::get('dashboard/stats', [DashboardController::class, 'stats'])->middleware('permission:view_dashboard');
     Route::get('dashboard/opportunities', [DashboardController::class, 'opportunities']);
+    Route::get('client-dashboard/overview', [DashboardController::class, 'overview'])->middleware('permission:view_dashboard');
 
     // Wallet
     Route::get('wallet/info', [WalletController::class, 'info'])->middleware('permission:manage_own_profile');

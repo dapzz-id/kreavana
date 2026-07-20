@@ -26,6 +26,18 @@ class OpportunityRepository extends BaseRepository
         return $query->orderBy('created_at', 'desc')->limit($limit)->get();
     }
 
+    public function countByUser(string $userId): int
+    {
+        return $this->model->where('posted_by', $userId)->count();
+    }
+
+    public function countActiveByUser(string $userId): int
+    {
+        return $this->model->where('posted_by', $userId)
+            ->where('status', 'open')
+            ->count();
+    }
+
     public function getMapLocations(string $subRoleSlug = 'all')
     {
         $query = $this->model->where('status', 'open')
@@ -43,5 +55,27 @@ class OpportunityRepository extends BaseRepository
     public function findWithUser(int $id)
     {
         return $this->model->with('user:id,name,username,phone,email,avatar_url,selected_sub_role')->find($id);
+    }
+
+    public function getByUser(string $userId, ?string $status = null, string $orderBy = 'created_at', string $direction = 'desc', int $limit = 5)
+    {
+        $query = $this->model->where('posted_by', $userId);
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        return $query->orderBy($orderBy, $direction)->limit($limit)->get();
+    }
+
+    public function getUpcomingByUser(string $userId, int $limit = 5)
+    {
+        return $this->model
+            ->where('posted_by', $userId)
+            ->whereNotNull('deadline')
+            ->where('deadline', '>=', now())
+            ->orderBy('deadline', 'asc')
+            ->limit($limit)
+            ->get();
     }
 }
