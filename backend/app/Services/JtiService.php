@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Cache;
 
 class JtiService
 {
@@ -15,35 +15,35 @@ class JtiService
      */
     public static function store(string $jti, int $ttlSeconds): void
     {
-        Redis::setex(self::activeKey($jti), $ttlSeconds, "1");
-        Redis::del(self::revokedKey($jti));
+        Cache::put(self::activeKey($jti), true, $ttlSeconds);
+        Cache::forget(self::revokedKey($jti));
     }
 
     /**
-     * Check if a JTI exists in Redis.
+     * Check if a JTI exists in cache.
      *
      * @param string $jti
      * @return bool
      */
     public static function exists(string $jti): bool
     {
-        if ((bool) Redis::exists(self::revokedKey($jti))) {
+        if (Cache::has(self::revokedKey($jti))) {
             return false;
         }
 
-        return (bool) Redis::exists(self::activeKey($jti));
+        return Cache::has(self::activeKey($jti));
     }
 
     /**
-     * Revoke (delete) a JTI from Redis.
+     * Revoke (delete) a JTI from cache.
      *
      * @param string $jti
      * @return void
      */
     public static function revoke(string $jti, ?int $ttlSeconds = null): void
     {
-        Redis::del(self::activeKey($jti));
-        Redis::setex(self::revokedKey($jti), $ttlSeconds ?? ((int) config('auth_tokens.access_ttl_minutes', 5) * 60), "1");
+        Cache::forget(self::activeKey($jti));
+        Cache::put(self::revokedKey($jti), true, $ttlSeconds ?? ((int) config('auth_tokens.access_ttl_minutes', 5) * 60));
     }
 
     private static function activeKey(string $jti): string

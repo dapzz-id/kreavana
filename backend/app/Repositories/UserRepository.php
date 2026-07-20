@@ -16,4 +16,14 @@ class UserRepository extends BaseRepository
         $field = filter_var($identifier, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
         return $this->model->where($field, $identifier)->first();
     }
+
+    public function getRecommendedCreators(int $limit = 5)
+    {
+        return $this->model
+            ->where('role', 'creator')
+            ->where('is_creator_approved', true)
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get();
+    }
 }

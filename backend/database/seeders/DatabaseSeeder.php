@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             RemainingTablesSeeder::class,
             OpportunityLocationSeeder::class,
+            DashboardMockSeeder::class,
         ]);
 
         // 1. Create main user

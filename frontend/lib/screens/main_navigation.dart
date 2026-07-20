@@ -8,7 +8,6 @@ import 'explore_screen.dart';
 import 'notifications_screen.dart';
 import 'profile_screen.dart';
 import 'login_screen.dart';
-import 'wallet_screen.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_verification_screen.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
@@ -169,6 +168,70 @@ class _MainNavigationState extends State<MainNavigation> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSidebarLink({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    required bool isDark,
+    bool isCollapsed = false,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: isCollapsed ? 8 : 16,
+        vertical: 4,
+      ),
+      child: Tooltip(
+        message: isCollapsed ? label : '',
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isCollapsed ? 0 : 16,
+              vertical: 12,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: isCollapsed
+                  ? MainAxisAlignment.center
+                  : MainAxisAlignment.start,
+              children: [
+                Icon(icon, color: isDark ? Colors.white70 : Colors.grey.shade700, size: 22),
+                if (!isCollapsed) ...[
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                        color: isDark ? Colors.white70 : Colors.grey.shade800,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDummyActionMessage(String title) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$title belum tersedia.'),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -407,90 +470,237 @@ class _MainNavigationState extends State<MainNavigation> {
                                   isDark: isDark,
                                   isCollapsed: _isSidebarCollapsed,
                                 ),
+                                if (!_isSidebarCollapsed) ...[
+                                  const SizedBox(height: 18),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    child: Text(
+                                      'Lainnya',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.white70 : Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                _buildSidebarLink(
+                                  icon: Icons.add_box_outlined,
+                                  label: 'Buat Kebutuhan',
+                                  onTap: () => _showDummyActionMessage('Buat Kebutuhan'),
+                                  isDark: isDark,
+                                  isCollapsed: _isSidebarCollapsed,
+                                ),
+                                _buildSidebarLink(
+                                  icon: Icons.search_outlined,
+                                  label: 'Cari Kreator',
+                                  onTap: () => _showDummyActionMessage('Cari Kreator'),
+                                  isDark: isDark,
+                                  isCollapsed: _isSidebarCollapsed,
+                                ),
+                                _buildSidebarLink(
+                                  icon: Icons.work_outline,
+                                  label: 'Proyek Saya',
+                                  onTap: () => _showDummyActionMessage('Proyek Saya'),
+                                  isDark: isDark,
+                                  isCollapsed: _isSidebarCollapsed,
+                                ),
+                                _buildSidebarLink(
+                                  icon: Icons.calendar_today_outlined,
+                                  label: 'Agenda',
+                                  onTap: () => _showDummyActionMessage('Agenda'),
+                                  isDark: isDark,
+                                  isCollapsed: _isSidebarCollapsed,
+                                ),
+                                _buildSidebarLink(
+                                  icon: Icons.handshake_outlined,
+                                  label: 'Kolaborasi',
+                                  onTap: () => _showDummyActionMessage('Kolaborasi'),
+                                  isDark: isDark,
+                                  isCollapsed: _isSidebarCollapsed,
+                                ),
+                                _buildSidebarLink(
+                                  icon: Icons.storefront_outlined,
+                                  label: 'Marketplace Karya',
+                                  onTap: () => _showDummyActionMessage('Marketplace Karya'),
+                                  isDark: isDark,
+                                  isCollapsed: _isSidebarCollapsed,
+                                ),
+                                _buildSidebarLink(
+                                  icon: Icons.star_border,
+                                  label: 'Ulasan & Reputasi',
+                                  onTap: () => _showDummyActionMessage('Ulasan & Reputasi'),
+                                  isDark: isDark,
+                                  isCollapsed: _isSidebarCollapsed,
+                                ),
+                                _buildSidebarLink(
+                                  icon: Icons.payment_outlined,
+                                  label: 'Pembayaran',
+                                  onTap: () => _showDummyActionMessage('Pembayaran'),
+                                  isDark: isDark,
+                                  isCollapsed: _isSidebarCollapsed,
+                                ),
+                                _buildSidebarLink(
+                                  icon: Icons.report_outlined,
+                                  label: 'Laporan',
+                                  onTap: () => _showDummyActionMessage('Laporan'),
+                                  isDark: isDark,
+                                  isCollapsed: _isSidebarCollapsed,
+                                ),
+                                _buildSidebarLink(
+                                  icon: Icons.settings_outlined,
+                                  label: 'Pengaturan',
+                                  onTap: () => _showDummyActionMessage('Pengaturan'),
+                                  isDark: isDark,
+                                  isCollapsed: _isSidebarCollapsed,
+                                ),
+                                if (!_isSidebarCollapsed) ...[
+                                  const SizedBox(height: 18),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? const Color(0xFF1A1830) : Colors.grey.shade50,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Icon(
+                                              Icons.headset_mic_outlined,
+                                              color: theme.colorScheme.primary,
+                                              size: 24,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          const Text(
+                                            'Butuh Bantuan?',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Tim support siap membantu kapan saja.',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: isDark ? Colors.white60 : Colors.grey.shade600,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          const SizedBox(height: 12),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: OutlinedButton(
+                                              onPressed: () => _showDummyActionMessage('Hubungi Support'),
+                                              style: OutlinedButton.styleFrom(
+                                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                                side: BorderSide(
+                                                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                'Hubungi Support',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: theme.colorScheme.primary,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? const Color(0xFF1A1830) : Colors.grey.shade50,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              color: Colors.orange.withValues(alpha: 0.1),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.workspace_premium_outlined,
+                                              color: Colors.orange,
+                                              size: 24,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          const Text(
+                                            'Dapatkan Lebih Banyak\nManfaat',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Tingkatkan akun untuk fitur prioritas & laporan lengkap.',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: isDark ? Colors.white60 : Colors.grey.shade600,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          const SizedBox(height: 12),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton(
+                                              onPressed: () => _showDummyActionMessage('Upgrade Sekarang'),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: theme.colorScheme.primary,
+                                                foregroundColor: Colors.white,
+                                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                              ),
+                                              child: const Text(
+                                                'Upgrade Sekarang',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
                               ],
                       ),
                     ),
-
-                    // ── Top Up / Isi Saldo Button ────────────────────────
-                    _isSidebarCollapsed
-                        ? Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Tooltip(
-                              message: 'Isi Saldo',
-                              child: InkWell(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => WalletScreen(
-                                        user: _currentUser,
-                                        onUserUpdated: _onUserUpdated,
-                                      ),
-                                    ),
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary.withValues(
-                                      alpha: 0.1,
-                                    ),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Icon(
-                                    Icons.add_card_rounded,
-                                    color: theme.colorScheme.primary,
-                                    size: 20,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          )
-                        : Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => WalletScreen(
-                                        user: _currentUser,
-                                        onUserUpdated: _onUserUpdated,
-                                      ),
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(
-                                  Icons.add_card_rounded,
-                                  size: 18,
-                                ),
-                                label: const Text(
-                                  'Isi Saldo',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: theme.colorScheme.primary,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
 
                     // ── Bottom user card ───────────────────────────────
                     Divider(

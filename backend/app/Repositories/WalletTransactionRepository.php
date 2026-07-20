@@ -23,4 +23,12 @@ class WalletTransactionRepository extends BaseRepository
 
         return $query->paginate($perPage);
     }
+
+    public function sumAmountByUserAndStatus(string $userId, string $status): float
+    {
+        return (float) $this->model
+            ->where('user_id', $userId)
+            ->where('status', $status)
+            ->sum('amount');
+    }
 }

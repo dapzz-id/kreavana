@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
 
 class RefreshTokenRepository
@@ -24,9 +23,8 @@ class RefreshTokenRepository
             'expires_at' => now()->addSeconds($ttl)->toISOString(),
         ];
 
-        Redis::setex($this->refreshKey($selector), $ttl, json_encode($entry, JSON_THROW_ON_ERROR));
-        Redis::sadd($this->familyKey($familyId), $selector);
-        Redis::expire($this->familyKey($familyId), $ttl);
+        Cache::put($this->refreshKey($selector), json_encode($entry, JSON_THROW_ON_ERROR), $ttl);
+        Cache::store('database')->put($this->familyKey($familyId), array_merge(Cache::get($this->familyKey($familyId), []), [$selector]), $ttl);
 
         return "{$selector}.{$secret}";
     }
@@ -42,7 +40,7 @@ class RefreshTokenRepository
 
         try {
             return $lock->block(2, function () use ($selector, $secret) {
-            $encoded = Redis::get($this->refreshKey($selector));
+            $encoded = Cache::get($this->refreshKey($selector));
 
             if (!$encoded) {
                 $this->revokeUsedFamily($selector);

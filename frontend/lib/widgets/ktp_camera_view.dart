@@ -197,17 +197,17 @@ class _KtpCameraViewState extends State<KtpCameraView> {
         Column(
           children: [
             // 1. Top overlay
-            Container(height: frameTop, color: Colors.black.withOpacity(0.3)),
+            Container(height: frameTop, color: Colors.black.withValues(alpha: 0.3)),
 
             // 2. Middle section (Kunci tinggi total section ini sebesar frameHeight)
-            Container(
+            SizedBox(
               height: frameHeight,
               child: Row(
                 children: [
                   // Left overlay
                   Container(
                     width: (size.width - frameWidth) / 2,
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withValues(alpha: 0.3),
                   ),
                   // Clear area for KTP (Sekarang tingginya akan pas!)
                   Container(
@@ -236,14 +236,14 @@ class _KtpCameraViewState extends State<KtpCameraView> {
                   // Right overlay
                   Container(
                     width: (size.width - frameWidth) / 2,
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withValues(alpha: 0.3),
                   ),
                 ],
               ),
             ),
 
             // 3. Bottom overlay (Sisanya otomatis menutup ke bawah)
-            Expanded(child: Container(color: Colors.black.withOpacity(0.3))),
+            Expanded(child: Container(color: Colors.black.withValues(alpha: 0.3))),
           ],
         ),
       ],
