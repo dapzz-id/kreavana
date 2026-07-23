@@ -199,3 +199,17 @@ class AppTheme {
     );
   }
 }
+
+extension ColorWithValues on Color {
+  /// A small helper so callers can preserve the source color while updating
+  /// only specific color components, especially alpha.
+  Color withValues({double? alpha, int? red, int? green, int? blue}) {
+    final opacity = alpha == null ? a.toDouble() / 255.0 : alpha.clamp(0.0, 1.0);
+    return Color.fromARGB(
+      (opacity * 255).round(),
+      red ?? r.toInt(),
+      green ?? g.toInt(),
+      blue ?? b.toInt(),
+    );
+  }
+}

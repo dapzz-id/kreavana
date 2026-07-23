@@ -10,12 +10,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kreavana/main.dart';
 
 void main() {
-  testWidgets('Register screen loaded test', (WidgetTester tester) async {
+  testWidgets('Login screen loaded test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const KreavanaApp());
 
-    // Verify that register screen has the title 'Daftar Kreavana'.
-    expect(find.text('Daftar Kreavana'), findsOneWidget);
+    // Verify that login screen has the title 'Masuk Kreavana'.
+    expect(find.text('Masuk Kreavana'), findsOneWidget);
   });
 }
+
 
