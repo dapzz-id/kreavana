@@ -322,24 +322,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ? Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                IntrinsicHeight(
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      // Left Column - Profile Card
-                                      Expanded(
-                                        flex: 1,
-                                        child: _buildProfileCard(theme, isDark),
-                                      ),
-                                      const SizedBox(width: 24),
-                                      // Right Column - Form only
-                                      Expanded(
-                                        flex: 1,
-                                        child: _buildProfileForm(theme, isDark),
-                                      ),
-                                    ],
-                                  ),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Left Column - Profile Card
+                                    Expanded(
+                                      flex: 1,
+                                      child: _buildProfileCard(theme, isDark),
+                                    ),
+                                    const SizedBox(width: 24),
+                                    // Right Column - Form only
+                                    Expanded(
+                                      flex: 1,
+                                      child: _buildProfileForm(theme, isDark),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 24),
                                 // Creator Application Card - Full Width

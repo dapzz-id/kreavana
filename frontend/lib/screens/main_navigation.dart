@@ -3,6 +3,14 @@ import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
 import 'dashboard_screen.dart';
+import 'govt_dashboard_screen.dart';
+import 'tender_kolaborasi_screen.dart';
+import 'mitra_komunitas_screen.dart';
+import 'realisasi_anggaran_screen.dart';
+import 'monitoring_evaluasi_screen.dart';
+import 'dokumen_instansi_screen.dart';
+import 'pengumuman_publik_screen.dart';
+import 'tim_hak_akses_screen.dart';
 import 'direct_message_screen.dart';
 import 'explore_screen.dart';
 import 'notifications_screen.dart';
@@ -10,6 +18,31 @@ import 'profile_screen.dart';
 import 'login_screen.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_verification_screen.dart';
+import 'buat_kebutuhan_screen.dart';
+import 'proyek_saya_screen.dart';
+import 'agenda_screen.dart';
+import 'kolaborasi_screen.dart';
+import 'marketplace_karya_screen.dart';
+import 'ulasan_reputasi_screen.dart';
+import 'laporan_screen.dart';
+import 'pengaturan_screen.dart';
+import 'wallet_screen.dart';
+import 'company_dashboard_screen.dart';
+import 'eo_dashboard_screen.dart';
+import 'wo_dashboard_screen.dart';
+import 'school_dashboard_screen.dart';
+import 'tourism_dashboard_screen.dart';
+import 'individual_dashboard_screen.dart';
+import 'community_dashboard_screen.dart';
+import 'creator_general_dashboard_screen.dart';
+import 'creator_fotografer_dashboard_screen.dart';
+import 'creator_videografer_dashboard_screen.dart';
+import 'creator_editor_dashboard_screen.dart';
+import 'creator_desainer_dashboard_screen.dart';
+import 'creator_mua_dashboard_screen.dart';
+import 'creator_talent_dashboard_screen.dart';
+import 'creator_drone_dashboard_screen.dart';
+import 'creator_content_dashboard_screen.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -236,6 +269,124 @@ class _MainNavigationState extends State<MainNavigation> {
     );
   }
 
+  Widget _buildClientDashboardScreen() {
+    if (_currentUser.role == 'creator' || _currentUser.isCreator) {
+      return _buildCreatorDashboardScreen();
+    }
+
+    final subRole = (_currentUser.subRole ?? '').toLowerCase().trim();
+    switch (subRole) {
+      case 'government':
+      case 'institution':
+      case 'pemerintah':
+      case 'instansi':
+        return GovtDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+
+      case 'company':
+      case 'business':
+      case 'corporate':
+      case 'perusahaan':
+      case 'bisnis':
+        return CompanyDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+
+      case 'event_organizer':
+      case 'eo':
+        return EoDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+
+      case 'wedding_organizer':
+      case 'wo':
+        return WoDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+
+      case 'school':
+      case 'education':
+      case 'campus':
+      case 'sekolah':
+      case 'kampus':
+        return SchoolDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+
+      case 'tourism':
+      case 'desa_wisata':
+      case 'pariwisata':
+        return TourismDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+
+      case 'individual':
+      case 'personal':
+      case 'family':
+      case 'pribadi':
+      case 'individu':
+      case 'keluarga':
+        return IndividualDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+
+      case 'community':
+      case 'komunitas':
+        return CommunityDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+
+      default:
+        // Tampilan Klien Umum (Default untuk akun baru atau sub_role kosong / umum / null)
+        return DashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+    }
+  }
+
+  Widget _buildCreatorDashboardScreen() {
+    final subRole = (_currentUser.subRole ?? '').toLowerCase().trim();
+    switch (subRole) {
+      case 'government':
+      case 'institution':
+      case 'pemerintah':
+      case 'instansi':
+        return GovtDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+
+      case 'fotografer':
+      case 'photographer':
+      case 'foto':
+        return CreatorFotograferDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+
+      case 'videografer':
+      case 'videographer':
+      case 'video':
+        return CreatorVideograferDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+
+      case 'editor':
+      case 'photo_editor':
+      case 'video_editor':
+        return CreatorEditorDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+
+      case 'desainer':
+      case 'designer':
+      case 'graphic_designer':
+      case 'desain':
+        return CreatorDesainerDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+
+      case 'mua':
+      case 'makeup_artist':
+      case 'makeup':
+        return CreatorMuaDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+
+      case 'talent':
+      case 'model':
+      case 'talent_model':
+        return CreatorTalentDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+
+      case 'drone':
+      case 'drone_pilot':
+      case 'pilot_drone':
+        return CreatorDroneDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+
+      case 'content_creator':
+      case 'influencer':
+      case 'ugc':
+        return CreatorContentDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+
+      default:
+        // Kreator Umum (Default untuk kreator baru yang belum memilih kategori)
+        return CreatorGeneralDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+    }
+  }
+
+  bool get _isGovernment =>
+      (_currentUser.role == 'user' || _currentUser.role == 'creator') &&
+      (_currentUser.subRole == 'government' || _currentUser.subRole == 'institution');
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -255,7 +406,7 @@ class _MainNavigationState extends State<MainNavigation> {
             ),
           ]
         : [
-            DashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated),
+            _buildClientDashboardScreen(),
             ExploreScreen(user: _currentUser),
             const DirectMessageScreen(),
             NotificationsScreen(userId: _currentUser.id ?? ''),
@@ -472,88 +623,255 @@ class _MainNavigationState extends State<MainNavigation> {
                                 ),
                                 if (!_isSidebarCollapsed) ...[
                                   const SizedBox(height: 18),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                                    child: Text(
-                                      'Lainnya',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: isDark ? Colors.white70 : Colors.grey.shade600,
+                                  if (_isGovernment)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      child: Text(
+                                        'PENGELOLAAN',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark ? Colors.white54 : Colors.grey.shade500,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      child: Text(
+                                        'Lainnya',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark ? Colors.white70 : Colors.grey.shade600,
+                                        ),
                                       ),
                                     ),
+                                ],
+                                if (_isGovernment) ...[
+                                  _buildSidebarLink(
+                                    icon: Icons.campaign_outlined,
+                                    label: 'Peluang & Program',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProyekSayaScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.event_outlined,
+                                    label: 'Kegiatan & Event',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AgendaScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.handshake_outlined,
+                                    label: 'Tender & Kolaborasi',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TenderKolaborasiScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.people_outlined,
+                                    label: 'Daftar Kreator & Vendor',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ExploreScreen(user: _currentUser))),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.diversity_3_outlined,
+                                    label: 'Mitra & Komunitas',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MitraKomunitasScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  if (!_isSidebarCollapsed) ...[
+                                    const SizedBox(height: 18),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      child: Text(
+                                        'PEMANTAUAN',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark ? Colors.white54 : Colors.grey.shade500,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                  _buildSidebarLink(
+                                    icon: Icons.work_outline,
+                                    label: 'Proyek Aktif',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProyekSayaScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.summarize_outlined,
+                                    label: 'Laporan Kegiatan',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LaporanScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.account_balance_outlined,
+                                    label: 'Realisasi Anggaran',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RealisasiAnggaranScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.monitor_outlined,
+                                    label: 'Monitoring & Evaluasi',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MonitoringEvaluasiScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  if (!_isSidebarCollapsed) ...[
+                                    const SizedBox(height: 18),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      child: Text(
+                                        'DATA & DOKUMEN',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark ? Colors.white54 : Colors.grey.shade500,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                  _buildSidebarLink(
+                                    icon: Icons.badge_outlined,
+                                    label: 'Data Kreator',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ExploreScreen(user: _currentUser))),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.folder_outlined,
+                                    label: 'Dokumen Instansi',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DokumenInstansiScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.campaign_outlined,
+                                    label: 'Pengumuman Publik',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PengumumanPublikScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  if (!_isSidebarCollapsed) ...[
+                                    const SizedBox(height: 18),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      child: Text(
+                                        'PENGATURAN',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark ? Colors.white54 : Colors.grey.shade500,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                  _buildSidebarLink(
+                                    icon: Icons.account_balance_outlined,
+                                    label: 'Profil Instansi',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen(user: _currentUser, onUserUpdated: _onUserUpdated, onLogout: _onLogout))),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.settings_outlined,
+                                    label: 'Pengaturan Akun',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PengaturanScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.admin_panel_settings_outlined,
+                                    label: 'Tim & Hak Akses',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TimHakAksesScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                ] else ...[
+                                  _buildSidebarLink(
+                                    icon: Icons.add_box_outlined,
+                                    label: 'Buat Kebutuhan',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BuatKebutuhanScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.search_outlined,
+                                    label: 'Cari Kreator',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ExploreScreen(user: _currentUser))),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.work_outline,
+                                    label: 'Proyek Saya',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProyekSayaScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.calendar_today_outlined,
+                                    label: 'Agenda',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AgendaScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.handshake_outlined,
+                                    label: 'Kolaborasi',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KolaborasiScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.storefront_outlined,
+                                    label: 'Marketplace Karya',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MarketplaceKaryaScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.star_border,
+                                    label: 'Ulasan & Reputasi',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UlasanReputasiScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.payment_outlined,
+                                    label: 'Pembayaran',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => WalletScreen(user: _currentUser, onUserUpdated: _onUserUpdated))),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.report_outlined,
+                                    label: 'Laporan',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LaporanScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
+                                  ),
+                                  _buildSidebarLink(
+                                    icon: Icons.settings_outlined,
+                                    label: 'Pengaturan',
+                                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PengaturanScreen())),
+                                    isDark: isDark,
+                                    isCollapsed: _isSidebarCollapsed,
                                   ),
                                 ],
-                                _buildSidebarLink(
-                                  icon: Icons.add_box_outlined,
-                                  label: 'Buat Kebutuhan',
-                                  onTap: () => _showDummyActionMessage('Buat Kebutuhan'),
-                                  isDark: isDark,
-                                  isCollapsed: _isSidebarCollapsed,
-                                ),
-                                _buildSidebarLink(
-                                  icon: Icons.search_outlined,
-                                  label: 'Cari Kreator',
-                                  onTap: () => _showDummyActionMessage('Cari Kreator'),
-                                  isDark: isDark,
-                                  isCollapsed: _isSidebarCollapsed,
-                                ),
-                                _buildSidebarLink(
-                                  icon: Icons.work_outline,
-                                  label: 'Proyek Saya',
-                                  onTap: () => _showDummyActionMessage('Proyek Saya'),
-                                  isDark: isDark,
-                                  isCollapsed: _isSidebarCollapsed,
-                                ),
-                                _buildSidebarLink(
-                                  icon: Icons.calendar_today_outlined,
-                                  label: 'Agenda',
-                                  onTap: () => _showDummyActionMessage('Agenda'),
-                                  isDark: isDark,
-                                  isCollapsed: _isSidebarCollapsed,
-                                ),
-                                _buildSidebarLink(
-                                  icon: Icons.handshake_outlined,
-                                  label: 'Kolaborasi',
-                                  onTap: () => _showDummyActionMessage('Kolaborasi'),
-                                  isDark: isDark,
-                                  isCollapsed: _isSidebarCollapsed,
-                                ),
-                                _buildSidebarLink(
-                                  icon: Icons.storefront_outlined,
-                                  label: 'Marketplace Karya',
-                                  onTap: () => _showDummyActionMessage('Marketplace Karya'),
-                                  isDark: isDark,
-                                  isCollapsed: _isSidebarCollapsed,
-                                ),
-                                _buildSidebarLink(
-                                  icon: Icons.star_border,
-                                  label: 'Ulasan & Reputasi',
-                                  onTap: () => _showDummyActionMessage('Ulasan & Reputasi'),
-                                  isDark: isDark,
-                                  isCollapsed: _isSidebarCollapsed,
-                                ),
-                                _buildSidebarLink(
-                                  icon: Icons.payment_outlined,
-                                  label: 'Pembayaran',
-                                  onTap: () => _showDummyActionMessage('Pembayaran'),
-                                  isDark: isDark,
-                                  isCollapsed: _isSidebarCollapsed,
-                                ),
-                                _buildSidebarLink(
-                                  icon: Icons.report_outlined,
-                                  label: 'Laporan',
-                                  onTap: () => _showDummyActionMessage('Laporan'),
-                                  isDark: isDark,
-                                  isCollapsed: _isSidebarCollapsed,
-                                ),
-                                _buildSidebarLink(
-                                  icon: Icons.settings_outlined,
-                                  label: 'Pengaturan',
-                                  onTap: () => _showDummyActionMessage('Pengaturan'),
-                                  isDark: isDark,
-                                  isCollapsed: _isSidebarCollapsed,
-                                ),
                                 if (!_isSidebarCollapsed) ...[
                                   const SizedBox(height: 18),
                                   Padding(
