@@ -45,7 +45,7 @@ class ProfileController extends Controller
                 'username' => $user->username,
                 'email' => $user->email,
                 'role' => $user->role,
-                'sub_role' => $user->sub_role,
+                'sub_role' => $user->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user->sub_role,
                 'avatar_url' => $user->avatar_url,
                 'is_creator_approved' => (bool) $user->is_creator_approved,
                 'balance' => $user->balance,

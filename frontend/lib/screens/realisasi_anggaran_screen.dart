@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../app/theme.dart';
+import '../models/user_model.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 
 class RealisasiAnggaranScreen extends StatelessWidget {
-  const RealisasiAnggaranScreen({super.key});
+  final UserModel? user;
+  final ValueChanged<UserModel>? onUserUpdated;
+
+  const RealisasiAnggaranScreen({super.key, this.user, this.onUserUpdated});
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +22,7 @@ class RealisasiAnggaranScreen extends StatelessWidget {
       {'name': 'Lainnya', 'pagu': 'Rp 500.000.000', 'realisasi': 'Rp 350.000.000', 'percent': 70, 'color': Colors.grey},
     ];
 
-    return Scaffold(
+    final content = Scaffold(
       appBar: AppBar(
         toolbarHeight: 75,
         title: const Text('Realisasi Anggaran', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -95,6 +100,17 @@ class RealisasiAnggaranScreen extends StatelessWidget {
         ),
       ),
     );
+
+    if (user != null) {
+      return DesktopSidebarLayout(
+        user: user!,
+        activeRoute: 'realisasi_anggaran',
+        onUserUpdated: onUserUpdated,
+        child: content,
+      );
+    }
+
+    return content;
   }
 
   Widget _buildStat(String label, String value, bool isDark) {

@@ -1,15 +1,17 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../app/theme.dart';
-import '../models/user_model.dart';
+import '../app/subrole_theme_engine.dart';
 import '../services/theme_transition_service.dart';
+import '../services/dashboard_service.dart';
+import '../widgets/subrole_right_sidebar.dart';
+import '../widgets/dashboard_stats_charts.dart';
+import 'global_search_screen.dart';
+import '../models/user_model.dart';
 import 'buat_kebutuhan_screen.dart';
 import 'proyek_saya_screen.dart';
-import 'explore_screen.dart';
 import 'notifications_screen.dart';
 import 'direct_message_screen.dart';
-import 'global_search_screen.dart';
-import 'wallet_screen.dart';
 
 class CompanyDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -28,8 +30,25 @@ class CompanyDashboardScreen extends StatefulWidget {
 class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
   final GlobalKey _themeBtnKey = GlobalKey();
 
-  static const Color _brandBlue = Color(0xFF2563EB);
-  static const Color _brandLight = Color(0xFF3B82F6);
+  Color get _brandBlue => SubRoleThemeEngine.getAccentColor('user', 'company');
+  Color get _brandLight => _brandBlue.withValues(alpha: 0.7);
+  Map<String, List<Map<String, String>>> _allSubRoleStats = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchStats();
+  }
+
+  Future<void> _fetchStats() async {
+    try {
+      final allStats = await DashboardService.getAllSubRoleStats(
+        subRoleSlugs: ['company', 'umkm', 'government', 'community'],
+        roleType: 'user',
+      );
+      if (mounted) setState(() => _allSubRoleStats = allStats);
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +60,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
     return Scaffold(
       appBar: _buildAppBar(isDark),
       body: RefreshIndicator(
-        onRefresh: () async {},
+        onRefresh: _fetchStats,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
@@ -50,19 +69,84 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
             isDesktop ? 24 : 16,
             110,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeroBanner(isDark),
-              const SizedBox(height: 24),
-              _buildMetricCards(isDark),
-              const SizedBox(height: 24),
-              _buildTopThreeColumns(isDark),
-              const SizedBox(height: 24),
-              _buildBottomThreeColumns(isDark),
-            ],
-          ),
+          child: isDesktop
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 7,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildHeroBanner(isDark),
+                          const SizedBox(height: 24),
+                          _buildMetricCards(isDark),
+                          const SizedBox(height: 24),
+                          _buildChartSection(isDark),
+                          const SizedBox(height: 24),
+                          _buildTopThreeColumns(isDark),
+                          const SizedBox(height: 24),
+                          _buildBottomThreeColumns(isDark),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      flex: 3,
+                      child: SubRoleRightSidebar(
+                        user: widget.user,
+                        onUserUpdated: widget.onUserUpdated,
+                        isDark: isDark,
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeroBanner(isDark),
+                    const SizedBox(height: 24),
+                    _buildMetricCards(isDark),
+                    const SizedBox(height: 24),
+                    _buildChartSection(isDark),
+                    const SizedBox(height: 24),
+                    SubRoleRightSidebar(
+                      user: widget.user,
+                      onUserUpdated: widget.onUserUpdated,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 24),
+                    _buildTopThreeColumns(isDark),
+                    const SizedBox(height: 24),
+                    _buildBottomThreeColumns(isDark),
+                  ],
+                ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildChartSection(bool isDark) {
+    final subRolesList = [
+      {'slug': 'company', 'name': 'Perusahaan', 'color': _brandBlue},
+      {'slug': 'umkm', 'name': 'UMKM', 'color': const Color(0xFF10B981)},
+      {'slug': 'government', 'name': 'Government', 'color': Colors.indigo},
+      {'slug': 'community', 'name': 'Komunitas', 'color': Colors.cyan},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardBg : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _brandBlue.withValues(alpha: 0.2)),
+      ),
+      child: DashboardStatsCharts(
+        subRoleList: subRolesList,
+        allSubRoleStats: _allSubRoleStats,
+        selectedSubRole: 'company',
+        currentRole: 'user',
+        isDark: isDark,
       ),
     );
   }
@@ -154,7 +238,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
               CircleAvatar(
                 radius: 18,
                 backgroundColor: _brandBlue.withValues(alpha: 0.1),
-                child: const Icon(Icons.business, color: _brandBlue, size: 20),
+                child: Icon(Icons.business, color: _brandBlue, size: 20),
               ),
               const SizedBox(width: 10),
               Column(
@@ -237,12 +321,8 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Kelola proyek dan temukan talenta kreatif terbaik untuk bisnis Anda.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                  height: 1.5,
-                ),
+                'Kelola proyek, temukan vendor, dan wujudkan kolaborasi yang tepat untuk bisnis Anda.',
+                style: TextStyle(fontSize: 14, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
               ),
             ],
           ),
@@ -254,7 +334,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
             MaterialPageRoute(builder: (_) => const BuatKebutuhanScreen()),
           ),
           icon: const Icon(Icons.add, size: 18),
-          label: const Text('Buat Proyek Baru'),
+          label: const Text('Buat Paket / Event Baru'),
           style: ElevatedButton.styleFrom(
             backgroundColor: _brandBlue,
             foregroundColor: Colors.white,
@@ -329,7 +409,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                     color: (m['color'] as Color).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(m['icon'] as IconData, color: m['color'] as Color, size: 20),
+                  child: Icon((m['icon'] as IconData?) ?? Icons.image_outlined, color: m['color'] as Color, size: 20),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -526,7 +606,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
               TextButton(
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ProyekSayaScreen()),
+                  MaterialPageRoute(builder: (_) => ProyekSayaScreen(user: widget.user)),
                 ),
                 child: const Text('Lihat Semua', style: TextStyle(fontSize: 12)),
               ),
@@ -539,7 +619,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                   children: [
                     CircleAvatar(
                       backgroundColor: _brandBlue.withValues(alpha: 0.1),
-                      child: const Icon(Icons.work, color: _brandBlue, size: 18),
+                      child: Icon(Icons.work, color: _brandBlue, size: 18),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -610,15 +690,16 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
     );
   }
 
-  Widget _buildActItem(String title, String time, IconData icon, [Color color = _brandBlue]) {
+  Widget _buildActItem(String title, String time, IconData icon, [Color? color]) {
+    final effectiveColor = color ?? _brandBlue;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
           CircleAvatar(
             radius: 16,
-            backgroundColor: color.withValues(alpha: 0.1),
-            child: Icon(icon, color: color, size: 16),
+            backgroundColor: effectiveColor.withValues(alpha: 0.1),
+            child: Icon(icon, color: effectiveColor, size: 16),
           ),
           const SizedBox(width: 10),
           Expanded(child: Text(title, style: const TextStyle(fontSize: 12))),
@@ -682,6 +763,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
 
   Widget _buildRecommendationsCard(bool isDark) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
           padding: const EdgeInsets.all(16),
@@ -739,3 +821,4 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
     );
   }
 }
+ 

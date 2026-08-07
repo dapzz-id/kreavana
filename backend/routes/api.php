@@ -8,8 +8,15 @@ use App\Http\Controllers\{
     ChatController, MessageController, GroupController, UserController,
     DashboardController, ProfileController, NotificationController,
     CallController, AdminController, OpportunityController, WalletController,
-    RoleController, FollowController
+    RoleController, FollowController, MarketplaceController,
+    PaymentMethodController, UserAddressController, AvatarController
 };
+
+// Public: serve avatar images with CORS headers (for Flutter Web)
+Route::get('avatars/{file}', [AvatarController::class, 'show'])
+    ->where('file', '.*')
+    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class)
+    ->withoutMiddleware(\App\Http\Middleware\TouchLastOnline::class);
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -38,11 +45,31 @@ Route::post('auth/admin/login', [AuthController::class, 'adminLogin'])
     ->middleware('throttle:auth-login')
     ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
 
+// Social Login (Google, Apple)
+Route::post('auth/social', [AuthController::class, 'socialLogin'])
+    ->middleware('throttle:auth-login')
+    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
+
 // Auth & Protected Routes
 Route::middleware('auth:api')->group(function () {
     // Auth
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('auth/me', [AuthController::class, 'me']);
+    Route::post('auth/user/change-password', [AuthController::class, 'changePassword']);
+
+    // Payment Methods
+    Route::get('payment-methods', [PaymentMethodController::class, 'index'])->middleware('permission:manage_own_profile');
+    Route::post('payment-methods', [PaymentMethodController::class, 'store'])->middleware('permission:manage_own_profile');
+    Route::put('payment-methods/{id}', [PaymentMethodController::class, 'update'])->middleware('permission:manage_own_profile');
+    Route::put('payment-methods/{id}/default', [PaymentMethodController::class, 'setDefault'])->middleware('permission:manage_own_profile');
+    Route::delete('payment-methods/{id}', [PaymentMethodController::class, 'destroy'])->middleware('permission:manage_own_profile');
+
+    // User Addresses
+    Route::get('user-addresses', [UserAddressController::class, 'index'])->middleware('permission:manage_own_profile');
+    Route::post('user-addresses', [UserAddressController::class, 'store'])->middleware('permission:manage_own_profile');
+    Route::put('user-addresses/{id}', [UserAddressController::class, 'update'])->middleware('permission:manage_own_profile');
+    Route::put('user-addresses/{id}/default', [UserAddressController::class, 'setDefault'])->middleware('permission:manage_own_profile');
+    Route::delete('user-addresses/{id}', [UserAddressController::class, 'destroy'])->middleware('permission:manage_own_profile');
 
     // Profile
     Route::get('profile', [ProfileController::class, 'getProfile'])->middleware('permission:manage_own_profile');
@@ -81,22 +108,53 @@ Route::middleware('auth:api')->group(function () {
 
     // Notifications
     Route::get('notifications', [NotificationController::class, 'index']);
+    Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
     Route::put('notifications/read', [NotificationController::class, 'markAsRead']);
 
     // Call Signaling
     Route::post('call/signal', [CallController::class, 'signal']);
 
+    // Unread counts (combined)
+    Route::get('unread-count', function (Request $request) {
+        $userId = $request->user()->id;
+        $notifCount = \App\Models\Notification::where('user_id', $userId)
+            ->where('is_read', false)
+            ->count();
+        $chatParticipants = \App\Models\ChatParticipant::where('user_id', $userId)
+            ->where('status', 'joined')
+            ->with('chat')
+            ->get();
+        $chatCount = 0;
+        foreach ($chatParticipants as $p) {
+            $chatCount += $p->chat->messages()
+                ->where('user_id', '!=', $userId)
+                ->where('created_at', '>', $p->last_read_at ?? '2000-01-01 00:00:00')
+                ->count();
+        }
+        return response()->json([
+            'status' => true,
+            'data' => [
+                'unread_notifications' => $notifCount,
+                'unread_messages' => $chatCount,
+            ],
+        ]);
+    });
+
     // Chat Users Search
     Route::get('users/search', [UserController::class, 'search'])->middleware('permission:use_chat');
+    Route::get('users/contacts', [UserController::class, 'contacts'])->middleware('permission:use_chat');
 
     // Chats
     Route::get('chats', [ChatController::class, 'index'])->middleware('permission:use_chat');
+    Route::get('chats/unread-count', [ChatController::class, 'unreadCount'])->middleware('permission:use_chat');
     Route::post('chats/personal', [ChatController::class, 'startPersonalChat'])->middleware('permission:use_chat');
     Route::post('chats/{chat}/read', [ChatController::class, 'markAsRead'])->middleware('permission:use_chat');
+    Route::post('presence/ping', [ChatController::class, 'presencePing'])->middleware('permission:use_chat');
 
     // Messages
     Route::get('chats/{chat}/messages', [MessageController::class, 'index'])->middleware('permission:use_chat');
     Route::post('chats/{chat}/messages', [MessageController::class, 'store'])->middleware('permission:use_chat');
+    Route::post('chats/{chat}/messages/{message}/delete', [MessageController::class, 'destroy'])->middleware('permission:use_chat');
 
     // Invitations
     Route::get('invitations', [GroupController::class, 'getInvitations'])->middleware('permission:use_chat');
@@ -116,4 +174,16 @@ Route::middleware('auth:api')->group(function () {
     Route::get('admin/applications', [AdminController::class, 'getApplications'])->middleware('role:admin');
     Route::post('admin/applications/{id}/approve', [AdminController::class, 'approveApplication'])->middleware('role:admin');
     Route::post('admin/applications/{id}/reject', [AdminController::class, 'rejectApplication'])->middleware('role:admin');
+
+    // Marketplace (write operations)
+    Route::post('marketplace', [MarketplaceController::class, 'store']);
+    Route::put('marketplace/{id}', [MarketplaceController::class, 'update']);
+    Route::delete('marketplace/{id}', [MarketplaceController::class, 'destroy']);
+    Route::post('marketplace/{id}/review', [MarketplaceController::class, 'review']);
 });
+
+// Marketplace (public read)
+Route::get('marketplace', [MarketplaceController::class, 'index']);
+Route::get('marketplace/featured', [MarketplaceController::class, 'featured']);
+Route::get('marketplace/categories', [MarketplaceController::class, 'categories']);
+Route::get('marketplace/{id}', [MarketplaceController::class, 'show']);

@@ -17,7 +17,7 @@ class ChatRepository extends BaseRepository
         return $this->model->whereHas('participants', function ($q) use ($userId) {
             $q->where('user_id', $userId)->where('status', 'joined');
         })
-        ->with(['participants.user:id,name,username,avatar_url', 'messages' => function($q) {
+        ->with(['participants.user:id,name,username,avatar_url,last_online', 'messages' => function($q) {
             $q->latest()->take(1);
         }])
         ->withCount(['messages as unread_count' => function ($query) use ($userId) {

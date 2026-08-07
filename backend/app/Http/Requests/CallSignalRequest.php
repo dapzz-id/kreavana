@@ -16,7 +16,7 @@ class CallSignalRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'receiver_id' => 'required|integer',
+            'receiver_id' => 'required|string',
             'call_id' => 'required|string',
             'type' => 'required|string|in:offer,answer,candidate,reject,end,ringing,connected',
             'data' => 'nullable|array',

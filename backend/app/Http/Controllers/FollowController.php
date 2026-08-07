@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Services\FollowService;
 use Exception;
 
-class FollowController extends BaseController
+class FollowController extends Controller
 {
     protected FollowService $followService;
 
@@ -20,9 +20,16 @@ class FollowController extends BaseController
         try {
             $followerId = auth('api')->id();
             $result = $this->followService->followUser($followerId, $userId);
-            return $this->successResponse($result['data'], $result['message']);
+            return response()->json([
+                'status' => true,
+                'message' => $result['message'],
+                'data' => $result['data']
+            ], 200);
         } catch (Exception $e) {
-            return $this->errorResponse($e->getMessage(), $e->getCode() === 404 ? 404 : 422);
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], $e->getCode() === 404 ? 404 : 422);
         }
     }
 
@@ -31,9 +38,16 @@ class FollowController extends BaseController
         try {
             $followerId = auth('api')->id();
             $result = $this->followService->unfollowUser($followerId, $userId);
-            return $this->successResponse(null, $result['message']);
+            return response()->json([
+                'status' => true,
+                'message' => $result['message'],
+                'data' => null
+            ], 200);
         } catch (Exception $e) {
-            return $this->errorResponse($e->getMessage(), $e->getCode() === 404 ? 404 : 422);
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], $e->getCode() === 404 ? 404 : 422);
         }
     }
 
@@ -42,9 +56,16 @@ class FollowController extends BaseController
         try {
             $perPage = $request->query('per_page', 15);
             $followers = $this->followService->getFollowers($userId, $perPage);
-            return $this->successResponse($followers, 'Berhasil mengambil daftar pengikut.');
+            return response()->json([
+                'status' => true,
+                'message' => 'Berhasil mengambil daftar pengikut.',
+                'data' => $followers
+            ], 200);
         } catch (Exception $e) {
-            return $this->errorResponse('Terjadi kesalahan.', 500);
+            return response()->json([
+                'status' => false,
+                'message' => 'Terjadi kesalahan.'
+            ], 500);
         }
     }
 
@@ -53,9 +74,16 @@ class FollowController extends BaseController
         try {
             $perPage = $request->query('per_page', 15);
             $following = $this->followService->getFollowing($userId, $perPage);
-            return $this->successResponse($following, 'Berhasil mengambil daftar diikuti.');
+            return response()->json([
+                'status' => true,
+                'message' => 'Berhasil mengambil daftar diikuti.',
+                'data' => $following
+            ], 200);
         } catch (Exception $e) {
-            return $this->errorResponse('Terjadi kesalahan.', 500);
+            return response()->json([
+                'status' => false,
+                'message' => 'Terjadi kesalahan.'
+            ], 500);
         }
     }
 }

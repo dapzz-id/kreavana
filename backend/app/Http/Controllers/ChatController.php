@@ -47,4 +47,36 @@ class ChatController extends Controller
 
         return $this->successResponse('Chat berhasil ditandai sudah dibaca');
     }
+
+    /**
+     * Lightweight presence ping - updates last_online without full middleware
+     */
+    public function presencePing(Request $request)
+    {
+        $user = $request->user();
+        $user->update(['last_online' => now()]);
+
+        return $this->successResponse('Presence updated', [
+            'last_online' => now()->toISOString(),
+        ]);
+    }
+
+    public function unreadCount(Request $request)
+    {
+        $userId = $request->user()->id;
+
+        $count = \App\Models\ChatParticipant::where('user_id', $userId)
+            ->where('status', 'joined')
+            ->with('chat')
+            ->get()
+            ->sum(function ($participant) {
+                $lastRead = $participant->last_read_at;
+                return $participant->chat->messages()
+                    ->where('user_id', '!=', $userId)
+                    ->where('created_at', '>', $lastRead ?? '2000-01-01 00:00:00')
+                    ->count();
+            });
+
+        return $this->successResponse('Jumlah pesan belum dibaca', ['count' => $count]);
+    }
 }

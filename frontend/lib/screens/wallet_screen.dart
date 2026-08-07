@@ -64,7 +64,7 @@ class _WalletScreenState extends State<WalletScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
+    final content = Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text(
@@ -421,6 +421,8 @@ class _WalletScreenState extends State<WalletScreen> {
         ),
       ),
     );
+
+    return content;
   }
 
   Widget _buildStatusBadge(String status) {

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/opportunity_model.dart';
 import '../services/opportunity_service.dart';
+import '../services/api_service.dart';
+import '../services/chat_service.dart';
 import '../app/theme.dart';
 
 class OpportunityDetailSheet extends StatelessWidget {
@@ -209,6 +211,27 @@ class OpportunityDetailSheet extends StatelessWidget {
                       ),
                     ),
                   ],
+                  if (opportunity.subRoleSlug.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.deepPurple.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        opportunity.subRoleLabel,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.deepPurple.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 12),
@@ -262,7 +285,7 @@ class OpportunityDetailSheet extends StatelessWidget {
                       backgroundColor: Colors.grey.shade200,
                       backgroundImage: poster.avatarUrl != null &&
                               poster.avatarUrl!.isNotEmpty
-                          ? NetworkImage(poster.avatarUrl!)
+                          ? NetworkImage(ApiService.resolveAssetUrl(poster.avatarUrl!))
                           : null,
                       child: poster.avatarUrl == null ||
                               poster.avatarUrl!.isEmpty
@@ -326,13 +349,85 @@ class OpportunityDetailSheet extends StatelessWidget {
                       color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
                     ),
                   ),
-              ] else
-                const Text(
-                  'Memuat informasi kontak...',
-                  style: TextStyle(color: Colors.grey),
+              ] else ...[ 
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: Colors.grey.shade200,
+                      child: const Icon(Icons.person, color: Colors.grey),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            opportunity.postedBy != null
+                                ? 'Creator #${opportunity.postedBy}'
+                                : 'Creator Kreavana',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          Text(
+                            'Kontak tidak tersedia. Hubungi via chat Kreavana.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppTheme.textMuted
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
+              ],
               const SizedBox(height: 20),
-              if (poster != null && poster.id != currentUserId)
+              if (poster != null && poster.id != currentUserId) ...[
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    try {
+                      final result = await ChatService.startPersonalChat(poster.id!);
+                      if (context.mounted && result['status'] == true) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Chat dengan ${poster.name} dibuka! Buka menu Chat untuk melanjutkan.'),
+                            backgroundColor: Colors.teal.shade700,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Gagal memulai chat: $e'),
+                            backgroundColor: Colors.red.shade700,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+                  label: Text(
+                    'Hubungi ${poster.name.split(" ").first} via Chat',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal.shade600,
+                    minimumSize: const Size(double.infinity, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
                 OutlinedButton.icon(
                   onPressed: () => _showReportDialog(context),
                   icon: const Icon(Icons.flag_outlined, color: Colors.red),
@@ -348,6 +443,7 @@ class OpportunityDetailSheet extends StatelessWidget {
                     ),
                   ),
                 ),
+              ],
             ],
           ),
         );

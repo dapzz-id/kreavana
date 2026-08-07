@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../app/theme.dart';
+import '../models/user_model.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 
 class TimHakAksesScreen extends StatelessWidget {
-  const TimHakAksesScreen({super.key});
+  final UserModel? user;
+  final ValueChanged<UserModel>? onUserUpdated;
+
+  const TimHakAksesScreen({super.key, this.user, this.onUserUpdated});
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +22,7 @@ class TimHakAksesScreen extends StatelessWidget {
       {'name': 'Rizky Pratama', 'role': 'Viewer', 'email': 'rizky@kominfo.go.id', 'role_color': Color(0xFF10B981), 'isOnline': false},
     ];
 
-    return Scaffold(
+    final content = Scaffold(
       appBar: AppBar(
         toolbarHeight: 75,
         title: const Text('Tim & Hak Akses', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -116,6 +121,17 @@ class TimHakAksesScreen extends StatelessWidget {
         ],
       ),
     );
+
+    if (user != null) {
+      return DesktopSidebarLayout(
+        user: user!,
+        activeRoute: 'tim_hak_akses',
+        onUserUpdated: onUserUpdated,
+        child: content,
+      );
+    }
+
+    return content;
   }
 
   Widget _buildRoleStat(String role, String count, Color color, bool isDark) {

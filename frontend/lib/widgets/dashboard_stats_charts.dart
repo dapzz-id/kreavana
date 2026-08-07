@@ -46,20 +46,21 @@ class _DashboardStatsChartsState extends State<DashboardStatsCharts> {
   List<Map<String, String>> _statsFor(String slug) =>
       widget.allSubRoleStats[slug] ?? [];
 
+  Map<String, dynamic> _findSubRole(String slug) {
+    for (final item in widget.subRoleList) {
+      if (item['slug'] == slug) return item;
+    }
+    return widget.subRoleList.isNotEmpty ? widget.subRoleList.first : <String, dynamic>{};
+  }
+
   Color _colorFor(String slug) {
-    final match = widget.subRoleList.firstWhere(
-      (p) => p['slug'] == slug,
-      orElse: () => widget.subRoleList.first,
-    );
-    return match['color'] as Color;
+    final match = _findSubRole(slug);
+    return (match['color'] as Color?) ?? AppTheme.primaryPurple;
   }
 
   String _nameFor(String slug) {
-    final match = widget.subRoleList.firstWhere(
-      (p) => p['slug'] == slug,
-      orElse: () => widget.subRoleList.first,
-    );
-    return match['name'] as String;
+    final match = _findSubRole(slug);
+    return (match['name'] as String?) ?? slug;
   }
 
   @override
@@ -126,12 +127,7 @@ class _DashboardStatsChartsState extends State<DashboardStatsCharts> {
             name: _nameFor(_detailSelectedSlug),
             slug: _detailSelectedSlug,
             color: _colorFor(_detailSelectedSlug),
-            icon:
-                widget.subRoleList.firstWhere(
-                      (p) => p['slug'] == _detailSelectedSlug,
-                      orElse: () => widget.subRoleList.first,
-                    )['icon']
-                    as IconData,
+            icon: (_findSubRole(_detailSelectedSlug)['icon'] as IconData?) ?? Icons.analytics,
             stats: detailStats,
             isDark: widget.isDark,
           ),
@@ -544,7 +540,7 @@ class _CategorySlider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 60,
+      height: 76,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: subRoleList.length,
@@ -579,7 +575,7 @@ class _CategorySlider extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    item['icon'] as IconData,
+                    (item['icon'] as IconData?) ?? Icons.image_outlined,
                     color: isSelected ? color : Colors.grey.shade600,
                     size: 20,
                   ),
@@ -699,7 +695,7 @@ class _CategoryDetailPanel extends StatelessWidget {
               crossAxisCount: crossCount,
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,
-              childAspectRatio: screenWidth > 900 ? 2.2 : 1.6,
+              childAspectRatio: screenWidth > 900 ? 1.6 : 1.1,
             ),
             itemCount: stats.length,
             itemBuilder: (context, index) {

@@ -1,192 +1,164 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../app/theme.dart';
 
-class CustomDiamondBottomBar extends StatelessWidget {
+class CustomBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
-  final bool isDark;
-  final List<CustomNavItem> items;
+  final List<BottomNavItem> items;
 
-  const CustomDiamondBottomBar({
+  const CustomBottomNavBar({
     super.key,
     required this.currentIndex,
     required this.onTap,
-    required this.isDark,
     required this.items,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primaryColor = theme.colorScheme.primary;
-    final bgColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final unselectedColor = Colors.grey.shade500;
+    final isDark = theme.brightness == Brightness.dark;
 
-    final screenWidth = MediaQuery.of(context).size.width;
-    const margin = 16.0;
-    final barWidth = screenWidth - (margin * 2);
-    final itemWidth = barWidth / items.length;
-    const diamondSize = 50.0;
-
-    final activeCenterX = (itemWidth * currentIndex) + (itemWidth / 2);
-
-    return SizedBox(
-      height: 95,
-      child: Stack(
-        alignment: Alignment.bottomCenter,
-        clipBehavior: Clip.none,
-        children: [
-          // Background pill bar
-          Container(
-            height: 68,
-            margin: const EdgeInsets.fromLTRB(margin, 0, margin, 14),
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.08)
-                    : Colors.grey.shade200,
-                width: 1,
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardDark : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        border: Border(
+          top: BorderSide(
+            color: isDark ? AppTheme.inputBorder : AppTheme.dividerLight,
+            width: 1,
+          ),
+        ),
+        boxShadow: AppTheme.bottomNavShadow,
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(
+              items.length,
+              (index) => _buildNavItem(
+                item: items[index],
+                isSelected: currentIndex == index,
+                onTap: () => onTap(index),
+                isDark: isDark,
+                theme: theme,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  blurRadius: 24,
-                  spreadRadius: 2,
-                  offset: const Offset(0, -4),
-                ),
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: List.generate(items.length, (index) {
-                final isSelected = index == currentIndex;
-                final item = items[index];
-
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () => onTap(index),
-                    behavior: HitTestBehavior.opaque,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Icon: smoothly fade out when selected
-                        AnimatedOpacity(
-                          opacity: isSelected ? 0.0 : 1.0,
-                          duration: const Duration(milliseconds: 200),
-                          child: AnimatedScale(
-                            scale: isSelected ? 0.5 : 1.0,
-                            duration: const Duration(milliseconds: 200),
-                            child: Icon(
-                              item.icon,
-                              color: unselectedColor,
-                              size: 24,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        // Text: smoothly fade out when selected
-                        AnimatedOpacity(
-                          opacity: isSelected ? 0.0 : 1.0,
-                          duration: const Duration(milliseconds: 200),
-                          child: Text(
-                            item.label,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: unselectedColor,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
             ),
           ),
+        ),
+      ),
+    );
+  }
 
-          // Diamond — slides smoothly via AnimatedPositioned
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-            bottom: 36,
-            left: margin + activeCenterX - (diamondSize / 2) - 4,
-            child: GestureDetector(
-              onTap: () => onTap(currentIndex),
-              child: Transform.rotate(
-                angle: 45 * math.pi / 180,
-                child: Container(
-                  width: diamondSize + 8,
-                  height: diamondSize + 8,
-                  decoration: BoxDecoration(
-                    color: bgColor,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+  Widget _buildNavItem({
+    required BottomNavItem item,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required bool isDark,
+    required ThemeData theme,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppTheme.primaryPurple.withValues(alpha: isDark ? 0.15 : 0.10)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppTheme.primaryPurple.withValues(alpha: isDark ? 0.2 : 0.15)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      isSelected ? item.activeIcon : item.icon,
+                      size: 22,
+                      color: isSelected
+                          ? AppTheme.primaryPurple
+                          : (isDark ? AppTheme.textMuted : Colors.grey.shade600),
+                    ),
                   ),
-                  child: Center(
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      width: diamondSize,
-                      height: diamondSize,
-                      decoration: BoxDecoration(
-                        color: primaryColor,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: primaryColor.withValues(alpha: 0.35),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Transform.rotate(
-                        angle: -45 * math.pi / 180,
+                  // Badge
+                  if (item.badgeCount != null && item.badgeCount! > 0)
+                    Positioned(
+                      top: -2,
+                      right: -4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: const BoxDecoration(
+                          color: AppTheme.error,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                         child: Center(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 200),
-                            switchInCurve: Curves.easeIn,
-                            switchOutCurve: Curves.easeOut,
-                            child: Icon(
-                              items[currentIndex].activeIcon,
-                              key: ValueKey(currentIndex),
+                          child: Text(
+                            item.badgeCount! > 9 ? '9+' : '${item.badgeCount}',
+                            style: const TextStyle(
+                              fontSize: 9,
                               color: Colors.white,
-                              size: 24,
+                              fontWeight: FontWeight.bold,
+                              height: 1,
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected
+                      ? AppTheme.primaryPurple
+                      : (isDark ? AppTheme.textMuted : Colors.grey.shade600),
+                  letterSpacing: isSelected ? 0.2 : 0,
+                ),
+                child: Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class CustomNavItem {
+class BottomNavItem {
   final IconData icon;
   final IconData activeIcon;
   final String label;
+  final int? badgeCount;
 
-  CustomNavItem({
+  const BottomNavItem({
     required this.icon,
     required this.activeIcon,
     required this.label,
+    this.badgeCount,
   });
 }

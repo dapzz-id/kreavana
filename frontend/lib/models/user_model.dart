@@ -40,7 +40,9 @@ class UserModel {
       avatarUrl: json['avatar_url'],
       phone: json['phone'],
       role: json['role'] ?? 'user',
-      subRole: json['sub_role'],
+      subRole: json['sub_role'] is Map
+          ? json['sub_role']['value']?.toString()
+          : json['sub_role']?.toString(),
       isCreatorApproved: json['is_creator_approved'] == 1 ||
           json['is_creator_approved'] == true ||
           json['is_creator_approved'] == '1',

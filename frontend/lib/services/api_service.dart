@@ -8,6 +8,20 @@ class ApiService {
 
   static String get keyPusher => 'cuzkfya73cpnszss3vc2';
 
+  /// Selesaikan URL gambar aset backend.
+  ///
+  /// File lama disimpan sebagai `http://host/avatars/file` yang TIDAK punya
+  /// CORS headers (dilayani langsung oleh web server). Tulis ulang ke
+  /// `http://host/api/avatars/file` sehingga lewat middleware CORS Laravel
+  /// dan bisa dimuat dari Flutter Web.
+  static String resolveAssetUrl(String? url) {
+    if (url == null || url.isEmpty) return '';
+    if (url.contains('/avatars/') && !url.contains('/api/avatars/')) {
+      return url.replaceFirst('/avatars/', '/api/avatars/');
+    }
+    return url;
+  }
+
   static Future<Map<String, dynamic>> get(
     String endpoint, {
     Map<String, dynamic>? queryParams,

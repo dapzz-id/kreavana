@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
+import '../services/api_service.dart';
 import '../services/theme_transition_service.dart';
 import 'explore_screen.dart';
 import 'global_search_screen.dart';
+import 'notifications_screen.dart';
+import 'direct_message_screen.dart';
+import 'profile_screen.dart';
 
 class CreatorContentDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -116,6 +120,10 @@ class _CreatorContentDashboardScreenState
             ),
           ),
           const SizedBox(width: 20),
+          _buildAppBarBadge(Icons.notifications_none_outlined, '3', isDark),
+          const SizedBox(width: 4),
+          _buildAppBarBadge(Icons.chat_bubble_outline, '1', isDark),
+          const SizedBox(width: 12),
           IconButton(
             key: _themeBtnKey,
             icon: Icon(
@@ -135,41 +143,114 @@ class _CreatorContentDashboardScreenState
             },
           ),
           const SizedBox(width: 8),
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: _primaryColor.withValues(alpha: 0.1),
-                child: const Icon(
-                  Icons.video_library,
-                  color: _primaryColor,
-                  size: 20,
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ProfileScreen(
+                  user: widget.user,
+                  onUserUpdated: widget.onUserUpdated,
+                  onLogout: () => Navigator.of(context).popUntil((r) => r.isFirst),
                 ),
               ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.user.name,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: _primaryColor.withValues(alpha: 0.1),
+                  backgroundImage: widget.user.avatarUrl?.isNotEmpty == true
+                      ? NetworkImage(
+                          ApiService.resolveAssetUrl(widget.user.avatarUrl!),
+                        )
+                      : null,
+                  child: widget.user.avatarUrl?.isNotEmpty != true
+                      ? const Icon(
+                          Icons.movie_creation_outlined,
+                          color: _primaryColor,
+                          size: 20,
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.user.name,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  Text(
-                    'Content Creator',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                    Text(
+                      'Content Creator',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.keyboard_arrow_down,
+                  size: 18,
+                  color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                ),
+              ],
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAppBarBadge(IconData icon, String count, bool isDark) {
+    final isNotification = icon == Icons.notifications_none_outlined;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton(
+          icon: Icon(
+            icon,
+            color: isDark ? Colors.white70 : Colors.grey.shade700,
+            size: 24,
+          ),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => isNotification
+                    ? NotificationsScreen(userId: widget.user.id ?? '')
+                    : const DirectMessageScreen(),
+              ),
+            );
+          },
+        ),
+        Positioned(
+          top: 6,
+          right: 6,
+          child: Container(
+            width: 18,
+            height: 18,
+            decoration: const BoxDecoration(
+              color: Colors.red,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                count,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -210,7 +291,16 @@ class _CreatorContentDashboardScreenState
                 Row(
                   children: [
                     ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ProfileScreen(
+                            user: widget.user,
+                            onUserUpdated: widget.onUserUpdated,
+                            onLogout: () => Navigator.of(context).popUntil((r) => r.isFirst),
+                          ),
+                        ),
+                      ),
                       icon: const Icon(Icons.person_outline, size: 18),
                       label: const Text('Lengkapi Profil'),
                       style: ElevatedButton.styleFrom(
@@ -287,60 +377,62 @@ class _CreatorContentDashboardScreenState
       },
     ];
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: metrics.map((m) {
-        return Expanded(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            padding: const EdgeInsets.all(16),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+        Widget buildCard(Map<String, Object> m) {
+          return Container(
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: isDark ? AppTheme.cardBg : Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-              ),
+              border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: (m['color'] as Color).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    m['icon'] as IconData,
-                    color: m['color'] as Color,
-                    size: 20,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(child: Text(m['label'] as String, style: const TextStyle(fontSize: 11, color: Colors.grey), maxLines: 2, overflow: TextOverflow.ellipsis)),
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(color: (m['color'] as Color).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+                      child: Icon((m['icon'] as IconData?) ?? Icons.image_outlined, color: m['color'] as Color, size: 18),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  m['label'] as String,
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  m['value'] as String,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                const SizedBox(height: 10),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(m['value'] as String, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  m['sub'] as String,
-                  style: const TextStyle(fontSize: 10, color: Colors.grey),
-                ),
+                Text(m['sub'] as String, style: const TextStyle(fontSize: 10, color: Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis),
               ],
             ),
-          ),
+          );
+        }
+        if (isMobile) {
+          final rows = <Widget>[];
+          for (var i = 0; i < metrics.length; i += 2) {
+            final rc = <Widget>[Expanded(child: buildCard(metrics[i]))];
+            if (i + 1 < metrics.length) { rc.add(const SizedBox(width: 10)); rc.add(Expanded(child: buildCard(metrics[i + 1]))); }
+            if (i > 0) rows.add(const SizedBox(height: 10));
+            rows.add(Row(children: rc));
+          }
+          return Column(children: rows);
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: metrics.map((m) {
+            return Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: buildCard(m)));
+          }).toList(),
         );
-      }).toList(),
+      },
     );
   }
 

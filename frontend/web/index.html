@@ -29,6 +29,13 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
+  <!-- Google Identity Services (required for Google Sign-In on web) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- Google OAuth Client ID for web. Ganti YOUR_CLIENT_ID dengan Client ID dari Google Cloud Console. -->
+  <!-- Type: Web application, bukan Android/iOS -->
+  <meta name="google-signin-client_id" content="YOUR_CLIENT_ID.apps.googleusercontent.com">
+
   <title>Kreavana — Platform Kolaborasi Proyek & Kreator Kreatif</title>
   <link rel="manifest" href="manifest.json">
   <script src="https://js.pusher.com/8.0/pusher.min.js"></script>

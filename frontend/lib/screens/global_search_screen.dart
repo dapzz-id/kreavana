@@ -5,6 +5,7 @@ import '../models/user_model.dart';
 import '../models/opportunity_model.dart';
 import '../services/chat_service.dart';
 import '../services/opportunity_service.dart';
+import '../services/api_service.dart';
 import '../widgets/opportunity_detail_sheet.dart';
 import 'profile_screen.dart';
 
@@ -368,17 +369,15 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     final name = user['name'] ?? 'Unknown';
     final username = user['username'] ?? '';
     final subRole = user['selected_sub_role'] ?? '';
-    final avatarUrl = user['avatar_url'];
+    final avatarUrl = ApiService.resolveAssetUrl(user['avatar_url']?.toString() ?? '');
 
     return ListTile(
       leading: CircleAvatar(
         radius: 20,
         backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.15),
         backgroundImage:
-            avatarUrl != null && avatarUrl.toString().isNotEmpty
-                ? NetworkImage(avatarUrl.toString())
-                : null,
-        child: avatarUrl == null || avatarUrl.toString().isEmpty
+            avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+        child: avatarUrl.isEmpty
             ? Text(
                 name.toString().isNotEmpty ? name[0].toUpperCase() : '?',
                 style: const TextStyle(

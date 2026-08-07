@@ -152,14 +152,23 @@ class _CallScreenState extends State<CallScreen> with SingleTickerProviderStateM
                 ),
               ),
 
-              // Remote Video (fullscreen, only for video calls when connected)
-              if (cs.isConnected && cs.isVideoCall)
-                Positioned.fill(
-                  child: RTCVideoView(
-                    cs.remoteRenderer,
-                    objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
-                  ),
-                ),
+              // Remote Video/Audio (must always be in widget tree when connected for audio to play)
+              if (cs.isConnected)
+                cs.isVideoCall
+                    ? Positioned.fill(
+                        child: RTCVideoView(
+                          cs.remoteRenderer,
+                          objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
+                        ),
+                      )
+                    // Voice call: hidden offscreen renderer so audio plays via HTML audio element
+                    : Positioned(
+                        left: -9999,
+                        top: -9999,
+                        width: 1,
+                        height: 1,
+                        child: RTCVideoView(cs.remoteRenderer),
+                      ),
 
               // Local Video (floating, only for video calls)
               if (cs.isVideoCall)

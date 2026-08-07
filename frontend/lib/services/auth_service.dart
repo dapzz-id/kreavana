@@ -140,4 +140,87 @@ class AuthService {
   static Future<void> updateLocalUser(UserModel user) async {
     await saveUserData(user.toJson());
   }
+
+  /// Ubah kata sandi user yang sedang login
+  static Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    return ApiService.post('auth/user/change-password', {
+      'current_password': currentPassword,
+      'new_password': newPassword,
+    });
+  }
+
+  /// Social Login (Google, Apple, etc.)
+  /// Backend harus punya endpoint POST /auth/social
+  static Future<Map<String, dynamic>> socialLogin({
+    required String provider,
+    required String idToken,
+    String? accessToken,
+    String? email,
+    String? name,
+    String? photoUrl,
+  }) async {
+    final result = await ApiService.post('auth/social', {
+      'provider': provider,
+      'id_token': idToken,
+      'access_token': accessToken,
+      'email': email,
+      'name': name,
+      'photo_url': photoUrl,
+    });
+
+    if (result['status'] == true && result['data'] != null) {
+      final data = result['data'];
+      final token = data['access_token'];
+      
+      if (token is! String || token.isEmpty) {
+        return {'success': false, 'message': 'Login gagal.'};
+      }
+
+      authSignedOutNotifier.value = false;
+      await saveTokens(access: token);
+
+      // Get profile
+      Map<String, dynamic>? userDataToSave;
+      final profileResult = await ApiService.get('profile/identity');
+      if (profileResult['status'] == true && profileResult['data'] != null) {
+        userDataToSave = profileResult['data'] is Map<String, dynamic>
+            ? Map<String, dynamic>.from(profileResult['data'] as Map)
+            : null;
+      }
+
+      if (userDataToSave == null) {
+        final meResult = await ApiService.get('auth/me');
+        final meData = meResult['data'];
+        if (meResult['status'] == true && meData is Map<String, dynamic>) {
+          final user = meData['user'];
+          if (user is Map<String, dynamic>) {
+            userDataToSave = Map<String, dynamic>.from(user);
+          }
+        }
+      }
+
+      if (userDataToSave != null) {
+        await saveUserData(userDataToSave);
+        final user = UserModel.fromJson(userDataToSave);
+        return {
+          'success': true,
+          'message': 'Login berhasil dengan $provider.',
+          'user': user,
+        };
+      }
+
+      return {
+        'success': false,
+        'message': 'Login berhasil, tetapi profil gagal dimuat.',
+      };
+    }
+
+    return {
+      'success': false,
+      'message': result['message'] ?? 'Login dengan $provider gagal.',
+    };
+  }
 }

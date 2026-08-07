@@ -1,8 +1,12 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../app/theme.dart';
+import '../app/subrole_theme_engine.dart';
 import '../models/user_model.dart';
 import '../services/theme_transition_service.dart';
+import '../services/dashboard_service.dart';
+import '../widgets/subrole_right_sidebar.dart';
+import '../widgets/dashboard_stats_charts.dart';
 import 'buat_kebutuhan_screen.dart';
 import 'proyek_saya_screen.dart';
 import 'agenda_screen.dart';
@@ -31,8 +35,24 @@ class GovtDashboardScreen extends StatefulWidget {
 class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
   final GlobalKey _themeBtnKey = GlobalKey();
 
-  static const Color _govBlue = Color(0xFF1E3A8A);
-  static const Color _govLight = Color(0xFF3B82F6);
+  Color get _govBlue => SubRoleThemeEngine.getAccentColor('user', 'government');
+  Color get _govLight => _govBlue.withValues(alpha: 0.7);
+  Map<String, List<Map<String, String>>> _allSubRoleStats = {};
+  @override
+  void initState() {
+    super.initState();
+    _fetchStats();
+  }
+
+  Future<void> _fetchStats() async {
+    try {
+      final allStats = await DashboardService.getAllSubRoleStats(
+        subRoleSlugs: ['government', 'institution', 'company', 'community'],
+        roleType: 'user',
+      );
+      if (mounted) setState(() => _allSubRoleStats = allStats);
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +64,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
     return Scaffold(
       appBar: _buildAppBar(isDark),
       body: RefreshIndicator(
-        onRefresh: () async {},
+        onRefresh: _fetchStats,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
@@ -53,19 +73,84 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
             isDesktop ? 24 : 16,
             110,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeroBanner(isDark),
-              const SizedBox(height: 24),
-              _buildMetricCards(isDark),
-              const SizedBox(height: 24),
-              _buildTopThreeColumns(isDark),
-              const SizedBox(height: 24),
-              _buildBottomThreeColumns(isDark), // <-- perbaikan utama
-            ],
-          ),
+          child: isDesktop
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 7,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildHeroBanner(isDark),
+                          const SizedBox(height: 24),
+                          _buildMetricCards(isDark),
+                          const SizedBox(height: 24),
+                          _buildChartSection(isDark),
+                          const SizedBox(height: 24),
+                          _buildTopThreeColumns(isDark),
+                          const SizedBox(height: 24),
+                          _buildBottomThreeColumns(isDark),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      flex: 3,
+                      child: SubRoleRightSidebar(
+                        user: widget.user,
+                        onUserUpdated: widget.onUserUpdated,
+                        isDark: isDark,
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeroBanner(isDark),
+                    const SizedBox(height: 24),
+                    _buildMetricCards(isDark),
+                    const SizedBox(height: 24),
+                    _buildChartSection(isDark),
+                    const SizedBox(height: 24),
+                    SubRoleRightSidebar(
+                      user: widget.user,
+                      onUserUpdated: widget.onUserUpdated,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 24),
+                    _buildTopThreeColumns(isDark),
+                    const SizedBox(height: 24),
+                    _buildBottomThreeColumns(isDark),
+                  ],
+                ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildChartSection(bool isDark) {
+    final subRolesList = [
+      {'slug': 'government', 'name': 'Pemerintah', 'color': _govBlue},
+      {'slug': 'institution', 'name': 'Instansi', 'color': Colors.teal},
+      {'slug': 'company', 'name': 'Perusahaan', 'color': Colors.blue},
+      {'slug': 'community', 'name': 'Komunitas', 'color': Colors.cyan},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardBg : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _govBlue.withValues(alpha: 0.2)),
+      ),
+      child: DashboardStatsCharts(
+        subRoleList: subRolesList,
+        allSubRoleStats: _allSubRoleStats,
+        selectedSubRole: 'government',
+        currentRole: 'user',
+        isDark: isDark,
       ),
     );
   }
@@ -184,7 +269,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
               CircleAvatar(
                 radius: 18,
                 backgroundColor: _govBlue.withValues(alpha: 0.1),
-                child: const Icon(
+                child: Icon(
                   Icons.account_balance_outlined,
                   color: _govBlue,
                   size: 20,
@@ -993,10 +1078,11 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
           const SizedBox(width: 16),
           Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(child: _buildAnggaranCard(isDark)),
+                _buildAnggaranCard(isDark),
                 const SizedBox(height: 16),
-                Expanded(child: _buildPengumumanCard(isDark)),
+                _buildPengumumanCard(isDark),
               ],
             ),
           ),
@@ -1417,7 +1503,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             '48.5%',
             style: TextStyle(
               fontSize: 28,
@@ -1609,7 +1695,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
       case 'Rincian Anggaran':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const RealisasiAnggaranScreen()),
+          MaterialPageRoute(builder: (_) => RealisasiAnggaranScreen(user: widget.user)),
         );
         break;
       case 'Lihat Semua':
@@ -1617,7 +1703,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
       case 'Lihat Semua Aktivitas':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const ProyekSayaScreen()),
+          MaterialPageRoute(builder: (_) => ProyekSayaScreen(user: widget.user)),
         );
         break;
       case 'Lihat Semua Kegiatan':
@@ -1632,7 +1718,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
       case 'Buka Semua Aset':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const MarketplaceKaryaScreen()),
+          MaterialPageRoute(builder: (_) => MarketplaceKaryaScreen(user: widget.user, onUserUpdated: widget.onUserUpdated)),
         );
         break;
       case 'Lihat Detail':
@@ -1640,14 +1726,14 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
       case 'Realisasi Anggaran':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const RealisasiAnggaranScreen()),
+          MaterialPageRoute(builder: (_) => RealisasiAnggaranScreen(user: widget.user)),
         );
         break;
       case 'Lihat Pengumuman':
       case 'Pengumuman Publik':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const PengumumanPublikScreen()),
+          MaterialPageRoute(builder: (_) => PengumumanPublikScreen(user: widget.user)),
         );
         break;
       case 'Notifikasi':

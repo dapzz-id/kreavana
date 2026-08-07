@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ApiPerformanceBudget::class,
             \App\Http\Middleware\EnsureHttpsForApi::class,
             \App\Http\Middleware\ValidateJti::class,
+            \App\Http\Middleware\TouchLastOnline::class,
         ]);
         
         $middleware->alias([
