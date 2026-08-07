@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/profile_service.dart';
+import '../services/api_service.dart';
 import '../widgets/creator_application_card.dart';
 import '../utils/form_validators.dart';
 import '../widgets/skeleton_box.dart';
@@ -430,7 +431,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     backgroundImage:
                         widget.user.avatarUrl != null &&
                             widget.user.avatarUrl!.isNotEmpty
-                        ? NetworkImage(widget.user.avatarUrl!)
+                        ? NetworkImage(ApiService.resolveAssetUrl(widget.user.avatarUrl!))
                         : null,
                     child:
                         widget.user.avatarUrl == null ||

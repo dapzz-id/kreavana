@@ -1,14 +1,12 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../app/theme.dart';
-import '../models/user_model.dart';
 import '../services/theme_transition_service.dart';
+import 'global_search_screen.dart';
+import '../models/user_model.dart';
 import 'buat_kebutuhan_screen.dart';
-import 'proyek_saya_screen.dart';
-import 'explore_screen.dart';
 import 'notifications_screen.dart';
 import 'direct_message_screen.dart';
-import 'global_search_screen.dart';
 
 class IndividualDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -112,6 +110,9 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
               ),
             ),
           ),
+          _buildAppBarBadge(Icons.notifications_none_outlined, '3', isDark),
+          const SizedBox(width: 4),
+          _buildAppBarBadge(Icons.chat_bubble_outline, '1', isDark),
           const SizedBox(width: 20),
           IconButton(
             key: _themeBtnKey,
@@ -121,9 +122,7 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
             ),
             onPressed: () {
               final box = _themeBtnKey.currentContext?.findRenderObject() as RenderBox?;
-              final origin = box != null
-                  ? box.localToGlobal(box.size.center(Offset.zero))
-                  : const Offset(0, 0);
+              final origin = box != null ? box.localToGlobal(box.size.center(Offset.zero)) : const Offset(0, 0);
               ThemeTransitionService.animateToggle(
                 origin: origin,
                 toDark: !isDark,
@@ -236,7 +235,7 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
                     color: (m['color'] as Color).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(m['icon'] as IconData, color: m['color'] as Color, size: 18),
+                  child: Icon((m['icon'] as IconData?) ?? Icons.image_outlined, color: m['color'] as Color, size: 18),
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -566,6 +565,7 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
 
   Widget _buildRecommendationsCard(bool isDark) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
           padding: const EdgeInsets.all(16),
@@ -593,6 +593,51 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAppBarBadge(IconData icon, String count, bool isDark) {
+    final isNotification = icon == Icons.notifications_none_outlined;
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => isNotification
+                ? NotificationsScreen(userId: widget.user.id ?? '')
+                : const DirectMessageScreen(),
+          ),
+        );
+      },
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1A1830) : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 20, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
+          ),
+          if (count.isNotEmpty)
+            Positioned(
+              right: -2,
+              top: -2,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  count,
+                  style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

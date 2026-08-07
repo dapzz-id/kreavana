@@ -16,7 +16,9 @@ class SendMessageRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'message' => 'required|string',
+            'type' => 'required|string|in:text,audio',
+            'message' => 'required_without:media|string|nullable',
+            'media' => 'required_if:type,audio|string',
         ];
     }
 

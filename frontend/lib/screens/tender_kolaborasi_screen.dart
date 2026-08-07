@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../app/theme.dart';
+import '../models/user_model.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 
 class TenderKolaborasiScreen extends StatefulWidget {
-  const TenderKolaborasiScreen({super.key});
+  final UserModel? user;
+  final ValueChanged<UserModel>? onUserUpdated;
+
+  const TenderKolaborasiScreen({super.key, this.user, this.onUserUpdated});
 
   @override
   State<TenderKolaborasiScreen> createState() => _TenderKolaborasiScreenState();
@@ -56,7 +61,7 @@ class _TenderKolaborasiScreenState extends State<TenderKolaborasiScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
+    final content = Scaffold(
       appBar: AppBar(
         toolbarHeight: 75,
         title: const Text('Tender & Kolaborasi', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -92,6 +97,17 @@ class _TenderKolaborasiScreenState extends State<TenderKolaborasiScreen> {
         itemBuilder: (context, index) => _buildTenderCard(_tenders[index], isDark),
       ),
     );
+
+    if (widget.user != null) {
+      return DesktopSidebarLayout(
+        user: widget.user!,
+        activeRoute: 'tender_kolaborasi',
+        onUserUpdated: widget.onUserUpdated,
+        child: content,
+      );
+    }
+
+    return content;
   }
 
   Widget _buildTenderCard(Map<String, dynamic> t, bool isDark) {

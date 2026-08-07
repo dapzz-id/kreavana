@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../app/theme.dart';
+import '../models/user_model.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 
 class MonitoringEvaluasiScreen extends StatelessWidget {
-  const MonitoringEvaluasiScreen({super.key});
+  final UserModel? user;
+  final ValueChanged<UserModel>? onUserUpdated;
+
+  const MonitoringEvaluasiScreen({super.key, this.user, this.onUserUpdated});
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +22,7 @@ class MonitoringEvaluasiScreen extends StatelessWidget {
       {'title': 'Pengelolaan Media Sosial', 'progress': 0.95, 'status': 'Hampir Selesai', 'color': Color(0xFF10B981)},
     ];
 
-    return Scaffold(
+    final content = Scaffold(
       appBar: AppBar(
         toolbarHeight: 75,
         title: const Text('Monitoring & Evaluasi', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -80,5 +85,16 @@ class MonitoringEvaluasiScreen extends StatelessWidget {
         },
       ),
     );
+
+    if (user != null) {
+      return DesktopSidebarLayout(
+        user: user!,
+        activeRoute: 'monitoring_evaluasi',
+        onUserUpdated: onUserUpdated,
+        child: content,
+      );
+    }
+
+    return content;
   }
 }

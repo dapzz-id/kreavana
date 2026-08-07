@@ -77,7 +77,7 @@ class ProfileService extends BaseService
                                 mkdir($dirPath, 0755, true);
                             }
                             file_put_contents($dirPath . '/' . $fileName, $decoded);
-                            $user->avatar_url = url('avatars/' . $fileName);
+                            $user->avatar_url = url('api/avatars/' . $fileName);
                         }
                     }
                 }

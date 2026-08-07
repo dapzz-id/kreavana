@@ -1,14 +1,12 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../app/theme.dart';
-import '../models/user_model.dart';
 import '../services/theme_transition_service.dart';
+import 'global_search_screen.dart';
+import '../models/user_model.dart';
 import 'buat_kebutuhan_screen.dart';
-import 'proyek_saya_screen.dart';
-import 'explore_screen.dart';
 import 'notifications_screen.dart';
 import 'direct_message_screen.dart';
-import 'global_search_screen.dart';
 
 class CommunityDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -112,18 +110,16 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
               ),
             ),
           ),
+          _buildAppBarBadge(Icons.notifications_none_outlined, '3', isDark),
+          const SizedBox(width: 4),
+          _buildAppBarBadge(Icons.chat_bubble_outline, '1', isDark),
           const SizedBox(width: 20),
           IconButton(
             key: _themeBtnKey,
-            icon: Icon(
-              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-              size: 20,
-            ),
+            icon: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined, size: 20),
             onPressed: () {
               final box = _themeBtnKey.currentContext?.findRenderObject() as RenderBox?;
-              final origin = box != null
-                  ? box.localToGlobal(box.size.center(Offset.zero))
-                  : const Offset(0, 0);
+              final origin = box != null ? box.localToGlobal(box.size.center(Offset.zero)) : const Offset(0, 0);
               ThemeTransitionService.animateToggle(origin: origin, toDark: !isDark);
             },
           ),
@@ -210,13 +206,12 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
       {'label': 'Mitra & Sponsor', 'value': '18', 'sub': '10 aktif bekerja sama', 'icon': Icons.handshake_outlined, 'color': const Color(0xFFEC4899)},
     ];
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: metrics.map((m) {
-        return Expanded(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            padding: const EdgeInsets.all(16),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+        Widget buildCard(Map<String, Object> m) {
+          return Container(
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: isDark ? AppTheme.cardBg : Colors.white,
               borderRadius: BorderRadius.circular(16),
@@ -225,26 +220,33 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: (m['color'] as Color).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(m['icon'] as IconData, color: m['color'] as Color, size: 20),
-                ),
-                const SizedBox(height: 12),
-                Text(m['label'] as String, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                const SizedBox(height: 6),
-                Text(m['value'] as String, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Expanded(child: Text(m['label'] as String, style: const TextStyle(fontSize: 11, color: Colors.grey), maxLines: 2, overflow: TextOverflow.ellipsis)),
+                  const SizedBox(width: 6),
+                  Container(width: 36, height: 36, decoration: BoxDecoration(color: (m['color'] as Color).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)), child: Icon((m['icon'] as IconData?) ?? Icons.image_outlined, color: m['color'] as Color, size: 18)),
+                ]),
+                const SizedBox(height: 10),
+                FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(m['value'] as String, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
                 const SizedBox(height: 4),
-                Text(m['sub'] as String, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                Text(m['sub'] as String, style: const TextStyle(fontSize: 10, color: Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis),
               ],
             ),
-          ),
-        );
-      }).toList(),
+          );
+        }
+        if (isMobile) {
+          final rows = <Widget>[];
+          for (var i = 0; i < metrics.length; i += 2) {
+            final rc = <Widget>[Expanded(child: buildCard(metrics[i]))];
+            if (i + 1 < metrics.length) { rc.add(const SizedBox(width: 10)); rc.add(Expanded(child: buildCard(metrics[i + 1]))); }
+            if (i > 0) rows.add(const SizedBox(height: 10));
+            rows.add(Row(children: rc));
+          }
+          return Column(children: rows);
+        }
+        return Row(crossAxisAlignment: CrossAxisAlignment.start, children: metrics.map((m) {
+          return Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: buildCard(m)));
+        }).toList());
+      },
     );
   }
 
@@ -554,6 +556,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
 
   Widget _buildParticipationCard(bool isDark) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
           padding: const EdgeInsets.all(16),
@@ -604,6 +607,51 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAppBarBadge(IconData icon, String count, bool isDark) {
+    final isNotification = icon == Icons.notifications_none_outlined;
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => isNotification
+                ? NotificationsScreen(userId: widget.user.id ?? '')
+                : const DirectMessageScreen(),
+          ),
+        );
+      },
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1A1830) : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 20, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
+          ),
+          if (count.isNotEmpty)
+            Positioned(
+              right: -2,
+              top: -2,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  count,
+                  style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

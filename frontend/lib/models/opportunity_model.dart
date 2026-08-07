@@ -28,6 +28,18 @@ class OpportunityPoster {
       selectedSubRole: json['selected_sub_role'],
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'username': username,
+      'phone': phone,
+      'email': email,
+      'avatar_url': avatarUrl,
+      'selected_sub_role': selectedSubRole,
+    };
+  }
 }
 
 class OpportunityModel {
@@ -101,6 +113,27 @@ class OpportunityModel {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'sub_role_slug': subRoleSlug,
+      'type': type,
+      'location': location,
+      'latitude': latitude,
+      'longitude': longitude,
+      'location_category': locationCategory,
+      'address': address,
+      'deadline': deadline,
+      'budget_range': budgetRange,
+      'status': status,
+      'posted_by': postedBy,
+      'created_at': createdAt,
+      'poster': poster?.toJson(),
+    };
+  }
+
   String get locationCategoryLabel {
     switch (locationCategory) {
       case 'nature':
@@ -117,6 +150,31 @@ class OpportunityModel {
         return 'Seasonal';
       default:
         return locationCategory ?? 'Lokasi';
+    }
+  }
+
+  String get subRoleLabel {
+    switch (subRoleSlug.toLowerCase()) {
+      case 'mc':
+        return '🎤 MC & Host Event';
+      case 'videografer':
+        return '🎥 Videografer';
+      case 'fotografer':
+        return '📸 Fotografer';
+      case 'content_creator':
+        return '🎬 Content Creator';
+      case 'animator':
+        return '🎨 Animator';
+      case 'editor':
+        return '✂️ Editor Video';
+      case 'desainer':
+        return '🖌️ Desainer Grafis';
+      case 'musisi':
+        return '🎵 Musisi & Audio';
+      case 'talent':
+        return '💃 Model & Talent';
+      default:
+        return subRoleSlug.isNotEmpty ? subRoleSlug : '⭐ Creator';
     }
   }
 }

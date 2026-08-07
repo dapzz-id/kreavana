@@ -235,7 +235,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          log['icon'] as IconData,
+                          (log['icon'] as IconData?) ?? Icons.image_outlined,
                           color: log['color'] as Color,
                           size: 20,
                         ),

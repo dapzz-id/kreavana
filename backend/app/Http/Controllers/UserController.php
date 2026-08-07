@@ -19,15 +19,32 @@ class UserController extends Controller
 
         $currentUserId = $request->user()->id;
 
-        $users = User::select('id', 'name', 'username', 'avatar_url')
+        $users = User::select('id', 'name', 'username', 'avatar_url', 'phone', 'role', 'selected_sub_role')
             ->where('id', '!=', $currentUserId)
             ->where(function($q) use ($query) {
                 $q->where('name', 'like', '%' . $query . '%')
                   ->orWhere('username', 'like', '%' . $query . '%');
             })
-            ->limit(10)
+            ->limit(20)
             ->get();
 
         return $this->successResponse('Hasil pencarian pengguna', $users->toArray());
+    }
+
+    /**
+     * Daftar kontak untuk memulai obrolan/panggilan: admin, kreator, dan klien.
+     */
+    public function contacts(Request $request)
+    {
+        $currentUserId = $request->user()->id;
+
+        $users = User::where('id', '!=', $currentUserId)
+            ->whereNotNull('username')
+            ->orderByRaw("FIELD(role, 'admin', 'creator', 'user')")
+            ->orderBy('name')
+            ->limit(50)
+            ->get(['id', 'name', 'username', 'email', 'phone', 'avatar_url', 'role', 'selected_sub_role']);
+
+        return $this->successResponse('Daftar kontak berhasil diambil', $users->toArray());
     }
 }

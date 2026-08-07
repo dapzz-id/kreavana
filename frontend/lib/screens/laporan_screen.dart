@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import '../app/theme.dart';
+import '../models/user_model.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 
 class LaporanScreen extends StatelessWidget {
-  const LaporanScreen({super.key});
+  final UserModel? user;
+  final ValueChanged<UserModel>? onUserUpdated;
+
+  const LaporanScreen({super.key, this.user, this.onUserUpdated});
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +22,7 @@ class LaporanScreen extends StatelessWidget {
       {'title': 'Transaksi Selesai', 'subtitle': 'Pembayaran berhasil', 'value': '18 Transaksi', 'icon': Icons.check_circle_outline, 'color': const Color(0xFF14B8A6)},
     ];
 
-    return Scaffold(
+    final content = Scaffold(
       appBar: AppBar(
         toolbarHeight: 75,
         title: const Text('Laporan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -42,7 +47,7 @@ class LaporanScreen extends StatelessWidget {
                 Container(
                   width: 48, height: 48,
                   decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
-                  child: Icon(r['icon'] as IconData, color: color, size: 22),
+                  child: Icon((r['icon'] as IconData?) ?? Icons.image_outlined, color: color, size: 22),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -62,5 +67,16 @@ class LaporanScreen extends StatelessWidget {
         },
       ),
     );
+
+    if (user != null) {
+      return DesktopSidebarLayout(
+        user: user!,
+        activeRoute: 'laporan',
+        onUserUpdated: onUserUpdated,
+        child: content,
+      );
+    }
+
+    return content;
   }
 }

@@ -23,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \Carbon\Carbon::setLocale(config('app.locale', 'id'));
         $this->validateAuthConfiguration();
         $this->configureRateLimiters();
     }

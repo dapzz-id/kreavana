@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../app/theme.dart';
+import '../models/user_model.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 
 class PengumumanPublikScreen extends StatelessWidget {
-  const PengumumanPublikScreen({super.key});
+  final UserModel? user;
+  final ValueChanged<UserModel>? onUserUpdated;
+
+  const PengumumanPublikScreen({super.key, this.user, this.onUserUpdated});
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +49,7 @@ class PengumumanPublikScreen extends StatelessWidget {
       },
     ];
 
-    return Scaffold(
+    final content = Scaffold(
       appBar: AppBar(
         toolbarHeight: 75,
         title: const Text('Pengumuman Publik', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -70,7 +75,7 @@ class PengumumanPublikScreen extends StatelessWidget {
                     Container(
                       width: 40, height: 40,
                       decoration: BoxDecoration(color: (p['type_color'] as Color).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-                      child: Icon(p['icon'] as IconData, color: p['type_color'] as Color, size: 20),
+                      child: Icon((p['icon'] as IconData?) ?? Icons.image_outlined, color: p['type_color'] as Color, size: 20),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -114,5 +119,16 @@ class PengumumanPublikScreen extends StatelessWidget {
         },
       ),
     );
+
+    if (user != null) {
+      return DesktopSidebarLayout(
+        user: user!,
+        activeRoute: 'pengumuman_publik',
+        onUserUpdated: onUserUpdated,
+        child: content,
+      );
+    }
+
+    return content;
   }
 }

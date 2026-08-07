@@ -42,18 +42,9 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
 
   Future<void> _loadProjects() async {
     setState(() => _isLoading = true);
-    print(
-      'DEBUG PeluangProyekScreen: Loading projects for subRole: ${widget.subRoleSlug}',
-    );
     final list = await OpportunityService.getOpportunities(
       subRole: widget.subRoleSlug,
     );
-    print('DEBUG PeluangProyekScreen: Loaded ${list.length} projects');
-    for (var project in list) {
-      print(
-        'DEBUG PeluangProyekScreen: - ${project.title} (${project.subRoleSlug})',
-      );
-    }
     if (mounted) {
       setState(() {
         _projects = list;

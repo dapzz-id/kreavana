@@ -22,7 +22,8 @@ class PeluangLokasiScreen extends StatefulWidget {
   State<PeluangLokasiScreen> createState() => _PeluangLokasiScreenState();
 }
 
-class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
+class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
+    with TickerProviderStateMixin {
   final MapController _mapController = MapController();
   bool _isLoading = true;
   List<OpportunityModel> _locations = [];
@@ -42,6 +43,25 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
   void initState() {
     super.initState();
     _loadLocations();
+  }
+
+
+
+  void _zoomIn() {
+    final targetZoom = (_mapController.camera.zoom + 1.0).clamp(3.0, 18.0);
+    _mapController.move(_mapController.camera.center, targetZoom);
+    if (mounted) setState(() {});
+  }
+
+  void _zoomOut() {
+    final targetZoom = (_mapController.camera.zoom - 1.0).clamp(3.0, 18.0);
+    _mapController.move(_mapController.camera.center, targetZoom);
+    if (mounted) setState(() {});
+  }
+
+  void _resetCenter(bool isMobile) {
+    _mapController.move(const LatLng(-2.5, 118.0), isMobile ? 4.5 : 5.0);
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadLocations() async {
@@ -84,18 +104,52 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
   }
 
   Future<void> _onMarkerTap(OpportunityModel opp) async {
-    var detail = opp;
-    if (opp.poster == null) {
-      final fetched = await OpportunityService.getDetail(opp.id ?? '');
-      if (fetched != null) detail = fetched;
-    }
+    // Show detail sheet immediately — don't wait for API
     if (mounted) {
       OpportunityDetailSheet.show(
         context,
-        opportunity: detail,
+        opportunity: opp,
         currentUserId: widget.user.id,
       );
     }
+  }
+
+  // ── Zoom button widget ────────────────────────────────────────────────────
+  Widget _zoomButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    required bool isDark,
+    required bool isMobile,
+    Color? iconColor,
+  }) {
+    final size = isMobile ? 44.0 : 48.0;
+    final iconSize = isMobile ? 22.0 : 24.0;
+    return Material(
+      color: isDark ? AppTheme.cardBg : Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      elevation: 4,
+      shadowColor: Colors.black.withValues(alpha: 0.2),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark ? AppTheme.inputBorder : Colors.grey.shade300,
+              width: 1,
+            ),
+          ),
+          child: Icon(
+            icon,
+            size: iconSize,
+            color: iconColor ?? (isDark ? Colors.white : Colors.black87),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -137,6 +191,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
       ),
       body: Column(
         children: [
+          // ── Category filter chips ────────────────────────────────────────
           SizedBox(
             height: isMobile ? 40 : 44,
             child: ListView.builder(
@@ -159,26 +214,28 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                     checkmarkColor: color,
                     labelStyle: TextStyle(
                       fontSize: isMobile ? 11 : 12,
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
                       color: isSelected
                           ? color
                           : (isDark ? Colors.white70 : Colors.black87),
                     ),
                     onSelected: (_) {
-                      setState(() => _selectedCategory = cat['slug'] as String);
+                      setState(
+                        () => _selectedCategory = cat['slug'] as String,
+                      );
                     },
                   ),
                 );
               },
             ),
           ),
+
+          // ── Map area ────────────────────────────────────────────────────
           Expanded(
             child: _isLoading
                 ? Stack(
                     children: [
-                      // Tampilkan peta kosong sebagai background saat loading
                       FlutterMap(
                         options: const MapOptions(
                           initialCenter: LatLng(-2.5, 118.0),
@@ -192,14 +249,12 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                           ),
                         ],
                       ),
-                      // Overlay skeleton card di tengah peta
                       Center(
                         child: Container(
                           margin: const EdgeInsets.all(24),
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
+                            color: isDark
                                 ? const Color(0xFF1E1E2C)
                                 : Colors.white.withValues(alpha: 0.95),
                             borderRadius: BorderRadius.circular(16),
@@ -210,9 +265,9 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                               ),
                             ],
                           ),
-                          child: Column(
+                          child: const Column(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
+                            children: [
                               SkeletonBox(
                                 width: 48,
                                 height: 48,
@@ -238,13 +293,22 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                   )
                 : Stack(
                     children: [
+                      // ── Map ─────────────────────────────────────────────
                       FlutterMap(
                         mapController: _mapController,
                         options: MapOptions(
                           initialCenter: const LatLng(-2.5, 118.0),
                           initialZoom: isMobile ? 4.5 : 5.0,
-                          minZoom: 4,
+                          minZoom: 3,
                           maxZoom: 18,
+                          interactionOptions: const InteractionOptions(
+                            flags: InteractiveFlag.all,
+                          ),
+                          onPositionChanged: (camera, hasGesture) {
+                            if (mounted && hasGesture) {
+                              setState(() {});
+                            }
+                          },
                         ),
                         children: [
                           TileLayer(
@@ -256,12 +320,12 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                             markers: filtered
                                 .where(
                                   (l) =>
-                                      l.latitude != null && l.longitude != null,
+                                      l.latitude != null &&
+                                      l.longitude != null,
                                 )
                                 .map((loc) {
-                                  final color = _markerColor(
-                                    loc.locationCategory,
-                                  );
+                                  final color =
+                                      _markerColor(loc.locationCategory);
                                   final markerWidth = isMobile ? 90.0 : 120.0;
                                   final markerHeight = isMobile ? 50.0 : 65.0;
                                   return Marker(
@@ -352,6 +416,8 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                           ),
                         ],
                       ),
+
+                      // ── Empty state ──────────────────────────────────────
                       if (filtered.isEmpty)
                         Center(
                           child: Container(
@@ -380,6 +446,8 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                             ),
                           ),
                         ),
+
+                      // ── Bottom info bar ──────────────────────────────────
                       Positioned(
                         bottom: isMobile ? 8 : 16,
                         left: isMobile ? 12 : 16,
@@ -412,7 +480,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                               Expanded(
                                 child: Text(
                                   isMobile
-                                      ? 'Ket(marker untuk detail'
+                                      ? 'Ketuk marker untuk detail'
                                       : 'Ketuk marker untuk lihat kontak pembuat & laporkan',
                                   style: TextStyle(
                                     fontSize: isMobile ? 10 : 12,
@@ -444,10 +512,303 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen> {
                           ),
                         ),
                       ),
+
+                      // ── Zoom controls (top-right) ────────────────────────
+                      Positioned(
+                        right: isMobile ? 12 : 16,
+                        top: isMobile ? 12 : 16,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Zoom In
+                            _zoomButton(
+                              icon: Icons.add,
+                              isDark: isDark,
+                              isMobile: isMobile,
+                              onTap: _zoomIn,
+                            ),
+                            const SizedBox(height: 8),
+                            // Zoom Out
+                            _zoomButton(
+                              icon: Icons.remove,
+                              isDark: isDark,
+                              isMobile: isMobile,
+                              onTap: _zoomOut,
+                            ),
+                            const SizedBox(height: 8),
+                            // Reset to Indonesia center
+                            _zoomButton(
+                              icon: Icons.my_location,
+                              isDark: isDark,
+                              isMobile: isMobile,
+                              iconColor: Colors.teal.shade600,
+                              onTap: () => _resetCenter(isMobile),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
           ),
         ],
+      ),
+      floatingActionButton: (widget.user.role == 'creator' || widget.user.isCreator)
+          ? FloatingActionButton.extended(
+              onPressed: () => _showAddLocationDialog(context),
+              backgroundColor: Colors.teal.shade600,
+              icon: const Icon(Icons.add_location_alt, color: Colors.white),
+              label: const Text(
+                'Tambah Lokasi',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            )
+          : null,
+    );
+  }
+
+  // ── Dialog tambah lokasi creator ───────────────────────────────────────────
+  void _showAddLocationDialog(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final titleController = TextEditingController();
+    final descController = TextEditingController();
+    final addressController = TextEditingController();
+    final phoneController = TextEditingController(text: widget.user.phone ?? '');
+    final latController = TextEditingController();
+    final lngController = TextEditingController();
+    String selectedSubRole = 'mc';
+    String selectedCategory = 'urban';
+
+    final subRoles = [
+      {'slug': 'mc', 'label': '🎤 MC & Host Event'},
+      {'slug': 'videografer', 'label': '🎥 Videografer'},
+      {'slug': 'fotografer', 'label': '📸 Fotografer'},
+      {'slug': 'content_creator', 'label': '🎬 Content Creator'},
+      {'slug': 'animator', 'label': '🎨 Animator'},
+      {'slug': 'editor', 'label': '✂️ Editor Video'},
+      {'slug': 'desainer', 'label': '🖌️ Desainer Grafis'},
+      {'slug': 'musisi', 'label': '🎵 Musisi & Audio'},
+      {'slug': 'talent', 'label': '💃 Model & Talent'},
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => DraggableScrollableSheet(
+          initialChildSize: 0.85,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (_, scrollController) => Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardBg : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: ListView(
+              controller: scrollController,
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  '📍 Tambah Lokasi Kolaborasi',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Isi data di bawah agar klien / creator lain dapat menemukan Anda di peta.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Sub-role
+                const Text('Posisi / Sub-Role Anda', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: subRoles.map((sr) {
+                    final isSelected = selectedSubRole == sr['slug'];
+                    return ChoiceChip(
+                      label: Text(sr['label']!),
+                      selected: isSelected,
+                      selectedColor: Colors.teal.withValues(alpha: 0.2),
+                      labelStyle: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? Colors.teal.shade700 : null,
+                      ),
+                      onSelected: (_) => setModalState(() => selectedSubRole = sr['slug']!),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                // Title
+                TextField(
+                  controller: titleController,
+                  decoration: InputDecoration(
+                    labelText: 'Judul / Nama Layanan',
+                    hintText: 'Contoh: Andi - MC Wedding & Corporate',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Description
+                TextField(
+                  controller: descController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: 'Deskripsi Layanan',
+                    hintText: 'Jelaskan keahlian, pengalaman, dan jasa yang Anda tawarkan...',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const SizedBox(height: 12),
+                // Phone
+                TextField(
+                  controller: phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    labelText: 'Nomor Telepon / WhatsApp Kontak',
+                    hintText: 'Contoh: 081234567890',
+                    prefixIcon: const Icon(Icons.phone),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Address
+                TextField(
+                  controller: addressController,
+                  decoration: InputDecoration(
+                    labelText: 'Alamat / Lokasi',
+                    hintText: 'Contoh: Kuningan, Jakarta Selatan',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Lat/Lng
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: latController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                        decoration: InputDecoration(
+                          labelText: 'Latitude',
+                          hintText: '-6.2088',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: lngController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                        decoration: InputDecoration(
+                          labelText: 'Longitude',
+                          hintText: '106.8456',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Category
+                const Text('Kategori Lokasi', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _categories.where((c) => c['slug'] != 'all').map((cat) {
+                    final isSelected = selectedCategory == cat['slug'];
+                    final color = cat['color'] as Color;
+                    return ChoiceChip(
+                      label: Text(cat['name'] as String),
+                      selected: isSelected,
+                      selectedColor: color.withValues(alpha: 0.2),
+                      labelStyle: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? color : null,
+                      ),
+                      onSelected: (_) => setModalState(() => selectedCategory = cat['slug'] as String),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final title = titleController.text.trim();
+                    if (title.isEmpty) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(content: Text('Judul wajib diisi!'), backgroundColor: Colors.red),
+                      );
+                      return;
+                    }
+                    final lat = double.tryParse(latController.text.trim());
+                    final lng = double.tryParse(lngController.text.trim());
+                    final phoneInput = phoneController.text.trim();
+
+                    final result = await OpportunityService.createOpportunity(
+                      title: title,
+                      subRoleSlug: selectedSubRole,
+                      type: 'location',
+                      description: descController.text.trim().isEmpty ? null : descController.text.trim(),
+                      location: addressController.text.trim().isEmpty ? 'Indonesia' : addressController.text.trim(),
+                      latitude: lat,
+                      longitude: lng,
+                      locationCategory: selectedCategory,
+                      address: addressController.text.trim().isEmpty ? null : addressController.text.trim(),
+                      poster: OpportunityPoster(
+                        id: widget.user.id,
+                        name: widget.user.name,
+                        username: widget.user.username,
+                        phone: phoneInput.isNotEmpty ? phoneInput : widget.user.phone,
+                      ),
+                    );
+
+                    if (ctx.mounted) {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(result['message'] ?? 'Lokasi berhasil ditambahkan!'),
+                          backgroundColor: Colors.teal.shade700,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                      _loadLocations();
+                    }
+                  },
+                  icon: const Icon(Icons.check_circle, color: Colors.white),
+                  label: const Text(
+                    'Simpan & Tampilkan di Peta',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal.shade600,
+                    minimumSize: const Size(double.infinity, 52),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

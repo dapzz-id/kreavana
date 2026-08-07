@@ -6,6 +6,8 @@ class StatCard extends StatelessWidget {
   final String value;
   final String iconName;
   final Color accentColor;
+  final String? trend;
+  final bool trendUp;
 
   const StatCard({
     super.key,
@@ -13,6 +15,8 @@ class StatCard extends StatelessWidget {
     required this.value,
     required this.iconName,
     required this.accentColor,
+    this.trend,
+    this.trendUp = true,
   });
 
   IconData _getIconData(String name) {
@@ -53,6 +57,10 @@ class StatCard extends StatelessWidget {
         return Icons.handshake_outlined;
       case 'campaign':
         return Icons.campaign_outlined;
+      case 'wallet':
+        return Icons.account_balance_wallet_outlined;
+      case 'trending_up':
+        return Icons.trending_up;
       default:
         return Icons.bar_chart_outlined;
     }
@@ -62,53 +70,46 @@ class StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
-    // Deteksi layar kecil (seperti iPhone SE) untuk menyesuaikan layout
     final screenWidth = MediaQuery.of(context).size.width;
     final isCompact = screenWidth < 360;
 
     return Container(
       padding: EdgeInsets.all(isCompact ? 10 : 16),
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: isDark ? AppTheme.cardDark : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
         border: Border.all(
-          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+          color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
           width: 1,
         ),
-        boxShadow: !isDark
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ]
-            : null,
+        boxShadow: isDark ? null : AppTheme.cardShadowLight,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Text(
                   label,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: isCompact ? 11 : 12,
+                    fontSize: isCompact ? 10 : 11,
                     fontWeight: FontWeight.w500,
-                    color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                    color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                    height: 1.3,
                   ),
                 ),
               ),
+              const SizedBox(width: 6),
               Container(
-                padding: EdgeInsets.all(isCompact ? 4 : 6),
+                padding: EdgeInsets.all(isCompact ? 5 : 7),
                 decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+                  color: accentColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSM),
                 ),
                 child: Icon(
                   _getIconData(iconName),
@@ -118,15 +119,47 @@ class StatCard extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: isCompact ? 6 : 12),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: isCompact ? 18 : 20,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.5,
+          SizedBox(height: isCompact ? 8 : 12),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: isCompact ? 16 : 20,
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.5,
+                color: theme.colorScheme.onSurface,
+              ),
             ),
           ),
+          if (trend != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(
+                  trendUp ? Icons.trending_up : Icons.trending_down,
+                  size: 12,
+                  color: trendUp ? AppTheme.success : AppTheme.error,
+                ),
+                const SizedBox(width: 3),
+                Expanded(
+                  child: Text(
+                    trend!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: trendUp ? AppTheme.success : AppTheme.error,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

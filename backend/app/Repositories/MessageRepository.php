@@ -11,10 +11,10 @@ class MessageRepository extends BaseRepository
         parent::__construct($model);
     }
 
-    public function getChatMessages(int $chatId)
+    public function getChatMessages(string $chatId)
     {
         return $this->model->where('chat_id', $chatId)
-            ->with('user:id,name')
+            ->with(['user:id,name,avatar_url', 'replyTo.user:id,name'])
             ->orderBy('created_at', 'desc')
             ->get();
     }

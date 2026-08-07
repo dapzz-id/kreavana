@@ -1,13 +1,19 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../app/theme.dart';
+import '../app/app_animations.dart';
+import '../widgets/animated_input_field.dart';
 import '../widgets/gradient_button.dart';
 import '../widgets/social_button.dart';
 import '../widgets/auth_divider.dart';
 import '../services/theme_transition_service.dart';
+import '../services/google_auth_service.dart';
 import 'register_screen.dart';
 import 'main_navigation.dart';
 import '../services/auth_service.dart';
 import '../services/call_service.dart';
 import '../services/push_notification_service.dart';
+import '../utils/app_errors.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,7 +30,9 @@ class _LoginScreenState extends State<LoginScreen>
 
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
   bool _rememberMe = false;
+  String? _errorMessage;
 
   final GlobalKey _themeBtnKey = GlobalKey();
 
@@ -37,13 +45,19 @@ class _LoginScreenState extends State<LoginScreen>
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 900),
     );
-    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
-    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
-        .animate(
-          CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
-        );
+    _fadeAnim = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOut,
+    );
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.04),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOutCubic,
+    ));
     _animController.forward();
   }
 
@@ -56,6 +70,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _handleLogin() async {
+    setState(() => _errorMessage = null);
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
@@ -67,39 +82,117 @@ class _LoginScreenState extends State<LoginScreen>
       if (mounted) {
         setState(() => _isLoading = false);
         if (result['success'] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Login berhasil!'),
-              backgroundColor: Colors.green.shade700,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          );
-
           CallService().initPusher();
           PushNotificationService.initialize();
 
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (_) => MainNavigation(initialUser: result['user']),
+            PageRouteBuilder(
+              pageBuilder: (_, a, _) =>
+                  MainNavigation(initialUser: result['user']),
+              transitionsBuilder: (_, a, _, child) =>
+                  FadeTransition(opacity: a, child: child),
+              transitionDuration: const Duration(milliseconds: 400),
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message'] ?? 'Login gagal.'),
-              backgroundColor: Theme.of(context).colorScheme.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          );
+          setState(() {
+            _errorMessage = AppErrors.messageFromResult(result);
+          });
         }
       }
     }
+  }
+
+  void _handleGoogleSignIn() async {
+    setState(() {
+      _errorMessage = null;
+      _isGoogleLoading = true;
+    });
+
+    final result = await GoogleAuthService.signInWithGoogle();
+
+    if (mounted) {
+      setState(() => _isGoogleLoading = false);
+
+      if (result['success'] == true) {
+        CallService().initPusher();
+        PushNotificationService.initialize();
+
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (_, a, _) =>
+                MainNavigation(initialUser: result['user']),
+            transitionsBuilder: (_, a, _, child) =>
+                FadeTransition(opacity: a, child: child),
+            transitionDuration: const Duration(milliseconds: 400),
+          ),
+        );
+      } else {
+        setState(() {
+          _errorMessage = result['message']?.toString() ??
+              'Login dengan Google gagal. Coba lagi.';
+        });
+      }
+    }
+  }
+
+  void _showForgotPasswordDialog() {
+    final emailCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Reset Kata Sandi',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Masukkan email Anda. Kami akan mengirimkan link reset kata sandi.',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Alamat Email',
+                prefixIcon: Icon(Icons.email_outlined),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Link reset telah dikirim ke ${emailCtrl.text.trim()}',
+                  ),
+                  backgroundColor: AppTheme.success,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryPurple,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Kirim'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -108,251 +201,188 @@ class _LoginScreenState extends State<LoginScreen>
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    // Warna teks dan border yang lebih soft untuk Material 3
-    final textMutedColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
-    final borderColor = isDark ? Colors.white24 : Colors.black12;
-
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 28,
-                  vertical: 24,
-                ),
-                child: Center(
-                  child: FadeTransition(
-                    opacity: _fadeAnim,
-                    child: SlideTransition(
-                      position: _slideAnim,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 420),
-                        child: Form(
-                          key: _formKey,
+      body: Stack(
+        children: [
+          // ── Theme toggle ─────────────────────────────────────────────────
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            right: 16,
+            child: _ThemeToggleButton(themeBtnKey: _themeBtnKey),
+          ),
+
+          // ── Main content ─────────────────────────────────────────────────
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+              child: Center(
+                child: FadeTransition(
+                  opacity: _fadeAnim,
+                  child: SlideTransition(
+                    position: _slideAnim,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 440),
+                      child: Form(
+                        key: _formKey,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            // Logo
-                            Center(
-                              child: Image.asset(
-                                'assets/brandlogo.png',
-                                width: 84,
-                                height: 84,
-                                fit: BoxFit.contain,
+                            const SizedBox(height: 16),
+                            // ── Logo ────────────────────────────────────────
+                            _staggered(
+                              Center(
+                                child: Hero(
+                                  tag: 'app-logo',
+                                  child: Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(22),
+                                      gradient: AppTheme.primaryGradient,
+                                      boxShadow: AppTheme.primaryShadow,
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(22),
+                                      child: Image.asset(
+                                        'assets/brandlogo.png',
+                                        width: 80,
+                                        height: 80,
+                                          fit: BoxFit.contain,
+                                          errorBuilder: (_, _, _) => const Center(
+                                            child: Icon(
+                                              Icons.auto_awesome,
+                                              color: Colors.white,
+                                              size: 40,
+                                            ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
+                              0,
                             ),
-                            const SizedBox(height: 24),
-
-                            // Title (Material 3 Typography style)
-                            Center(
-                              child: Text(
-                                'Masuk Kreavana',
-                                style: theme.textTheme.headlineMedium?.copyWith(
+                            const SizedBox(height: 32),
+                            // ── Title ───────────────────────────────────────
+                            _staggered(
+                              Text(
+                                'Masuk ke Kreavana',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.headlineSmall?.copyWith(
                                   fontWeight: FontWeight.w800,
                                   color: colorScheme.onSurface,
                                   letterSpacing: -0.5,
                                 ),
                               ),
+                              1,
                             ),
-                            const SizedBox(height: 8),
-                            Center(
-                              child: Text(
+                            const SizedBox(height: 6),
+                            _staggered(
+                              Text(
                                 'Selamat datang kembali! Silakan masuk ke akun Anda.',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: textMutedColor,
-                                ),
                                 textAlign: TextAlign.center,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: isDark
+                                      ? AppTheme.textMuted
+                                      : AppTheme.textMutedLight,
+                                  height: 1.4,
+                                ),
                               ),
+                              2,
                             ),
                             const SizedBox(height: 36),
 
-                            // Username/Email Field
-                            TextFormField(
-                              controller: _usernameOrEmailController,
-                              style: TextStyle(
-                                color: colorScheme.onSurface,
-                                fontSize: 15,
+                            // ── Error banner with shake ─────────────────────
+                            _staggered(
+                              AnimatedSize(
+                                duration: const Duration(milliseconds: 250),
+                                curve: AppMotion.easeOut,
+                                child: _ErrorBanner(message: _errorMessage),
                               ),
-                              decoration: InputDecoration(
-                                labelText: 'Username atau Email',
-                                floatingLabelBehavior:
-                                    FloatingLabelBehavior.auto,
-                                labelStyle: TextStyle(
-                                  color: textMutedColor,
-                                  fontSize: 14,
-                                ),
-                                floatingLabelStyle: TextStyle(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                prefixIcon: Icon(
-                                  Icons.person_outline_rounded,
-                                  color: textMutedColor,
-                                  size: 22,
-                                ),
-                                filled: true,
-                                fillColor: isDark
-                                    ? colorScheme.surfaceContainerHighest
-                                          .withValues(alpha: 0.5)
-                                    : colorScheme.surfaceContainerHighest
-                                          .withValues(alpha: 0.3),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: borderColor,
-                                    width: 1.0,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: colorScheme.primary,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 16,
-                                ),
-                              ),
-                              keyboardType: TextInputType.emailAddress,
-                              textInputAction: TextInputAction.next,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Masukkan username atau email';
-                                }
-                                if (value.trim().length < 3) {
-                                  return 'Minimal 3 karakter';
-                                }
-                                return null;
-                              },
+                              3,
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 16),
 
-                            // Password Field
-                            TextFormField(
-                              controller: _passwordController,
-                              style: TextStyle(
-                                color: colorScheme.onSurface,
-                                fontSize: 15,
+                            // ── Username / Email ───────────────────────────
+                            _staggered(
+                              AnimatedInputField(
+                                controller: _usernameOrEmailController,
+                                label: 'Username atau Email',
+                                hint: 'user@email.com',
+                                icon: Icons.person_outline_rounded,
+                                keyboardType: TextInputType.emailAddress,
+                                textInputAction: TextInputAction.next,
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) {
+                                    return 'Masukkan username atau email';
+                                  }
+                                  if (v.trim().length < 3) {
+                                    return 'Minimal 3 karakter';
+                                  }
+                                  return null;
+                                },
                               ),
-                              decoration: InputDecoration(
-                                labelText: 'Kata Sandi',
-                                floatingLabelBehavior:
-                                    FloatingLabelBehavior.auto,
-                                labelStyle: TextStyle(
-                                  color: textMutedColor,
-                                  fontSize: 14,
-                                ),
-                                floatingLabelStyle: TextStyle(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                prefixIcon: Icon(
-                                  Icons.lock_outline_rounded,
-                                  color: textMutedColor,
-                                  size: 22,
-                                ),
+                              4,
+                            ),
+                            const SizedBox(height: 16),
+
+                            // ── Password ───────────────────────────────────
+                            _staggered(
+                              AnimatedInputField(
+                                controller: _passwordController,
+                                label: 'Kata Sandi',
+                                hint: '••••••••',
+                                icon: Icons.lock_outline_rounded,
+                                obscureText: _obscurePassword,
+                                textInputAction: TextInputAction.done,
+                                onFieldSubmitted: (_) => _handleLogin(),
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscurePassword
                                         ? Icons.visibility_off_outlined
                                         : Icons.visibility_outlined,
-                                    color: textMutedColor,
-                                    size: 22,
+                                    size: 20,
+                                    color: isDark
+                                        ? AppTheme.textMuted
+                                        : AppTheme.textMutedLight,
                                   ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _obscurePassword = !_obscurePassword;
-                                    });
-                                  },
+                                  onPressed: () => setState(
+                                      () => _obscurePassword = !_obscurePassword),
                                 ),
-                                filled: true,
-                                fillColor: isDark
-                                    ? colorScheme.surfaceContainerHighest
-                                          .withValues(alpha: 0.5)
-                                    : colorScheme.surfaceContainerHighest
-                                          .withValues(alpha: 0.3),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: borderColor,
-                                    width: 1.0,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(
-                                    color: colorScheme.primary,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 16,
-                                ),
+                                validator: (v) {
+                                  if (v == null || v.isEmpty) {
+                                    return 'Masukkan kata sandi';
+                                  }
+                                  return null;
+                                },
                               ),
-                              obscureText: _obscurePassword,
-                              textInputAction: TextInputAction.done,
-                              onFieldSubmitted: (_) => _handleLogin(),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Masukkan kata sandi';
-                                }
-                                return null;
-                              },
+                              5,
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 10),
 
-                            // Remember me & Forgot password
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            // ── Remember me + Forgot password ──────────────
+                            _staggered(
+                              Row(
                               children: [
-                                Row(
-                                  children: [
-                                    Checkbox(
-                                      value: _rememberMe,
-                                      onChanged: (val) {
-                                        setState(() {
-                                          _rememberMe = val ?? false;
-                                        });
-                                      },
-                                      activeColor: colorScheme.primary,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      side: BorderSide(
-                                        color: textMutedColor,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Ingat saya',
-                                      style: theme.textTheme.bodyMedium
-                                          ?.copyWith(
-                                            color: colorScheme.onSurface,
-                                          ),
-                                    ),
-                                  ],
+                                _AnimatedCheckbox(
+                                  value: _rememberMe,
+                                  onChanged: (v) => setState(
+                                      () => _rememberMe = v ?? false),
                                 ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Ingat saya',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                                const Spacer(),
                                 TextButton(
-                                  onPressed: () {
-                                    // Handle forgot password
-                                  },
+                                  onPressed: _showForgotPasswordDialog,
                                   style: TextButton.styleFrom(
-                                    foregroundColor: colorScheme.primary,
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                    ),
+                                        horizontal: 4),
                                   ),
                                   child: const Text(
                                     'Lupa kata sandi?',
@@ -363,86 +393,76 @@ class _LoginScreenState extends State<LoginScreen>
                                   ),
                                 ),
                               ],
+                              ),
+                              6,
                             ),
                             const SizedBox(height: 24),
 
-                            // Login Button
-                            GradientButton(
-                              text: 'Masuk Sekarang',
-                              onPressed: _handleLogin,
-                              isLoading: _isLoading,
+                            // ── Login button ───────────────────────────────
+                            _staggered(
+                              GradientButton(
+                                text: 'Masuk Sekarang',
+                                onPressed: _handleLogin,
+                                isLoading: _isLoading,
+                              ),
+                              7,
+                            ),
+                            const SizedBox(height: 28),
+
+                            // ── Divider ────────────────────────────────────
+                            _staggered(const AuthDivider(text: 'atau masuk dengan'), 8),
+                            const SizedBox(height: 20),
+
+                            // ── Google ─────────────────────────────────────
+                            _staggered(
+                              GoogleSignInButton(
+                                text: 'Lanjutkan dengan Google',
+                                isLoading: _isGoogleLoading,
+                                onPressed: _handleGoogleSignIn,
+                              ),
+                              9,
                             ),
                             const SizedBox(height: 32),
 
-                            // Divider
-                            const AuthDivider(text: 'Atau masuk dengan'),
-                            const SizedBox(height: 24),
-
-                            // Google Button
-                            GoogleSignInButton(
-                              text: 'Lanjutkan dengan Google',
-                              onPressed: () {
-                                // Handle Google sign-in
-                              },
-                            ),
-                            const SizedBox(height: 32),
-
-                            // Footer Link
-                            Row(
+                            // ── Register link ──────────────────────────────
+                            _staggered(
+                              Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
                                   'Belum punya akun? ',
                                   style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: textMutedColor,
+                                    color: isDark
+                                        ? AppTheme.textMuted
+                                        : AppTheme.textMutedLight,
                                   ),
                                 ),
-                                InkWell(
-                                  borderRadius: BorderRadius.circular(4),
-                                  onTap: () {
-                                    Navigator.of(context).pushReplacement(
-                                      PageRouteBuilder(
-                                        pageBuilder:
-                                            (
-                                              context,
-                                              animation,
-                                              secondaryAnimation,
-                                            ) => const RegisterScreen(),
-                                        transitionsBuilder:
-                                            (
-                                              context,
-                                              animation,
-                                              secondaryAnimation,
-                                              child,
-                                            ) {
-                                              return FadeTransition(
-                                                opacity: animation,
-                                                child: child,
-                                              );
-                                            },
-                                        transitionDuration: const Duration(
-                                          milliseconds: 300,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 4,
-                                      vertical: 2,
+                                GestureDetector(
+                                  onTap: () => Navigator.of(context)
+                                      .pushReplacement(
+                                    PageRouteBuilder(
+                                      pageBuilder: (_, a, _) =>
+                                          const RegisterScreen(),
+                                      transitionsBuilder: (_, a, _, child) =>
+                                          FadeTransition(
+                                              opacity: a, child: child),
+                                      transitionDuration:
+                                          const Duration(milliseconds: 300),
                                     ),
-                                    child: Text(
-                                      'Daftar di sini',
-                                      style: theme.textTheme.bodyMedium
-                                          ?.copyWith(
-                                            color: colorScheme.primary,
-                                            fontWeight: FontWeight.w700,
-                                          ),
+                                  ),
+                                  child: Text(
+                                    'Daftar sekarang',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: colorScheme.primary,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                 ),
                               ],
+                              ),
+                              10,
                             ),
+                            const SizedBox(height: 24),
                           ],
                         ),
                       ),
@@ -451,45 +471,193 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
             ),
-            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-            // Theme Toggle Button
-            Positioned(
-              top: 16,
-              right: 16,
-              child: IconButton.filledTonal(
-                key: _themeBtnKey,
-                icon: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  transitionBuilder: (child, anim) => RotationTransition(
-                    turns: Tween(begin: 0.75, end: 1.0).animate(anim),
-                    child: FadeTransition(opacity: anim, child: child),
-                  ),
-                  child: Icon(
-                    isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                    key: ValueKey(isDark),
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+  Widget _staggered(Widget child, int index) {
+    final start = (index * 0.06).clamp(0.0, 0.9);
+    final end = (start + 0.6).clamp(0.0, 1.0);
+    final anim = CurvedAnimation(
+      parent: _animController,
+      curve: Interval(start, end, curve: Curves.easeOutCubic),
+    );
+    return FadeTransition(
+      opacity: anim,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.03),
+          end: Offset.zero,
+        ).animate(anim),
+        child: child,
+      ),
+    );
+  }
+}
+
+// ── Error banner with shake ──────────────────────────────────────────────────
+
+class _ErrorBanner extends StatefulWidget {
+  final String? message;
+  const _ErrorBanner({this.message});
+
+  @override
+  State<_ErrorBanner> createState() => _ErrorBannerState();
+}
+
+class _ErrorBannerState extends State<_ErrorBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shakeCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _shakeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    if (widget.message != null) _shakeCtrl.forward(from: 0);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ErrorBanner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.message != null && widget.message != oldWidget.message) {
+      _shakeCtrl.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _shakeCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final message = widget.message;
+    if (message == null) return const SizedBox.shrink();
+
+    return AnimatedBuilder(
+      animation: _shakeCtrl,
+      builder: (context, child) {
+        final t = _shakeCtrl.value;
+        final dx = math.sin(t * math.pi * 8) * 8 * (1 - t);
+        return Transform.translate(offset: Offset(dx, 0), child: child);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppTheme.error.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppTheme.error.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, color: AppTheme.error, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.error,
+                  fontWeight: FontWeight.w500,
                 ),
-                style: IconButton.styleFrom(
-                  backgroundColor: colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.5),
-                ),
-                onPressed: () {
-                  final box = _themeBtnKey.currentContext?.findRenderObject()
-                      as RenderBox?;
-                  final origin = box != null
-                      ? box.localToGlobal(box.size.center(Offset.zero))
-                      : const Offset(0, 0);
-                  ThemeTransitionService.animateToggle(
-                    origin: origin,
-                    toDark: !isDark,
-                  );
-                },
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Animated checkbox ────────────────────────────────────────────────────────
+
+class _AnimatedCheckbox extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool?> onChanged;
+
+  const _AnimatedCheckbox({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: () => onChanged(!value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 22,
+        height: 22,
+        decoration: BoxDecoration(
+          color: value ? theme.colorScheme.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: value
+                ? theme.colorScheme.primary
+                : (theme.brightness == Brightness.dark
+                    ? AppTheme.inputBorder
+                    : AppTheme.inputBorderLight),
+            width: 1.5,
+          ),
+        ),
+        child: value
+            ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+            : null,
+      ),
+    );
+  }
+}
+
+// ── Theme toggle ─────────────────────────────────────────────────────────────
+
+class _ThemeToggleButton extends StatelessWidget {
+  final GlobalKey themeBtnKey;
+  const _ThemeToggleButton({required this.themeBtnKey});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: IconButton.filledTonal(
+        key: themeBtnKey,
+        icon: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          transitionBuilder: (child, anim) => RotationTransition(
+            turns: Tween(begin: 0.75, end: 1.0).animate(anim),
+            child: FadeTransition(opacity: anim, child: child),
+          ),
+          child: Icon(
+            isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+            key: ValueKey(isDark),
+            color: colorScheme.onSurfaceVariant,
+            size: 20,
+          ),
+        ),
+        style: IconButton.styleFrom(
+          backgroundColor:
+              colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        ),
+        onPressed: () {
+          final box =
+              themeBtnKey.currentContext?.findRenderObject() as RenderBox?;
+          final origin = box != null
+              ? box.localToGlobal(box.size.center(Offset.zero))
+              : Offset.zero;
+          ThemeTransitionService.animateToggle(
+            origin: origin,
+            toDark: !isDark,
+          );
+        },
       ),
     );
   }

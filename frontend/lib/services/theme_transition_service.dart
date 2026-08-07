@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
 
 /// High-performance theme transition service.
@@ -55,6 +57,18 @@ class ThemeTransitionService {
     // then trigger the theme change on the next frame.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       themeNotifier.value = toDark ? ThemeMode.dark : ThemeMode.light;
+
+      // Persist selection and update system UI (status bar icons) to match.
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setString('theme_mode', toDark ? 'dark' : 'light');
+      });
+
+      SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness:
+            toDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: toDark ? Brightness.dark : Brightness.light,
+      ));
     });
 
     await completer.future;

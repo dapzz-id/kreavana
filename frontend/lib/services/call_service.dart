@@ -25,7 +25,7 @@ class CallService extends ChangeNotifier {
   MediaStream? _remoteStream;
 
   String? currentCallId;
-  int? remoteUserId;
+  String? remoteUserId;
   bool isCaller = false;
   bool isVideoCall = false;
 
@@ -56,6 +56,7 @@ class CallService extends ChangeNotifier {
   bool _hasRemoteDescription = false;
 
   PusherChannelsClient? _pusher;
+  bool _callChannelSubscribed = false;
   final _uuid = const Uuid();
 
   RTCVideoRenderer? _localRenderer;
@@ -99,23 +100,19 @@ class CallService extends ChangeNotifier {
           ),
           connectionErrorHandler: (exception, trace, refresh) {
             debugPrint('Pusher call connection error: $exception');
-            Future.delayed(const Duration(seconds: 5), refresh);
+            _callChannelSubscribed = false;
+            Future.delayed(const Duration(seconds: 3), refresh);
           },
         );
         _pusher!.onConnectionEstablished.listen((event) {
           debugPrint('Pusher Call Connection Event: Connected');
-          
-          // Subscribe to personal call channel (using public channel for prototyping)
-          final channel = _pusher!.publicChannel('call.${currentUser.id ?? ''}');
-          channel.subscribe();
-          
-          channel.bind('call.signal').listen((callEvent) {
-            if (callEvent.data != null) {
-              _onSignalingEvent(callEvent.data!);
-            }
-          });
+          _subscribeCallChannel(currentUser.id ?? '');
         });
         _pusher!.connect();
+      } else {
+        // If already created, attempt reconnect by re-subscribing
+        debugPrint('Pusher already exists, re-subscribing call channel...');
+        _subscribeCallChannel(currentUser.id ?? '');
       }
 
       // Listen to CallKit Events (Android/iOS only)
@@ -141,6 +138,24 @@ class CallService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint("Pusher Init Error for Calls: $e");
+    }
+  }
+
+  void _subscribeCallChannel(String userId) {
+    if (userId.isEmpty || _pusher == null || _callChannelSubscribed) return;
+    _callChannelSubscribed = true;
+    try {
+      final channel = _pusher!.publicChannel('call.$userId');
+      channel.subscribe();
+      channel.bind('call.signal').listen((callEvent) {
+        if (callEvent.data != null) {
+          debugPrint('📞 Received call signal: ${callEvent.data}');
+          _onSignalingEvent(callEvent.data!);
+        }
+      });
+      debugPrint('📡 Subscribed to call.$userId');
+    } catch (e) {
+      debugPrint('Error subscribing to call channel: $e');
     }
   }
 
@@ -251,7 +266,7 @@ class CallService extends ChangeNotifier {
   }
 
   /// Start a Call
-  Future<void> startCall(int receiverId, bool video, {String remoteUserName = 'User', String remoteAvatarUrl = ''}) async {
+  Future<void> startCall(String receiverId, bool video, {String remoteUserName = 'User', String remoteAvatarUrl = ''}) async {
     isCaller = true;
     isVideoCall = video;
     remoteUserId = receiverId;
@@ -288,7 +303,7 @@ class CallService extends ChangeNotifier {
   }
 
   /// Accept an incoming call (initializes WebRTC for receiver)
-  Future<void> acceptCall(String callId, int callerId, bool video) async {
+  Future<void> acceptCall(String callId, String callerId, bool video) async {
     isCaller = false;
     isVideoCall = video;
     currentCallId = callId;
@@ -445,7 +460,7 @@ class CallService extends ChangeNotifier {
         remoteUserId = remoteId;
         isVideoCall = signalData['video'] ?? false;
         incomingCallerName = signalData['callerName'] ?? 'Panggilan Masuk';
-        incomingCallerAvatar = signalData['callerAvatar'] ?? '';
+        incomingCallerAvatar = ApiService.resolveAssetUrl(signalData['callerAvatar']?.toString() ?? '');
         notifyListeners();
         
         _tempOffer = RTCSessionDescription(_fixSdp(signalData['sdp']), signalData['type']);

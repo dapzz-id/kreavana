@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'app/theme.dart';
 import 'models/user_model.dart';
 import 'services/auth_session_state.dart';
 import 'services/auth_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/call_service.dart';
+import 'services/badge_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_navigation.dart';
 import 'widgets/global_call_overlay.dart';
@@ -16,12 +18,22 @@ final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Transparent status bar for all pages on mobile
+  // Load saved theme preference (if any) and apply before building the app.
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString('theme_mode') ?? 'light';
+    themeNotifier.value = saved == 'dark' ? ThemeMode.dark : ThemeMode.light;
+  } catch (_) {
+    // ignore errors and keep default
+  }
+
+  // Transparent status bar for all pages on mobile — set according to theme.
+  final isDark = themeNotifier.value == ThemeMode.dark;
   SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
+    SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      statusBarBrightness: Brightness.light,
+      statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
     ),
   );
 
@@ -35,6 +47,7 @@ void main() async {
       initialUser = await AuthService.getCurrentUser();
       if (initialUser != null) {
         CallService().initPusher();
+        BadgeService().startPolling();
       }
     }
   } catch (_) {
@@ -42,9 +55,11 @@ void main() async {
   }
 
   FlutterError.onError = (FlutterErrorDetails details) {
-    // Ignore GPU context lost errors
-    if (details.toString().contains('context') ||
-        details.toString().contains('LateInitializationError')) {
+    // Ignore only known-benign GPU/engine hiccups — NOT everything with 'context'.
+    final msg = details.exceptionAsString().toLowerCase();
+    if (msg.contains('gpu context lost') ||
+        msg.contains('lateinitializationerror') ||
+        (msg.contains('context') && msg.contains('surface'))) {
       return;
     }
     FlutterError.presentError(details);
