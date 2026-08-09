@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../main.dart' show themeNotifier;
-import '../services/auth_service.dart';
+import '../features/auth/services/auth_service.dart';
 import '../services/api_service.dart';
 import '../utils/app_errors.dart';
 import 'profile_screen.dart';

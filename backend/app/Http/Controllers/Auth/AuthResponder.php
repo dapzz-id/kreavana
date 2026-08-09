@@ -44,8 +44,8 @@ trait AuthResponder
             (int) config('auth_tokens.refresh.ttl_minutes'),
             config('auth_tokens.refresh.path'),
             null,
-            true,
-            true,
+            request()->secure() || app()->environment('production'), // secure
+            true, // httpOnly
             false,
             config('auth_tokens.refresh.same_site')
         );

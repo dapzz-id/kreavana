@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:kreavana/services/secure_storage_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart';
 import 'auth_session_state.dart';
 
 class DioClient {
@@ -19,8 +21,7 @@ class DioClient {
   Completer<bool>? _refreshCompleter;
 
   // Change baseUrl according to environment
-  // static const String baseUrl = 'http://10.112.174.165:8000/api';
-  static const String baseUrl = 'http://127.0.0.1:8000/api';
+  static String get baseUrl => dotenv.env['API_BASE_URL'] ?? 'http://127.0.0.1:8000/api';
 
   DioClient._internal() {
     dio = Dio(
@@ -40,7 +41,7 @@ class DioClient {
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
-          if (options.path.contains('/auth/refresh')) {
+          if (!kIsWeb && options.path.contains('/auth/refresh')) {
             final refreshCookie = await _secureStorage.getRefreshCookie();
             if (refreshCookie != null && refreshCookie.isNotEmpty) {
               options.headers['Cookie'] = refreshCookie;
@@ -113,16 +114,22 @@ class DioClient {
     _refreshCompleter = Completer<bool>();
 
     try {
-      final refreshCookie = await _secureStorage.getRefreshCookie();
-      if (refreshCookie == null || refreshCookie.isEmpty) {
-        throw Exception("No refresh cookie");
+      String? refreshCookie;
+      if (!kIsWeb) {
+        refreshCookie = await _secureStorage.getRefreshCookie();
+        if (refreshCookie == null || refreshCookie.isEmpty) {
+          throw Exception("No refresh cookie on mobile");
+        }
       }
 
       final refreshDio = Dio(
         BaseOptions(
           baseUrl: baseUrl,
           extra: const {'withCredentials': true},
-          headers: {'Accept': 'application/json', 'Cookie': refreshCookie},
+          headers: {
+            'Accept': 'application/json',
+            if (!kIsWeb && refreshCookie != null) 'Cookie': refreshCookie,
+          },
         ),
       );
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../app/theme.dart';
 
 class AnimatedInputField extends StatefulWidget {
@@ -14,6 +15,7 @@ class AnimatedInputField extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   final String? Function(String?)? validator;
   final bool autofocus;
+  final List<TextInputFormatter>? inputFormatters;
 
   const AnimatedInputField({
     super.key,
@@ -29,6 +31,7 @@ class AnimatedInputField extends StatefulWidget {
     this.onChanged,
     this.validator,
     this.autofocus = false,
+    this.inputFormatters,
   });
 
   @override
@@ -73,6 +76,7 @@ class _AnimatedInputFieldState extends State<AnimatedInputField> {
       onChanged: widget.onChanged,
       validator: widget.validator,
       autofocus: widget.autofocus,
+      inputFormatters: widget.inputFormatters,
       style: TextStyle(
         color: theme.colorScheme.onSurface,
         fontSize: 15,

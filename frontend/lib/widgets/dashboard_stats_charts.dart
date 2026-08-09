@@ -1,7 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../app/theme.dart';
-import '../services/dashboard_service.dart';
+import '../features/dashboard/services/dashboard_service.dart';
 import 'stat_card.dart';
 
 class DashboardStatsCharts extends StatefulWidget {

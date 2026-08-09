@@ -11,7 +11,7 @@ import '../services/chat_service.dart';
 import '../services/call_service.dart';
 import '../services/audio_player_service.dart';
 import '../widgets/skeleton_box.dart';
-import '../services/auth_service.dart';
+import '../features/auth/services/auth_service.dart';
 import '../services/api_service.dart';
 import '../app/theme.dart';
 import '../app/app_animations.dart';

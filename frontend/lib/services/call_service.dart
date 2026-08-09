@@ -11,7 +11,7 @@ import 'package:flutter_callkit_incoming/entities/android_params.dart';
 import 'package:flutter_callkit_incoming/entities/ios_params.dart';
 import 'package:dart_pusher_channels/dart_pusher_channels.dart';
 import 'api_service.dart';
-import 'auth_service.dart';
+import '../features/auth/services/auth_service.dart';
 import '../main.dart';
 import '../screens/call_screen.dart';
 

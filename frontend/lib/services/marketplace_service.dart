@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 import 'api_service.dart';
 
 class MarketplaceService {
@@ -44,16 +46,36 @@ class MarketplaceService {
     required String title,
     String? description,
     required String category,
+    required String type,
     required double price,
-    String? imageUrl,
+    List<PlatformFile>? media,
   }) async {
-    return await ApiService.post('marketplace', {
+    final formData = FormData.fromMap({
       'title': title,
-      'description': description,
+      'description': description ?? '',
       'category': category,
+      'type': type,
       'price': price,
-      'image_url': ?imageUrl,
     });
+
+    if (media != null && media.isNotEmpty) {
+      for (var i = 0; i < media.length; i++) {
+        final file = media[i];
+        if (file.bytes != null) {
+          formData.files.add(MapEntry(
+            'media[]',
+            MultipartFile.fromBytes(file.bytes!, filename: file.name),
+          ));
+        } else if (file.path != null) {
+          formData.files.add(MapEntry(
+            'media[]',
+            await MultipartFile.fromFile(file.path!, filename: file.name),
+          ));
+        }
+      }
+    }
+
+    return await ApiService.postFormData('marketplace', formData);
   }
 
   static Future<Map<String, dynamic>> submitReview({
@@ -65,5 +87,9 @@ class MarketplaceService {
       'rating': rating,
       'comment': comment,
     });
+  }
+
+  static Future<Map<String, dynamic>> purchaseItem(String id) async {
+    return await ApiService.post('marketplace/$id/purchase', {});
   }
 }

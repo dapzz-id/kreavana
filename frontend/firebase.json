@@ -1,0 +1,25 @@
+{
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "kreavana-com",
+                    "appId": "1:1093327579845:android:f1d7be7d7974a1aa709eac",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "kreavana-com",
+                    "configurations": {
+                        "android": "1:1093327579845:android:f1d7be7d7974a1aa709eac",
+                        "ios": "1:1093327579845:ios:20d5f0e1cccf970f709eac",
+                        "macos": "1:1093327579845:ios:20d5f0e1cccf970f709eac",
+                        "web": "1:1093327579845:web:faae89461f8b9844709eac",
+                        "windows": "1:1093327579845:web:d50c0089eb56d68d709eac"
+                    }
+                }
+            }
+        }
+    }
+}

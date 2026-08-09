@@ -8,6 +8,7 @@ import '../widgets/opportunity_detail_sheet.dart';
 import 'peluang_lokasi_screen.dart';
 import 'peluang_proyek_screen.dart';
 import '../widgets/skeleton_box.dart';
+import '../utils/debouncer.dart';
 
 class ExploreScreen extends StatefulWidget {
   final UserModel user;
@@ -19,9 +20,10 @@ class ExploreScreen extends StatefulWidget {
 }
 
 class _ExploreScreenState extends State<ExploreScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   String _selectedSubRole = 'all';
+  final _debouncer = Debouncer(milliseconds: 500);
   bool _isLoading = false;
   List<OpportunityModel> _opportunities = [];
   final TextEditingController _searchController = TextEditingController();
@@ -54,6 +56,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   void dispose() {
     _tabController.dispose();
     _searchController.dispose();
+    _debouncer.dispose();
     super.dispose();
   }
 
@@ -80,20 +83,22 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   void _onSearchChanged() {
-    final query = _searchController.text.toLowerCase().trim();
-    setState(() {
-      if (query.isEmpty) {
-        _filteredOpportunities = _opportunities;
-      } else {
-        _filteredOpportunities = _opportunities
-            .where(
-              (op) =>
-                  op.title.toLowerCase().contains(query) ||
-                  (op.description?.toLowerCase().contains(query) ?? false) ||
-                  (op.location?.toLowerCase().contains(query) ?? false),
-            )
-            .toList();
-      }
+    _debouncer.run(() {
+      final query = _searchController.text.toLowerCase().trim();
+      setState(() {
+        if (query.isEmpty) {
+          _filteredOpportunities = _opportunities;
+        } else {
+          _filteredOpportunities = _opportunities
+              .where(
+                (op) =>
+                    op.title.toLowerCase().contains(query) ||
+                    (op.description?.toLowerCase().contains(query) ?? false) ||
+                    (op.location?.toLowerCase().contains(query) ?? false),
+              )
+              .toList();
+        }
+      });
     });
   }
 
@@ -142,7 +147,11 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;

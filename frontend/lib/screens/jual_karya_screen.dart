@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:kreavana/services/marketplace_service.dart';
 import '../app/theme.dart';
 import '../app/app_animations.dart';
 import '../utils/app_errors.dart';
-import '../services/marketplace_service.dart';
 import '../widgets/animated_input_field.dart';
 import '../widgets/gradient_button.dart';
 
@@ -20,10 +22,11 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
   final _judulCtrl = TextEditingController();
   final _deskripsiCtrl = TextEditingController();
   final _hargaCtrl = TextEditingController();
-  final _imageUrlCtrl = TextEditingController();
 
   String _kategori = 'Fotografi';
+  String _type = 'paid';
   bool _submitting = false;
+  List<PlatformFile> _media = [];
 
   static const _kategoriItems = [
     'Fotografi',
@@ -38,16 +41,19 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
     _judulCtrl.dispose();
     _deskripsiCtrl.dispose();
     _hargaCtrl.dispose();
-    _imageUrlCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final price = double.tryParse(_hargaCtrl.text.replaceAll('.', '')) ?? 0;
-    if (price <= 0) {
-      AppSnackbar.error(context, 'Harga harus lebih dari 0.');
+    final price = double.tryParse(_hargaCtrl.text.trim()) ?? 0;
+    if (_type == 'paid' && price <= 0) {
+      AppSnackbar.error(context, 'Harga harus lebih dari 0 untuk tipe berbayar.');
+      return;
+    }
+    if (_media.isEmpty) {
+      AppSnackbar.error(context, 'Pilih setidaknya 1 foto atau video.');
       return;
     }
 
@@ -59,10 +65,9 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
             ? _deskripsiCtrl.text.trim()
             : null,
         category: _kategori,
+        type: _type,
         price: price,
-        imageUrl: _imageUrlCtrl.text.trim().isNotEmpty
-            ? _imageUrlCtrl.text.trim()
-            : null,
+        media: _media,
       );
 
       if (!mounted) return;
@@ -169,40 +174,113 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
               ),
               const SizedBox(height: 18),
 
-              AnimatedInputField(
-                controller: _hargaCtrl,
-                label: 'Harga (Rp)',
-                hint: 'Contoh: 500000',
-                icon: Icons.payments_rounded,
-                keyboardType: TextInputType.number,
-                textInputAction: TextInputAction.next,
-                onChanged: (_) => setState(() {}),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Wajib diisi';
-                  final price =
-                      double.tryParse(v.replaceAll('.', ''));
-                  if (price == null || price <= 0) {
-                    return 'Masukkan harga yang valid';
-                  }
-                  return null;
-                },
+              // Type Selection
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Tipe Karya', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isDark ? Colors.white70 : Colors.grey.shade600)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: RadioListTile<String>(
+                          title: const Text('Berbayar', style: TextStyle(fontSize: 14)),
+                          value: 'paid',
+                          groupValue: _type,
+                          onChanged: (v) => setState(() => _type = v!),
+                          contentPadding: EdgeInsets.zero,
+                          activeColor: AppTheme.primaryPurple,
+                        ),
+                      ),
+                      Expanded(
+                        child: RadioListTile<String>(
+                          title: const Text('Gratis', style: TextStyle(fontSize: 14)),
+                          value: 'free',
+                          groupValue: _type,
+                          onChanged: (v) => setState(() => _type = v!),
+                          contentPadding: EdgeInsets.zero,
+                          activeColor: AppTheme.primaryPurple,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
+              if (_type == 'paid') ...[
+                const SizedBox(height: 18),
+                AnimatedInputField(
+                  controller: _hargaCtrl,
+                  label: 'Harga (Rp)',
+                  hint: '0',
+                  icon: Icons.payments_rounded,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) return 'Harga wajib diisi';
+                    final num = double.tryParse(val.trim());
+                    if (num == null || num <= 0) return 'Format harga tidak valid';
+                    return null;
+                  },
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
               const SizedBox(height: 18),
 
-              AnimatedInputField(
-                controller: _imageUrlCtrl,
-                label: 'URL Gambar (Opsional)',
-                hint: 'https://...',
-                icon: Icons.image_rounded,
-                keyboardType: TextInputType.url,
-                textInputAction: TextInputAction.next,
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return null;
-                  if (!v.startsWith('http')) {
-                    return 'URL harus dimulai dengan http(s)';
-                  }
-                  return null;
-                },
+              // File Picker
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.cardBg : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade300,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Foto / Video', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isDark ? Colors.white70 : Colors.grey.shade600)),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final result = await FilePicker.pickFiles(
+                          allowMultiple: true,
+                          type: FileType.media,
+                        );
+                        if (result != null) {
+                          setState(() {
+                            _media = result.files;
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.upload_file),
+                      label: const Text('Pilih File (Bisa lebih dari 1)'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.1),
+                        foregroundColor: AppTheme.primaryPurple,
+                        elevation: 0,
+                      ),
+                    ),
+                    if (_media.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _media.map((f) => Chip(
+                          label: Text(f.name, style: const TextStyle(fontSize: 12)),
+                          deleteIcon: const Icon(Icons.close, size: 16),
+                          onDeleted: () {
+                            setState(() {
+                              _media.remove(f);
+                            });
+                          },
+                        )).toList(),
+                      ),
+                    ],
+                  ],
+                ),
               ),
               const SizedBox(height: 18),
 

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Services\DashboardService;
+use App\Contracts\DashboardServiceInterface;
 use App\Services\OpportunityService;
 use App\Traits\ApiResponse;
 
@@ -11,10 +11,10 @@ class DashboardController extends Controller
 {
     use ApiResponse;
 
-    protected DashboardService $dashboardService;
+    protected DashboardServiceInterface $dashboardService;
     protected OpportunityService $opportunityService;
 
-    public function __construct(DashboardService $dashboardService, OpportunityService $opportunityService)
+    public function __construct(DashboardServiceInterface $dashboardService, OpportunityService $opportunityService)
     {
         $this->dashboardService = $dashboardService;
         $this->opportunityService = $opportunityService;

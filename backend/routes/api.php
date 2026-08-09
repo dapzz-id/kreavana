@@ -56,6 +56,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('auth/me', [AuthController::class, 'me']);
     Route::post('auth/user/change-password', [AuthController::class, 'changePassword']);
+    Route::post('auth/user/set-initial-password', [AuthController::class, 'setInitialPassword']);
 
     // Payment Methods
     Route::get('payment-methods', [PaymentMethodController::class, 'index'])->middleware('permission:manage_own_profile');
@@ -180,6 +181,8 @@ Route::middleware('auth:api')->group(function () {
     Route::put('marketplace/{id}', [MarketplaceController::class, 'update']);
     Route::delete('marketplace/{id}', [MarketplaceController::class, 'destroy']);
     Route::post('marketplace/{id}/review', [MarketplaceController::class, 'review']);
+    Route::get('marketplace/{id}/purchases', [MarketplaceController::class, 'purchases']);
+    Route::post('marketplace/{id}/purchase', [MarketplaceController::class, 'purchase']);
 });
 
 // Marketplace (public read)

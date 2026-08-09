@@ -51,8 +51,8 @@ class GoogleSignInButton extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(4),
                       image: const DecorationImage(
-                        image: NetworkImage(
-                          'https://www.google.com/favicon.ico',
+                        image: AssetImage(
+                          'assets/google_logo.png',
                         ),
                         fit: BoxFit.contain,
                       ),
