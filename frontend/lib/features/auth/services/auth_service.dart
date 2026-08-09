@@ -4,6 +4,8 @@ import '../../../models/user_model.dart';
 import '../../../services/api_service.dart';
 import '../../../services/auth_session_state.dart';
 import '../../../services/secure_storage_service.dart';
+import '../../../services/realtime_service.dart';
+import '../../../services/fcm_service.dart';
 
 class AuthService {
   /// Register user baru
@@ -65,6 +67,10 @@ class AuthService {
       if (userDataToSave != null) {
         await saveUserData(userDataToSave);
         final user = UserModel.fromJson(userDataToSave);
+        
+        RealtimeService().init(user.id ?? '', accessToken);
+        FCMService().init();
+        
         return {
           'success': true,
           'message': result['message'] ?? 'Login berhasil.',
@@ -86,6 +92,7 @@ class AuthService {
     try {
       await ApiService.post('auth/logout', {});
     } finally {
+      RealtimeService().dispose();
       await clearSession();
     }
   }

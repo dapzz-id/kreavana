@@ -5,11 +5,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app/theme.dart';
 import 'services/auth_session_state.dart';
 import 'features/auth/services/auth_service.dart';
+import 'features/auth/screens/login_screen.dart';
+import 'services/realtime_service.dart';
+import 'services/fcm_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/call_service.dart';
 import 'services/badge_service.dart';
 import 'services/user_store.dart';
 import 'services/app_router.dart';
+import 'services/secure_storage_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -83,6 +87,13 @@ void main() async {
         currentUserNotifier.value = user;
         authSignedOutNotifier.value = false;
         CallService().initPusher();
+        
+        final token = await SecureStorageService().getToken();
+        if (token != null) {
+          RealtimeService().init(user.id ?? '', token);
+        }
+        
+        FCMService().init();
         BadgeService().startPolling();
       }
     }

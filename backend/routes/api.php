@@ -144,6 +144,7 @@ Route::middleware('auth:api')->group(function () {
     // Chat Users Search
     Route::get('users/search', [UserController::class, 'search'])->middleware('permission:use_chat');
     Route::get('users/contacts', [UserController::class, 'contacts'])->middleware('permission:use_chat');
+    Route::post('users/fcm-token', [UserController::class, 'updateFcmToken'])->middleware('permission:use_chat');
 
     // Chats
     Route::get('chats', [ChatController::class, 'index'])->middleware('permission:use_chat');

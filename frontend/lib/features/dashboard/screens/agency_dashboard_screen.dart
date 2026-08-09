@@ -1,3 +1,4 @@
+import '../../../services/badge_service.dart';
 import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../../app/subrole_theme_engine.dart';
@@ -483,46 +484,52 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
 
   Widget _buildAppBarBadge(IconData icon, String count, bool isDark) {
     final isNotification = icon == Icons.notifications_none_outlined;
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => isNotification
-                ? NotificationsScreen(userId: widget.user.id ?? '')
-                : const DirectMessageScreen(),
+    return ListenableBuilder(
+      listenable: BadgeService(),
+      builder: (context, _) {
+        final badgeCount = isNotification ? BadgeService().unreadNotificationsText : BadgeService().unreadMessagesText;
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => isNotification
+                    ? NotificationsScreen(userId: '')
+                    : const DirectMessageScreen(),
+              ),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade100,
+              shape: BoxShape.circle,
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(icon, size: 20, color: isDark ? Colors.white : Colors.black87),
+                if (badgeCount.isNotEmpty && badgeCount != '0')
+                  Positioned(
+                    right: -4,
+                    top: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.redAccent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        badgeCount,
+                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         );
       },
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1A1830) : Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, size: 20, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
-          ),
-          if (count.isNotEmpty)
-            Positioned(
-              right: -2,
-              top: -2,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  count,
-                  style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-        ],
-      ),
     );
   }
 }
