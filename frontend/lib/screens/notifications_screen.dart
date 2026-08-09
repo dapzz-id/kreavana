@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../app/theme.dart';
 import '../models/notification_model.dart';
 import '../services/notification_service.dart';
+import '../services/badge_service.dart';
 import '../utils/app_errors.dart';
 import '../widgets/app_empty_state.dart';
 
@@ -26,6 +27,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    BadgeService().markNotificationsRead();
     _loadNotifications();
   }
 
@@ -67,14 +69,68 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
     AppSnackbar.success(context, 'Semua notifikasi ditandai dibaca');
   }
 
+  Future<void> _deleteNotification(NotificationModel notif) async {
+    final ok = await NotificationService.deleteNotification(notif.id);
+    if (!mounted) return;
+    if (!ok) {
+      AppSnackbar.error(context, 'Gagal menghapus notifikasi.');
+      return;
+    }
+    setState(() => _notifications.removeWhere((n) => n.id == notif.id));
+    AppSnackbar.success(context, 'Notifikasi dihapus');
+  }
+
+  Future<void> _deleteAllNotifications() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Semua Notifikasi?'),
+        content: const Text('Semua notifikasi akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Hapus Semua'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final ok = await NotificationService.deleteAllNotifications();
+    if (!mounted) return;
+    if (!ok) {
+      AppSnackbar.error(context, 'Gagal menghapus notifikasi.');
+      return;
+    }
+    setState(() => _notifications.clear());
+    AppSnackbar.success(context, 'Semua notifikasi dihapus');
+  }
+
   List<NotificationModel> get _filteredNotifications {
+    final tabFilter = ['all', 'project', 'message', 'transaction'];
+    final currentTab = tabFilter[_tabController.index];
+
+    List<NotificationModel> list;
+    if (currentTab == 'project') {
+      list = _notifications.where((n) => n.type == 'project' || n.type == 'opportunity' || n.type == 'creator_applied' || n.type == 'creator_approved' || n.type == 'creator_rejected').toList();
+    } else if (currentTab == 'message') {
+      list = _notifications.where((n) => n.type == 'message' || n.type == 'chat').toList();
+    } else if (currentTab == 'transaction') {
+      list = _notifications.where((n) => n.type == 'payment' || n.type == 'transaction' || n.type == 'wallet').toList();
+    } else {
+      list = _notifications;
+    }
+
     switch (_filter) {
       case 'unread':
-        return _notifications.where((n) => !n.isRead).toList();
+        return list.where((n) => !n.isRead).toList();
       case 'read':
-        return _notifications.where((n) => n.isRead).toList();
+        return list.where((n) => n.isRead).toList();
       default:
-        return _notifications;
+        return list;
     }
   }
 
@@ -129,7 +185,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
             icon: const Icon(Icons.filter_list),
             tooltip: 'Filter notifikasi',
             onSelected: (value) {
-              setState(() => _filter = value);
+              if (value == 'delete_all') {
+                _deleteAllNotifications();
+              } else {
+                setState(() => _filter = value);
+              }
             },
             itemBuilder: (context) => [
               PopupMenuItem(value: 'all', child: Row(children: [
@@ -146,6 +206,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                 Icon(_filter == 'read' ? Icons.check : Icons.circle_outlined, size: 18, color: AppTheme.primaryPurple),
                 const SizedBox(width: 10),
                 const Text('Sudah Dibaca'),
+              ])),
+              const PopupMenuDivider(),
+              PopupMenuItem(value: 'delete_all', child: Row(children: [
+                const Icon(Icons.delete_sweep_outlined, size: 18, color: Colors.red),
+                const SizedBox(width: 10),
+                const Text('Hapus Semua', style: TextStyle(color: Colors.red)),
               ])),
             ],
           ),
@@ -164,6 +230,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
             controller: _tabController,
             isScrollable: true,
             tabAlignment: TabAlignment.start,
+            onTap: (_) => setState(() {}),
             tabs: const [
               Tab(icon: Icon(Icons.notifications_active_outlined, size: 18), text: 'Semua'),
               Tab(icon: Icon(Icons.work_outline, size: 18), text: 'Proyek'),
@@ -219,89 +286,119 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
   Widget _buildNotificationCard(NotificationModel notif, bool isDark) {
     final icon = _getIconForType(notif.type);
     final iconColor = _getColorForType(notif.type);
-    final timeDiff = _formatTimeDiff(notif.createdAt);
+    final formattedDate = _formatFullDate(notif.createdAt);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: notif.isRead
-            ? (isDark ? AppTheme.cardDark : Colors.white)
-            : (isDark ? AppTheme.cardDark2 : const Color(0xFFF5F3FF)),
-        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-        border: Border.all(
-          color: notif.isRead
-              ? (isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight)
-              : AppTheme.primaryPurple.withValues(alpha: 0.25),
-          width: notif.isRead ? 1 : 1.5,
+    return Dismissible(
+      key: Key(notif.id.toString()),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: Colors.red.shade400,
+          borderRadius: BorderRadius.circular(AppTheme.radiusMD),
         ),
-        boxShadow: isDark ? null : AppTheme.cardShadowLight,
+        child: const Icon(Icons.delete_outline, color: Colors.white, size: 24),
       ),
-      child: InkWell(
-        onTap: () {
-          if (!notif.isRead) {
-            setState(() => notif.isRead = true);
-          }
-        },
-        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Icon
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: iconColor, size: 22),
-              ),
-              const SizedBox(width: 12),
-              // Content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            notif.title,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: notif.isRead ? FontWeight.w600 : FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        if (!notif.isRead) const AppDot(size: 8),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      notif.body,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
-                        height: 1.4,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      timeDiff,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: isDark ? AppTheme.textMuted.withValues(alpha: 0.7) : AppTheme.textMutedLight.withValues(alpha: 0.8),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+      confirmDismiss: (direction) async {
+        return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Hapus Notifikasi?'),
+            content: const Text('Notifikasi ini akan dihapus permanen.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                child: const Text('Hapus'),
               ),
             ],
+          ),
+        );
+      },
+      onDismissed: (direction) => _deleteNotification(notif),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: notif.isRead
+              ? (isDark ? AppTheme.cardDark : Colors.white)
+              : (isDark ? AppTheme.cardDark2 : const Color(0xFFF5F3FF)),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+          border: Border.all(
+            color: notif.isRead
+                ? (isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight)
+                : AppTheme.primaryPurple.withValues(alpha: 0.25),
+            width: notif.isRead ? 1 : 1.5,
+          ),
+          boxShadow: isDark ? null : AppTheme.cardShadowLight,
+        ),
+        child: InkWell(
+          onTap: () {
+            if (!notif.isRead) {
+              setState(() => notif.isRead = true);
+            }
+          },
+          borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              notif.title,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: notif.isRead ? FontWeight.w600 : FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          if (!notif.isRead) const AppDot(size: 8),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        notif.body,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                          height: 1.4,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        formattedDate,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isDark ? AppTheme.textMuted.withValues(alpha: 0.7) : AppTheme.textMutedLight.withValues(alpha: 0.8),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -318,11 +415,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
         return Icons.chat_bubble_outline;
       case 'payment':
       case 'transaction':
+      case 'wallet':
         return Icons.payments_outlined;
       case 'system':
         return Icons.settings_outlined;
       case 'alert':
         return Icons.warning_amber_outlined;
+      case 'creator_applied':
+      case 'creator_approved':
+      case 'creator_rejected':
+        return Icons.person_outline;
       default:
         return Icons.notifications_outlined;
     }
@@ -338,26 +440,43 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
         return const Color(0xFF3B82F6);
       case 'payment':
       case 'transaction':
+      case 'wallet':
         return const Color(0xFFF59E0B);
       case 'system':
         return const Color(0xFF6366F1);
       case 'alert':
         return AppTheme.error;
+      case 'creator_applied':
+      case 'creator_approved':
+        return const Color(0xFF10B981);
+      case 'creator_rejected':
+        return const Color(0xFFEF4444);
       default:
         return AppTheme.primaryPurple;
     }
   }
 
-  String _formatTimeDiff(String? createdAt) {
+  String _formatFullDate(String? createdAt) {
     if (createdAt == null) return '';
     try {
       final dt = DateTime.parse(createdAt);
-      final diff = DateTime.now().difference(dt);
-      if (diff.inMinutes < 1) return 'Baru saja';
-      if (diff.inMinutes < 60) return '${diff.inMinutes} menit lalu';
-      if (diff.inHours < 24) return '${diff.inHours} jam lalu';
-      if (diff.inDays < 7) return '${diff.inDays} hari lalu';
-      return DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(dt);
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final notifDate = DateTime(dt.year, dt.month, dt.day);
+      final diff = today.difference(notifDate).inDays;
+
+      final timeStr = DateFormat('HH:mm').format(dt);
+
+      if (diff == 0) {
+        return 'Hari ini, $timeStr';
+      } else if (diff == 1) {
+        return 'Kemarin, $timeStr';
+      } else if (diff < 7) {
+        final dayName = DateFormat('EEEE', 'id_ID').format(dt);
+        return '$dayName, $timeStr';
+      } else {
+        return DateFormat('d MMMM yyyy, HH:mm', 'id_ID').format(dt);
+      }
     } catch (_) {
       return '';
     }

@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../app/app_animations.dart';
+import '../services/api_service.dart';
 
 /// Portfolio item model untuk showcase.
 class PortfolioItem {
   final String title;
   final String category;
   final List<Color> gradient;
-  final IconData icon;
+  final IconData? icon;
+  final String? imageUrl;
   final VoidCallback? onTap;
 
   const PortfolioItem({
     required this.title,
     required this.category,
     required this.gradient,
-    required this.icon,
+    this.icon,
+    this.imageUrl,
     this.onTap,
   });
 }
@@ -59,45 +62,77 @@ class PortfolioShowcaseCard extends StatelessWidget {
             borderRadius: borderRadius,
             child: Stack(
               children: [
-                Positioned(
-                  right: -30,
-                  top: -30,
-                  child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.08),
+                if (item.imageUrl != null && item.imageUrl!.isNotEmpty)
+                  Positioned.fill(
+                    child: Image.network(
+                      ApiService.resolveAssetUrl(item.imageUrl!),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: item.gradient,
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                else ...[
+                  Positioned(
+                    right: -30,
+                    top: -30,
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.08),
+                      ),
                     ),
                   ),
-                ),
-                Positioned(
-                  right: 40,
-                  bottom: -50,
-                  child: Container(
-                    width: 140,
-                    height: 140,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.06),
+                  Positioned(
+                    right: 40,
+                    bottom: -50,
+                    child: Container(
+                      width: 140,
+                      height: 140,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.06),
+                      ),
                     ),
                   ),
-                ),
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: item.gradient,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
                 Padding(
                   padding: const EdgeInsets.all(18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(14),
+                      if (item.icon != null)
+                        Container(
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                                ? Colors.black.withValues(alpha: 0.3)
+                                : Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(item.icon, color: Colors.white, size: 24),
                         ),
-                        child: Icon(item.icon, color: Colors.white, size: 24),
-                      ),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [

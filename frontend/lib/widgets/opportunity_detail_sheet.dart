@@ -4,6 +4,8 @@ import '../models/opportunity_model.dart';
 import '../services/opportunity_service.dart';
 import '../services/api_service.dart';
 import '../services/chat_service.dart';
+import '../screens/direct_message_screen.dart';
+import '../utils/app_errors.dart';
 import '../app/theme.dart';
 
 class OpportunityDetailSheet extends StatelessWidget {
@@ -43,6 +45,65 @@ class OpportunityDetailSheet extends StatelessWidget {
     final uri = Uri.parse('mailto:$email');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
+    }
+  }
+
+  Future<void> _openChat(
+    BuildContext context, {
+    required String userId,
+    String? name,
+    String? username,
+    String? avatarUrl,
+  }) async {
+    try {
+      final result = await ChatService.startPersonalChat(userId);
+      if (!context.mounted) return;
+
+      final chatData = result['data'];
+      if (chatData == null) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Gagal membuka chat.'),
+              backgroundColor: Colors.red.shade700,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
+      final chat = Map<String, dynamic>.from(chatData is Map ? chatData : result);
+      chat['name'] = name ?? 'Creator';
+      if (username != null) chat['username'] = username;
+      if (avatarUrl != null) {
+        chat['avatar_url'] = ApiService.resolveAssetUrl(avatarUrl);
+      }
+      chat['user_id'] = userId;
+      chat['isOnline'] = false;
+      chat['isGroup'] = false;
+
+      if (context.mounted) {
+        Navigator.pop(context);
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => Scaffold(
+              body: ChatDetailSection(chat: chat, isMobile: true),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memulai chat: $e'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -383,36 +444,34 @@ class OpportunityDetailSheet extends StatelessWidget {
                         ],
                       ),
                     ),
+                    if (opportunity.postedBy != null && opportunity.postedBy != currentUserId)
+                      IconButton(
+                        onPressed: () {
+                          _openChat(
+                            context,
+                            userId: opportunity.postedBy!,
+                            name: null,
+                            username: null,
+                            avatarUrl: null,
+                          );
+                        },
+                        icon: Icon(Icons.chat_bubble_outline, color: Colors.teal.shade600),
+                        tooltip: 'Hubungi via Chat',
+                      ),
                   ],
                 ),
               ],
               const SizedBox(height: 20),
               if (poster != null && poster.id != currentUserId) ...[
                 ElevatedButton.icon(
-                  onPressed: () async {
-                    Navigator.pop(context);
-                    try {
-                      final result = await ChatService.startPersonalChat(poster.id!);
-                      if (context.mounted && result['status'] == true) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Chat dengan ${poster.name} dibuka! Buka menu Chat untuk melanjutkan.'),
-                            backgroundColor: Colors.teal.shade700,
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Gagal memulai chat: $e'),
-                            backgroundColor: Colors.red.shade700,
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      }
-                    }
+                  onPressed: () {
+                    _openChat(
+                      context,
+                      userId: poster.id!,
+                      name: poster.name,
+                      username: poster.username,
+                      avatarUrl: poster.avatarUrl,
+                    );
                   },
                   icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
                   label: Text(
@@ -438,6 +497,31 @@ class OpportunityDetailSheet extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 48),
                     side: BorderSide(color: Colors.red.shade300),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ] else if (poster == null && opportunity.postedBy != null &&
+                  opportunity.postedBy != currentUserId) ...[
+                ElevatedButton.icon(
+                  onPressed: () {
+                    _openChat(
+                      context,
+                      userId: opportunity.postedBy!,
+                      name: null,
+                      username: null,
+                      avatarUrl: null,
+                    );
+                  },
+                  icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+                  label: const Text(
+                    'Hubungi via Chat',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal.shade600,
+                    minimumSize: const Size(double.infinity, 48),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

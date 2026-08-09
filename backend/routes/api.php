@@ -9,7 +9,8 @@ use App\Http\Controllers\{
     DashboardController, ProfileController, NotificationController,
     CallController, AdminController, OpportunityController, WalletController,
     RoleController, FollowController, MarketplaceController,
-    PaymentMethodController, UserAddressController, AvatarController
+    PaymentMethodController, UserAddressController, AvatarController,
+    PortfolioController
 };
 
 // Public: serve avatar images with CORS headers (for Flutter Web)
@@ -72,6 +73,13 @@ Route::middleware('auth:api')->group(function () {
     Route::put('user-addresses/{id}/default', [UserAddressController::class, 'setDefault'])->middleware('permission:manage_own_profile');
     Route::delete('user-addresses/{id}', [UserAddressController::class, 'destroy'])->middleware('permission:manage_own_profile');
 
+    // Portfolio
+    Route::get('portfolio', [PortfolioController::class, 'index']);
+    Route::post('portfolio', [PortfolioController::class, 'store']);
+    Route::put('portfolio/{id}', [PortfolioController::class, 'update']);
+    Route::delete('portfolio/{id}', [PortfolioController::class, 'destroy']);
+    Route::put('portfolio/reorder', [PortfolioController::class, 'reorder']);
+
     // Profile
     Route::get('profile', [ProfileController::class, 'getProfile'])->middleware('permission:manage_own_profile');
     Route::get('profile/identity', [ProfileController::class, 'identity'])->middleware('permission:manage_own_profile');
@@ -111,6 +119,8 @@ Route::middleware('auth:api')->group(function () {
     Route::get('notifications', [NotificationController::class, 'index']);
     Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
     Route::put('notifications/read', [NotificationController::class, 'markAsRead']);
+    Route::delete('notifications/{id}', [NotificationController::class, 'destroy']);
+    Route::delete('notifications', [NotificationController::class, 'destroyAll']);
 
     // Call Signaling
     Route::post('call/signal', [CallController::class, 'signal']);
@@ -127,9 +137,11 @@ Route::middleware('auth:api')->group(function () {
             ->get();
         $chatCount = 0;
         foreach ($chatParticipants as $p) {
+            if (!$p->chat) continue;
+            $lastRead = $p->last_read_at ?? $p->created_at ?? now();
             $chatCount += $p->chat->messages()
                 ->where('user_id', '!=', $userId)
-                ->where('created_at', '>', $p->last_read_at ?? '2000-01-01 00:00:00')
+                ->where('created_at', '>', $lastRead)
                 ->count();
         }
         return response()->json([
@@ -150,6 +162,7 @@ Route::middleware('auth:api')->group(function () {
     Route::get('chats/unread-count', [ChatController::class, 'unreadCount'])->middleware('permission:use_chat');
     Route::post('chats/personal', [ChatController::class, 'startPersonalChat'])->middleware('permission:use_chat');
     Route::post('chats/{chat}/read', [ChatController::class, 'markAsRead'])->middleware('permission:use_chat');
+    Route::post('chats/read-all', [ChatController::class, 'markAllAsRead'])->middleware('permission:use_chat');
     Route::post('presence/ping', [ChatController::class, 'presencePing'])->middleware('permission:use_chat');
 
     // Messages

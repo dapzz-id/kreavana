@@ -12,6 +12,8 @@ import '../../../screens/daftar_kebutuhan_screen.dart';
 import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
 import '../../../screens/buat_kebutuhan_screen.dart';
+import '../../../screens/peluang_proyek_screen.dart';
+import '../../../services/badge_service.dart';
 
 class UmkmDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -207,9 +209,15 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          _buildAppBarBadge(Icons.notifications_none_outlined, '3', isDark),
+          ListenableBuilder(
+            listenable: BadgeService(),
+            builder: (_, _) => _buildAppBarBadge(Icons.notifications_none_outlined, BadgeService().unreadNotificationsText, isDark),
+          ),
           const SizedBox(width: 4),
-          _buildAppBarBadge(Icons.chat_bubble_outline, '1', isDark),
+          ListenableBuilder(
+            listenable: BadgeService(),
+            builder: (_, _) => _buildAppBarBadge(Icons.chat_bubble_outline, BadgeService().unreadMessagesText, isDark),
+          ),
         ],
       ),
     );
@@ -292,7 +300,7 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
                 label: const Text('Buat Project Foto Produk', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
               OutlinedButton.icon(
-                onPressed: () {},
+                onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => PeluangProyekScreen(user: widget.user))); },
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white,
                   side: const BorderSide(color: Colors.white70, width: 1.5),
@@ -679,7 +687,7 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
           ),
           const SizedBox(width: 12),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => const DirectMessageScreen())); },
             style: ElevatedButton.styleFrom(
               backgroundColor: _accentColor,
               foregroundColor: Colors.white,

@@ -49,7 +49,7 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
 
     try {
       final response = await ApiService.get('profile/history?page=$_currentPage&year=$_selectedYear');
-      if (response['success'] == true && response['data'] != null) {
+      if ((response['success'] == true || response['status'] == true) && response['data'] != null) {
         final data = response['data']['data'] as List;
         final currentTransactions = data.map((tx) => WalletTransactionModel.fromJson(tx)).toList();
         

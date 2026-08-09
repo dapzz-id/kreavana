@@ -12,6 +12,8 @@ import '../../../screens/buat_kebutuhan_screen.dart';
 import '../../../screens/proyek_saya_screen.dart';
 import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
+import '../../../screens/profile_screen.dart';
+import '../../../services/badge_service.dart';
 
 class CompanyDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -214,9 +216,15 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
             ),
           ),
           const SizedBox(width: 20),
-          _buildAppBarBadge(Icons.notifications_none_outlined, '3', isDark),
+          ListenableBuilder(
+            listenable: BadgeService(),
+            builder: (_, _) => _buildAppBarBadge(Icons.notifications_none_outlined, BadgeService().unreadNotificationsText, isDark),
+          ),
           const SizedBox(width: 4),
-          _buildAppBarBadge(Icons.chat_bubble_outline, '1', isDark),
+          ListenableBuilder(
+            listenable: BadgeService(),
+            builder: (_, _) => _buildAppBarBadge(Icons.chat_bubble_outline, BadgeService().unreadMessagesText, isDark),
+          ),
           const SizedBox(width: 12),
           IconButton(
             key: _themeBtnKey,
@@ -784,7 +792,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
               ),
               const SizedBox(height: 10),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => const BuatKebutuhanScreen())); },
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
                 child: const Text('Coba Sekarang', style: TextStyle(color: Colors.white, fontSize: 11)),
               ),
@@ -811,7 +819,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
               ),
               const SizedBox(height: 10),
               OutlinedButton(
-                onPressed: () {},
+                onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen(user: widget.user, onUserUpdated: widget.onUserUpdated, onLogout: () {}))); },
                 child: const Text('Lihat Paket', style: TextStyle(fontSize: 11)),
               ),
             ],

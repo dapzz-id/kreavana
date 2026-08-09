@@ -302,6 +302,16 @@ class MarketplaceController extends Controller
 
         $item->increment('order_count');
 
+        \App\Models\Notification::create([
+            'user_id' => $user->id,
+            'title' => 'Pembelian Berhasil',
+            'message' => 'Anda berhasil membeli "' . $item->title . '" seharga Rp ' . number_format($item->price, 0, ',', '.') . '.',
+            'type' => 'transaction',
+            'data' => ['item_id' => $item->id, 'purchase_id' => $purchase->id],
+            'is_read' => false,
+            'created_at' => now(),
+        ]);
+
         return response()->json([
             'status' => true,
             'message' => 'Berhasil membeli karya.',
