@@ -47,4 +47,17 @@ class UserController extends Controller
 
         return $this->successResponse('Daftar kontak berhasil diambil', $users->toArray());
     }
+
+    public function updateFcmToken(Request $request)
+    {
+        $request->validate([
+            'fcm_token' => 'required|string',
+        ]);
+
+        $user = $request->user();
+        $user->fcm_token = $request->fcm_token;
+        $user->save();
+
+        return $this->successResponse('FCM token berhasil diperbarui.');
+    }
 }

@@ -24,7 +24,9 @@ class RefreshTokenRepository
         ];
 
         Cache::put($this->refreshKey($selector), json_encode($entry, JSON_THROW_ON_ERROR), $ttl);
-        Cache::store('database')->put($this->familyKey($familyId), array_merge(Cache::get($this->familyKey($familyId), []), [$selector]), $ttl);
+        $familySelectors = Cache::get($this->familyKey($familyId), []);
+        $familySelectors[] = $selector;
+        Cache::put($this->familyKey($familyId), $familySelectors, $ttl);
 
         return "{$selector}.{$secret}";
     }
@@ -55,11 +57,11 @@ class RefreshTokenRepository
                 return null;
             }
 
-            Redis::del($this->refreshKey($selector));
-            Redis::setex($this->usedKey($selector), $this->ttlSeconds(), json_encode([
+            Cache::forget($this->refreshKey($selector));
+            Cache::put($this->usedKey($selector), json_encode([
                 'family_id' => $entry['family_id'],
                 'user_id' => $entry['user_id'],
-            ], JSON_THROW_ON_ERROR));
+            ], JSON_THROW_ON_ERROR), $this->ttlSeconds());
 
             return [
                 'user_id' => $entry['user_id'],
@@ -79,26 +81,26 @@ class RefreshTokenRepository
 
         [$selector] = $this->parse($rawToken);
         if ($selector) {
-            Redis::del($this->refreshKey($selector));
+            Cache::forget($this->refreshKey($selector));
         }
     }
 
     public function revokeFamily(string $familyId): void
     {
-        $selectors = Redis::smembers($this->familyKey($familyId));
-        foreach ($selectors ?: [] as $selector) {
-            Redis::del($this->refreshKey((string) $selector));
-            Redis::setex($this->usedKey((string) $selector), $this->ttlSeconds(), json_encode([
+        $selectors = Cache::get($this->familyKey($familyId), []);
+        foreach ($selectors as $selector) {
+            Cache::forget($this->refreshKey((string) $selector));
+            Cache::put($this->usedKey((string) $selector), json_encode([
                 'family_id' => $familyId,
-            ], JSON_THROW_ON_ERROR));
+            ], JSON_THROW_ON_ERROR), $this->ttlSeconds());
         }
 
-        Redis::del($this->familyKey($familyId));
+        Cache::forget($this->familyKey($familyId));
     }
 
     private function revokeUsedFamily(string $selector): void
     {
-        $encoded = Redis::get($this->usedKey($selector));
+        $encoded = Cache::get($this->usedKey($selector));
         if (!$encoded) {
             return;
         }
