@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/debouncer.dart';
 import '../app/theme.dart';
 import '../app/subrole_theme_engine.dart';
 import '../models/user_model.dart';
@@ -20,6 +21,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   bool _isLoading = false;
   String _selectedStatus = 'Semua';
   String _searchQuery = '';
+  final _debouncer = Debouncer(milliseconds: 500);
 
   List<Map<String, dynamic>> _projects = [
     {
@@ -63,6 +65,12 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
       'budget': 'Rp 12.000.000',
     },
   ];
+
+  @override
+  void dispose() {
+    _debouncer.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -146,7 +154,11 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
 
               // ── Search & Filters ──
               TextField(
-                onChanged: (v) => setState(() => _searchQuery = v),
+                onChanged: (v) {
+                  _debouncer.run(() {
+                    setState(() => _searchQuery = v);
+                  });
+                },
                 decoration: InputDecoration(
                   hintText: 'Cari nama proyek atau partner...',
                   prefixIcon: const Icon(Icons.search, size: 20),

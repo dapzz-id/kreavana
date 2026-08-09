@@ -3,20 +3,54 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app/theme.dart';
-import 'models/user_model.dart';
 import 'services/auth_session_state.dart';
-import 'services/auth_service.dart';
+import 'features/auth/services/auth_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/call_service.dart';
 import 'services/badge_service.dart';
-import 'screens/login_screen.dart';
-import 'screens/main_navigation.dart';
+import 'services/user_store.dart';
+import 'services/app_router.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'firebase_options.dart';
 import 'widgets/global_call_overlay.dart';
+import 'package:flutter_web_plugins/flutter_web_plugins.dart';
+
+import 'services/navigator_key.dart';
+export 'services/navigator_key.dart' show navigatorKey;
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Pakai path-based URL (/login) bukan hash-based (/#/login)
+  usePathUrlStrategy();
+
+  const String env = String.fromEnvironment('ENV', defaultValue: kReleaseMode ? 'production' : 'development');
+  await dotenv.load(fileName: ".env.$env");
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Aktivasi Firebase App Check
+  await FirebaseAppCheck.instance.activate(
+    providerWeb: ReCaptchaV3Provider(dotenv.env['RECAPTCHA_SITE_KEY'] ?? ''),
+    providerAndroid: env == 'development' ? AndroidDebugProvider() : AndroidPlayIntegrityProvider(),
+    providerApple: AppleAppAttestProvider(),
+  );
+
+  // Aktivasi Crashlytics hanya untuk Mobile (Non-Web)
+  if (!kIsWeb) {
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+  }
 
   // Load saved theme preference (if any) and apply before building the app.
   try {
@@ -40,12 +74,14 @@ void main() async {
   // Inisialisasi notifikasi di background — jangan blokir splash/login.
   unawaited(PushNotificationService.initialize());
 
-  UserModel? initialUser;
+  // Restore session dari local storage → set ke global user notifier
   try {
     final loggedIn = await AuthService.isLoggedIn();
     if (loggedIn) {
-      initialUser = await AuthService.getCurrentUser();
-      if (initialUser != null) {
+      final user = await AuthService.getCurrentUser();
+      if (user != null) {
+        currentUserNotifier.value = user;
+        authSignedOutNotifier.value = false;
         CallService().initPusher();
         BadgeService().startPolling();
       }
@@ -62,26 +98,28 @@ void main() async {
         (msg.contains('context') && msg.contains('surface'))) {
       return;
     }
+    
+    // Laporkan ke Crashlytics jika bukan di web
+    if (!kIsWeb) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(details);
+    }
+    
     FlutterError.presentError(details);
   };
 
-  runApp(KreavanaApp(initialUser: initialUser));
+  runApp(const KreavanaApp());
 }
 
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
 class KreavanaApp extends StatelessWidget {
-  final UserModel? initialUser;
-
-  const KreavanaApp({super.key, this.initialUser});
+  const KreavanaApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (context, currentMode, child) {
-        return MaterialApp(
-          navigatorKey: navigatorKey,
+        return MaterialApp.router(
+          routerConfig: appRouter,
           title: 'Kreavana',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
@@ -95,16 +133,6 @@ class KreavanaApp extends StatelessWidget {
               ],
             );
           },
-          home: ValueListenableBuilder<bool>(
-            valueListenable: authSignedOutNotifier,
-            builder: (context, isSignedOut, child) {
-              if (initialUser != null && !isSignedOut) {
-                return MainNavigation(initialUser: initialUser!);
-              }
-
-              return const LoginScreen();
-            },
-          ),
         );
       },
     );

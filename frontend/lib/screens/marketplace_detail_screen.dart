@@ -8,7 +8,7 @@ import '../models/marketplace_item.dart';
 import '../services/marketplace_service.dart';
 import '../services/follow_service.dart';
 import '../services/chat_service.dart';
-import '../services/auth_service.dart';
+import '../features/auth/services/auth_service.dart';
 import '../services/api_service.dart';
 import '../utils/app_errors.dart';
 import 'direct_message_screen.dart';
@@ -170,6 +170,28 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
       );
     } catch (e) {
       if (mounted) AppSnackbar.error(context, AppErrors.friendly(e));
+    }
+  }
+
+  Future<void> _purchaseItem() async {
+    if (_item == null) return;
+    setState(() => _isSubmitting = true);
+    try {
+      final result = await MarketplaceService.purchaseItem(_item!.id);
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        if (result['status'] == true) {
+          AppSnackbar.success(context, 'Berhasil membeli karya!');
+          _loadItem();
+        } else {
+          AppSnackbar.error(context, result['message'] ?? 'Gagal membeli karya.');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        AppSnackbar.error(context, 'Terjadi kesalahan saat membeli.');
+      }
     }
   }
 
@@ -361,28 +383,45 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                 );
               },
             ),
-            Center(
-              child: AnimatedEntrance(
-                duration: const Duration(milliseconds: 600),
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppTheme.primaryPurple.withValues(alpha: isDark ? 0.2 : 0.15),
-                    border: Border.all(
-                      color: AppTheme.primaryPurple.withValues(alpha: 0.3),
-                      width: 2,
+            if (_item?.media != null && _item!.media!.isNotEmpty)
+              PageView.builder(
+                itemCount: _item!.media!.length,
+                itemBuilder: (context, index) {
+                  final media = _item!.media![index];
+                  if (media.fileType == 'video') {
+                     return const Center(child: Icon(Icons.videocam, size: 64, color: Colors.white54));
+                  }
+                  return Image.network(
+                    media.filePath,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                  );
+                },
+              )
+            else
+              Center(
+                child: AnimatedEntrance(
+                  duration: const Duration(milliseconds: 600),
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppTheme.primaryPurple.withValues(alpha: isDark ? 0.2 : 0.15),
+                      border: Border.all(
+                        color: AppTheme.primaryPurple.withValues(alpha: 0.3),
+                        width: 2,
+                      ),
                     ),
-                  ),
-                  child: Icon(
-                    _categoryIcon(_item?.category ?? ''),
-                    size: 44,
-                    color: AppTheme.primaryPurple.withValues(alpha: 0.9),
+                    child: Icon(
+                      _categoryIcon(_item?.category ?? ''),
+                      size: 44,
+                      color: AppTheme.primaryPurple.withValues(alpha: 0.9),
+                    ),
                   ),
                 ),
               ),
-            ),
             if (_item?.isFeatured == true)
               Positioned(
                 top: 16,
@@ -953,7 +992,13 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                       ),
                     ),
                     Pressable(
-                      onTap: isOwn ? null : _contactCreator,
+                      onTap: isOwn ? null : () {
+                        if (_item!.type == 'paid' && !_item!.hasPurchased) {
+                          _purchaseItem();
+                        } else {
+                          AppSnackbar.info(context, 'Fitur download belum tersedia.');
+                        }
+                      },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
@@ -988,26 +1033,31 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              isOwn
-                                  ? Icons.check_circle_rounded
-                                  : Icons.chat_bubble_outline_rounded,
-                              size: 18,
-                              color: isOwn
-                                  ? AppTheme.textMuted
-                                  : Colors.white,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              isOwn ? 'Ini karyamu' : 'Hubungi Kreator',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: isOwn
-                                    ? AppTheme.textMuted
-                                    : Colors.white,
+                            if (_isSubmitting)
+                              const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            else ...[
+                              Icon(
+                                isOwn
+                                    ? Icons.person_rounded
+                                    : (_item!.type == 'paid' && !_item!.hasPurchased ? Icons.shopping_cart_checkout_rounded : Icons.download_rounded),
+                                size: 20,
+                                color: isOwn ? AppTheme.textMuted : Colors.white,
                               ),
-                            ),
+                              const SizedBox(width: 8),
+                              Text(
+                                isOwn
+                                    ? 'Karya Anda'
+                                    : (_item!.type == 'paid' && !_item!.hasPurchased ? 'Beli Sekarang' : 'Download'),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: isOwn ? AppTheme.textMuted : Colors.white,
+                                ),
+                              ),
+                            ]
                           ],
                         ),
                       ),

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dio_client.dart';
 
 class ApiService {
@@ -6,7 +7,7 @@ class ApiService {
 
   static String get hostIp => Uri.parse(DioClient.baseUrl).host;
 
-  static String get keyPusher => 'cuzkfya73cpnszss3vc2';
+  static String get keyPusher => dotenv.env['PUSHER_KEY'] ?? '';
 
   /// Selesaikan URL gambar aset backend.
   ///
@@ -43,6 +44,18 @@ class ApiService {
   ) async {
     try {
       final response = await _dio.post('/$endpoint', data: body);
+      return _formatResponse(response);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  static Future<Map<String, dynamic>> postFormData(
+    String endpoint,
+    FormData data,
+  ) async {
+    try {
+      final response = await _dio.post('/$endpoint', data: data);
       return _formatResponse(response);
     } on DioException catch (e) {
       return _handleError(e);
@@ -100,7 +113,7 @@ class ApiService {
       if (statusCode == 401) {
         return {
           'status': false,
-          'message': 'Sesi tidak valid. Silakan masuk kembali.',
+          'message': 'Email dan Password Salah',
         };
       }
 

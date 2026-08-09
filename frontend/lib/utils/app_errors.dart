@@ -2,16 +2,41 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../app/theme.dart';
 
+import 'package:dio/dio.dart';
+
 /// Standar error helper: maps any exception/result-map to a friendly message.
 class AppErrors {
   AppErrors._();
 
+  /// Masking logic to prevent raw backend errors from leaking
+  static String _sanitizeMessage(String rawMsg, {String fallback = 'Terjadi kesalahan internal pada server.'}) {
+    final lowerMsg = rawMsg.toLowerCase();
+    if (lowerMsg.contains('sqlstate') ||
+        lowerMsg.contains('exception') ||
+        lowerMsg.contains('stack trace:') ||
+        lowerMsg.contains('mysql') ||
+        lowerMsg.contains('connection refused') ||
+        lowerMsg.contains('syntax error')) {
+      return fallback;
+    }
+    return rawMsg;
+  }
+
   /// Extracts a user-friendly message from a result map (service pattern).
-  /// Falls back to a generic message.
   static String messageFromResult(Map<String, dynamic> result,
-      {String fallback = 'Terjadi kesalahan. Silakan coba lagi.'}) {
+      {String fallback = 'Terjadi kesalahan. Silakan coba lagi.', int? statusCode}) {
+    
+    // HTTP Status overrides
+    if (statusCode == 401) return 'Email atau kata sandi yang Anda masukkan salah.';
+    if (statusCode == 403) return 'Anda tidak memiliki izin untuk mengakses sumber ini.';
+    if (statusCode == 404) return 'Sumber data tidak ditemukan.';
+    if (statusCode == 422) return 'Data yang dikirimkan tidak valid. Periksa kembali form Anda.';
+    if (statusCode != null && statusCode >= 500) return 'Terjadi kesalahan internal pada server. Coba lagi nanti.';
+
     final raw = result['message'] ?? result['error'] ?? result['msg'];
-    if (raw is String && raw.trim().isNotEmpty) return raw.trim();
+    if (raw is String && raw.trim().isNotEmpty) {
+      return _sanitizeMessage(raw.trim(), fallback: fallback);
+    }
     return fallback;
   }
 
@@ -19,19 +44,44 @@ class AppErrors {
   static String friendly(Object? error,
       {String fallback = 'Terjadi kesalahan. Silakan coba lagi.'}) {
     if (error == null) return fallback;
-    if (error is String) return error.isNotEmpty ? error : fallback;
+
+    if (error is DioException) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401) return 'Autentikasi gagal. Silakan masuk kembali.';
+      if (statusCode == 403) return 'Anda tidak memiliki izin untuk mengakses sumber ini.';
+      if (statusCode == 404) return 'Sumber data tidak ditemukan.';
+      if (statusCode == 422) return 'Validasi data gagal. Periksa masukan Anda.';
+      if (statusCode != null && statusCode >= 500) return 'Terjadi kesalahan internal pada server.';
+      
+      if (error.type == DioExceptionType.connectionTimeout || 
+          error.type == DioExceptionType.receiveTimeout || 
+          error.type == DioExceptionType.sendTimeout) {
+        return 'Koneksi terputus (Timeout). Periksa internet Anda.';
+      }
+
+      if (error.response?.data is Map<String, dynamic>) {
+        return messageFromResult(error.response!.data as Map<String, dynamic>, fallback: fallback, statusCode: statusCode);
+      }
+    }
+
     if (error is SocketException || error is HttpException) {
       return 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
     }
     if (error is FormatException) {
-      return 'Data yang diterima tidak valid. Silakan coba lagi.';
+      return 'Data yang diterima tidak valid dari server.';
+    }
+    if (error is String) {
+      return error.isNotEmpty ? _sanitizeMessage(error, fallback: fallback) : fallback;
     }
     if (error is Map) {
       return messageFromResult(Map<String, dynamic>.from(error), fallback: fallback);
     }
+
     final msg = error.toString().replaceAll('Exception: ', '').replaceAll('DioException:', '');
     if (msg.isEmpty) return fallback;
-    return msg.length > 200 ? fallback : msg;
+    if (msg.length > 200) return fallback;
+    
+    return _sanitizeMessage(msg, fallback: fallback);
   }
 }
 

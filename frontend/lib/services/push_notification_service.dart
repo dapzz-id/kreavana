@@ -4,7 +4,7 @@ import 'package:dart_pusher_channels/dart_pusher_channels.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'api_service.dart';
-import 'auth_service.dart';
+import '../features/auth/services/auth_service.dart';
 import 'badge_service.dart';
 
 class PushNotificationService {

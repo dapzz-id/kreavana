@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
-import '../services/auth_service.dart';
+import '../features/auth/services/auth_service.dart';
 import '../services/profile_service.dart';
 import '../services/api_service.dart';
-import 'dashboard_screen.dart';
-import 'govt_dashboard_screen.dart';
+import '../features/dashboard/screens/dashboard_screen.dart';
+import '../features/dashboard/screens/govt_dashboard_screen.dart';
 import 'tender_kolaborasi_screen.dart';
 import 'mitra_komunitas_screen.dart';
 import 'realisasi_anggaran_screen.dart';
@@ -16,8 +16,11 @@ import 'tim_hak_akses_screen.dart';
 import 'notifications_screen.dart';
 import 'profile_screen.dart';
 import 'explore_screen.dart';
-import 'login_screen.dart';
-import 'admin_dashboard_screen.dart';
+import '../features/auth/screens/login_screen.dart';
+import '../services/user_store.dart';
+import '../services/app_router.dart';
+import 'package:go_router/go_router.dart';
+import '../features/dashboard/screens/admin_dashboard_screen.dart';
 import 'admin_verification_screen.dart';
 import 'proyek_saya_screen.dart';
 import 'agenda_screen.dart';
@@ -27,31 +30,32 @@ import 'ulasan_reputasi_screen.dart';
 import 'laporan_screen.dart';
 import 'pengaturan_screen.dart';
 import 'wallet_screen.dart';
-import 'company_dashboard_screen.dart';
-import 'eo_dashboard_screen.dart';
-import 'wo_dashboard_screen.dart';
-import 'school_dashboard_screen.dart';
-import 'tourism_dashboard_screen.dart';
-import 'individual_dashboard_screen.dart';
-import 'community_dashboard_screen.dart';
-import 'creator_general_dashboard_screen.dart';
-import 'creator_fotografer_dashboard_screen.dart';
-import 'creator_videografer_dashboard_screen.dart';
-import 'creator_editor_dashboard_screen.dart';
-import 'creator_desainer_dashboard_screen.dart';
-import 'creator_mua_dashboard_screen.dart';
-import 'creator_talent_dashboard_screen.dart';
-import 'creator_drone_dashboard_screen.dart';
-import 'creator_content_dashboard_screen.dart';
-import 'creator_animator_dashboard_screen.dart';
-import 'umkm_dashboard_screen.dart';
-import 'agency_dashboard_screen.dart';
+import '../features/dashboard/screens/company_dashboard_screen.dart';
+import '../features/dashboard/screens/eo_dashboard_screen.dart';
+import '../features/dashboard/screens/wo_dashboard_screen.dart';
+import '../features/dashboard/screens/school_dashboard_screen.dart';
+import '../features/dashboard/screens/tourism_dashboard_screen.dart';
+import '../features/dashboard/screens/individual_dashboard_screen.dart';
+import '../features/dashboard/screens/community_dashboard_screen.dart';
+import '../features/dashboard/screens/creator_general_dashboard_screen.dart';
+import '../features/dashboard/screens/creator_fotografer_dashboard_screen.dart';
+import '../features/dashboard/screens/creator_videografer_dashboard_screen.dart';
+import '../features/dashboard/screens/creator_editor_dashboard_screen.dart';
+import '../features/dashboard/screens/creator_desainer_dashboard_screen.dart';
+import '../features/dashboard/screens/creator_mua_dashboard_screen.dart';
+import '../features/dashboard/screens/creator_talent_dashboard_screen.dart';
+import '../features/dashboard/screens/creator_drone_dashboard_screen.dart';
+import '../features/dashboard/screens/creator_content_dashboard_screen.dart';
+import '../features/dashboard/screens/creator_animator_dashboard_screen.dart';
+import '../features/dashboard/screens/umkm_dashboard_screen.dart';
+import '../features/dashboard/screens/agency_dashboard_screen.dart';
 import 'creator_service_screen.dart';
 import 'direct_message_screen.dart';
 import '../app/subrole_theme_engine.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
 import '../widgets/creator_sidebar_menus.dart';
 import '../utils/app_errors.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class MainNavigation extends StatefulWidget {
   final UserModel initialUser;
@@ -109,12 +113,8 @@ class _MainNavigationState extends State<MainNavigation> {
 
   void _onLogout() async {
     await AuthService.logout();
-    if (mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
-    }
+    currentUserNotifier.value = null;
+    if (mounted) context.go(AppRoutes.login);
   }
 
   void _showLogoutDialog() {
@@ -313,6 +313,22 @@ class _MainNavigationState extends State<MainNavigation> {
   bool get _hasSpecificCreatorSubRole =>
       CreatorSidebarMenus.hasSpecificSubRole(_currentUser.subRole);
 
+  /// Index → URL mapping (kebalikan dari _routeIndexMap di app_router.dart)
+  static const _indexRouteMap = {
+    0: AppRoutes.beranda,
+    1: AppRoutes.explore,
+    2: AppRoutes.proyek,
+    3: AppRoutes.marketplace,
+    4: AppRoutes.agenda,
+    5: AppRoutes.kolaborasi,
+    6: AppRoutes.reputasi,
+    7: AppRoutes.wallet,
+    8: AppRoutes.pengaturan,
+    9: AppRoutes.profil,
+    10: AppRoutes.notifikasi,
+    11: AppRoutes.pesan,
+  };
+
   void _navigateToScreenIndex(int index) {
     if (_sidebarScrollController.hasClients) {
       _savedSidebarScrollOffset = _sidebarScrollController.offset;
@@ -321,6 +337,11 @@ class _MainNavigationState extends State<MainNavigation> {
       _currentIndex = index;
       _activeGovRoute = null;
     });
+    // Sync URL di web
+    final route = _indexRouteMap[index];
+    if (route != null && mounted) {
+      context.go(route);
+    }
   }
 
   Widget _buildSidebarSectionHeader(
@@ -659,9 +680,9 @@ class _MainNavigationState extends State<MainNavigation> {
       ),
       if (!_isCreatorUser || !_hasSpecificCreatorSubRole) ...[
         _buildSidebarItem(
-          icon: Icons.photo_library_outlined,
-          activeIcon: Icons.photo_library,
-          label: 'Portofolio',
+          icon: Icons.storefront_outlined,
+          activeIcon: Icons.storefront,
+          label: 'Marketplace',
           index: 3,
           theme: theme,
           isDark: isDark,
@@ -927,7 +948,7 @@ class _MainNavigationState extends State<MainNavigation> {
                     radius: 16,
                     backgroundColor: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
                     backgroundImage: _currentUser.avatarUrl != null && _currentUser.avatarUrl!.isNotEmpty
-                        ? NetworkImage(ApiService.resolveAssetUrl(_currentUser.avatarUrl!))
+                        ? CachedNetworkImageProvider(ApiService.resolveAssetUrl(_currentUser.avatarUrl!))
                         : null,
                     child: _currentUser.avatarUrl == null || _currentUser.avatarUrl!.isEmpty
                         ? const Icon(Icons.person, color: AppTheme.primaryPurple)
@@ -954,7 +975,7 @@ class _MainNavigationState extends State<MainNavigation> {
                   radius: 18,
                   backgroundColor: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
                   backgroundImage: _currentUser.avatarUrl != null && _currentUser.avatarUrl!.isNotEmpty
-                      ? NetworkImage(ApiService.resolveAssetUrl(_currentUser.avatarUrl!))
+                      ? CachedNetworkImageProvider(ApiService.resolveAssetUrl(_currentUser.avatarUrl!))
                       : const AssetImage('assets/brandlogo.png') as ImageProvider,
                 ),
                 const SizedBox(width: 10),
@@ -1234,12 +1255,16 @@ class _MainNavigationState extends State<MainNavigation> {
             _buildClientDashboardScreen(), // 0
             ExploreScreen(user: _currentUser), // 1
             ProyekSayaScreen(user: _currentUser), // 2
-            const MarketplaceKaryaScreen(), // 3
+            MarketplaceKaryaScreen(user: _currentUser), // 3
             const AgendaScreen(), // 4
             const KolaborasiScreen(), // 5
             const UlasanReputasiScreen(), // 6
             WalletScreen(user: _currentUser, onUserUpdated: _onUserUpdated), // 7
-            const PengaturanScreen(), // 8
+            PengaturanScreen(
+              user: _currentUser,
+              onUserUpdated: _onUserUpdated,
+              onLogout: _onLogout,
+            ), // 8
             ProfileScreen(
               user: _currentUser,
               onUserUpdated: _onUserUpdated,

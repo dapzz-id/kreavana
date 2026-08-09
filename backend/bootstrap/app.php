@@ -38,4 +38,21 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 401);
             }
         });
+
+        // Tangkap exception umum dan DB exception agar tidak bocor
+        $exceptions->render(function (\Throwable $e, Request $request) {
+            if ($request->is('api/*')) {
+                // Biarkan error validasi lewat seperti biasa
+                if ($e instanceof \Illuminate\Validation\ValidationException) {
+                    return null; 
+                }
+                
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Terjadi kesalahan internal pada server.',
+                    // Optional: hapus baris di bawah jika tidak ingin error debug sama sekali
+                    // 'debug' => env('APP_DEBUG') ? $e->getMessage() : null,
+                ], 500);
+            }
+        });
     })->create();

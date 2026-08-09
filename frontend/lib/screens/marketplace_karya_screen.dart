@@ -186,18 +186,20 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).size.width < 800 ? 90 : 0,
         ),
-        child: FloatingActionButton.extended(
-          heroTag: 'jual_karya',
-          onPressed: _openJualKarya,
-          backgroundColor: AppTheme.primaryPurple,
-          foregroundColor: Colors.white,
-          elevation: 4,
-          icon: const Icon(Icons.add_rounded),
-          label: const Text(
-            'Jual Karya',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-        ),
+        child: (widget.user != null && widget.user!.isCreator)
+          ? FloatingActionButton.extended(
+              heroTag: 'jual_karya',
+              onPressed: _openJualKarya,
+              backgroundColor: AppTheme.primaryPurple,
+              foregroundColor: Colors.white,
+              elevation: 4,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text(
+                'Jual Karya',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            )
+          : null,
       ),
       appBar: AppBar(
         toolbarHeight: 75,

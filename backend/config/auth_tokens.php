@@ -14,7 +14,7 @@ return [
         'cookie' => env('AUTH_REFRESH_COOKIE', 'refresh_token'),
         'ttl_minutes' => (int) env('AUTH_REFRESH_TTL', 60 * 24 * 7),
         'path' => '/api/auth/refresh',
-        'same_site' => 'Strict',
+        'same_site' => 'Lax',
     ],
 
     'redis_prefixes' => [

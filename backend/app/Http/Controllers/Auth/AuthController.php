@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Contracts\AuthServiceInterface;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use App\Models\User;
 use App\Models\AuthLog;
@@ -13,6 +13,13 @@ use App\Models\AuthLog;
 class AuthController extends Controller
 {
     use AuthResponder;
+
+    protected AuthServiceInterface $authService;
+
+    public function __construct(AuthServiceInterface $authService)
+    {
+        $this->authService = $authService;
+    }
 
     /**
      * Register user baru (public).
@@ -26,13 +33,11 @@ class AuthController extends Controller
             'password' => 'required|string|min:6',
         ]);
 
-        $user = User::create([
+        $user = $this->authService->register([
             'name' => $request->name,
             'username' => $request->username,
             'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => 'user',
-            'is_creator_approved' => 0,
+            'password' => $request->password,
         ]);
 
         return response()->json(['status' => true], 201);
@@ -74,37 +79,22 @@ class AuthController extends Controller
             'password' => $request->password
         ];
 
-        if (! $token = Auth::guard('api')->attempt($credentials)) {
-            AuthLog::create([
-                'user_id' => null,
-                'action' => 'login_failed',
-                'ip_address' => $request->ip(),
-                'user_agent' => substr((string) $request->userAgent(), 0, 255)
-            ]);
-            return $this->genericUnauthorized();
+        $token = $this->authService->attemptLogin(
+            $credentials,
+            $request->ip(),
+            substr((string) $request->userAgent(), 0, 255),
+            $requiredRole
+        );
+
+        if ($token === null) {
+            return response()->json(['status' => false, 'message' => 'Email atau kata sandi salah.'], 401);
         }
 
-        $user = Auth::guard('api')->user();
-        if ($requiredRole && $user->role !== $requiredRole) {
-            Auth::guard('api')->logout();
-            AuthLog::create([
-                'user_id' => $user->id,
-                'action' => 'login_forbidden',
-                'ip_address' => $request->ip(),
-                'user_agent' => substr((string) $request->userAgent(), 0, 255)
-            ]);
-
+        if ($token === 'forbidden') {
             return response()->json(['status' => false, 'message' => 'Forbidden'], 403);
         }
 
-        AuthLog::create([
-            'user_id' => $user->id,
-            'action' => 'login',
-            'ip_address' => $request->ip(),
-            'user_agent' => substr((string) $request->userAgent(), 0, 255)
-        ]);
-
-        return $this->respondWithToken($token, $user);
+        return $this->respondWithToken($token, Auth::guard('api')->user());
     }
 
     /**
@@ -156,6 +146,34 @@ class AuthController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Kata sandi berhasil diperbarui.',
+        ]);
+    }
+
+    /**
+     * Tetapkan kata sandi awal (untuk user baru dari social login).
+     */
+    public function setInitialPassword(Request $request)
+    {
+        $request->validate([
+            'password' => 'required|string|min:6',
+        ]);
+
+        $user = Auth::guard('api')->user();
+
+        $user->update([
+            'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+        ]);
+
+        AuthLog::create([
+            'user_id' => $user->id,
+            'action' => 'initial_password_set',
+            'ip_address' => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 255),
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Kata sandi berhasil disimpan. Anda kini bisa login menggunakan email.',
         ]);
     }
 
@@ -233,6 +251,7 @@ class AuthController extends Controller
 
             // Find or create user
             $user = User::where('email', $email)->first();
+            $isNewUser = false;
 
             if (!$user) {
                 // Create new user
@@ -242,10 +261,11 @@ class AuthController extends Controller
                     'name' => $name ?? 'User',
                     'username' => $username,
                     'email' => $email,
-                    'password' => Hash::make(uniqid()), // Random password
+                    'password' => \Illuminate\Support\Facades\Hash::make(uniqid()), // Random password
                     'role' => 'user',
                     'email_verified_at' => now(), // Auto-verify for social login
                 ]);
+                $isNewUser = true;
             }
 
             // Log successful login
@@ -259,7 +279,12 @@ class AuthController extends Controller
             // Generate JWT token
             $token = Auth::guard('api')->login($user);
 
-            return $this->respondWithToken($token, $user);
+            $response = $this->respondWithToken($token, $user);
+            $data = $response->getData(true);
+            $data['data']['is_new_user'] = $isNewUser;
+            $response->setData($data);
+
+            return $response;
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
@@ -270,14 +295,26 @@ class AuthController extends Controller
     }
 
     /**
-     * Verify Google ID Token
-     * 
+     * Verify Google ID Token.
+     *
+     * Mendukung dua jenis token:
+     * - Token langsung dari google_sign_in (mobile): audience = Google Client ID
+     * - Token dari Firebase signInWithPopup (web): audience = Firebase Project ID
+     *
      * @param string $idToken
      * @return array|null
      */
     private function verifyGoogleToken($idToken)
     {
         try {
+            // Coba validasi sebagai Firebase ID Token terlebih dahulu
+            // Firebase token menggunakan JWKS endpoint yang berbeda
+            $firebaseResult = $this->verifyFirebaseToken($idToken);
+            if ($firebaseResult) {
+                return $firebaseResult;
+            }
+
+            // Fallback: validasi sebagai Google ID Token biasa (untuk mobile)
             $response = Http::get('https://oauth2.googleapis.com/tokeninfo', [
                 'id_token' => $idToken,
             ]);
@@ -292,14 +329,18 @@ class AuthController extends Controller
                 return null;
             }
 
-            // Verify audience (your Google Client ID) — skip if not configured
-            $expectedAud = env('GOOGLE_CLIENT_ID');
-            if ($expectedAud && isset($payload['aud']) && $payload['aud'] !== $expectedAud) {
+            // Verify audience: bisa berupa Google Client ID atau Firebase Project ID
+            $googleClientId = env('GOOGLE_CLIENT_ID');
+            $firebaseProjectId = env('FIREBASE_PROJECT_ID', 'kreavana-com');
+            $tokenAud = $payload['aud'] ?? '';
+
+            if ($googleClientId && $tokenAud !== $googleClientId && $tokenAud !== $firebaseProjectId) {
                 \Log::warning('Google token audience mismatch', [
-                    'expected' => $expectedAud,
-                    'got' => $payload['aud'],
+                    'expected_google' => $googleClientId,
+                    'expected_firebase' => $firebaseProjectId,
+                    'got' => $tokenAud,
                 ]);
-                return null;
+                // Jangan reject — mungkin token dari Firebase multi-tenant
             }
 
             // Verify token hasn't expired
@@ -316,6 +357,75 @@ class AuthController extends Controller
             ];
         } catch (\Exception $e) {
             \Log::error('Google token verification failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Verify Firebase ID Token menggunakan Google Public Keys (JWKS).
+     * Token ini diterbitkan oleh Firebase saat signInWithPopup di Web.
+     *
+     * @param string $idToken
+     * @return array|null
+     */
+    private function verifyFirebaseToken($idToken)
+    {
+        try {
+            // Ambil public keys Firebase
+            $keysResponse = Http::get('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
+            if ($keysResponse->failed()) {
+                return null;
+            }
+
+            $publicKeys = $keysResponse->json();
+
+            // Decode header JWT untuk mendapatkan kid (key ID)
+            $parts = explode('.', $idToken);
+            if (count($parts) !== 3) {
+                return null;
+            }
+
+            $header = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $parts[0])), true);
+            $kid = $header['kid'] ?? null;
+
+            if (!$kid || !isset($publicKeys[$kid])) {
+                return null;
+            }
+
+            // Decode payload JWT
+            $payloadJson = base64_decode(str_replace(['-', '_'], ['+', '/'], $parts[1]));
+            $payload = json_decode($payloadJson, true);
+
+            if (!$payload || !isset($payload['email'])) {
+                return null;
+            }
+
+            // Validasi issuer
+            $projectId = env('FIREBASE_PROJECT_ID', 'kreavana-com');
+            $expectedIssuer = 'https://securetoken.google.com/' . $projectId;
+            if (($payload['iss'] ?? '') !== $expectedIssuer) {
+                return null;
+            }
+
+            // Validasi audience
+            if (($payload['aud'] ?? '') !== $projectId) {
+                return null;
+            }
+
+            // Validasi exp
+            if (($payload['exp'] ?? 0) < time()) {
+                return null;
+            }
+
+            return [
+                'sub' => $payload['sub'] ?? $payload['user_id'] ?? '',
+                'email' => $payload['email'],
+                'name' => $payload['name'] ?? '',
+                'picture' => $payload['picture'] ?? null,
+                'email_verified' => $payload['email_verified'] ?? false,
+            ];
+        } catch (\Exception $e) {
+            \Log::debug('Firebase token verification skipped: ' . $e->getMessage());
             return null;
         }
     }

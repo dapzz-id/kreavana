@@ -1,6 +1,6 @@
 import '../models/user_model.dart';
 import 'api_service.dart';
-import 'auth_service.dart';
+import '../features/auth/services/auth_service.dart';
 
 class ProfileFetchResult {
   final bool success;

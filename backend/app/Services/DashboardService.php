@@ -10,7 +10,9 @@ use App\Repositories\UserRepository;
 use App\Repositories\NotificationRepository;
 use Illuminate\Support\Facades\Cache;
 
-class DashboardService extends BaseService
+use App\Contracts\DashboardServiceInterface;
+
+class DashboardService extends BaseService implements DashboardServiceInterface
 {
     protected DashboardStatRepository $statRepo;
     protected OpportunityRepository $opportunityRepo;

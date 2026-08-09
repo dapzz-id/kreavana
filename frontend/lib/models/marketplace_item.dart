@@ -4,6 +4,7 @@ class MarketplaceItem {
   final String title;
   final String? description;
   final String category;
+  final String type;
   final double price;
   final double rating;
   final int reviewCount;
@@ -12,9 +13,11 @@ class MarketplaceItem {
   final bool isFeatured;
   final bool isActive;
   final bool isFollowing;
+  final bool hasPurchased;
   final String? createdAt;
   final MarketplaceCreator? creator;
   final List<MarketplaceReview>? reviews;
+  final List<MarketplaceMedia>? media;
 
   MarketplaceItem({
     required this.id,
@@ -22,38 +25,46 @@ class MarketplaceItem {
     required this.title,
     this.description,
     required this.category,
+    required this.type,
     required this.price,
     this.rating = 0,
     this.reviewCount = 0,
     this.orderCount = 0,
     this.imageUrl,
     this.isFeatured = false,
-    this.isActive = true,
+    required this.isActive,
     this.isFollowing = false,
+    this.hasPurchased = false,
     this.createdAt,
     this.creator,
     this.reviews,
+    this.media,
   });
 
   factory MarketplaceItem.fromJson(Map<String, dynamic> json) {
     return MarketplaceItem(
-      id: json['id'].toString(),
+      id: json['id']?.toString() ?? '',
       userId: (json['user_id'] ?? '').toString(),
       title: json['title'] ?? '',
       description: json['description'],
-      category: json['category'] ?? '',
-      price: double.tryParse(json['price'].toString()) ?? 0,
+      category: json['category'] ?? 'Lainnya',
+      type: json['type'] ?? 'free',
+      price: (json['price'] != null) ? double.tryParse(json['price'].toString()) ?? 0 : 0,
       rating: double.tryParse(json['rating'].toString()) ?? 0,
       reviewCount: json['review_count'] ?? 0,
       orderCount: json['order_count'] ?? 0,
       imageUrl: json['image_url'],
-      isFeatured: json['is_featured'] == true || json['is_featured'] == 1,
-      isActive: json['is_active'] == true || json['is_active'] == 1,
-      isFollowing: json['is_following'] == true || json['is_following'] == 1,
+      isFeatured: json['is_featured'] ?? false,
+      isActive: json['is_active'] ?? true,
+      isFollowing: json['is_following'] ?? false,
+      hasPurchased: json['has_purchased'] ?? false,
       createdAt: json['created_at'],
       creator: json['user'] != null ? MarketplaceCreator.fromJson(json['user']) : null,
       reviews: json['reviews'] != null
           ? (json['reviews'] as List).map((r) => MarketplaceReview.fromJson(r)).toList()
+          : null,
+      media: json['media'] != null
+          ? (json['media'] as List).map((e) => MarketplaceMedia.fromJson(e)).toList()
           : null,
     );
   }
@@ -148,6 +159,26 @@ class MarketplaceReview {
       rating: json['rating'] ?? 0,
       user: json['user'] != null ? MarketplaceCreator.fromJson(json['user']) : null,
       createdAt: json['created_at'],
+    );
+  }
+}
+
+class MarketplaceMedia {
+  final String id;
+  final String filePath;
+  final String fileType;
+
+  MarketplaceMedia({
+    required this.id,
+    required this.filePath,
+    required this.fileType,
+  });
+
+  factory MarketplaceMedia.fromJson(Map<String, dynamic> json) {
+    return MarketplaceMedia(
+      id: json['id']?.toString() ?? '',
+      filePath: json['file_path'] ?? '',
+      fileType: json['file_type'] ?? 'image',
     );
   }
 }

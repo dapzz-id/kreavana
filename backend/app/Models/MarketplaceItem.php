@@ -13,7 +13,7 @@ class MarketplaceItem extends Model
     use HasFactory, HasUuids;
 
     protected $fillable = [
-        'user_id', 'title', 'description', 'category', 'price',
+        'user_id', 'title', 'description', 'category', 'type', 'price',
         'rating', 'review_count', 'order_count', 'image_url',
         'is_featured', 'is_active',
     ];
@@ -38,6 +38,16 @@ class MarketplaceItem extends Model
     public function reviews(): HasMany
     {
         return $this->hasMany(MarketplaceReview::class, 'marketplace_item_id');
+    }
+
+    public function media(): HasMany
+    {
+        return $this->hasMany(MarketplaceItemMedia::class, 'marketplace_item_id');
+    }
+
+    public function purchases(): HasMany
+    {
+        return $this->hasMany(MarketplacePurchase::class, 'marketplace_item_id');
     }
 
     public function recalculateRating(): void
