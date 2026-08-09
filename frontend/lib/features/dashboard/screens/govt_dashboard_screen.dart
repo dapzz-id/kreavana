@@ -17,6 +17,7 @@ import '../../../screens/direct_message_screen.dart';
 import '../../../screens/global_search_screen.dart';
 import '../../../screens/realisasi_anggaran_screen.dart';
 import '../../../screens/pengumuman_publik_screen.dart';
+import '../../../services/badge_service.dart';
 
 class GovtDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -230,9 +231,15 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
             ),
           ),
           const SizedBox(width: 20),
-          _buildAppBarBadge(Icons.notifications_none_outlined, '5', isDark),
+          ListenableBuilder(
+            listenable: BadgeService(),
+            builder: (_, _) => _buildAppBarBadge(Icons.notifications_none_outlined, BadgeService().unreadNotificationsText, isDark),
+          ),
           const SizedBox(width: 4),
-          _buildAppBarBadge(Icons.chat_bubble_outline, '2', isDark),
+          ListenableBuilder(
+            listenable: BadgeService(),
+            builder: (_, _) => _buildAppBarBadge(Icons.chat_bubble_outline, BadgeService().unreadMessagesText, isDark),
+          ),
           const SizedBox(width: 12),
           Builder(
             builder: (btnCtx) => IconButton(

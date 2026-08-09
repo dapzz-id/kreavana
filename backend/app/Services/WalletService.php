@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Repositories\WalletTransactionRepository;
 use App\Repositories\UserRepository;
+use App\Repositories\NotificationRepository;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Exception;
 
@@ -12,11 +14,13 @@ class WalletService extends BaseService
 {
     protected WalletTransactionRepository $walletRepo;
     protected UserRepository $userRepo;
+    protected NotificationRepository $notificationRepo;
 
-    public function __construct(WalletTransactionRepository $walletRepo, UserRepository $userRepo)
+    public function __construct(WalletTransactionRepository $walletRepo, UserRepository $userRepo, NotificationRepository $notificationRepo)
     {
         $this->walletRepo = $walletRepo;
         $this->userRepo = $userRepo;
+        $this->notificationRepo = $notificationRepo;
     }
 
     public function getInfo(string $userId): array
@@ -97,6 +101,16 @@ class WalletService extends BaseService
             $user = $this->userRepo->find($userId);
             $this->userRepo->update($userId, ['balance' => $user->balance + $transaction->amount]);
 
+            $this->notificationRepo->create([
+                'user_id' => $userId,
+                'title' => 'Top Up Berhasil',
+                'message' => 'Saldo sebesar Rp ' . number_format($transaction->amount, 0, ',', '.') . ' berhasil ditambahkan ke dompet Anda.',
+                'type' => 'wallet',
+                'data' => ['transaction_id' => $transaction->id, 'amount' => $transaction->amount],
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
+
             DB::commit();
 
             return [
@@ -109,7 +123,7 @@ class WalletService extends BaseService
         }
     }
 
-    public function transfer(int $senderId, array $data): array
+    public function transfer(string $senderId, array $data): array
     {
         $sender = $this->userRepo->find($senderId);
         $receiver = $this->userRepo->findByEmailOrUsername($data['receiver_username']); // Using existing method

@@ -110,10 +110,18 @@ class ApiService {
     if (e.response != null) {
       final statusCode = e.response!.statusCode;
 
+      if (e.response!.data is Map<String, dynamic>) {
+        final data = e.response!.data as Map<String, dynamic>;
+        if (!data.containsKey('status')) {
+          data['status'] = false;
+        }
+        return data;
+      }
+
       if (statusCode == 401) {
         return {
           'status': false,
-          'message': 'Email dan Password Salah',
+          'message': 'Email atau kata sandi salah.',
         };
       }
 

@@ -17,7 +17,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
 import 'widgets/global_call_overlay.dart';
-import 'package:flutter_web_plugins/flutter_web_plugins.dart';
+import 'services/url_strategy.dart';
 
 import 'services/navigator_key.dart';
 export 'services/navigator_key.dart' show navigatorKey;
@@ -27,8 +27,9 @@ final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Pakai path-based URL (/login) bukan hash-based (/#/login)
-  usePathUrlStrategy();
+  // Pakai path-based URL (/login) bukan hash-based (/#/login).
+  // No-op di platform native (Windows/Android/iOS) via conditional import.
+  configureUrlStrategy();
 
   const String env = String.fromEnvironment('ENV', defaultValue: kReleaseMode ? 'production' : 'development');
   await dotenv.load(fileName: ".env.$env");

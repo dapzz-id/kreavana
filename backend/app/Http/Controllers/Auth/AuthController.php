@@ -315,7 +315,7 @@ class AuthController extends Controller
             }
 
             // Fallback: validasi sebagai Google ID Token biasa (untuk mobile)
-            $response = Http::get('https://oauth2.googleapis.com/tokeninfo', [
+            $response = Http::withoutVerifying()->get('https://oauth2.googleapis.com/tokeninfo', [
                 'id_token' => $idToken,
             ]);
 
@@ -372,8 +372,9 @@ class AuthController extends Controller
     {
         try {
             // Ambil public keys Firebase
-            $keysResponse = Http::get('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
+            $keysResponse = Http::timeout(10)->withoutVerifying()->get('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
             if ($keysResponse->failed()) {
+                \Log::warning('Firebase: failed to fetch public keys', ['status' => $keysResponse->status()]);
                 return null;
             }
 
@@ -382,21 +383,32 @@ class AuthController extends Controller
             // Decode header JWT untuk mendapatkan kid (key ID)
             $parts = explode('.', $idToken);
             if (count($parts) !== 3) {
+                \Log::warning('Firebase: token bukan JWT valid', ['parts_count' => count($parts)]);
                 return null;
             }
 
-            $header = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $parts[0])), true);
+            $headerB64 = str_replace(['-', '_'], ['+', '/'], $parts[0]);
+            $headerB64 .= str_repeat('=', (4 - strlen($headerB64) % 4) % 4);
+            $header = json_decode(base64_decode($headerB64), true);
             $kid = $header['kid'] ?? null;
 
-            if (!$kid || !isset($publicKeys[$kid])) {
+            if (!$kid) {
+                \Log::warning('Firebase: kid not found in header', ['header' => $header]);
+                return null;
+            }
+            if (!isset($publicKeys[$kid])) {
+                \Log::warning('Firebase: kid not found in public keys', ['kid' => $kid, 'available_keys' => array_keys($publicKeys)]);
                 return null;
             }
 
             // Decode payload JWT
-            $payloadJson = base64_decode(str_replace(['-', '_'], ['+', '/'], $parts[1]));
+            $payloadB64 = str_replace(['-', '_'], ['+', '/'], $parts[1]);
+            $payloadB64 .= str_repeat('=', (4 - strlen($payloadB64) % 4) % 4);
+            $payloadJson = base64_decode($payloadB64);
             $payload = json_decode($payloadJson, true);
 
             if (!$payload || !isset($payload['email'])) {
+                \Log::warning('Firebase: email not found in payload', ['payload' => $payload]);
                 return null;
             }
 
@@ -404,16 +416,21 @@ class AuthController extends Controller
             $projectId = env('FIREBASE_PROJECT_ID', 'kreavana-com');
             $expectedIssuer = 'https://securetoken.google.com/' . $projectId;
             if (($payload['iss'] ?? '') !== $expectedIssuer) {
+                \Log::warning('Firebase: issuer mismatch', ['expected' => $expectedIssuer, 'got' => $payload['iss'] ?? 'null']);
                 return null;
             }
 
-            // Validasi audience
-            if (($payload['aud'] ?? '') !== $projectId) {
+            // Validasi audience — terima project ID atau web client ID
+            $aud = $payload['aud'] ?? '';
+            $webClientId = env('GOOGLE_CLIENT_ID');
+            if ($aud !== $projectId && ($webClientId && $aud !== $webClientId)) {
+                \Log::warning('Firebase: audience mismatch', ['expected_project' => $projectId, 'expected_client' => $webClientId, 'got' => $aud]);
                 return null;
             }
 
             // Validasi exp
             if (($payload['exp'] ?? 0) < time()) {
+                \Log::warning('Firebase: token expired', ['exp' => $payload['exp'], 'now' => time()]);
                 return null;
             }
 
@@ -425,7 +442,7 @@ class AuthController extends Controller
                 'email_verified' => $payload['email_verified'] ?? false,
             ];
         } catch (\Exception $e) {
-            \Log::debug('Firebase token verification skipped: ' . $e->getMessage());
+            \Log::error('Firebase token verification error: ' . $e->getMessage());
             return null;
         }
     }

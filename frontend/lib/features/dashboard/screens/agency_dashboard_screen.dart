@@ -9,6 +9,7 @@ import '../../../screens/explore_screen.dart';
 import '../../../screens/global_search_screen.dart';
 import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
+import '../../../services/badge_service.dart';
 
 class AgencyDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -199,9 +200,15 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          _buildAppBarBadge(Icons.notifications_none_outlined, '3', isDark),
+          ListenableBuilder(
+            listenable: BadgeService(),
+            builder: (_, _) => _buildAppBarBadge(Icons.notifications_none_outlined, BadgeService().unreadNotificationsText, isDark),
+          ),
           const SizedBox(width: 4),
-          _buildAppBarBadge(Icons.chat_bubble_outline, '1', isDark),
+          ListenableBuilder(
+            listenable: BadgeService(),
+            builder: (_, _) => _buildAppBarBadge(Icons.chat_bubble_outline, BadgeService().unreadMessagesText, isDark),
+          ),
         ],
       ),
     );
@@ -468,7 +475,7 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
           ),
           const SizedBox(width: 12),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => ExploreScreen(user: widget.user))); },
             style: ElevatedButton.styleFrom(
               backgroundColor: _accentColor,
               foregroundColor: Colors.white,

@@ -6,15 +6,18 @@ use App\Repositories\MessageRepository;
 use App\Events\MessageDeleted;
 use App\Events\MessageSent;
 use App\Models\Chat;
+use App\Repositories\NotificationRepository;
 use Illuminate\Support\Facades\Log;
 
 class MessageService extends BaseService
 {
     protected MessageRepository $messageRepo;
+    protected NotificationRepository $notificationRepo;
 
-    public function __construct(MessageRepository $messageRepo)
+    public function __construct(MessageRepository $messageRepo, NotificationRepository $notificationRepo)
     {
         $this->messageRepo = $messageRepo;
+        $this->notificationRepo = $notificationRepo;
     }
 
     public function getChatMessages(string $chatId, string $userId): array
@@ -125,6 +128,8 @@ class MessageService extends BaseService
         Log::info('Broadcasting MessageSent on chat.' . $chat->id . ' by User ' . $userId);
         broadcast(new MessageSent($messageData, $chat->id));
 
+        $this->createMessageNotification($chat, $userId, $messageText, $type);
+
         $messageData['isMe'] = true;
         return $messageData;
     }
@@ -197,5 +202,34 @@ class MessageService extends BaseService
         file_put_contents($fullPath, $decoded);
 
         return url('uploads/chat_audio/' . $fileName);
+    }
+
+    protected function createMessageNotification(Chat $chat, string $senderId, ?string $messageText, string $type): void
+    {
+        try {
+            $sender = \App\Models\User::find($senderId);
+            $participantIds = $chat->participants()->pluck('user_id')->toArray();
+            $recipientIds = array_filter($participantIds, fn($id) => $id !== $senderId);
+
+            $preview = $messageText;
+            if ($type === 'audio') $preview = '🎤 Voice note';
+            elseif ($type === 'image') $preview = '📷 Foto';
+            elseif ($type === 'video') $preview = '🎥 Video';
+            if (strlen($preview) > 80) $preview = substr($preview, 0, 80) . '...';
+
+            foreach ($recipientIds as $recipientId) {
+                $this->notificationRepo->create([
+                    'user_id' => $recipientId,
+                    'title' => 'Pesan baru dari ' . ($sender->name ?? 'Pengguna'),
+                    'message' => $preview,
+                    'type' => 'message',
+                    'data' => ['chat_id' => $chat->id, 'sender_id' => $senderId],
+                    'is_read' => false,
+                    'created_at' => now(),
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::warning('Failed to create message notification: ' . $e->getMessage());
+        }
     }
 }

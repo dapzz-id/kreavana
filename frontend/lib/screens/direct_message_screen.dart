@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart' as record;
 
+import '../services/badge_service.dart';
 import '../services/chat_service.dart';
 import '../services/call_service.dart';
 import '../services/audio_player_service.dart';
@@ -32,6 +33,12 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
   Map<String, dynamic>? selectedChat;
   final GlobalKey<ChatListSectionState> chatListKey =
       GlobalKey<ChatListSectionState>();
+
+  @override
+  void initState() {
+    super.initState();
+    BadgeService().markMessagesRead();
+  }
 
   @override
   Widget build(BuildContext context) {

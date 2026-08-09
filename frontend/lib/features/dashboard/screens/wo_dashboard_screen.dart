@@ -8,6 +8,8 @@ import '../../../models/user_model.dart';
 import '../../../screens/buat_kebutuhan_screen.dart';
 import '../../../screens/notifications_screen.dart';
 import '../../../services/badge_service.dart';
+import '../../../screens/proyek_saya_screen.dart';
+import '../../../screens/profile_screen.dart';
 
 class WoDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -391,7 +393,7 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Proyek Aktif', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-              TextButton(onPressed: () {}, child: const Text('Lihat Semua', style: TextStyle(fontSize: 12))),
+              TextButton(onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => ProyekSayaScreen(user: widget.user, onUserUpdated: widget.onUserUpdated))); }, child: const Text('Lihat Semua', style: TextStyle(fontSize: 12))),
             ],
           ),
           const SizedBox(height: 8),
@@ -583,7 +585,7 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
               ),
               const SizedBox(height: 10),
               OutlinedButton(
-                onPressed: () {},
+                onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen(user: widget.user, onUserUpdated: widget.onUserUpdated, onLogout: () {}))); },
                 child: const Text('Lengkapi Sekarang', style: TextStyle(fontSize: 11)),
               ),
             ],

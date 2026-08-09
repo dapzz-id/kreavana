@@ -7,6 +7,8 @@ import '../../../models/user_model.dart';
 import '../../../screens/buat_kebutuhan_screen.dart';
 import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
+import '../../../screens/peluang_proyek_screen.dart';
+import '../../../services/badge_service.dart';
 
 class CommunityDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -110,9 +112,15 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
               ),
             ),
           ),
-          _buildAppBarBadge(Icons.notifications_none_outlined, '3', isDark),
+          ListenableBuilder(
+            listenable: BadgeService(),
+            builder: (_, _) => _buildAppBarBadge(Icons.notifications_none_outlined, BadgeService().unreadNotificationsText, isDark),
+          ),
           const SizedBox(width: 4),
-          _buildAppBarBadge(Icons.chat_bubble_outline, '1', isDark),
+          ListenableBuilder(
+            listenable: BadgeService(),
+            builder: (_, _) => _buildAppBarBadge(Icons.chat_bubble_outline, BadgeService().unreadMessagesText, isDark),
+          ),
           const SizedBox(width: 20),
           IconButton(
             key: _themeBtnKey,
@@ -405,7 +413,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
             children: [
               const Text('Kegiatan Mendatang', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               TextButton(
-                onPressed: () {},
+                onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => PeluangProyekScreen(user: widget.user))); },
                 child: const Text('Lihat Semua', style: TextStyle(fontSize: 12)),
               ),
             ],

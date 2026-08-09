@@ -48,6 +48,16 @@ class ChatController extends Controller
         return $this->successResponse('Chat berhasil ditandai sudah dibaca');
     }
 
+    public function markAllAsRead(Request $request)
+    {
+        $userId = $request->user()->id;
+        \App\Models\ChatParticipant::where('user_id', $userId)
+            ->where('status', 'joined')
+            ->update(['last_read_at' => now()]);
+
+        return $this->successResponse('Semua chat berhasil ditandai sudah dibaca');
+    }
+
     /**
      * Lightweight presence ping - updates last_online without full middleware
      */
@@ -70,10 +80,11 @@ class ChatController extends Controller
             ->with('chat')
             ->get()
             ->sum(function ($participant) {
-                $lastRead = $participant->last_read_at;
+                if (!$participant->chat) return 0;
+                $lastRead = $participant->last_read_at ?? $participant->created_at ?? now();
                 return $participant->chat->messages()
-                    ->where('user_id', '!=', $userId)
-                    ->where('created_at', '>', $lastRead ?? '2000-01-01 00:00:00')
+                    ->where('user_id', '!=', $participant->user_id)
+                    ->where('created_at', '>', $lastRead)
                     ->count();
             });
 
