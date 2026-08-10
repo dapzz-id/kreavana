@@ -1,6 +1,7 @@
 import '../../../services/badge_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import '../../../widgets/upgrade_plan_modal.dart';
 import '../../../app/theme.dart';
 import '../../../services/theme_transition_service.dart';
 import '../../../screens/global_search_screen.dart';
@@ -8,6 +9,9 @@ import '../../../models/user_model.dart';
 import '../../../screens/buat_kebutuhan_screen.dart';
 import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
+import '../../../screens/peluang_proyek_screen.dart';
+import '../../../screens/profile_screen.dart';
+import '../../../services/badge_service.dart';
 
 class IndividualDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -111,9 +115,15 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
               ),
             ),
           ),
-          _buildAppBarBadge(Icons.notifications_none_outlined, '3', isDark),
+          ListenableBuilder(
+            listenable: BadgeService(),
+            builder: (_, _) => _buildAppBarBadge(Icons.notifications_none_outlined, BadgeService().unreadNotificationsText, isDark),
+          ),
           const SizedBox(width: 4),
-          _buildAppBarBadge(Icons.chat_bubble_outline, '1', isDark),
+          ListenableBuilder(
+            listenable: BadgeService(),
+            builder: (_, _) => _buildAppBarBadge(Icons.chat_bubble_outline, BadgeService().unreadMessagesText, isDark),
+          ),
           const SizedBox(width: 20),
           IconButton(
             key: _themeBtnKey,
@@ -417,7 +427,7 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Permintaan Terbaru', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-              TextButton(onPressed: () {}, child: const Text('Lihat Semua', style: TextStyle(fontSize: 12))),
+              TextButton(onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => PeluangProyekScreen(user: widget.user))); }, child: const Text('Lihat Semua', style: TextStyle(fontSize: 12))),
             ],
           ),
           const SizedBox(height: 8),
@@ -586,7 +596,7 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
               ),
               const SizedBox(height: 10),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () => UpgradePlanModal.show(context),
                 style: ElevatedButton.styleFrom(backgroundColor: _indivPurple),
                 child: const Text('Upgrade Sekarang', style: TextStyle(color: Colors.white, fontSize: 11)),
               ),

@@ -72,12 +72,17 @@ class ProfileService extends BaseService
                         $decoded = base64_decode($imageData);
                         if ($decoded !== false) {
                             $fileName = 'avatar_' . $user->id . '_' . time() . '.' . $ext;
-                            $dirPath = public_path('avatars');
-                            if (!file_exists($dirPath)) {
-                                mkdir($dirPath, 0755, true);
-                            }
-                            file_put_contents($dirPath . '/' . $fileName, $decoded);
-                            $user->avatar_url = url('api/avatars/' . $fileName);
+                            $tempPath = sys_get_temp_dir() . '/' . $fileName;
+                            file_put_contents($tempPath, $decoded);
+                            
+                            $uploadedFile = new \Illuminate\Http\UploadedFile($tempPath, $fileName, 'image/' . $ext, null, true);
+                            
+                            /** @var \App\Services\StorageService $storageService */
+                            $storageService = app(\App\Services\StorageService::class);
+                            $storageFile = $storageService->store($user, $uploadedFile, 'avatar', 'public');
+                            
+                            $user->avatar_url = url('storage/' . $storageFile->path);
+                            @unlink($tempPath);
                         }
                     }
                 }
@@ -165,12 +170,18 @@ class ProfileService extends BaseService
                 $decoded = base64_decode($data);
                 if ($decoded !== false) {
                     $fileName = $prefix . '_' . $userId . '_' . time() . '.' . $ext;
-                    $dirPath = public_path($prefix);
-                    if (!file_exists($dirPath)) {
-                        mkdir($dirPath, 0755, true);
-                    }
-                    file_put_contents($dirPath . '/' . $fileName, $decoded);
-                    return url($prefix . '/' . $fileName);
+                    $tempPath = sys_get_temp_dir() . '/' . $fileName;
+                    file_put_contents($tempPath, $decoded);
+                    
+                    $uploadedFile = new \Illuminate\Http\UploadedFile($tempPath, $fileName, 'image/' . $ext, null, true);
+                    
+                    $user = \App\Models\User::find($userId);
+                    /** @var \App\Services\StorageService $storageService */
+                    $storageService = app(\App\Services\StorageService::class);
+                    $storageFile = $storageService->store($user, $uploadedFile, $prefix, 'public');
+                    
+                    @unlink($tempPath);
+                    return url('storage/' . $storageFile->path);
                 }
             }
         }

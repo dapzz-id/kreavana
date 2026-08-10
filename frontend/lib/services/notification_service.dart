@@ -32,4 +32,22 @@ class NotificationService {
       return false;
     }
   }
+
+  static Future<bool> deleteNotification(dynamic id) async {
+    try {
+      final response = await ApiService.delete('notifications/$id');
+      return response['status'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<bool> deleteAllNotifications() async {
+    try {
+      final response = await ApiService.delete('notifications');
+      return response['status'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
 }

@@ -4,17 +4,20 @@ namespace App\Services;
 
 use App\Repositories\OpportunityRepository;
 use App\Repositories\ReportRepository;
+use App\Repositories\NotificationRepository;
 use Illuminate\Support\Facades\Cache;
 
 class OpportunityService extends BaseService
 {
     protected OpportunityRepository $opportunityRepo;
     protected ReportRepository $reportRepo;
+    protected NotificationRepository $notificationRepo;
 
-    public function __construct(OpportunityRepository $opportunityRepo, ReportRepository $reportRepo)
+    public function __construct(OpportunityRepository $opportunityRepo, ReportRepository $reportRepo, NotificationRepository $notificationRepo)
     {
         $this->opportunityRepo = $opportunityRepo;
         $this->reportRepo = $reportRepo;
+        $this->notificationRepo = $notificationRepo;
     }
 
     public function getList(string $subRoleSlug = 'all', ?string $type = null, int $limit = 50)
@@ -47,6 +50,16 @@ class OpportunityService extends BaseService
         $data['created_at'] = now();
 
         $opp = $this->opportunityRepo->create($data);
+
+        $this->notificationRepo->create([
+            'user_id' => $userId,
+            'title' => 'Peluang Proyek Dipublikasikan',
+            'message' => '"' . ($data['title'] ?? 'Peluang baru') . '" telah berhasil dipublikasikan.',
+            'type' => 'project',
+            'data' => ['opportunity_id' => $opp->id],
+            'is_read' => false,
+            'created_at' => now(),
+        ]);
 
         Cache::increment('opportunities_version');
 
@@ -82,9 +95,8 @@ class OpportunityService extends BaseService
             'created_at' => $opp->created_at?->toIso8601String(),
         ];
 
-        // Only include full poster details if specifically requested (e.g., detail page)
-        // This avoids heavy payload in listing routes
-        if ($includePoster && $opp->relationLoaded('user') && $opp->user) {
+        // Include poster details if the user relation is loaded
+        if ($opp->relationLoaded('user') && $opp->user) {
             $data['poster'] = [
                 'id' => $opp->user->id,
                 'name' => $opp->user->name,

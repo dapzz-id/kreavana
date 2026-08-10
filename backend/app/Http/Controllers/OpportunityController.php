@@ -88,4 +88,58 @@ class OpportunityController extends Controller
 
         return $this->successResponse('Data pembuat peluang berhasil diambil', $user->toArray());
     }
+    public function complete(Request $request, $id)
+    {
+        $user = Auth::guard('api')->user();
+        
+        try {
+            $opp = \Illuminate\Support\Facades\DB::transaction(function () use ($id, $user, $request) {
+                $opp = \App\Models\Opportunity::where('id', $id)->lockForUpdate()->firstOrFail();
+
+                if ($opp->status === 'closed') {
+                    abort(409, 'Cannot refund or cancel a completed project.');
+                }
+                if ($opp->status === 'cancelled') {
+                    abort(409, 'Project has been cancelled.');
+                }
+
+                // If user is the creator (seller of services, mapped to posted_by as per prompt instructions)
+                if ($user->id === $opp->posted_by) {
+                    if ($opp->creator_completed) {
+                        abort(409, 'Creator has already confirmed completion.');
+                    }
+                    $opp->creator_completed = true;
+                    $opp->creator_completed_at = now();
+                    $opp->save();
+                    return $opp;
+                }
+
+                // If user is the buyer (client)
+                if ($user->id === $opp->buyer_id) {
+                    if (!$opp->creator_completed) {
+                        abort(409, 'Creator has not confirmed completion yet.');
+                    }
+                    
+                    $request->validate(['pin' => 'required|string']);
+
+                    if (!\Illuminate\Support\Facades\Hash::check($request->pin, $user->wallet_pin)) {
+                        abort(400, 'PIN salah.');
+                    }
+
+                    $opp->buyer_completed = true;
+                    $opp->status = 'closed';
+                    $opp->save();
+
+                    return $opp;
+                }
+
+                abort(403, 'Unauthorized. Hanya pihak terkait project yang dapat menyelesaikan.');
+            });
+
+            return $this->successResponse('Aksi penyelesaian berhasil.', $opp);
+        } catch (\Exception $e) {
+            $statusCode = $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface ? $e->getStatusCode() : 500;
+            return $this->errorResponse($e->getMessage(), $statusCode);
+        }
+    }
 }

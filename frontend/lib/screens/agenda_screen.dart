@@ -4,6 +4,8 @@ import '../app/subrole_theme_engine.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
 
+import '../widgets/skeleton/skeleton_list.dart';
+
 class AgendaScreen extends StatefulWidget {
   final UserModel? user;
   final ValueChanged<UserModel>? onUserUpdated;
@@ -16,6 +18,7 @@ class AgendaScreen extends StatefulWidget {
 
 class _AgendaScreenState extends State<AgendaScreen> {
   bool _isLoading = false;
+  final Set<String> _remindedAgendas = {};
   String _selectedFilter = 'Semua';
   String _searchQuery = '';
 
@@ -196,7 +199,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
 
               // ── Agenda List ──
               if (_isLoading)
-                const Padding(padding: EdgeInsets.symmetric(vertical: 40), child: Center(child: CircularProgressIndicator()))
+                const SkeletonList()
               else if (filtered.isEmpty)
                 _buildEmptyState(isDark)
               else
@@ -256,7 +259,6 @@ class _AgendaScreenState extends State<AgendaScreen> {
 
   Widget _buildAgendaCard(Map<String, dynamic> item, Color accentColor, bool isDark) {
     final typeColor = item['typeColor'] as Color;
-    final isOnline = item['type'] == 'Online';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -340,24 +342,41 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     ),
                   ],
                 ),
-                if (isOnline) ...[
-                  const SizedBox(height: 10),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Fitur virtual room segera hadir!')),
-                      );
-                    },
-                    icon: const Icon(Icons.videocam, size: 16),
-                    label: const Text('Gabung Virtual Room', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: accentColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
+                const SizedBox(height: 10),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    final isReminded = _remindedAgendas.contains(item['id']);
+                    setState(() {
+                      if (isReminded) {
+                        _remindedAgendas.remove(item['id']);
+                      } else {
+                        _remindedAgendas.add(item['id']);
+                      }
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(isReminded 
+                          ? 'Pengingat dibatalkan untuk agenda ini.' 
+                          : 'Pengingat (Alarm) berhasil disetel!'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                  icon: Icon(
+                    _remindedAgendas.contains(item['id']) ? Icons.notifications_off : Icons.notifications_active,
+                    size: 16
                   ),
-                ],
+                  label: Text(
+                    _remindedAgendas.contains(item['id']) ? 'Batal Ingatkan' : 'Ingatkan Saya', 
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _remindedAgendas.contains(item['id']) ? Colors.grey.shade600 : accentColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
               ],
             ),
           ),
@@ -416,6 +435,9 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       DropdownMenuItem(value: 'Online', child: Text('Online Meeting')),
                       DropdownMenuItem(value: 'Offline', child: Text('Offline / Shooting Day')),
                       DropdownMenuItem(value: 'Deadline', child: Text('Deadline Penyerahan')),
+                      DropdownMenuItem(value: 'Review', child: Text('Review Project')),
+                      DropdownMenuItem(value: 'Client', child: Text('Client Briefing')),
+                      DropdownMenuItem(value: 'Lainnya', child: Text('Lainnya')),
                     ],
                     onChanged: (v) => setModalState(() => typeSel = v!),
                     decoration: const InputDecoration(labelText: 'Tipe Agenda', border: OutlineInputBorder()),
@@ -429,6 +451,19 @@ class _AgendaScreenState extends State<AgendaScreen> {
                         if (titleCtrl.text.isNotEmpty) {
                           setState(() {
                             final now = DateTime.now();
+                            Color getTypeColor(String type) {
+                              if (type == 'Online' || type == 'Client') return const Color(0xFF3B82F6);
+                              if (type == 'Offline') return const Color(0xFFF97316);
+                              if (type == 'Deadline' || type == 'Review') return const Color(0xFFEF4444);
+                              return Colors.grey.shade600; // Lainnya
+                            }
+                            IconData getTypeIcon(String type) {
+                              if (type == 'Online' || type == 'Client') return Icons.videocam_outlined;
+                              if (type == 'Offline') return Icons.location_on_outlined;
+                              if (type == 'Deadline') return Icons.alarm_outlined;
+                              if (type == 'Review') return Icons.rate_review_outlined;
+                              return Icons.event_note_outlined; // Lainnya
+                            }
                             _agendaList.insert(0, {
                               'id': '${now.millisecondsSinceEpoch}',
                               'title': titleCtrl.text,
@@ -436,13 +471,9 @@ class _AgendaScreenState extends State<AgendaScreen> {
                               'month': 'Agu',
                               'time': timeCtrl.text.isEmpty ? '10:00 WIB' : timeCtrl.text,
                               'type': typeSel,
-                              'typeColor': typeSel == 'Online'
-                                  ? const Color(0xFF3B82F6)
-                                  : (typeSel == 'Offline' ? const Color(0xFFF97316) : const Color(0xFFEF4444)),
-                              'icon': typeSel == 'Online'
-                                  ? Icons.videocam_outlined
-                                  : (typeSel == 'Offline' ? Icons.location_on_outlined : Icons.alarm_outlined),
-                              'location': typeSel == 'Online' ? 'Virtual Call Room' : 'Venue / Studio',
+                              'typeColor': getTypeColor(typeSel),
+                              'icon': getTypeIcon(typeSel),
+                              'location': (typeSel == 'Online' || typeSel == 'Client') ? 'Virtual Call Room' : (typeSel == 'Offline' ? 'Venue / Studio' : '-'),
                               'organizer': widget.user?.name ?? 'Saya',
                             });
                           });

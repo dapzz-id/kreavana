@@ -46,4 +46,10 @@ class AdminController extends Controller
             return $this->errorResponse($e->getMessage(), $e->getCode() ?: 500);
         }
     }
+
+    public function getSystemLogs()
+    {
+        $logs = \App\Models\SystemLog::orderBy('created_at', 'desc')->take(10)->get();
+        return $this->successResponse('System logs berhasil diambil', $logs->toArray());
+    }
 }

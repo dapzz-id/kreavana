@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart' as record;
 
+import '../services/badge_service.dart';
+import '../services/encryption_service.dart';
 import '../services/chat_service.dart';
 import '../services/call_service.dart';
 import '../services/audio_player_service.dart';
@@ -20,8 +22,13 @@ import 'call_screen.dart';
 import 'transfer_screen.dart';
 import 'contacts_screen.dart';
 
+import '../models/user_model.dart';
+
 class DirectMessageScreen extends StatefulWidget {
-  const DirectMessageScreen({super.key});
+  final UserModel? currentUser;
+  final dynamic chatId;
+
+  const DirectMessageScreen({super.key, this.currentUser, this.chatId});
 
   @override
   State<DirectMessageScreen> createState() => _DirectMessageScreenState();
@@ -32,6 +39,13 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
   Map<String, dynamic>? selectedChat;
   final GlobalKey<ChatListSectionState> chatListKey =
       GlobalKey<ChatListSectionState>();
+
+  @override
+  void initState() {
+    super.initState();
+    BadgeService().markMessagesRead();
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -1100,6 +1114,44 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
   Timer? _pingTimer;
   bool _isRefreshingPresence = false;
 
+  Map<String, dynamic> _processMessage(Map<String, dynamic> msg) {
+    if (msg['encryption_version'] == 1) {
+      if (!EncryptionService().isInitialized) {
+        msg['_decrypt_failed'] = true;
+        return msg;
+      }
+      final messageKeys = msg['message_keys'] as List<dynamic>? ?? [];
+      final deviceId = EncryptionService().deviceId;
+      
+      // Look for envelope for this device
+      final envelope = messageKeys.firstWhere(
+        (k) => k['device_id'] == deviceId,
+        orElse: () => null,
+      );
+
+      if (envelope == null) {
+        msg['_decrypt_failed'] = true;
+        return msg;
+      }
+
+      final plaintext = EncryptionService().decryptMessageMultiDevice(
+        msg['ciphertext'] ?? '',
+        msg['iv'] ?? '',
+        envelope['encrypted_key'] ?? '',
+      );
+
+      if (plaintext == null) {
+        msg['_decrypt_failed'] = true;
+      } else {
+        msg['text'] = plaintext;
+        msg['_decrypt_failed'] = false;
+      }
+    } else {
+      msg['_decrypt_failed'] = false;
+    }
+    return msg;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1112,7 +1164,8 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
           ChatService.markAsRead(widget.chat['id'].toString());
           setState(() {
             if (!_messages.any((m) => m['id'].toString() == msg['id'].toString())) {
-              _messages.insert(0, Map<String, dynamic>.from(msg));
+              final processed = _processMessage(Map<String, dynamic>.from(msg));
+              _messages.insert(0, processed);
             }
           });
         }
@@ -1196,7 +1249,10 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
       );
       if (mounted) {
         setState(() {
-          _messages = msgs.map((m) => Map<String, dynamic>.from(m)).toList();
+          _messages = msgs.map((m) {
+            final map = Map<String, dynamic>.from(m);
+            return _processMessage(map);
+          }).toList();
           isLoading = false;
         });
       }
@@ -1225,7 +1281,8 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         if (msgData != null) {
           setState(() {
             if (!_messages.any((m) => m['id'].toString() == msgData['id'].toString())) {
-              _messages.insert(0, Map<String, dynamic>.from(msgData));
+              final processed = _processMessage(Map<String, dynamic>.from(msgData));
+              _messages.insert(0, processed);
             }
           });
         }
@@ -2160,6 +2217,11 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                       itemCount: _messages.length,
                       itemBuilder: (context, index) {
                         final message = _messages[index];
+
+                        if (message['_decrypt_failed'] == true) {
+                          return const SizedBox.shrink();
+                        }
+
                         final isMe = message['isMe'] == true;
                         final isAudio = message['type'] == 'audio';
 

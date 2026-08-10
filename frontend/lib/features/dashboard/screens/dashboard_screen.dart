@@ -15,6 +15,7 @@ import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
 import '../../../screens/transfer_screen.dart';
 import '../../../screens/laporan_screen.dart';
+import '../../../services/badge_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -1099,11 +1100,26 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ),
         const SizedBox(width: 12),
-        // Notification
-        _NotifIconBtn(icon: Icons.notifications_none_outlined, count: _isCreator ? 9 : 2, onTap: () => _navigateTo('Notifikasi'), isDark: isDark),
+        ListenableBuilder(
+          listenable: BadgeService(),
+          builder: (_, __) => _NotifIconBtn(
+            icon: Icons.notifications_none_outlined,
+            count: BadgeService().unreadNotifications,
+            onTap: () => _navigateTo('Notifikasi'),
+            isDark: isDark,
+          ),
+        ),
         const SizedBox(width: 2),
         // Chat
-        _NotifIconBtn(icon: Icons.chat_bubble_outline, count: _isCreator ? 5 : 3, onTap: () => _navigateTo('Pesan'), isDark: isDark),
+        ListenableBuilder(
+          listenable: BadgeService(),
+          builder: (_, __) => _NotifIconBtn(
+            icon: Icons.chat_bubble_outline,
+            count: BadgeService().unreadMessages,
+            onTap: () => _navigateTo('Pesan'),
+            isDark: isDark,
+          ),
+        ),
         const SizedBox(width: 8),
         // Theme toggle
         Builder(builder: (btnCtx) => IconButton(
@@ -1221,7 +1237,7 @@ class _HeroButton extends StatelessWidget {
       return OutlinedButton.icon(
         onPressed: onTap,
         icon: Icon(icon, size: 16),
-        label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        label: FittedBox(fit: BoxFit.scaleDown, child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           side: BorderSide(color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight),
@@ -1246,7 +1262,7 @@ class _HeroButton extends StatelessWidget {
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(icon, color: Colors.white, size: 16),
               const SizedBox(width: 6),
-              Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+              Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)))),
             ]),
           ),
         ),

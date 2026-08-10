@@ -6,6 +6,8 @@ import '../app/theme.dart';
 import 'topup_screen.dart';
 import 'transfer_screen.dart';
 import 'withdraw_screen.dart';
+import '../widgets/skeleton_loader.dart';
+import '../widgets/wallet_pin_dialog.dart';
 
 class WalletScreen extends StatefulWidget {
   final UserModel user;
@@ -24,6 +26,7 @@ class WalletScreen extends StatefulWidget {
 class _WalletScreenState extends State<WalletScreen> {
   bool _isLoading = false;
   double _balance = 0.0;
+  bool _hasPin = true;
   List<WalletTransactionModel> _transactions = [];
   late UserModel _currentUser;
 
@@ -43,6 +46,7 @@ class _WalletScreenState extends State<WalletScreen> {
         _isLoading = false;
         if (result['success'] == true) {
           _balance = result['balance'];
+          _hasPin = result['has_pin'] ?? true;
           _transactions = result['transactions'];
           
           // Update parent state & save local session
@@ -85,7 +89,9 @@ class _WalletScreenState extends State<WalletScreen> {
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
-          child: Column(
+          child: !_hasPin
+              ? _buildActivationUI(theme)
+              : Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 1. Premium Wallet Card with Linear Gradient
@@ -282,11 +288,19 @@ class _WalletScreenState extends State<WalletScreen> {
 
               // 3. Transactions List
               _isLoading && _transactions.isEmpty
-                  ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(32),
-                        child: CircularProgressIndicator(),
-                      ),
+                  ? ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: 4,
+                      itemBuilder: (context, index) {
+                        return const Padding(
+                          padding: EdgeInsets.only(bottom: 12),
+                          child: SkeletonLoader(
+                            height: 80,
+                            borderRadius: 16,
+                          ),
+                        );
+                      },
                     )
                   : _transactions.isEmpty
                       ? Center(
@@ -423,6 +437,84 @@ class _WalletScreenState extends State<WalletScreen> {
     );
 
     return content;
+  }
+
+  Widget _buildActivationUI(ThemeData theme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.account_balance_wallet_rounded,
+                size: 80,
+                color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+            const SizedBox(height: 24),
+            Text(
+              'Wallet Belum Aktif',
+              style: theme.textTheme.headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Aktifkan wallet dan atur PIN terlebih dahulu untuk bisa melakukan transaksi, seperti pembelian paket atau transfer saldo.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: _activateWallet,
+              icon: const Icon(Icons.security_rounded),
+              label: const Text('Aktifkan & Set PIN'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryPurple,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _activateWallet() async {
+    final pin = await WalletPinDialog.show(
+      context,
+      title: 'Set PIN Wallet Baru',
+      subtitle: 'Buat PIN 6 digit untuk mengamankan transaksi kamu.',
+      checkPinFirst: false,
+    );
+
+    if (pin != null && mounted) {
+      setState(() => _isLoading = true);
+      try {
+        await WalletService.setPin(pin);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Wallet berhasil diaktifkan!'),
+            backgroundColor: Colors.green.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        _loadWalletData();
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal: $e'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildStatusBadge(String status) {

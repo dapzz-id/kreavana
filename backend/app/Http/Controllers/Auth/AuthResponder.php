@@ -29,26 +29,38 @@ trait AuthResponder
             $refreshToken = app(RefreshTokenRepository::class)->issue($user);
         }
 
+        $isMobile = request()->header('X-Client-Type') === 'mobile';
+
+        $data = [
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'expires_in' => $ttlSeconds,
+        ];
+
+        if ($isMobile) {
+            $data['refresh_token'] = $refreshToken;
+        }
+
         $response = response()->json([
             'status' => true,
-            'data' => [
-                'access_token' => $token,
-                'token_type' => 'bearer',
-                'expires_in' => $ttlSeconds,
-            ]
+            'data' => $data
         ]);
 
-        return $response->cookie(
-            config('auth_tokens.refresh.cookie'),
-            (string) $refreshToken,
-            (int) config('auth_tokens.refresh.ttl_minutes'),
-            config('auth_tokens.refresh.path'),
-            null,
-            request()->secure() || app()->environment('production'), // secure
-            true, // httpOnly
-            false,
-            config('auth_tokens.refresh.same_site')
-        );
+        if (!$isMobile) {
+            $response->cookie(
+                config('auth_tokens.refresh.cookie'),
+                (string) $refreshToken,
+                (int) config('auth_tokens.refresh.ttl_minutes'),
+                config('auth_tokens.refresh.path'),
+                null,
+                request()->secure() || app()->environment('production', 'testing'), // secure
+                true, // httpOnly
+                false,
+                config('auth_tokens.refresh.same_site')
+            );
+        }
+
+        return $response;
     }
 
     /**
@@ -59,7 +71,9 @@ trait AuthResponder
      */
     protected function handleRefresh($request)
     {
-        $refreshToken = $request->cookie(config('auth_tokens.refresh.cookie'));
+        // Fallback to cookie if not explicitly provided in the request body
+        $refreshToken = $request->input('refresh_token') ?: $request->cookie(config('auth_tokens.refresh.cookie'));
+        
         if (!$refreshToken) {
             return $this->genericUnauthorized();
         }
@@ -103,7 +117,8 @@ trait AuthResponder
      */
     protected function handleLogout($request)
     {
-        app(RefreshTokenRepository::class)->revokeRaw($request->cookie(config('auth_tokens.refresh.cookie')));
+        $refreshToken = $request->input('refresh_token') ?: $request->cookie(config('auth_tokens.refresh.cookie'));
+        app(RefreshTokenRepository::class)->revokeRaw($refreshToken);
         $this->revokeBearerJtiIfPresent();
 
         $user = Auth::guard('api')->user();
@@ -118,8 +133,13 @@ trait AuthResponder
 
         Auth::guard('api')->logout();
 
-        return response()->json(['status' => true])
-            ->withoutCookie(config('auth_tokens.refresh.cookie'), config('auth_tokens.refresh.path'));
+        $response = response()->json(['status' => true]);
+        
+        if ($request->header('X-Client-Type') !== 'mobile') {
+            $response->withoutCookie(config('auth_tokens.refresh.cookie'), config('auth_tokens.refresh.path'));
+        }
+
+        return $response;
     }
 
     protected function genericUnauthorized()

@@ -52,12 +52,46 @@ class UserController extends Controller
     {
         $request->validate([
             'fcm_token' => 'required|string',
+            'device_id' => 'nullable|string',
         ]);
 
         $user = $request->user();
+        
+        // Backward compatibility: selalu update legacy token
         $user->fcm_token = $request->fcm_token;
         $user->save();
 
+        if ($request->device_id) {
+            \App\Models\UserDevice::where('user_id', $user->id)
+                ->where('device_id', $request->device_id)
+                ->update(['fcm_token' => $request->fcm_token]);
+        }
+
         return $this->successResponse('FCM token berhasil diperbarui.');
+    }
+
+    public function registerDevice(Request $request)
+    {
+        $request->validate([
+            'device_id' => 'required|string',
+            'public_key' => 'required|string',
+        ]);
+
+        $user = $request->user();
+
+        // Reactivate device or create a new one
+        $device = \App\Models\UserDevice::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'device_id' => $request->device_id,
+            ],
+            [
+                'public_key' => $request->public_key,
+                'is_active' => true,
+                'revoked_at' => null,
+            ]
+        );
+
+        return $this->successResponse('Device registered successfully', $device->toArray());
     }
 }

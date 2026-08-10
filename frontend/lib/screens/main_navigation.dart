@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/upgrade_plan_modal.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../features/auth/services/auth_service.dart';
@@ -16,11 +17,11 @@ import 'tim_hak_akses_screen.dart';
 import 'notifications_screen.dart';
 import 'profile_screen.dart';
 import 'explore_screen.dart';
-import '../features/auth/screens/login_screen.dart';
 import '../services/user_store.dart';
 import '../services/app_router.dart';
 import 'package:go_router/go_router.dart';
 import '../features/dashboard/screens/admin_dashboard_screen.dart';
+import '../features/dashboard/screens/admin_resolution_screen.dart';
 import 'admin_verification_screen.dart';
 import 'proyek_saya_screen.dart';
 import 'agenda_screen.dart';
@@ -54,7 +55,6 @@ import 'direct_message_screen.dart';
 import '../app/subrole_theme_engine.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
 import '../widgets/creator_sidebar_menus.dart';
-import '../utils/app_errors.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -150,7 +150,7 @@ class _MainNavigationState extends State<MainNavigation> {
     bool isCollapsed = false,
     bool isMobileDrawer = false,
   }) {
-    final screensCount = _currentUser.isAdmin ? 4 : 12;
+    final screensCount = _currentUser.isAdmin ? 5 : 12;
     final activeIndex = _currentIndex >= screensCount ? 0 : _currentIndex;
     final isSelected = activeIndex == index;
     final activeColor = SubRoleThemeEngine.getAccentColorForUser(_currentUser);
@@ -304,10 +304,6 @@ class _MainNavigationState extends State<MainNavigation> {
     );
   }
 
-  void _showDummyActionMessage(String title) {
-    AppSnackbar.info(context, '$title belum tersedia.');
-  }
-
   bool get _isCreatorUser => CreatorSidebarMenus.isCreatorUser(_currentUser);
 
   bool get _hasSpecificCreatorSubRole =>
@@ -318,7 +314,7 @@ class _MainNavigationState extends State<MainNavigation> {
     0: AppRoutes.beranda,
     1: AppRoutes.explore,
     2: AppRoutes.proyek,
-    3: AppRoutes.marketplace,
+    3: AppRoutes.marketplaceKarya,
     4: AppRoutes.agenda,
     5: AppRoutes.kolaborasi,
     6: AppRoutes.reputasi,
@@ -327,6 +323,14 @@ class _MainNavigationState extends State<MainNavigation> {
     9: AppRoutes.profil,
     10: AppRoutes.notifikasi,
     11: AppRoutes.pesan,
+  };
+
+  static const _adminIndexRouteMap = {
+    0: AppRoutes.adminDashboard,
+    1: AppRoutes.adminVerification,
+    2: AppRoutes.adminResolution,
+    3: AppRoutes.notifikasi,
+    4: AppRoutes.profil,
   };
 
   void _navigateToScreenIndex(int index) {
@@ -338,7 +342,9 @@ class _MainNavigationState extends State<MainNavigation> {
       _activeGovRoute = null;
     });
     // Sync URL di web
-    final route = _indexRouteMap[index];
+    final route = _currentUser.isAdmin 
+        ? _adminIndexRouteMap[index] 
+        : _indexRouteMap[index];
     if (route != null && mounted) {
       context.go(route);
     }
@@ -365,6 +371,7 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   Widget _buildUpgradePromoCard(bool isDark, {bool isCollapsed = false}) {
+    if (_currentUser.role != 'creator') return const SizedBox.shrink();
     if (isCollapsed) return const SizedBox.shrink();
     final accentColor = SubRoleThemeEngine.getAccentColorForUser(_currentUser);
     return Column(
@@ -396,7 +403,7 @@ class _MainNavigationState extends State<MainNavigation> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => _showDummyActionMessage('Upgrade Sekarang'),
+                    onPressed: () => UpgradePlanModal.show(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: accentColor,
@@ -540,14 +547,24 @@ class _MainNavigationState extends State<MainNavigation> {
       const SizedBox(height: 18),
       _buildSidebarSectionHeader(layananTitle, isDark, isCollapsed: isCollapsed),
       ...layananItems.map(
-        (entry) => _buildSidebarLink(
-          icon: entry.icon,
-          label: entry.label,
-          onTap: () => _handleCreatorMenuEntry(entry),
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isMobileDrawer: isMobileDrawer,
-        ),
+        (entry) {
+          final index = switch (entry.route) {
+            'marketplace' => 3,
+            'agenda' => 4,
+            'proyek' => 2,
+            'kolaborasi' => 5,
+            _ => null,
+          };
+          return _buildSidebarLink(
+            icon: entry.icon,
+            label: entry.label,
+            onTap: () => _handleCreatorMenuEntry(entry),
+            isDark: isDark,
+            isCollapsed: isCollapsed,
+            isSelected: index != null && _currentIndex == index,
+            isMobileDrawer: isMobileDrawer,
+          );
+        },
       ),
       const SizedBox(height: 18),
       _buildSidebarSectionHeader('LAINNYA', isDark, isCollapsed: isCollapsed),
@@ -625,10 +642,20 @@ class _MainNavigationState extends State<MainNavigation> {
           isMobileDrawer: isMobileDrawer,
         ),
         _buildSidebarItem(
+          icon: Icons.warning_amber_rounded,
+          activeIcon: Icons.warning,
+          label: 'Resolusi & Dispute',
+          index: 2,
+          theme: theme,
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarItem(
           icon: Icons.notifications_none_outlined,
           activeIcon: Icons.notifications,
           label: 'Notifikasi',
-          index: 2,
+          index: 3,
           theme: theme,
           isDark: isDark,
           isCollapsed: isCollapsed,
@@ -638,7 +665,7 @@ class _MainNavigationState extends State<MainNavigation> {
           icon: Icons.person_outline,
           activeIcon: Icons.person,
           label: 'Profil Saya',
-          index: 3,
+          index: 4,
           theme: theme,
           isDark: isDark,
           isCollapsed: isCollapsed,
@@ -1244,6 +1271,7 @@ class _MainNavigationState extends State<MainNavigation> {
         ? [
             AdminDashboardScreen(user: _currentUser),
             const AdminVerificationScreen(),
+            AdminResolutionScreen(user: _currentUser),
             NotificationsScreen(userId: _currentUser.id ?? ''),
             ProfileScreen(
               user: _currentUser,

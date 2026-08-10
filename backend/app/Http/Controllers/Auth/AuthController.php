@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Contracts\AuthServiceInterface;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
 use App\Models\User;
 use App\Models\AuthLog;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use App\Jobs\SendSocialLoginPasswordJob;
+use App\Contracts\AuthServiceInterface;
+use Illuminate\Support\Facades\Http;
 
 class AuthController extends Controller
 {
@@ -103,6 +106,69 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         return $this->handleLogout($request);
+    }
+
+    /**
+     * Get active sessions for the current user.
+     */
+    public function getSessions(Request $request)
+    {
+        $user = Auth::guard('api')->user();
+        
+        $sessions = \App\Models\UserSession::where('user_id', $user->id)
+            ->whereNull('revoked_at')
+            ->where('expires_at', '>', now())
+            ->orderBy('last_used_at', 'desc')
+            ->get(['id', 'device_name', 'platform', 'ip_address', 'user_agent', 'last_used_at', 'expires_at']);
+
+        return response()->json([
+            'status' => true,
+            'data' => $sessions
+        ]);
+    }
+
+    /**
+     * Revoke a specific session.
+     */
+    public function revokeSession(Request $request, $id)
+    {
+        $user = Auth::guard('api')->user();
+        
+        $session = \App\Models\UserSession::where('id', $id)
+            ->where('user_id', $user->id) // Prevent IDOR
+            ->first();
+
+        if (!$session) {
+            return response()->json(['status' => false, 'message' => 'Session not found'], 404);
+        }
+
+        app(\App\Services\RefreshTokenRepository::class)->revokeSession($session->id);
+
+        return response()->json(['status' => true, 'message' => 'Session revoked']);
+    }
+
+    /**
+     * Logout from all sessions.
+     */
+    public function logoutAll(Request $request)
+    {
+        $user = Auth::guard('api')->user();
+        
+        app(\App\Services\RefreshTokenRepository::class)->revokeAllForUser($user->id);
+
+        $this->revokeBearerJtiIfPresent();
+        
+        AuthLog::create([
+            'user_id' => $user->id,
+            'action' => 'logout_all',
+            'ip_address' => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 255)
+        ]);
+        
+        Auth::guard('api')->logout();
+
+        return response()->json(['status' => true, 'message' => 'Berhasil logout dari semua perangkat.'])
+            ->withoutCookie(config('auth_tokens.refresh.cookie'), config('auth_tokens.refresh.path'));
     }
 
     /**
@@ -256,15 +322,21 @@ class AuthController extends Controller
             if (!$user) {
                 // Create new user
                 $username = $this->generateUsername($email);
+                $plainPassword = Str::random(10);
                 
                 $user = User::create([
                     'name' => $name ?? 'User',
                     'username' => $username,
                     'email' => $email,
-                    'password' => \Illuminate\Support\Facades\Hash::make(uniqid()), // Random password
+                    'password' => \Illuminate\Support\Facades\Hash::make($plainPassword),
+                    'avatar_url' => $photoUrl,
                     'role' => 'user',
                     'email_verified_at' => now(), // Auto-verify for social login
                 ]);
+                
+                // Dispatch job to send email in the background
+                SendSocialLoginPasswordJob::dispatch($email, $plainPassword);
+
                 $isNewUser = true;
             }
 
@@ -315,7 +387,7 @@ class AuthController extends Controller
             }
 
             // Fallback: validasi sebagai Google ID Token biasa (untuk mobile)
-            $response = Http::get('https://oauth2.googleapis.com/tokeninfo', [
+            $response = Http::withoutVerifying()->get('https://oauth2.googleapis.com/tokeninfo', [
                 'id_token' => $idToken,
             ]);
 
@@ -372,8 +444,9 @@ class AuthController extends Controller
     {
         try {
             // Ambil public keys Firebase
-            $keysResponse = Http::get('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
+            $keysResponse = Http::timeout(10)->withoutVerifying()->get('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
             if ($keysResponse->failed()) {
+                \Log::warning('Firebase: failed to fetch public keys', ['status' => $keysResponse->status()]);
                 return null;
             }
 
@@ -382,21 +455,32 @@ class AuthController extends Controller
             // Decode header JWT untuk mendapatkan kid (key ID)
             $parts = explode('.', $idToken);
             if (count($parts) !== 3) {
+                \Log::warning('Firebase: token bukan JWT valid', ['parts_count' => count($parts)]);
                 return null;
             }
 
-            $header = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $parts[0])), true);
+            $headerB64 = str_replace(['-', '_'], ['+', '/'], $parts[0]);
+            $headerB64 .= str_repeat('=', (4 - strlen($headerB64) % 4) % 4);
+            $header = json_decode(base64_decode($headerB64), true);
             $kid = $header['kid'] ?? null;
 
-            if (!$kid || !isset($publicKeys[$kid])) {
+            if (!$kid) {
+                \Log::warning('Firebase: kid not found in header', ['header' => $header]);
+                return null;
+            }
+            if (!isset($publicKeys[$kid])) {
+                \Log::warning('Firebase: kid not found in public keys', ['kid' => $kid, 'available_keys' => array_keys($publicKeys)]);
                 return null;
             }
 
             // Decode payload JWT
-            $payloadJson = base64_decode(str_replace(['-', '_'], ['+', '/'], $parts[1]));
+            $payloadB64 = str_replace(['-', '_'], ['+', '/'], $parts[1]);
+            $payloadB64 .= str_repeat('=', (4 - strlen($payloadB64) % 4) % 4);
+            $payloadJson = base64_decode($payloadB64);
             $payload = json_decode($payloadJson, true);
 
             if (!$payload || !isset($payload['email'])) {
+                \Log::warning('Firebase: email not found in payload', ['payload' => $payload]);
                 return null;
             }
 
@@ -404,16 +488,21 @@ class AuthController extends Controller
             $projectId = env('FIREBASE_PROJECT_ID', 'kreavana-com');
             $expectedIssuer = 'https://securetoken.google.com/' . $projectId;
             if (($payload['iss'] ?? '') !== $expectedIssuer) {
+                \Log::warning('Firebase: issuer mismatch', ['expected' => $expectedIssuer, 'got' => $payload['iss'] ?? 'null']);
                 return null;
             }
 
-            // Validasi audience
-            if (($payload['aud'] ?? '') !== $projectId) {
+            // Validasi audience — terima project ID atau web client ID
+            $aud = $payload['aud'] ?? '';
+            $webClientId = env('GOOGLE_CLIENT_ID');
+            if ($aud !== $projectId && ($webClientId && $aud !== $webClientId)) {
+                \Log::warning('Firebase: audience mismatch', ['expected_project' => $projectId, 'expected_client' => $webClientId, 'got' => $aud]);
                 return null;
             }
 
             // Validasi exp
             if (($payload['exp'] ?? 0) < time()) {
+                \Log::warning('Firebase: token expired', ['exp' => $payload['exp'], 'now' => time()]);
                 return null;
             }
 
@@ -425,7 +514,7 @@ class AuthController extends Controller
                 'email_verified' => $payload['email_verified'] ?? false,
             ];
         } catch (\Exception $e) {
-            \Log::debug('Firebase token verification skipped: ' . $e->getMessage());
+            \Log::error('Firebase token verification error: ' . $e->getMessage());
             return null;
         }
     }

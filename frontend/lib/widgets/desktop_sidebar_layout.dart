@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'upgrade_plan_modal.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../features/auth/screens/login_screen.dart';
@@ -313,6 +314,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   }
 
   Widget _buildUpgradePromoCard(bool isDark) {
+    if (widget.user.role != 'creator') return const SizedBox.shrink();
     return Column(
       children: [
         const SizedBox(height: 18),
@@ -344,14 +346,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Upgrade Sekarang — Segera Hadir'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    },
+                    onPressed: () => UpgradePlanModal.show(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: AppTheme.primaryPurple,

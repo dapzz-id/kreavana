@@ -1,6 +1,6 @@
 class NotificationModel {
   final String? id;
-  final int userId;
+  final String userId;
   final String title;
   final String body;
   final String type;
@@ -20,9 +20,7 @@ class NotificationModel {
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
       id: json['id']?.toString(),
-      userId: json['user_id'] is int
-          ? json['user_id']
-          : int.parse(json['user_id'].toString()),
+      userId: json['user_id']?.toString() ?? '',
       title: json['title'] ?? '',
       body: json['body'] ?? json['message'] ?? '',
       type: json['type'] ?? 'info',

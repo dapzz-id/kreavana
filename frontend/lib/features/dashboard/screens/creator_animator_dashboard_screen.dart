@@ -11,6 +11,9 @@ import '../../../screens/global_search_screen.dart';
 import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
 import '../../../screens/profile_screen.dart';
+import '../../../services/badge_service.dart';
+
+import '../../../widgets/skeleton/skeleton_grid.dart';
 
 class CreatorAnimatorDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -170,9 +173,15 @@ class _CreatorAnimatorDashboardScreenState
             ),
           ),
           const SizedBox(width: 12),
-          _buildAppBarBadge(Icons.notifications_none_outlined, '3', isDark),
+          ListenableBuilder(
+            listenable: BadgeService(),
+            builder: (_, _) => _buildAppBarBadge(Icons.notifications_none_outlined, BadgeService().unreadNotificationsText, isDark),
+          ),
           const SizedBox(width: 4),
-          _buildAppBarBadge(Icons.chat_bubble_outline, '1', isDark),
+          ListenableBuilder(
+            listenable: BadgeService(),
+            builder: (_, _) => _buildAppBarBadge(Icons.chat_bubble_outline, BadgeService().unreadMessagesText, isDark),
+          ),
           const SizedBox(width: 8),
           GestureDetector(
             onTap: () => Navigator.push(

@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app/theme.dart';
 import 'services/auth_session_state.dart';
 import 'features/auth/services/auth_service.dart';
-import 'features/auth/screens/login_screen.dart';
+
 import 'services/realtime_service.dart';
 import 'services/fcm_service.dart';
 import 'services/push_notification_service.dart';
@@ -13,6 +13,7 @@ import 'services/call_service.dart';
 import 'services/badge_service.dart';
 import 'services/user_store.dart';
 import 'services/app_router.dart';
+import 'services/encryption_service.dart';
 import 'services/secure_storage_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
@@ -21,9 +22,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
 import 'widgets/global_call_overlay.dart';
-import 'package:flutter_web_plugins/flutter_web_plugins.dart';
+import 'services/url_strategy.dart';
 
-import 'services/navigator_key.dart';
 export 'services/navigator_key.dart' show navigatorKey;
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
@@ -31,8 +31,9 @@ final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Pakai path-based URL (/login) bukan hash-based (/#/login)
-  usePathUrlStrategy();
+  // Pakai path-based URL (/login) bukan hash-based (/#/login).
+  // No-op di platform native (Windows/Android/iOS) via conditional import.
+  configureUrlStrategy();
 
   const String env = String.fromEnvironment('ENV', defaultValue: kReleaseMode ? 'production' : 'development');
   await dotenv.load(fileName: ".env.$env");
@@ -93,8 +94,12 @@ void main() async {
           RealtimeService().init(user.id ?? '', token);
         }
         
+        
         FCMService().init();
         BadgeService().startPolling();
+        
+        // Initialize E2EE Keys
+        EncryptionService().initializeKeys();
       }
     }
   } catch (_) {
