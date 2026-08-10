@@ -15,6 +15,7 @@ class MarketplacePurchase extends Model
         'marketplace_item_id',
         'amount',
         'status',
+        'storage_sync_status',
     ];
 
     public function user()

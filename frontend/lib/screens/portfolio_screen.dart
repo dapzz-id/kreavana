@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/portfolio_service.dart';
 import '../services/api_service.dart';
+import '../utils/app_errors.dart';
 import '../widgets/app_empty_state.dart';
 import '../widgets/skeleton_loader.dart';
+import '../widgets/kreavana_image.dart';
 
 class PortfolioScreen extends StatefulWidget {
   final UserModel? user;
@@ -122,16 +123,12 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
         children: [
           Expanded(
             child: item.imageUrl != null
-                ? CachedNetworkImage(
-                    imageUrl: ApiService.resolveAssetUrl(item.imageUrl!),
+                ? KreavanaImage(
+                    url: item.imageUrl,
                     fit: BoxFit.cover,
-                    placeholder: (context, url) => const SkeletonLoader(
+                    placeholder: const SkeletonLoader(
                       height: double.infinity,
                       borderRadius: 0,
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey.withValues(alpha: 0.2),
-                      child: const Icon(Icons.broken_image, color: Colors.grey),
                     ),
                   )
                 : Container(

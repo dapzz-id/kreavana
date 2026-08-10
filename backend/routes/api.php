@@ -236,7 +236,18 @@ Route::middleware('auth:api')->group(function () {
         Route::post('purchase', [SubscriptionController::class, 'purchase']);
         Route::get('current', [SubscriptionController::class, 'getCurrent']);
     });
+
+    // Storage Management
+    Route::prefix('storage')->group(function () {
+        Route::get('history', [StorageController::class, 'history']);
+        Route::delete('{id}', [StorageController::class, 'destroy']);
+        Route::post('purchased/{id}/retry', [StorageController::class, 'retryPurchasedClone']);
+        Route::get('purchased/{id}/download', [StorageController::class, 'downloadPurchasedAsset']);
+    });
 });
+
+// Storage Management (Public Read for Status)
+Route::get('storage/file/{id}/status', [StorageController::class, 'status']);
 
 // Marketplace (public read)
 Route::prefix('marketplace')->group(function () {
