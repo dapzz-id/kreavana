@@ -31,12 +31,15 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
 
   static const _categories = [
     {'slug': 'all', 'name': 'Semua', 'color': Colors.indigo},
-    {'slug': 'nature', 'name': 'Alam', 'color': Colors.green},
-    {'slug': 'tourism', 'name': 'Wisata', 'color': Colors.blue},
-    {'slug': 'culture', 'name': 'Budaya', 'color': Colors.brown},
-    {'slug': 'urban', 'name': 'Urban', 'color': Colors.grey},
-    {'slug': 'hidden_gems', 'name': 'Hidden Gems', 'color': Colors.purple},
-    {'slug': 'seasonal', 'name': 'Seasonal', 'color': Colors.orange},
+    {'slug': 'mc', 'name': 'MC', 'color': Color(0xFFF59E0B)},
+    {'slug': 'videographer', 'name': 'Videografer', 'color': Color(0xFF0EA5E9)},
+    {'slug': 'photographer', 'name': 'Fotografer', 'color': Color(0xFF3B82F6)},
+    {'slug': 'editor', 'name': 'Editor', 'color': Color(0xFF14B8A6)},
+    {'slug': 'makeup_artist', 'name': 'MUA', 'color': Color(0xFFD946EF)},
+    {'slug': 'singer', 'name': 'Penyanyi', 'color': Color(0xFF8B5CF6)},
+    {'slug': 'event_organizer', 'name': 'EO', 'color': Color(0xFFF97316)},
+    {'slug': 'wedding_organizer', 'name': 'WO', 'color': Color(0xFFE11D48)},
+    {'slug': 'community', 'name': 'Komunitas', 'color': Color(0xFFEC4899)},
   ];
 
   @override
@@ -80,24 +83,30 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
   List<OpportunityModel> get _filtered {
     if (_selectedCategory == 'all') return _locations;
     return _locations
-        .where((l) => l.locationCategory == _selectedCategory)
+        .where((l) => l.subRoleSlug == _selectedCategory)
         .toList();
   }
 
-  Color _markerColor(String? category) {
-    switch (category) {
-      case 'nature':
-        return Colors.green;
-      case 'tourism':
-        return Colors.blue;
-      case 'culture':
-        return Colors.brown;
-      case 'urban':
-        return Colors.grey.shade700;
-      case 'hidden_gems':
-        return Colors.purple;
-      case 'seasonal':
-        return Colors.orange;
+  Color _markerColor(String? subRole) {
+    switch (subRole) {
+      case 'mc':
+        return const Color(0xFFF59E0B);
+      case 'videographer':
+        return const Color(0xFF0EA5E9);
+      case 'photographer':
+        return const Color(0xFF3B82F6);
+      case 'editor':
+        return const Color(0xFF14B8A6);
+      case 'makeup_artist':
+        return const Color(0xFFD946EF);
+      case 'singer':
+        return const Color(0xFF8B5CF6);
+      case 'event_organizer':
+        return const Color(0xFFF97316);
+      case 'wedding_organizer':
+        return const Color(0xFFE11D48);
+      case 'community':
+        return const Color(0xFFEC4899);
       default:
         return Colors.teal;
     }
@@ -325,7 +334,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                                 )
                                 .map((loc) {
                                   final color =
-                                      _markerColor(loc.locationCategory);
+                                      _markerColor(loc.subRoleSlug);
                                   final markerWidth = isMobile ? 90.0 : 120.0;
                                   final markerHeight = isMobile ? 50.0 : 65.0;
                                   return Marker(
@@ -577,7 +586,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
     final latController = TextEditingController();
     final lngController = TextEditingController();
     String selectedSubRole = 'mc';
-    String selectedCategory = 'urban';
+    String selectedCategory = 'mc';
 
     final subRoles = [
       {'slug': 'mc', 'label': '🎤 MC & Host Event'},
@@ -728,7 +737,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                 ),
                 const SizedBox(height: 16),
                 // Category
-                const Text('Kategori Lokasi', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Kategori Kreator', style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,

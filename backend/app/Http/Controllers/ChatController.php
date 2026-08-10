@@ -48,6 +48,16 @@ class ChatController extends Controller
         return $this->successResponse('Chat berhasil ditandai sudah dibaca');
     }
 
+    public function markAllAsRead(Request $request)
+    {
+        $userId = $request->user()->id;
+        \App\Models\ChatParticipant::where('user_id', $userId)
+            ->where('status', 'joined')
+            ->update(['last_read_at' => now()]);
+
+        return $this->successResponse('Semua chat berhasil ditandai sudah dibaca');
+    }
+
     /**
      * Lightweight presence ping - updates last_online without full middleware
      */
@@ -70,13 +80,37 @@ class ChatController extends Controller
             ->with('chat')
             ->get()
             ->sum(function ($participant) {
-                $lastRead = $participant->last_read_at;
+                if (!$participant->chat) return 0;
+                $lastRead = $participant->last_read_at ?? $participant->created_at ?? now();
                 return $participant->chat->messages()
-                    ->where('user_id', '!=', $userId)
-                    ->where('created_at', '>', $lastRead ?? '2000-01-01 00:00:00')
+                    ->where('user_id', '!=', $participant->user_id)
+                    ->where('created_at', '>', $lastRead)
                     ->count();
             });
 
         return $this->successResponse('Jumlah pesan belum dibaca', ['count' => $count]);
+    }
+
+    public function devices(Request $request, Chat $chat)
+    {
+        $userId = $request->user()->id;
+        
+        // Ensure user is participant
+        $isParticipant = $chat->participants()->where('user_id', $userId)->exists();
+        if (!$isParticipant) {
+            return $this->errorResponse('Unauthorized', 403);
+        }
+
+        $participantIds = $chat->participants()->pluck('user_id')->toArray();
+        
+        // Get all active devices of all participants
+        $devices = \App\Models\UserDevice::whereIn('user_id', $participantIds)
+            ->where('is_active', true)
+            ->whereNull('revoked_at')
+            ->whereNotNull('public_key')
+            ->get(['user_id', 'device_id', 'public_key'])
+            ->toArray();
+
+        return $this->successResponse('Devices fetched', $devices);
     }
 }

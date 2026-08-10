@@ -18,7 +18,8 @@ class AppRoutes {
   static const beranda = '/beranda';
   static const explore = '/explore';
   static const proyek = '/proyek';
-  static const marketplace = '/marketplace';
+  static const portfolio = '/portfolio';
+  static const marketplaceKarya = '/marketplace-karya';
   static const agenda = '/agenda';
   static const kolaborasi = '/kolaborasi';
   static const reputasi = '/reputasi';
@@ -27,14 +28,16 @@ class AppRoutes {
   static const profil = '/profil';
   static const notifikasi = '/notifikasi';
   static const pesan = '/pesan';
+  static const adminDashboard = '/dashboard';
+  static const adminVerification = '/verifikasi';
+  static const adminResolution = '/resolusi';
 }
 
-/// Tab index mapping sesuai urutan di MainNavigation (non-admin).
 const _routeIndexMap = {
   AppRoutes.beranda: 0,
   AppRoutes.explore: 1,
   AppRoutes.proyek: 2,
-  AppRoutes.marketplace: 3,
+  AppRoutes.marketplaceKarya: 3,
   AppRoutes.agenda: 4,
   AppRoutes.kolaborasi: 5,
   AppRoutes.reputasi: 6,
@@ -43,6 +46,14 @@ const _routeIndexMap = {
   AppRoutes.profil: 9,
   AppRoutes.notifikasi: 10,
   AppRoutes.pesan: 11,
+};
+
+const _adminRouteIndexMap = {
+  AppRoutes.adminDashboard: 0,
+  AppRoutes.adminVerification: 1,
+  AppRoutes.adminResolution: 2,
+  AppRoutes.notifikasi: 3,
+  AppRoutes.profil: 4,
 };
 
 /// Route-route yang tidak memerlukan autentikasi.
@@ -89,14 +100,17 @@ final GoRouter appRouter = GoRouter(
     ),
 
     // ── Authenticated routes (semua via MainNavigation) ──────────────────
-    ..._routeIndexMap.entries.map(
-      (entry) => GoRoute(
-        path: entry.key,
+    ...{..._routeIndexMap.keys, ..._adminRouteIndexMap.keys}.map(
+      (path) => GoRoute(
+        path: path,
         builder: (context, state) {
           final user = currentUserNotifier.value!;
+          final initialIndex = user.isAdmin 
+              ? (_adminRouteIndexMap[path] ?? 0)
+              : (_routeIndexMap[path] ?? 0);
           return MainNavigation(
             initialUser: user,
-            initialIndex: entry.value,
+            initialIndex: initialIndex,
           );
         },
       ),

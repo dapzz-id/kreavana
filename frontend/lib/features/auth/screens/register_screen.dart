@@ -154,7 +154,15 @@ class _RegisterScreenState extends State<RegisterScreen>
 
       if (result['success'] == true) {
         if (result['is_new_user'] == true) {
-          _showSetInitialPasswordDialog(result['user']);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Akun berhasil dibuat. Password sementara telah dikirim ke email Anda.'),
+                backgroundColor: AppTheme.success,
+              ),
+            );
+          }
+          _completeGoogleSignIn(result['user']);
         } else {
           _completeGoogleSignIn(result['user']);
         }
@@ -174,112 +182,112 @@ class _RegisterScreenState extends State<RegisterScreen>
     if (mounted) context.go(AppRoutes.beranda);
   }
 
-  void _showSetInitialPasswordDialog(dynamic user) {
-    final passwordCtrl = TextEditingController();
-    bool isLoading = false;
-    String? localError;
+  // void _showSetInitialPasswordDialog(dynamic user) {
+  //   final passwordCtrl = TextEditingController();
+  //   bool isLoading = false;
+  //   String? localError;
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setStateDialog) {
-          return AlertDialog(
-            title: const Text(
-              'Atur Kata Sandi',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Akun berhasil dibuat! Silakan atur kata sandi agar Anda bisa login menggunakan email di kemudian hari.',
-                  style: TextStyle(fontSize: 13),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: passwordCtrl,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Kata Sandi Baru',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                if (localError != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    localError!,
-                    style: const TextStyle(color: Colors.red, fontSize: 12),
-                  ),
-                ],
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: isLoading
-                    ? null
-                    : () {
-                        Navigator.of(ctx).pop();
-                        _completeGoogleSignIn(user);
-                      },
-                child: const Text('Nanti Saja', style: TextStyle(color: Colors.grey)),
-              ),
-              ElevatedButton(
-                onPressed: isLoading
-                    ? null
-                    : () async {
-                        final pwd = passwordCtrl.text.trim();
-                        if (pwd.length < 6) {
-                          setStateDialog(() {
-                            localError = 'Kata sandi minimal 6 karakter.';
-                          });
-                          return;
-                        }
+  //   showDialog(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (ctx) => StatefulBuilder(
+  //       builder: (context, setStateDialog) {
+  //         return AlertDialog(
+  //           title: const Text(
+  //             'Atur Kata Sandi',
+  //             style: TextStyle(fontWeight: FontWeight.bold),
+  //           ),
+  //           content: Column(
+  //             mainAxisSize: MainAxisSize.min,
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               const Text(
+  //                 'Akun berhasil dibuat! Silakan atur kata sandi agar Anda bisa login menggunakan email di kemudian hari.',
+  //                 style: TextStyle(fontSize: 13),
+  //               ),
+  //               const SizedBox(height: 16),
+  //               TextField(
+  //                 controller: passwordCtrl,
+  //                 obscureText: true,
+  //                 decoration: const InputDecoration(
+  //                   labelText: 'Kata Sandi Baru',
+  //                   border: OutlineInputBorder(),
+  //                 ),
+  //               ),
+  //               if (localError != null) ...[
+  //                 const SizedBox(height: 8),
+  //                 Text(
+  //                   localError!,
+  //                   style: const TextStyle(color: Colors.red, fontSize: 12),
+  //                 ),
+  //               ],
+  //             ],
+  //           ),
+  //           actions: [
+  //             TextButton(
+  //               onPressed: isLoading
+  //                   ? null
+  //                   : () {
+  //                       Navigator.of(ctx).pop();
+  //                       _completeGoogleSignIn(user);
+  //                     },
+  //               child: const Text('Nanti Saja', style: TextStyle(color: Colors.grey)),
+  //             ),
+  //             ElevatedButton(
+  //               onPressed: isLoading
+  //                   ? null
+  //                   : () async {
+  //                       final pwd = passwordCtrl.text.trim();
+  //                       if (pwd.length < 6) {
+  //                         setStateDialog(() {
+  //                           localError = 'Kata sandi minimal 6 karakter.';
+  //                         });
+  //                         return;
+  //                       }
                         
-                        setStateDialog(() {
-                          isLoading = true;
-                          localError = null;
-                        });
+  //                       setStateDialog(() {
+  //                         isLoading = true;
+  //                         localError = null;
+  //                       });
 
-                        final res = await AuthService.setInitialPassword(
-                          newPassword: pwd,
-                        );
+  //                       final res = await AuthService.setInitialPassword(
+  //                         newPassword: pwd,
+  //                       );
 
-                        if (res['status'] == true) {
-                          if (mounted) {
-                            Navigator.of(ctx).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Kata sandi berhasil disimpan!')),
-                            );
-                            _completeGoogleSignIn(user);
-                          }
-                        } else {
-                          setStateDialog(() {
-                            isLoading = false;
-                            localError = res['message'] ?? 'Gagal menyimpan kata sandi.';
-                          });
-                        }
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6A0DAD), // Primary color
-                  foregroundColor: Colors.white,
-                ),
-                child: isLoading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2),
-                      )
-                    : const Text('Simpan & Lanjutkan'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
+  //                       if (res['status'] == true) {
+  //                         if (mounted) {
+  //                           Navigator.of(ctx).pop();
+  //                           ScaffoldMessenger.of(context).showSnackBar(
+  //                             const SnackBar(content: Text('Kata sandi berhasil disimpan!')),
+  //                           );
+  //                           _completeGoogleSignIn(user);
+  //                         }
+  //                       } else {
+  //                         setStateDialog(() {
+  //                           isLoading = false;
+  //                           localError = res['message'] ?? 'Gagal menyimpan kata sandi.';
+  //                         });
+  //                       }
+  //                     },
+  //               style: ElevatedButton.styleFrom(
+  //                 backgroundColor: const Color(0xFF6A0DAD), // Primary color
+  //                 foregroundColor: Colors.white,
+  //               ),
+  //               child: isLoading
+  //                   ? const SizedBox(
+  //                       width: 16,
+  //                       height: 16,
+  //                       child: CircularProgressIndicator(
+  //                           color: Colors.white, strokeWidth: 2),
+  //                     )
+  //                   : const Text('Simpan & Lanjutkan'),
+  //             ),
+  //           ],
+  //         );
+  //       },
+  //     ),
+  //   );
+  // }
 
   Color get _strengthColor {
     switch (_passwordStrength) {

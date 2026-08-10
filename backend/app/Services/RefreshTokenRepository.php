@@ -3,34 +3,67 @@
 namespace App\Services;
 
 use App\Models\User;
-use Illuminate\Support\Facades\Cache;
+use App\Models\UserSession;
+use App\Models\RefreshToken;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use App\Models\AuthLog;
 
 class RefreshTokenRepository
 {
-    public function issue(User $user, ?string $familyId = null): string
+    /**
+     * Issues a new refresh token for a user.
+     * If $sessionId is provided, it attaches the new token to the existing session.
+     * Otherwise, it creates a new session.
+     */
+    public function issue(User $user, ?string $sessionId = null): string
     {
-        $selector = $this->randomHex(16);
+        $selector = (string) Str::uuid();
         $secret = $this->randomToken();
-        $familyId ??= (string) Str::uuid();
         $ttl = $this->ttlSeconds();
+        $expiresAt = now()->addSeconds($ttl);
+        
+        $request = request();
+        $ip = $request ? $request->ip() : null;
+        $userAgent = $request ? substr((string) $request->userAgent(), 0, 255) : null;
 
-        $entry = [
-            'user_id' => (string) $user->getKey(),
-            'family_id' => $familyId,
-            'hash' => $this->hash($secret),
-            'issued_at' => now()->toISOString(),
-            'expires_at' => now()->addSeconds($ttl)->toISOString(),
-        ];
+        DB::transaction(function () use ($user, $sessionId, $selector, $secret, $expiresAt, $ip, $userAgent) {
+            if (!$sessionId) {
+                // Create new session
+                $session = UserSession::create([
+                    'user_id' => $user->id,
+                    'ip_address' => $ip,
+                    'user_agent' => $userAgent,
+                    'expires_at' => $expiresAt,
+                    'last_used_at' => now(),
+                ]);
+                $sessionId = $session->id;
+            } else {
+                // Update existing session's last_used_at
+                UserSession::where('id', $sessionId)->update([
+                    'last_used_at' => now(),
+                    'ip_address' => $ip,
+                    'user_agent' => $userAgent,
+                ]);
+            }
 
-        Cache::put($this->refreshKey($selector), json_encode($entry, JSON_THROW_ON_ERROR), $ttl);
-        $familySelectors = Cache::get($this->familyKey($familyId), []);
-        $familySelectors[] = $selector;
-        Cache::put($this->familyKey($familyId), $familySelectors, $ttl);
+            RefreshToken::create([
+                'id' => $selector,
+                'user_session_id' => $sessionId,
+                'token_hash' => $this->hash($secret),
+                'is_active' => true,
+                'expires_at' => $expiresAt,
+            ]);
+        });
 
         return "{$selector}.{$secret}";
     }
 
+    /**
+     * Atomically rotates a refresh token.
+     * Prevents concurrent reuse.
+     * Revokes session on reuse detection.
+     */
     public function rotate(string $rawToken): ?array
     {
         [$selector, $secret] = $this->parse($rawToken);
@@ -38,41 +71,58 @@ class RefreshTokenRepository
             return null;
         }
 
-        $lock = Cache::lock($this->lockKey($selector), 5);
-
         try {
-            return $lock->block(2, function () use ($selector, $secret) {
-            $encoded = Cache::get($this->refreshKey($selector));
+            return DB::transaction(function () use ($selector, $secret) {
+                // Use row lock to prevent race conditions during concurrent refresh
+                $token = RefreshToken::where('id', $selector)->lockForUpdate()->first();
 
-            if (!$encoded) {
-                $this->revokeUsedFamily($selector);
-                return null;
-            }
-
-            $entry = json_decode((string) $encoded, true);
-            if (!is_array($entry) || !hash_equals((string) ($entry['hash'] ?? ''), $this->hash($secret))) {
-                if (is_array($entry) && isset($entry['family_id'])) {
-                    $this->revokeFamily((string) $entry['family_id']);
+                if (!$token) {
+                    return null;
                 }
-                return null;
-            }
 
-            Cache::forget($this->refreshKey($selector));
-            Cache::put($this->usedKey($selector), json_encode([
-                'family_id' => $entry['family_id'],
-                'user_id' => $entry['user_id'],
-            ], JSON_THROW_ON_ERROR), $this->ttlSeconds());
+                $session = UserSession::where('id', $token->user_session_id)->lockForUpdate()->first();
 
-            return [
-                'user_id' => $entry['user_id'],
-                'family_id' => $entry['family_id'],
-            ];
+                if (!$session || $session->revoked_at || $session->expires_at < now()) {
+                    return null;
+                }
+
+                // Verify the hash
+                if (!hash_equals($token->token_hash, $this->hash($secret))) {
+                    return null;
+                }
+
+                // Reuse detection
+                if (!$token->is_active) {
+                    // Revoke the entire session
+                    $session->update(['revoked_at' => now()]);
+                    
+                    // Log security event
+                    AuthLog::create([
+                        'user_id' => $session->user_id,
+                        'action' => 'refresh_reuse_detected',
+                        'ip_address' => request() ? request()->ip() : null,
+                        'user_agent' => request() ? substr((string) request()->userAgent(), 0, 255) : null,
+                    ]);
+
+                    return null;
+                }
+
+                // Valid token, rotate it by invalidating the current one
+                $token->update(['is_active' => false]);
+
+                return [
+                    'user_id' => $session->user_id,
+                    'family_id' => $session->id, // session_id acts as family_id
+                ];
             });
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
             return null;
         }
     }
 
+    /**
+     * Revokes a session given a raw token.
+     */
     public function revokeRaw(?string $rawToken): void
     {
         if (!$rawToken) {
@@ -81,46 +131,37 @@ class RefreshTokenRepository
 
         [$selector] = $this->parse($rawToken);
         if ($selector) {
-            Cache::forget($this->refreshKey($selector));
+            $token = RefreshToken::find($selector);
+            if ($token) {
+                $this->revokeSession($token->user_session_id);
+            }
         }
     }
 
-    public function revokeFamily(string $familyId): void
+    /**
+     * Revokes a specific session.
+     */
+    public function revokeSession(string $sessionId): void
     {
-        $selectors = Cache::get($this->familyKey($familyId), []);
-        foreach ($selectors as $selector) {
-            Cache::forget($this->refreshKey((string) $selector));
-            Cache::put($this->usedKey((string) $selector), json_encode([
-                'family_id' => $familyId,
-            ], JSON_THROW_ON_ERROR), $this->ttlSeconds());
-        }
-
-        Cache::forget($this->familyKey($familyId));
+        UserSession::where('id', $sessionId)
+            ->whereNull('revoked_at')
+            ->update(['revoked_at' => now()]);
     }
 
-    private function revokeUsedFamily(string $selector): void
+    /**
+     * Revokes all sessions for a user.
+     */
+    public function revokeAllForUser(string $userId): void
     {
-        $encoded = Cache::get($this->usedKey($selector));
-        if (!$encoded) {
-            return;
-        }
-
-        $entry = json_decode((string) $encoded, true);
-        if (is_array($entry) && isset($entry['family_id'])) {
-            $this->revokeFamily((string) $entry['family_id']);
-        }
+        UserSession::where('user_id', $userId)
+            ->whereNull('revoked_at')
+            ->update(['revoked_at' => now()]);
     }
 
     private function parse(string $rawToken): array
     {
         $parts = explode('.', $rawToken, 2);
-
         return count($parts) === 2 ? $parts : [null, null];
-    }
-
-    private function randomHex(int $bytes): string
-    {
-        return bin2hex(random_bytes($bytes));
     }
 
     private function randomToken(): string
@@ -136,25 +177,5 @@ class RefreshTokenRepository
     private function ttlSeconds(): int
     {
         return max(60, (int) config('auth_tokens.refresh.ttl_minutes') * 60);
-    }
-
-    private function refreshKey(string $selector): string
-    {
-        return config('auth_tokens.redis_prefixes.refresh').$selector;
-    }
-
-    private function familyKey(string $familyId): string
-    {
-        return config('auth_tokens.redis_prefixes.refresh_family').$familyId;
-    }
-
-    private function usedKey(string $selector): string
-    {
-        return config('auth_tokens.redis_prefixes.refresh_used').$selector;
-    }
-
-    private function lockKey(string $selector): string
-    {
-        return config('auth_tokens.redis_prefixes.refresh_lock').$selector;
     }
 }

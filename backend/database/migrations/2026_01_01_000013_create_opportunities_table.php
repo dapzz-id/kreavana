@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('address', 255)->nullable();
             $table->date('deadline')->nullable();
             $table->string('budget_range', 100)->nullable();
-            $table->enum('status', ['open', 'closed'])->default('open');
+            $table->enum('status', ['open', 'closed', 'cancelled', 'under_dispute'])->default('open');
             $table->uuid('posted_by');
             $table->timestamp('created_at')->useCurrent();
 

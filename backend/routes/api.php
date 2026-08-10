@@ -9,7 +9,9 @@ use App\Http\Controllers\{
     DashboardController, ProfileController, NotificationController,
     CallController, AdminController, OpportunityController, WalletController,
     RoleController, FollowController, MarketplaceController,
-    PaymentMethodController, UserAddressController, AvatarController
+    PaymentMethodController, UserAddressController, AvatarController,
+    PortfolioController, SubscriptionController,
+    StorageController, DisputeController, OpportunityReviewController
 };
 
 // Public: serve avatar images with CORS headers (for Flutter Web)
@@ -26,91 +28,111 @@ Route::get('/user', function (Request $request) {
 Route::get('roles/creator/sub-roles', [RoleController::class, 'getCreatorSubRoles']);
 
 // Auth (Public)
-Route::post('auth/register', [AuthController::class, 'register'])
-    ->middleware('throttle:auth-register')
-    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
-Route::post('auth/login', [AuthController::class, 'login'])
-    ->middleware('throttle:auth-login')
-    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
-Route::post('auth/refresh', [AuthController::class, 'refresh'])
-    ->middleware('throttle:auth-refresh')
-    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
-Route::post('auth/user/login', [AuthController::class, 'userLogin'])
-    ->middleware('throttle:auth-login')
-    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
-Route::post('auth/creator/login', [AuthController::class, 'creatorLogin'])
-    ->middleware('throttle:auth-login')
-    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
-Route::post('auth/admin/login', [AuthController::class, 'adminLogin'])
-    ->middleware('throttle:auth-login')
-    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
-
-// Social Login (Google, Apple)
-Route::post('auth/social', [AuthController::class, 'socialLogin'])
-    ->middleware('throttle:auth-login')
-    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
+Route::prefix('auth')->withoutMiddleware(\App\Http\Middleware\ValidateJti::class)->group(function () {
+    Route::post('register', [AuthController::class, 'register'])->middleware('throttle:auth-register');
+    Route::post('login', [AuthController::class, 'login'])->middleware('throttle:auth-login');
+    Route::post('refresh', [AuthController::class, 'refresh'])->middleware('throttle:auth-refresh');
+    Route::post('user/login', [AuthController::class, 'userLogin'])->middleware('throttle:auth-login');
+    Route::post('creator/login', [AuthController::class, 'creatorLogin'])->middleware('throttle:auth-login');
+    Route::post('admin/login', [AuthController::class, 'adminLogin'])->middleware('throttle:auth-login');
+    Route::post('social', [AuthController::class, 'socialLogin'])->middleware('throttle:auth-login');
+});
 
 // Auth & Protected Routes
 Route::middleware('auth:api')->group(function () {
+    
     // Auth
-    Route::post('auth/logout', [AuthController::class, 'logout']);
-    Route::get('auth/me', [AuthController::class, 'me']);
-    Route::post('auth/user/change-password', [AuthController::class, 'changePassword']);
-    Route::post('auth/user/set-initial-password', [AuthController::class, 'setInitialPassword']);
+    Route::prefix('auth')->group(function () {
+        Route::post('logout', [AuthController::class, 'logout']);
+        Route::get('me', [AuthController::class, 'me']);
+        Route::post('user/change-password', [AuthController::class, 'changePassword']);
+        Route::post('user/set-initial-password', [AuthController::class, 'setInitialPassword']);
+    });
 
     // Payment Methods
-    Route::get('payment-methods', [PaymentMethodController::class, 'index'])->middleware('permission:manage_own_profile');
-    Route::post('payment-methods', [PaymentMethodController::class, 'store'])->middleware('permission:manage_own_profile');
-    Route::put('payment-methods/{id}', [PaymentMethodController::class, 'update'])->middleware('permission:manage_own_profile');
-    Route::put('payment-methods/{id}/default', [PaymentMethodController::class, 'setDefault'])->middleware('permission:manage_own_profile');
-    Route::delete('payment-methods/{id}', [PaymentMethodController::class, 'destroy'])->middleware('permission:manage_own_profile');
+    Route::prefix('payment-methods')->middleware('permission:manage_own_profile')->group(function () {
+        Route::get('/', [PaymentMethodController::class, 'index']);
+        Route::post('/', [PaymentMethodController::class, 'store']);
+        Route::put('{id}', [PaymentMethodController::class, 'update']);
+        Route::put('{id}/default', [PaymentMethodController::class, 'setDefault']);
+        Route::delete('{id}', [PaymentMethodController::class, 'destroy']);
+    });
 
     // User Addresses
-    Route::get('user-addresses', [UserAddressController::class, 'index'])->middleware('permission:manage_own_profile');
-    Route::post('user-addresses', [UserAddressController::class, 'store'])->middleware('permission:manage_own_profile');
-    Route::put('user-addresses/{id}', [UserAddressController::class, 'update'])->middleware('permission:manage_own_profile');
-    Route::put('user-addresses/{id}/default', [UserAddressController::class, 'setDefault'])->middleware('permission:manage_own_profile');
-    Route::delete('user-addresses/{id}', [UserAddressController::class, 'destroy'])->middleware('permission:manage_own_profile');
+    Route::prefix('user-addresses')->middleware('permission:manage_own_profile')->group(function () {
+        Route::get('/', [UserAddressController::class, 'index']);
+        Route::post('/', [UserAddressController::class, 'store']);
+        Route::put('{id}', [UserAddressController::class, 'update']);
+        Route::put('{id}/default', [UserAddressController::class, 'setDefault']);
+        Route::delete('{id}', [UserAddressController::class, 'destroy']);
+    });
 
-    // Profile
-    Route::get('profile', [ProfileController::class, 'getProfile'])->middleware('permission:manage_own_profile');
-    Route::get('profile/identity', [ProfileController::class, 'identity'])->middleware('permission:manage_own_profile');
-    Route::get('profile/application', [ProfileController::class, 'application'])->middleware('permission:manage_own_profile');
-    Route::get('profile/permissions', [ProfileController::class, 'permissions'])->middleware('permission:manage_own_profile');
-    Route::put('profile', [ProfileController::class, 'updateProfile'])->middleware('permission:manage_own_profile');
-    Route::get('profile/history', [ProfileController::class, 'history'])->middleware('permission:manage_own_profile');
-    Route::post('profile/apply-creator', [ProfileController::class, 'applyCreator'])->middleware('role:user');
+    // Portfolio
+    Route::prefix('portfolio')->group(function () {
+        Route::get('/', [PortfolioController::class, 'index']);
+        Route::post('/', [PortfolioController::class, 'store']);
+        Route::put('reorder', [PortfolioController::class, 'reorder']);
+        Route::put('{id}', [PortfolioController::class, 'update']);
+        Route::delete('{id}', [PortfolioController::class, 'destroy']);
+    });
+
+    // Profile & Settings
+    Route::prefix('profile')->group(function () {
+        Route::get('/', [ProfileController::class, 'getProfile'])->middleware('permission:view_own_profile');
+        Route::put('/', [ProfileController::class, 'updateProfile'])->middleware('permission:manage_own_profile');
+        Route::get('identity', [ProfileController::class, 'identity'])->middleware('permission:view_own_profile');
+        Route::get('permissions', [ProfileController::class, 'permissions'])->middleware('permission:view_own_profile');
+        Route::get('history', [ProfileController::class, 'history'])->middleware('permission:manage_own_profile');
+        Route::post('apply-creator', [ProfileController::class, 'applyCreator'])->middleware('role:user');
+    });
+    
+    Route::put('user/public-key', [ProfileController::class, 'updatePublicKey'])->middleware('auth:api');
 
     // Follows
-    Route::post('follow/{userId}', [FollowController::class, 'follow']);
-    Route::delete('follow/{userId}', [FollowController::class, 'unfollow']);
+    Route::prefix('follow')->group(function () {
+        Route::post('{userId}', [FollowController::class, 'follow']);
+        Route::delete('{userId}', [FollowController::class, 'unfollow']);
+    });
     Route::get('users/{userId}/followers', [FollowController::class, 'followers']);
     Route::get('users/{userId}/following', [FollowController::class, 'following']);
 
     // Dashboard
-    Route::get('dashboard/stats', [DashboardController::class, 'stats'])->middleware('permission:view_dashboard');
-    Route::get('dashboard/opportunities', [DashboardController::class, 'opportunities']);
+    Route::prefix('dashboard')->group(function () {
+        Route::get('stats', [DashboardController::class, 'stats'])->middleware('permission:view_dashboard');
+        Route::get('opportunities', [DashboardController::class, 'opportunities']);
+    });
     Route::get('client-dashboard/overview', [DashboardController::class, 'overview'])->middleware('permission:view_dashboard');
 
     // Wallet
-    Route::get('wallet/info', [WalletController::class, 'info'])->middleware('permission:manage_own_profile');
-    Route::post('wallet/topup', [WalletController::class, 'topup'])->middleware('permission:manage_own_profile');
-    Route::post('wallet/topup/simulate', [WalletController::class, 'simulatePay'])->middleware('permission:manage_own_profile');
-    Route::post('wallet/transfer', [WalletController::class, 'transfer'])->middleware('permission:manage_own_profile');
-    Route::post('wallet/withdraw', [WalletController::class, 'withdraw'])->middleware('permission:manage_own_profile');
+    Route::prefix('wallet')->middleware('permission:manage_own_profile')->group(function () {
+        Route::get('info', [WalletController::class, 'info']);
+        Route::get('has-pin', [WalletController::class, 'hasPin']);
+        Route::post('set-pin', [WalletController::class, 'setPin']);
+        Route::post('verify-pin', [WalletController::class, 'verifyPin']);
+        Route::post('topup', [WalletController::class, 'topup']);
+        Route::post('topup/simulate', [WalletController::class, 'simulatePay']);
+        Route::post('transfer', [WalletController::class, 'transfer']);
+        Route::post('withdraw', [WalletController::class, 'withdraw']);
+    });
 
     // Opportunities
-    Route::get('opportunities', [OpportunityController::class, 'index'])->middleware('permission:view_opportunities');
-    Route::post('opportunities', [OpportunityController::class, 'store'])->middleware('permission:create_opportunity');
-    Route::get('opportunities/map', [OpportunityController::class, 'mapLocations'])->middleware('permission:view_opportunities');
-    Route::post('opportunities/report', [OpportunityController::class, 'submitReport'])->middleware('permission:submit_report');
-    Route::get('opportunities/{id}', [OpportunityController::class, 'show'])->middleware('permission:view_opportunities');
-    Route::get('opportunities/{id}/poster', [OpportunityController::class, 'getPoster'])->middleware('permission:view_opportunities');
+    Route::prefix('opportunities')->group(function () {
+        Route::get('/', [OpportunityController::class, 'index'])->middleware('permission:view_opportunities');
+        Route::post('/', [OpportunityController::class, 'store'])->middleware('permission:create_opportunity');
+        Route::get('map', [OpportunityController::class, 'mapLocations'])->middleware('permission:view_opportunities');
+        Route::post('report', [OpportunityController::class, 'submitReport'])->middleware('permission:submit_report');
+        Route::get('{id}', [OpportunityController::class, 'show'])->middleware('permission:view_opportunities');
+        Route::get('{id}/poster', [OpportunityController::class, 'getPoster'])->middleware('permission:view_opportunities');
+    });
 
     // Notifications
-    Route::get('notifications', [NotificationController::class, 'index']);
-    Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
-    Route::put('notifications/read', [NotificationController::class, 'markAsRead']);
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [NotificationController::class, 'index']);
+        Route::get('unread-count', [NotificationController::class, 'unreadCount']);
+        Route::put('read', [NotificationController::class, 'markAsRead']);
+        Route::delete('{id}', [NotificationController::class, 'destroy']);
+        Route::delete('/', [NotificationController::class, 'destroyAll']);
+    });
 
     // Call Signaling
     Route::post('call/signal', [CallController::class, 'signal']);
@@ -127,9 +149,11 @@ Route::middleware('auth:api')->group(function () {
             ->get();
         $chatCount = 0;
         foreach ($chatParticipants as $p) {
+            if (!$p->chat) continue;
+            $lastRead = $p->last_read_at ?? $p->created_at ?? now();
             $chatCount += $p->chat->messages()
                 ->where('user_id', '!=', $userId)
-                ->where('created_at', '>', $p->last_read_at ?? '2000-01-01 00:00:00')
+                ->where('created_at', '>', $lastRead)
                 ->count();
         }
         return response()->json([
@@ -142,52 +166,87 @@ Route::middleware('auth:api')->group(function () {
     });
 
     // Chat Users Search
-    Route::get('users/search', [UserController::class, 'search'])->middleware('permission:use_chat');
-    Route::get('users/contacts', [UserController::class, 'contacts'])->middleware('permission:use_chat');
-    Route::post('users/fcm-token', [UserController::class, 'updateFcmToken'])->middleware('permission:use_chat');
+    Route::prefix('users')->middleware('permission:use_chat')->group(function () {
+        Route::get('search', [UserController::class, 'search']);
+        Route::get('contacts', [UserController::class, 'contacts']);
+        Route::post('fcm-token', [UserController::class, 'updateFcmToken']);
+    });
+    Route::post('user/devices', [UserController::class, 'registerDevice'])->middleware('permission:use_chat');
 
     // Chats
-    Route::get('chats', [ChatController::class, 'index'])->middleware('permission:use_chat');
-    Route::get('chats/unread-count', [ChatController::class, 'unreadCount'])->middleware('permission:use_chat');
-    Route::post('chats/personal', [ChatController::class, 'startPersonalChat'])->middleware('permission:use_chat');
-    Route::post('chats/{chat}/read', [ChatController::class, 'markAsRead'])->middleware('permission:use_chat');
+    Route::prefix('chats')->middleware('permission:use_chat')->group(function () {
+        Route::get('/', [ChatController::class, 'index']);
+        Route::get('unread-count', [ChatController::class, 'unreadCount']);
+        Route::post('personal', [ChatController::class, 'startPersonalChat']);
+        Route::post('read-all', [ChatController::class, 'markAllAsRead']);
+        
+        Route::prefix('{chat}')->group(function () {
+            Route::post('read', [ChatController::class, 'markAsRead']);
+            Route::get('devices', [ChatController::class, 'devices']);
+            Route::get('messages', [MessageController::class, 'index']);
+            Route::post('messages', [MessageController::class, 'store']);
+            Route::post('messages/{message}/delete', [MessageController::class, 'destroy']);
+        });
+    });
+    
     Route::post('presence/ping', [ChatController::class, 'presencePing'])->middleware('permission:use_chat');
 
-    // Messages
-    Route::get('chats/{chat}/messages', [MessageController::class, 'index'])->middleware('permission:use_chat');
-    Route::post('chats/{chat}/messages', [MessageController::class, 'store'])->middleware('permission:use_chat');
-    Route::post('chats/{chat}/messages/{message}/delete', [MessageController::class, 'destroy'])->middleware('permission:use_chat');
-
     // Invitations
-    Route::get('invitations', [GroupController::class, 'getInvitations'])->middleware('permission:use_chat');
-    Route::post('invitations/{chat}/respond', [GroupController::class, 'respondInvitation'])->middleware('permission:use_chat');
+    Route::prefix('invitations')->middleware('permission:use_chat')->group(function () {
+        Route::get('/', [GroupController::class, 'getInvitations']);
+        Route::post('{chat}/respond', [GroupController::class, 'respondInvitation']);
+    });
 
     // Groups
-    Route::post('groups', [GroupController::class, 'store'])->middleware('permission:use_chat');
-    Route::get('groups/{chat}/members', [GroupController::class, 'members'])->middleware('permission:use_chat');
-    Route::post('groups/{chat}/members', [GroupController::class, 'addMember'])->middleware('permission:use_chat');
-    Route::delete('groups/{chat}/members/{userId}', [GroupController::class, 'kickMember'])->middleware('permission:use_chat');
-    Route::put('groups/{chat}/members/{userId}/admin', [GroupController::class, 'makeAdmin'])->middleware('permission:use_chat');
-    Route::post('groups/{chat}/leave', [GroupController::class, 'leaveGroup'])->middleware('permission:use_chat');
-    Route::put('groups/{chat}/settings', [GroupController::class, 'updateSettings'])->middleware('permission:use_chat');
-    Route::put('groups/{chat}/details', [GroupController::class, 'updateGroupDetails'])->middleware('permission:use_chat');
+    Route::prefix('groups')->middleware('permission:use_chat')->group(function () {
+        Route::post('/', [GroupController::class, 'store']);
+        
+        Route::prefix('{chat}')->group(function () {
+            Route::get('members', [GroupController::class, 'members']);
+            Route::post('members', [GroupController::class, 'addMember']);
+            Route::delete('members/{userId}', [GroupController::class, 'kickMember']);
+            Route::put('members/{userId}/admin', [GroupController::class, 'makeAdmin']);
+            Route::post('leave', [GroupController::class, 'leaveGroup']);
+            Route::put('settings', [GroupController::class, 'updateSettings']);
+            Route::put('details', [GroupController::class, 'updateGroupDetails']);
+        });
+    });
 
     // Admin
-    Route::get('admin/applications', [AdminController::class, 'getApplications'])->middleware('role:admin');
-    Route::post('admin/applications/{id}/approve', [AdminController::class, 'approveApplication'])->middleware('role:admin');
-    Route::post('admin/applications/{id}/reject', [AdminController::class, 'rejectApplication'])->middleware('role:admin');
+    Route::prefix('admin')->middleware('role:admin')->group(function () {
+        Route::get('applications', [AdminController::class, 'getApplications']);
+        Route::post('applications/{id}/approve', [AdminController::class, 'approveApplication']);
+        Route::post('applications/{id}/reject', [AdminController::class, 'rejectApplication']);
+        Route::get('system-logs', [AdminController::class, 'getSystemLogs']);
+        Route::get('assigned-disputes', [DisputeController::class, 'assignedDisputes']);
+    });
 
     // Marketplace (write operations)
-    Route::post('marketplace', [MarketplaceController::class, 'store']);
-    Route::put('marketplace/{id}', [MarketplaceController::class, 'update']);
-    Route::delete('marketplace/{id}', [MarketplaceController::class, 'destroy']);
-    Route::post('marketplace/{id}/review', [MarketplaceController::class, 'review']);
-    Route::get('marketplace/{id}/purchases', [MarketplaceController::class, 'purchases']);
-    Route::post('marketplace/{id}/purchase', [MarketplaceController::class, 'purchase']);
+    Route::prefix('marketplace')->group(function () {
+        Route::post('/', [MarketplaceController::class, 'store']);
+        Route::put('{id}', [MarketplaceController::class, 'update']);
+        Route::delete('{id}', [MarketplaceController::class, 'destroy']);
+        Route::post('{id}/review', [MarketplaceController::class, 'review']);
+        Route::get('{id}/purchases', [MarketplaceController::class, 'purchases']);
+        Route::post('{id}/purchase', [MarketplaceController::class, 'purchase']);
+    });
+
+    // Subscription (authenticated)
+    Route::prefix('subscription')->group(function () {
+        Route::post('purchase', [SubscriptionController::class, 'purchase']);
+        Route::get('current', [SubscriptionController::class, 'getCurrent']);
+    });
 });
 
 // Marketplace (public read)
-Route::get('marketplace', [MarketplaceController::class, 'index']);
-Route::get('marketplace/featured', [MarketplaceController::class, 'featured']);
-Route::get('marketplace/categories', [MarketplaceController::class, 'categories']);
-Route::get('marketplace/{id}', [MarketplaceController::class, 'show']);
+Route::prefix('marketplace')->group(function () {
+    Route::get('/', [MarketplaceController::class, 'index']);
+    Route::get('featured', [MarketplaceController::class, 'featured']);
+    Route::get('categories', [MarketplaceController::class, 'categories']);
+    Route::get('{id}', [MarketplaceController::class, 'show']);
+});
+
+// Subscription plans (public — prices are defined server-side, never trust the client)
+Route::prefix('subscription')->group(function () {
+    Route::get('plans', [SubscriptionController::class, 'plans']);
+});

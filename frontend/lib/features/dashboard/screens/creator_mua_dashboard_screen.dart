@@ -5,10 +5,18 @@ import '../../../models/user_model.dart';
 import '../../../services/api_service.dart';
 import '../../../services/theme_transition_service.dart';
 import '../../../screens/explore_screen.dart';
+import '../../../screens/peluang_proyek_screen.dart';
+import '../../../screens/mitra_komunitas_screen.dart';
 import '../../../screens/global_search_screen.dart';
 import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
 import '../../../screens/profile_screen.dart';
+import '../../../services/portfolio_service.dart';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import '../../../services/badge_service.dart';
+
+import '../../../widgets/skeleton/skeleton_grid.dart';
 
 class CreatorMuaDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -30,6 +38,69 @@ class _CreatorMuaDashboardScreenState extends State<CreatorMuaDashboardScreen> {
 
   static const Color _primaryColor = Color(0xFFEC4899);
   static const Color _secondaryColor = Color(0xFFF43F5E);
+
+  List<PortfolioItemModel> _portfolioItems = [];
+  bool _isLoadingPortfolio = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPortfolio();
+  }
+
+  Future<void> _loadPortfolio() async {
+    final items = await PortfolioService.getPortfolio();
+    if (mounted) {
+      setState(() {
+        _portfolioItems = items;
+        _isLoadingPortfolio = false;
+      });
+    }
+  }
+
+  Future<void> _addPortfolioItem() async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+    );
+    if (result == null || result.files.isEmpty) return;
+
+    final file = File(result.files.first.path!);
+    final nameController = TextEditingController();
+
+    if (!mounted) return;
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Nama Portofolio'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            hintText: 'Contoh: Color Grading Sinematik',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, nameController.text.trim()),
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+
+    if (name == null || name.isEmpty) return;
+
+    final item = await PortfolioService.addPortfolio(
+      title: name,
+      imageFile: file,
+    );
+
+    if (item != null && mounted) {
+      setState(() => _portfolioItems.add(item));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -120,9 +191,15 @@ class _CreatorMuaDashboardScreenState extends State<CreatorMuaDashboardScreen> {
             ),
           ),
           const SizedBox(width: 20),
-          _buildAppBarBadge(Icons.notifications_none_outlined, '3', isDark),
+          ListenableBuilder(
+            listenable: BadgeService(),
+            builder: (_, _) => _buildAppBarBadge(Icons.notifications_none_outlined, BadgeService().unreadNotificationsText, isDark),
+          ),
           const SizedBox(width: 4),
-          _buildAppBarBadge(Icons.chat_bubble_outline, '1', isDark),
+          ListenableBuilder(
+            listenable: BadgeService(),
+            builder: (_, _) => _buildAppBarBadge(Icons.chat_bubble_outline, BadgeService().unreadMessagesText, isDark),
+          ),
           const SizedBox(width: 12),
           IconButton(
             key: _themeBtnKey,
@@ -512,7 +589,13 @@ class _CreatorMuaDashboardScreenState extends State<CreatorMuaDashboardScreen> {
                     ),
                     const SizedBox(height: 10),
                     OutlinedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        if (r['type'] == 'KOMUNITAS') {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => MitraKomunitasScreen(user: widget.user)));
+                        } else {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => PeluangProyekScreen(user: widget.user)));
+                        }
+                      },
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 32),
                       ),
@@ -715,6 +798,7 @@ class _CreatorMuaDashboardScreenState extends State<CreatorMuaDashboardScreen> {
   }
 
   Widget _buildPortfolioGrid(bool isDark) {
+    final accentColor = _primaryColor;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -727,28 +811,108 @@ class _CreatorMuaDashboardScreenState extends State<CreatorMuaDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Portofolio & Karya',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Portofolio & Karya',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              GestureDetector(
+                onTap: _addPortfolioItem,
+                child: Icon(Icons.add_circle_outline, color: accentColor, size: 22),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          GridView.count(
-            crossAxisCount: 3,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 6,
-            crossAxisSpacing: 6,
-            children: List.generate(
-              6,
-              (index) => Container(
-                decoration: BoxDecoration(
-                  color: _primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+          if (_isLoadingPortfolio)
+            const SkeletonGrid(itemCount: 4)
+          else if (_portfolioItems.isEmpty)
+            GridView.count(
+              crossAxisCount: 3,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 6,
+              crossAxisSpacing: 6,
+              children: List.generate(
+                6,
+                (index) => GestureDetector(
+                  onTap: _addPortfolioItem,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: accentColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.add_photo_alternate_outlined, color: accentColor, size: 20),
+                  ),
                 ),
-                child: const Icon(Icons.brush, color: _primaryColor, size: 20),
               ),
+            )
+          else
+            GridView.builder(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 6,
+                crossAxisSpacing: 6,
+              ),
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _portfolioItems.length + 1,
+              itemBuilder: (context, index) {
+                if (index == _portfolioItems.length) {
+                  return GestureDetector(
+                    onTap: _addPortfolioItem,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: accentColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.add_photo_alternate_outlined, color: accentColor, size: 20),
+                    ),
+                  );
+                }
+                final item = _portfolioItems[index];
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      item.imageUrl != null && item.imageUrl!.isNotEmpty
+                          ? Image.network(
+                              ApiService.resolveAssetUrl(item.imageUrl!),
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                color: accentColor.withValues(alpha: 0.1),
+                                child: Icon(Icons.broken_image, color: accentColor, size: 20),
+                              ),
+                            )
+                          : Container(
+                              color: accentColor.withValues(alpha: 0.1),
+                              child: Icon(Icons.image, color: accentColor, size: 20),
+                            ),
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: GestureDetector(
+                          onTap: () async {
+                            await PortfolioService.deletePortfolio(item.id);
+                            if (mounted) setState(() => _portfolioItems.removeAt(index));
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.close, color: Colors.white, size: 14),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-          ),
         ],
       ),
     );

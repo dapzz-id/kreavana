@@ -23,7 +23,8 @@ class MessageController extends Controller
     public function index(Request $request, Chat $chat)
     {
         $userId = $request->user()->id;
-        $messages = $this->messageService->getChatMessages($chat->id, $userId);
+        $deviceId = $request->header('X-Device-ID');
+        $messages = $this->messageService->getChatMessages($chat->id, $userId, $deviceId);
 
         return $this->successResponse('Pesan berhasil diambil', $messages);
     }
@@ -38,6 +39,10 @@ class MessageController extends Controller
             $request->type ?? 'text',
             $request->media ?? null,
             $request->reply_to_id ?? null,
+            (int) $request->input('encryption_version', 0),
+            $request->ciphertext,
+            $request->iv,
+            $request->message_keys ?? []
         );
 
         return $this->successResponse('Pesan berhasil dikirim', $messageData);

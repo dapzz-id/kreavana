@@ -9,6 +9,7 @@ import '../services/api_service.dart';
 import '../widgets/opportunity_detail_sheet.dart';
 import 'profile_screen.dart';
 
+import '../widgets/skeleton/skeleton_list.dart';
 class GlobalSearchScreen extends StatefulWidget {
   final UserModel user;
   final String? initialQuery;
@@ -269,9 +270,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
 
   Widget _buildBody(bool isDark) {
     if (_isSearching) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppTheme.primaryPurple),
-      );
+      return const SkeletonList();
     }
 
     if (!_hasSearched) {

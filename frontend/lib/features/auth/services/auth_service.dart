@@ -6,6 +6,7 @@ import '../../../services/auth_session_state.dart';
 import '../../../services/secure_storage_service.dart';
 import '../../../services/realtime_service.dart';
 import '../../../services/fcm_service.dart';
+import '../../../services/encryption_service.dart';
 
 class AuthService {
   /// Register user baru
@@ -37,12 +38,14 @@ class AuthService {
     if (result['status'] == true && result['data'] != null) {
       final data = result['data'];
       final accessToken = data['access_token'];
+      final refreshToken = data['refresh_token']; // Parse from JSON
+
       if (accessToken is! String || accessToken.isEmpty) {
         return {'success': false, 'message': 'Login gagal.'};
       }
 
       authSignedOutNotifier.value = false;
-      await saveTokens(access: accessToken);
+      await saveTokens(access: accessToken, refresh: refreshToken);
 
       Map<String, dynamic>? userDataToSave;
 
@@ -71,6 +74,9 @@ class AuthService {
         RealtimeService().init(user.id ?? '', accessToken);
         FCMService().init();
         
+        // Initialize E2EE Keys
+        EncryptionService().initializeKeys();
+        
         return {
           'success': true,
           'message': result['message'] ?? 'Login berhasil.',
@@ -97,9 +103,12 @@ class AuthService {
     }
   }
 
-  static Future<void> saveTokens({required String access}) async {
+  static Future<void> saveTokens({required String access, String? refresh}) async {
     final secureStorage = SecureStorageService();
     await secureStorage.saveToken(access);
+    if (refresh != null && refresh.isNotEmpty) {
+      await secureStorage.saveRefreshToken(refresh);
+    }
   }
 
   // Save user data locally
@@ -190,6 +199,7 @@ class AuthService {
     if (result['status'] == true && result['data'] != null) {
       final data = result['data'];
       final token = data['access_token'];
+      final refreshToken = data['refresh_token']; // Extract refresh token for social login
       final bool isNewUser = data['is_new_user'] == true;
       
       if (token is! String || token.isEmpty) {
@@ -197,7 +207,7 @@ class AuthService {
       }
 
       authSignedOutNotifier.value = false;
-      await saveTokens(access: token);
+      await saveTokens(access: token, refresh: refreshToken);
 
       // Get profile
       Map<String, dynamic>? userDataToSave;
@@ -222,6 +232,10 @@ class AuthService {
       if (userDataToSave != null) {
         await saveUserData(userDataToSave);
         final user = UserModel.fromJson(userDataToSave);
+        
+        // Initialize E2EE Keys
+        EncryptionService().initializeKeys();
+        
         return {
           'success': true,
           'message': 'Login berhasil dengan $provider.',

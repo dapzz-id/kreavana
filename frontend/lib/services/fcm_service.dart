@@ -4,7 +4,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'api_service.dart';
+import 'app_router.dart';
 import 'badge_service.dart';
+import 'encryption_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -90,6 +92,19 @@ class FCMService {
         }
       });
 
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        _handleNotificationTap(message);
+      });
+
+      _firebaseMessaging.getInitialMessage().then((RemoteMessage? message) {
+        if (message != null) {
+          // Delay a bit to let the router initialize if needed
+          Future.delayed(const Duration(milliseconds: 500), () {
+            _handleNotificationTap(message);
+          });
+        }
+      });
+
       // 5. Get FCM Token and save it to backend
       String? token = await _firebaseMessaging.getToken(
         vapidKey: kIsWeb ? dotenv.env['FIREBASE_VAPID_KEY'] : null,
@@ -112,10 +127,24 @@ class FCMService {
 
   Future<void> syncTokenToBackend(String token) async {
     try {
-      await ApiService.post('users/fcm-token', {'fcm_token': token});
-      debugPrint('Synced FCM token to backend');
+      final deviceId = EncryptionService().deviceId;
+      await ApiService.post('users/fcm-token', {
+        'fcm_token': token,
+        'device_id': deviceId,
+      });
+      debugPrint('Synced FCM token to backend for device: $deviceId');
     } catch (e) {
       debugPrint('Failed to sync FCM token: $e');
+    }
+  }
+
+  void _handleNotificationTap(RemoteMessage message) {
+    if (message.data.containsKey('type') && message.data['type'] == 'message') {
+      final chatId = message.data['chat_id'];
+      if (chatId != null) {
+        // Navigate to DirectMessageScreen
+        appRouter.push('/dashboard/messages/direct/$chatId');
+      }
     }
   }
 

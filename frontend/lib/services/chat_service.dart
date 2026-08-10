@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:dart_pusher_channels/dart_pusher_channels.dart';
 import 'api_service.dart';
 import 'badge_service.dart';
+import 'encryption_service.dart';
 
 class ChatService {
   static PusherChannelsClient? _pusher;
@@ -163,6 +164,14 @@ class ChatService {
     return [];
   }
 
+  static Future<List<dynamic>> fetchDevices(String chatId) async {
+    final response = await ApiService.get('chats/$chatId/devices');
+    if (response['status'] == true && response['data'] is List) {
+      return response['data'];
+    }
+    return [];
+  }
+
   static Future<List<dynamic>> fetchMessages(String chatId) async {
     final response = await ApiService.get('chats/$chatId/messages');
     if (response['status'] == true && response['data'] is List) {
@@ -171,12 +180,26 @@ class ChatService {
     return [];
   }
 
-  static Future<Map<String, dynamic>> sendMessage(String chatId, String text, {String? replyToId}) async {
+  static Future<Map<String, dynamic>> sendMessage(String chatId, String text, {String? replyToId, bool encrypt = true}) async {
     final body = <String, dynamic>{
       'type': 'text',
       'message': text,
     };
     if (replyToId != null) body['reply_to_id'] = replyToId;
+
+    if (encrypt && EncryptionService().isInitialized) {
+      // 1. Fetch active devices for all participants in this chat
+      final devices = await fetchDevices(chatId);
+      
+      // 2. Encrypt the message for all those devices
+      final List<Map<String, dynamic>> deviceList = List<Map<String, dynamic>>.from(devices);
+      final encryptedPayload = EncryptionService().encryptMessageForMultipleDevices(text, deviceList);
+      
+      body.addAll(encryptedPayload);
+      body.remove('message'); // Do not send plaintext
+    } else {
+      body['encryption_version'] = 0;
+    }
 
     final response = await ApiService.post('chats/$chatId/messages', body);
     return response;

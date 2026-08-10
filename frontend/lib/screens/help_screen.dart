@@ -12,8 +12,6 @@ class HelpScreen extends StatefulWidget {
 }
 
 class _HelpScreenState extends State<HelpScreen> {
-  final List<bool> _expanded = List.filled(6, false);
-
   static const _faqs = [
     {
       'q': 'Bagaimana cara membuat akun di Kreavana?',

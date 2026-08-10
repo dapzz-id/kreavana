@@ -4,6 +4,7 @@ import 'package:kreavana/services/secure_storage_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart';
 import 'auth_session_state.dart';
+import 'encryption_service.dart';
 
 class DioClient {
   static final DioClient instance = DioClient._internal();
@@ -16,21 +17,35 @@ class DioClient {
   void setStorageForTesting(SecureStorageService storage) {
     _secureStorage = storage;
   }
+  
+  HttpClientAdapter? refreshAdapterForTesting;
 
   bool _isRefreshing = false;
   Completer<bool>? _refreshCompleter;
 
   // Change baseUrl according to environment
-  static String get baseUrl => dotenv.env['API_BASE_URL'] ?? 'http://127.0.0.1:8000/api';
+  static String get baseUrl {
+    try {
+      if (dotenv.isInitialized) {
+        return dotenv.env['API_BASE_URL'] ?? 'http://127.0.0.1:8000/api';
+      }
+    } catch (_) {}
+    return 'http://127.0.0.1:8000/api';
+  }
 
   DioClient._internal() {
+    final headers = <String, dynamic>{'Accept': 'application/json'};
+    if (!kIsWeb) {
+      headers['X-Client-Type'] = 'mobile';
+    }
+
     dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
         connectTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 15),
         extra: const {'withCredentials': true},
-        headers: {'Accept': 'application/json'},
+        headers: headers,
       ),
     );
 
@@ -41,16 +56,13 @@ class DioClient {
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
-          if (!kIsWeb && options.path.contains('/auth/refresh')) {
-            final refreshCookie = await _secureStorage.getRefreshCookie();
-            if (refreshCookie != null && refreshCookie.isNotEmpty) {
-              options.headers['Cookie'] = refreshCookie;
-            }
+          final deviceId = EncryptionService().deviceId;
+          if (deviceId != null) {
+            options.headers['X-Device-ID'] = deviceId;
           }
           return handler.next(options);
         },
         onResponse: (response, handler) async {
-          await _captureRefreshCookie(response);
           return handler.next(response);
         },
         onError: (DioException error, handler) async {
@@ -95,7 +107,6 @@ class DioClient {
               // Refresh failed, force logout
               authSignedOutNotifier.value = true;
               await _secureStorage.clearAll();
-              // TODO: Navigate to login screen
               return handler.next(error);
             }
           }
@@ -114,12 +125,13 @@ class DioClient {
     _refreshCompleter = Completer<bool>();
 
     try {
-      String? refreshCookie;
+      dynamic requestData;
       if (!kIsWeb) {
-        refreshCookie = await _secureStorage.getRefreshCookie();
-        if (refreshCookie == null || refreshCookie.isEmpty) {
-          throw Exception("No refresh cookie on mobile");
+        final rToken = await _secureStorage.getRefreshToken();
+        if (rToken == null || rToken.isEmpty) {
+          throw Exception("No refresh token available on mobile");
         }
+        requestData = {'refresh_token': rToken};
       }
 
       final refreshDio = Dio(
@@ -128,48 +140,42 @@ class DioClient {
           extra: const {'withCredentials': true},
           headers: {
             'Accept': 'application/json',
-            if (!kIsWeb && refreshCookie != null) 'Cookie': refreshCookie,
+            if (!kIsWeb) 'X-Client-Type': 'mobile',
           },
         ),
       );
+      
+      if (refreshAdapterForTesting != null) {
+        refreshDio.httpClientAdapter = refreshAdapterForTesting!;
+      }
 
-      final response = await refreshDio.post('/auth/refresh');
+      final response = await refreshDio.post('/auth/refresh', data: requestData);
 
-      if (response.statusCode == 200) {
-        await _captureRefreshCookie(response);
-        final data = response.data['data'];
-        await _secureStorage.saveToken(data['access_token']);
-        _isRefreshing = false;
+      if (response.statusCode == 200 && response.data['status'] == true) {
+        final resData = response.data['data'];
+        final accessToken = resData['access_token'];
+        
+        await _secureStorage.saveToken(accessToken);
+        
+        if (!kIsWeb) {
+          final newRefreshToken = resData['refresh_token'];
+          if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
+            await _secureStorage.saveRefreshToken(newRefreshToken);
+          }
+        }
+        
         _refreshCompleter!.complete(true);
         return true;
       }
     } catch (e) {
-      // Failed to refresh
+      // Failed to refresh due to network or 401
+    } finally {
+      if (!_refreshCompleter!.isCompleted) {
+        _refreshCompleter!.complete(false);
+      }
+      _isRefreshing = false;
     }
 
-    _isRefreshing = false;
-    _refreshCompleter!.complete(false);
     return false;
-  }
-
-  Future<void> _captureRefreshCookie(Response response) async {
-    final setCookieHeaders = response.headers.map['set-cookie'];
-    if (setCookieHeaders == null || setCookieHeaders.isEmpty) {
-      return;
-    }
-
-    for (final header in setCookieHeaders) {
-      final cookiePart = header.split(';').first.trim();
-      if (!cookiePart.startsWith('refresh_token=')) {
-        continue;
-      }
-
-      final value = cookiePart.substring('refresh_token='.length);
-      if (value.isEmpty) {
-        await _secureStorage.clearRefreshCookie();
-      } else {
-        await _secureStorage.saveRefreshCookie(cookiePart);
-      }
-    }
   }
 }
