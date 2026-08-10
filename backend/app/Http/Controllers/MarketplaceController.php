@@ -12,6 +12,10 @@ use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use App\Models\PurchasedStorageAsset;
+use App\Models\SystemLog;
+use App\Models\StorageFile;
+use App\Services\StorageService;
 
 class MarketplaceController extends Controller
 {
@@ -405,6 +409,139 @@ class MarketplaceController extends Controller
                 'is_read' => false,
                 'created_at' => now(),
             ]);
+
+            SystemLog::create([
+                'id' => Str::uuid()->toString(),
+                'user_id' => $buyerId,
+                'action' => 'marketplace_purchase_completed',
+                'title' => 'Marketplace Purchase Completed',
+                'description' => 'User purchased item ' . $item->id,
+                'type' => 'info',
+                'metadata' => json_encode(['order_id' => $purchase->id, 'item_id' => $item->id]),
+            ]);
+
+            // Transaction 2: Clone Storage Assets
+            \App\Models\AssetAccessPermission::firstOrCreate([
+                'user_id' => $buyerId,
+                'marketplace_item_id' => $item->id,
+            ], [
+                'can_download' => true,
+                'can_clone' => true,
+                'expires_at' => null,
+            ]);
+
+            $mediaFiles = MarketplaceItemMedia::where('marketplace_item_id', $item->id)->get();
+            $sourceFileIds = [];
+            foreach ($mediaFiles as $media) {
+                if ($media->file_path) {
+                    $sourceFileIds[] = $media->file_path;
+                }
+            }
+
+            if (count($sourceFileIds) > 20) {
+                // Dispatch Queue
+                \App\Jobs\ClonePurchasedAssetsJob::dispatch($purchase->id, $buyerId, $item->id, $sourceFileIds);
+                $purchase->update(['storage_sync_status' => 'pending']);
+                
+                SystemLog::create([
+                    'id' => Str::uuid()->toString(),
+                    'user_id' => $buyerId,
+                    'action' => 'bulk_clone_started',
+                    'title' => 'Bulk Clone Queued',
+                    'description' => 'Queued bulk clone for order ' . $purchase->id,
+                    'type' => 'info',
+                    'metadata' => json_encode([
+                        'order_id' => $purchase->id,
+                        'total_files' => count($sourceFileIds),
+                    ]),
+                ]);
+            } else {
+                // Immediate bulk clone
+                $storageService = app(\App\Services\StorageService::class);
+                $buyerUser = \App\Models\User::find($buyerId);
+                $sourceFiles = \App\Models\StorageFile::whereIn('id', $sourceFileIds)->get();
+
+                // Idempotency: filter out already cloned
+                $alreadyClonedIds = \App\Models\PurchasedStorageAsset::where('order_id', $purchase->id)
+                    ->where('status', 'cloned')
+                    ->pluck('source_storage_file_id')->toArray();
+                
+                $filesToClone = $sourceFiles->filter(function($f) use ($alreadyClonedIds) {
+                    return !in_array($f->id, $alreadyClonedIds);
+                });
+
+                if ($filesToClone->isNotEmpty()) {
+                    $cloneResult = $storageService->cloneManyToUser($filesToClone, $buyerUser);
+                    
+                    $bulkAssets = [];
+                    $now = now();
+                    
+                    foreach ($cloneResult['cloned'] as $clonedItem) {
+                        $bulkAssets[] = [
+                            'id' => Str::uuid()->toString(),
+                            'buyer_id' => $buyerId,
+                            'order_id' => $purchase->id,
+                            'marketplace_asset_id' => $item->id,
+                            'source_storage_file_id' => $clonedItem->source_storage_file_id,
+                            'cloned_storage_file_id' => $clonedItem->id,
+                            'status' => 'cloned',
+                            'clone_attempts' => 1,
+                            'last_clone_attempt_at' => $now,
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ];
+                    }
+
+                    foreach ($cloneResult['pending'] as $pendingItem) {
+                        $bulkAssets[] = [
+                            'id' => Str::uuid()->toString(),
+                            'buyer_id' => $buyerId,
+                            'order_id' => $purchase->id,
+                            'marketplace_asset_id' => $item->id,
+                            'source_storage_file_id' => $pendingItem->id,
+                            'cloned_storage_file_id' => null,
+                            'status' => 'pending_storage',
+                            'clone_attempts' => 1,
+                            'last_clone_attempt_at' => $now,
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ];
+                    }
+
+                    // We use upsert or ignore if constraint exists
+                    foreach (array_chunk($bulkAssets, 100) as $chunk) {
+                        \App\Models\PurchasedStorageAsset::insertOrIgnore($chunk);
+                    }
+
+                    $totalSuccess = count($cloneResult['cloned']);
+                    $totalPending = count($cloneResult['pending']);
+
+                    if ($totalPending > 0 && $totalSuccess > 0) {
+                        $purchase->update(['storage_sync_status' => 'partial']);
+                    } elseif ($totalPending > 0 && $totalSuccess === 0) {
+                        $purchase->update(['storage_sync_status' => 'pending']);
+                    } else {
+                        $purchase->update(['storage_sync_status' => 'completed']);
+                    }
+
+                    SystemLog::create([
+                        'id' => Str::uuid()->toString(),
+                        'user_id' => $buyerId,
+                        'action' => 'bulk_clone_completed',
+                        'title' => 'Bulk Clone Completed',
+                        'description' => 'Successfully cloned asset bundle for order ' . $purchase->id,
+                        'type' => 'info',
+                        'metadata' => json_encode([
+                            'order_id' => $purchase->id, 
+                            'total_files' => $filesToClone->count(), 
+                            'success' => $totalSuccess, 
+                            'pending' => $totalPending
+                        ]),
+                    ]);
+                } else {
+                    $purchase->update(['storage_sync_status' => 'completed']);
+                }
+            }
 
             return response()->json([
                 'status' => true,

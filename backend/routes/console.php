@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('auth:cleanup-sessions')->daily();
+Schedule::command('storage:cleanup')->daily();

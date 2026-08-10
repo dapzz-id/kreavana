@@ -1466,12 +1466,30 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         onError: (err) {
           if (mounted) {
             setState(() => _playingMessageId = null);
-            AppSnackbar.error(context, err);
+            final errorStr = err.toString();
+            if (errorStr.contains('410') || errorStr.contains('Media telah dihapus') || errorStr.contains('404')) {
+              setState(() {
+                message['is_media_deleted'] = true;
+              });
+              AppSnackbar.error(context, 'Media telah dihapus');
+            } else {
+              AppSnackbar.error(context, errorStr);
+            }
           }
         },
       );
     } catch (e) {
-      if (mounted) AppSnackbar.error(context, AppErrors.friendly(e));
+      if (mounted) {
+        final errorStr = e.toString();
+        if (errorStr.contains('410') || errorStr.contains('Media telah dihapus') || errorStr.contains('404')) {
+          setState(() {
+            message['is_media_deleted'] = true;
+          });
+          AppSnackbar.error(context, 'Media telah dihapus');
+        } else {
+          AppSnackbar.error(context, AppErrors.friendly(e));
+        }
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -1509,11 +1527,26 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         : 0.0;
     final theme = Theme.of(context);
 
+    final isDeleted = message['is_media_deleted'] == true;
+
     return Column(
       crossAxisAlignment:
           isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
-        InkWell(
+        if (isDeleted)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.broken_image, size: 24, color: isMe ? theme.colorScheme.onPrimary : theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text('Media telah dihapus', style: TextStyle(color: isMe ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface, fontStyle: FontStyle.italic)),
+              ],
+            ),
+          )
+        else
+          InkWell(
           onTap: () => _toggleAudioPlayback(message),
           borderRadius: BorderRadius.circular(16),
           child: Padding(

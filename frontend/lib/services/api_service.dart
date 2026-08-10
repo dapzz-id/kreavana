@@ -86,9 +86,12 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> delete(String endpoint) async {
+  static Future<Map<String, dynamic>> delete(
+    String endpoint, {
+    Map<String, dynamic>? data,
+  }) async {
     try {
-      final response = await _dio.delete('/$endpoint');
+      final response = await _dio.delete('/$endpoint', data: data);
       return _formatResponse(response);
     } on DioException catch (e) {
       return _handleError(e);

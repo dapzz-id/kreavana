@@ -22,6 +22,9 @@ class StorageFile extends Model
         'visibility',
         'mime_type',
         'size',
+        'checksum',
+        'source_type',
+        'source_storage_file_id',
     ];
 
     public function user()
