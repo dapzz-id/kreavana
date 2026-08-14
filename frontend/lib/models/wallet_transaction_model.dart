@@ -1,6 +1,6 @@
 class WalletTransactionModel {
   final String? id;
-  final int userId;
+  final String userId;
   final String type; // 'topup', 'transfer_send', 'transfer_receive'
   final double amount;
   final double fee;
@@ -27,8 +27,8 @@ class WalletTransactionModel {
 
   factory WalletTransactionModel.fromJson(Map<String, dynamic> json) {
     return WalletTransactionModel(
-      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
-      userId: json['user_id'] is int ? json['user_id'] : int.parse(json['user_id'].toString()),
+      id: json['id']?.toString(),
+      userId: json['user_id']?.toString() ?? '',
       type: json['type'] ?? '',
       amount: json['amount'] != null ? double.parse(json['amount'].toString()) : 0.0,
       fee: json['fee'] != null ? double.parse(json['fee'].toString()) : 0.0,

@@ -47,4 +47,66 @@ class ChatController extends Controller
 
         return $this->successResponse('Chat berhasil ditandai sudah dibaca');
     }
+
+    public function markAllAsRead(Request $request)
+    {
+        $userId = $request->user()->id;
+        \App\Models\ChatParticipant::where('user_id', $userId)
+            ->where('status', 'joined')
+            ->update(['last_read_at' => now()]);
+
+        return $this->successResponse('Semua chat berhasil ditandai sudah dibaca');
+    }
+
+    /**
+     * Lightweight presence ping - updates last_online without full middleware
+     */
+    public function presencePing(Request $request)
+    {
+        $user = $request->user();
+        $user->update(['last_online' => now()]);
+
+        return $this->successResponse('Presence updated', [
+            'last_online' => now()->toISOString(),
+        ]);
+    }
+
+    public function unreadCount(Request $request)
+    {
+        $userId = $request->user()->id;
+
+        $count = \App\Models\ChatParticipant::where('chat_participants.user_id', $userId)
+            ->where('chat_participants.status', 'joined')
+            ->join('messages', function ($join) use ($userId) {
+                $join->on('messages.chat_id', '=', 'chat_participants.chat_id')
+                     ->where('messages.user_id', '!=', $userId)
+                     ->whereRaw('messages.created_at > COALESCE(chat_participants.last_read_at, chat_participants.created_at, "2000-01-01 00:00:00")');
+            })
+            ->count();
+
+        return $this->successResponse('Jumlah pesan belum dibaca', ['count' => $count]);
+    }
+
+    public function devices(Request $request, Chat $chat)
+    {
+        $userId = $request->user()->id;
+        
+        // Ensure user is participant
+        $isParticipant = $chat->participants()->where('user_id', $userId)->exists();
+        if (!$isParticipant) {
+            return $this->errorResponse('Unauthorized', 403);
+        }
+
+        $participantIds = $chat->participants()->pluck('user_id')->toArray();
+        
+        // Get all active devices of all participants
+        $devices = \App\Models\UserDevice::whereIn('user_id', $participantIds)
+            ->where('is_active', true)
+            ->whereNull('revoked_at')
+            ->whereNotNull('public_key')
+            ->get(['user_id', 'device_id', 'public_key'])
+            ->toArray();
+
+        return $this->successResponse('Devices fetched', $devices);
+    }
 }

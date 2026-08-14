@@ -6,7 +6,7 @@ class AdminService {
   static Future<List<CreatorApplication>> getApplications({String? status}) async {
     try {
       final response = await ApiService.get('admin/applications', queryParams: {
-        'status': ?status,
+        'status': status,
       });
 
       if (response['status'] == true) {
@@ -44,6 +44,30 @@ class AdminService {
         'success': false,
         'message': e.toString(),
       };
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getSystemLogs() async {
+    try {
+      final response = await ApiService.get('admin/system-logs');
+      if (response['status'] == true) {
+        return List<Map<String, dynamic>>.from(response['data'] ?? []);
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getAssignedDisputes() async {
+    try {
+      final response = await ApiService.get('admin/assigned-disputes');
+      if (response['status'] == true) {
+        return List<Map<String, dynamic>>.from(response['data'] ?? []);
+      }
+      return [];
+    } catch (_) {
+      return [];
     }
   }
 }

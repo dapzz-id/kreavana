@@ -10,7 +10,7 @@ class Chat extends Model
 {
     use HasFactory, HasUuids;
     
-    protected $fillable = ['type', 'name', 'description', 'only_admin_can_add'];
+    protected $fillable = ['type', 'name', 'description', 'avatar_url', 'only_admin_can_add'];
     
     protected $casts = [
         'only_admin_can_add' => 'boolean',

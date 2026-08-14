@@ -33,4 +33,31 @@ class NotificationController extends Controller
 
         return $this->successResponse('Semua notifikasi berhasil ditandai sudah dibaca');
     }
+
+    public function unreadCount()
+    {
+        $user = Auth::guard('api')->user();
+        $count = \App\Models\Notification::where('user_id', $user->id)
+            ->where('is_read', false)
+            ->count();
+
+        return $this->successResponse('Jumlah notifikasi belum dibaca', ['count' => $count]);
+    }
+
+    public function destroy($id)
+    {
+        $user = Auth::guard('api')->user();
+        $notification = \App\Models\Notification::where('user_id', $user->id)->findOrFail($id);
+        $notification->delete();
+
+        return $this->successResponse('Notifikasi berhasil dihapus');
+    }
+
+    public function destroyAll()
+    {
+        $user = Auth::guard('api')->user();
+        \App\Models\Notification::where('user_id', $user->id)->delete();
+
+        return $this->successResponse('Semua notifikasi berhasil dihapus');
+    }
 }

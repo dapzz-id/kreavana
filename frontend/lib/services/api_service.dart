@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dio_client.dart';
 
 class ApiService {
@@ -6,7 +7,26 @@ class ApiService {
 
   static String get hostIp => Uri.parse(DioClient.baseUrl).host;
 
-  static String get keyPusher => 'cuzkfya73cpnszss3vc2';
+  static String get keyPusher => dotenv.env['PUSHER_KEY'] ?? '';
+
+  /// Selesaikan URL gambar aset backend.
+  ///
+  /// File lama disimpan sebagai `http://host/avatars/file` yang TIDAK punya
+  /// CORS headers (dilayani langsung oleh web server). Tulis ulang ke
+  /// `http://host/api/avatars/file` sehingga lewat middleware CORS Laravel
+  /// dan bisa dimuat dari Flutter Web.
+  static String resolveAssetUrl(String? url) {
+    if (url == null || url.isEmpty) return '';
+    // Rewrite /storage/avatar/file.jpg → /api/avatars/file.jpg
+    if (url.contains('/storage/avatar/') && !url.contains('/api/avatars/')) {
+      return url.replaceFirst(RegExp(r'/storage/avatar/'), '/api/avatars/');
+    }
+    // Rewrite /avatars/file.jpg → /api/avatars/file.jpg
+    if (url.contains('/avatars/') && !url.contains('/api/avatars/')) {
+      return url.replaceFirst('/avatars/', '/api/avatars/');
+    }
+    return url;
+  }
 
   static Future<Map<String, dynamic>> get(
     String endpoint, {
@@ -29,6 +49,18 @@ class ApiService {
   ) async {
     try {
       final response = await _dio.post('/$endpoint', data: body);
+      return _formatResponse(response);
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  static Future<Map<String, dynamic>> postFormData(
+    String endpoint,
+    FormData data,
+  ) async {
+    try {
+      final response = await _dio.post('/$endpoint', data: data);
       return _formatResponse(response);
     } on DioException catch (e) {
       return _handleError(e);
@@ -59,9 +91,12 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> delete(String endpoint) async {
+  static Future<Map<String, dynamic>> delete(
+    String endpoint, {
+    Map<String, dynamic>? data,
+  }) async {
     try {
-      final response = await _dio.delete('/$endpoint');
+      final response = await _dio.delete('/$endpoint', data: data);
       return _formatResponse(response);
     } on DioException catch (e) {
       return _handleError(e);
@@ -83,10 +118,18 @@ class ApiService {
     if (e.response != null) {
       final statusCode = e.response!.statusCode;
 
+      if (e.response!.data is Map<String, dynamic>) {
+        final data = e.response!.data as Map<String, dynamic>;
+        if (!data.containsKey('status')) {
+          data['status'] = false;
+        }
+        return data;
+      }
+
       if (statusCode == 401) {
         return {
           'status': false,
-          'message': 'Sesi tidak valid. Silakan masuk kembali.',
+          'message': 'Email atau kata sandi salah.',
         };
       }
 

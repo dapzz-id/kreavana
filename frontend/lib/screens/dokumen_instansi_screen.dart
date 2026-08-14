@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../app/theme.dart';
+import '../models/user_model.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 
 class DokumenInstansiScreen extends StatelessWidget {
-  const DokumenInstansiScreen({super.key});
+  final UserModel? user;
+  final ValueChanged<UserModel>? onUserUpdated;
+
+  const DokumenInstansiScreen({super.key, this.user, this.onUserUpdated});
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +23,7 @@ class DokumenInstansiScreen extends StatelessWidget {
       {'name': 'Surat Edaran Internal.pdf', 'size': '450 KB', 'date': '12 Jun 2025', 'icon': Icons.mail_outline, 'color': Colors.grey},
     ];
 
-    return Scaffold(
+    final content = Scaffold(
       appBar: AppBar(
         toolbarHeight: 75,
         title: const Text('Dokumen Instansi', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -44,7 +49,7 @@ class DokumenInstansiScreen extends StatelessWidget {
                 Container(
                   width: 42, height: 42,
                   decoration: BoxDecoration(color: (d['color'] as Color).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-                  child: Icon(d['icon'] as IconData, color: d['color'] as Color, size: 20),
+                  child: Icon((d['icon'] as IconData?) ?? Icons.image_outlined, color: d['color'] as Color, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -64,5 +69,16 @@ class DokumenInstansiScreen extends StatelessWidget {
         },
       ),
     );
+
+    if (user != null) {
+      return DesktopSidebarLayout(
+        user: user!,
+        activeRoute: 'dokumen_instansi',
+        onUserUpdated: onUserUpdated,
+        child: content,
+      );
+    }
+
+    return content;
   }
 }

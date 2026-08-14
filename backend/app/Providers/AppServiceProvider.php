@@ -15,7 +15,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(
+            \App\Contracts\AuthServiceInterface::class,
+            \App\Services\AuthService::class
+        );
+        $this->app->bind(
+            \App\Contracts\DashboardServiceInterface::class,
+            \App\Services\DashboardService::class
+        );
+        $this->app->bind(
+            \App\Contracts\AiServiceInterface::class,
+            \App\Services\AiService::class
+        );
     }
 
     /**
@@ -23,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \Carbon\Carbon::setLocale(config('app.locale', 'id'));
         $this->validateAuthConfiguration();
         $this->configureRateLimiters();
     }

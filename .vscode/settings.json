@@ -14,5 +14,7 @@
             "approve": true,
             "matchCommandLine": true
         }
-    }
+    },
+    "java.import.gradle.enabled": false,
+    "java.project.import.enable": false
 }

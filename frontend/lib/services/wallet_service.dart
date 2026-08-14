@@ -1,8 +1,36 @@
 import 'api_service.dart';
 import '../models/wallet_transaction_model.dart';
 
+
 class WalletService {
+  /// Cek apakah user sudah mengatur PIN wallet (wallet "aktif").
+  /// Jika belum, wallet tidak bisa digunakan untuk transaksi.
+  static Future<bool> hasPin() async {
+    try {
+      final response = await ApiService.get('wallet/has-pin');
+      return response['data']?['has_pin'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Mengatur PIN wallet baru (hanya jika belum diatur).
+  static Future<bool> setPin(String pin) async {
+    final response = await ApiService.post('wallet/set-pin', {'pin': pin});
+    if (response['status'] == true) return true;
+    throw Exception(response['message'] ?? 'Gagal mengatur PIN.');
+  }
+
+  /// Verifikasi PIN wallet ke server. Returns true jika valid.
+  /// Throws Exception dengan pesan error jika PIN salah atau wallet belum aktif.
+  static Future<bool> verifyPin(String pin) async {
+    final response = await ApiService.post('wallet/verify-pin', {'pin': pin});
+    if (response['status'] == true) return true;
+    throw Exception(response['message'] ?? 'PIN tidak valid.');
+  }
+
   /// Mendapatkan saldo saat ini dan daftar transaksi
+
   static Future<Map<String, dynamic>> getWalletInfo() async {
     try {
       final response = await ApiService.get('wallet/info');
@@ -18,6 +46,7 @@ class WalletService {
         return {
           'success': true,
           'balance': balance,
+          'has_pin': data['has_pin'] ?? false,
           'transactions': transactions,
         };
       } else {

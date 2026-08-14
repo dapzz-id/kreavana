@@ -1,35 +1,48 @@
 class NotificationModel {
   final String? id;
-  final int userId;
+  final String userId;
   final String title;
-  final String message;
+  final String body;
   final String type;
-  final bool isRead;
-  final String? createdAt;
+  final Map<String, dynamic>? data;
+  bool isRead;
+  final String createdAt;
 
   NotificationModel({
     required this.id,
     required this.userId,
     required this.title,
-    required this.message,
+    required this.body,
     this.type = 'info',
+    this.data,
     this.isRead = false,
-    this.createdAt,
+    required this.createdAt,
   });
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
-      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
-      userId: json['user_id'] is int
-          ? json['user_id']
-          : int.parse(json['user_id'].toString()),
+      id: json['id']?.toString(),
+      userId: json['user_id']?.toString() ?? '',
       title: json['title'] ?? '',
-      message: json['message'] ?? '',
+      body: json['body'] ?? json['message'] ?? '',
       type: json['type'] ?? 'info',
+      data: json['data'] is Map ? Map<String, dynamic>.from(json['data']) : null,
       isRead: json['is_read'] == 1 ||
           json['is_read'] == true ||
           json['is_read'] == '1',
-      createdAt: json['created_at'],
+      createdAt: json['created_at'] ?? DateTime.now().toIso8601String(),
+    );
+  }
+
+  NotificationModel copyWith({bool? isRead}) {
+    return NotificationModel(
+      id: id,
+      userId: userId,
+      title: title,
+      body: body,
+      type: type,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt,
     );
   }
 }
