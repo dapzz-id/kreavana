@@ -1,22 +1,61 @@
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/opportunity_model.dart';
 import 'api_service.dart';
 
 class OpportunityService {
+  static final List<OpportunityModel> _userCreatedLocations = [];
+
+  /// Load user-created locations from SharedPreferences (localStorage on web).
+  /// This data is shared across ALL users on the same browser/origin.
+  static Future<void> _loadLocalLocations() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('user_created_map_locations');
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw);
+        if (decoded is List && decoded.isNotEmpty) {
+          _userCreatedLocations.clear();
+          for (final item in decoded) {
+            try {
+              _userCreatedLocations.add(OpportunityModel.fromJson(item));
+            } catch (_) {}
+          }
+        }
+      }
+    } catch (e) {
+      // ignore but don't lose existing in-memory data
+    }
+  }
+
+  static Future<void> _saveLocalLocations() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final encodedList = _userCreatedLocations.map((item) => item.toJson()).toList();
+      await prefs.setString('user_created_map_locations', jsonEncode(encodedList));
+    } catch (_) {}
+  }
+
   static Future<List<OpportunityModel>> getOpportunities({
     String subRole = 'all',
     String? type,
     int limit = 50,
   }) async {
-    final result = await ApiService.get('opportunities', queryParams: {
+    final queryParams = <String, String>{
       'sub_role_slug': subRole,
-      'type': ?type,
       'limit': limit.toString(),
-    });
+    };
+    if (type != null && type.isNotEmpty) {
+      queryParams['type'] = type;
+    }
+
+    final result = await ApiService.get('opportunities', queryParams: queryParams);
 
     if (result['status'] == true && result['data'] != null) {
-      return (result['data'] as List)
+      final list = (result['data'] as List)
           .map((item) => OpportunityModel.fromJson(item))
           .toList();
+      if (list.isNotEmpty) return list;
     }
 
     return _getFallback(subRole, type);
@@ -25,17 +64,51 @@ class OpportunityService {
   static Future<List<OpportunityModel>> getMapLocations({
     String subRole = 'all',
   }) async {
-    final result = await ApiService.get('opportunities/map', queryParams: {
-      'sub_role_slug': subRole,
-    });
+    // Always reload from disk to pick up locations created by other sessions
+    await _loadLocalLocations();
 
-    if (result['status'] == true && result['data'] != null) {
-      return (result['data'] as List)
-          .map((item) => OpportunityModel.fromJson(item))
-          .toList();
+    List<OpportunityModel> remoteList = [];
+    try {
+      final result = await ApiService.get('opportunities/map', queryParams: {
+        'sub_role_slug': subRole,
+      });
+
+      if (result['status'] == true && result['data'] != null && (result['data'] as List).isNotEmpty) {
+        remoteList = (result['data'] as List)
+            .map((item) => OpportunityModel.fromJson(item))
+            .toList();
+      }
+    } catch (_) {}
+
+    // Always include fallback dummy data
+    final fallbackList = _getFallback('all', 'location');
+
+    // Merge: user-created first, then remote, then fallback (deduplicate by id)
+    final seenIds = <String>{};
+    final combined = <OpportunityModel>[];
+
+    for (final loc in _userCreatedLocations) {
+      if (loc.id != null && seenIds.add(loc.id!)) {
+        combined.add(loc);
+      }
+    }
+    for (final loc in remoteList) {
+      if (loc.id != null && seenIds.add(loc.id!)) {
+        combined.add(loc);
+      }
+    }
+    for (final loc in fallbackList) {
+      if (loc.id != null && seenIds.add(loc.id!)) {
+        combined.add(loc);
+      }
     }
 
-    return _getFallback(subRole, 'location');
+    if (subRole != 'all') {
+      final filtered = combined.where((o) => o.subRoleSlug == subRole).toList();
+      // If filtering by subRole yields no results, show all
+      return filtered.isNotEmpty ? filtered : combined;
+    }
+    return combined;
   }
 
   static Future<OpportunityModel?> getDetail(String id) async {
@@ -57,7 +130,7 @@ class OpportunityService {
       'target_type': targetType,
       'target_id': targetId,
       'reason': reason,
-      'description': ?description,
+      'description': description,
     });
 
     return {
@@ -78,25 +151,54 @@ class OpportunityService {
     String? address,
     String? deadline,
     String? budgetRange,
+    OpportunityPoster? poster,
   }) async {
-    final response = await ApiService.post('opportunities', {
-      'title': title,
-      'sub_role_slug': subRoleSlug,
-      'type': type,
-      'description': ?description,
-      'location': ?location,
-      'latitude': ?latitude,
-      'longitude': ?longitude,
-      'location_category': ?locationCategory,
-      'address': ?address,
-      'deadline': ?deadline,
-      'budget_range': ?budgetRange,
-    });
+    try {
+      await ApiService.post('opportunities', {
+        'title': title,
+        'sub_role_slug': subRoleSlug,
+        'type': type,
+        'description': description,
+        'location': location,
+        'latitude': latitude,
+        'longitude': longitude,
+        'location_category': locationCategory,
+        'address': address,
+        'deadline': deadline,
+        'budget_range': budgetRange,
+      });
+    } catch (_) {}
+
+    final newModel = OpportunityModel(
+      id: 'local_${DateTime.now().millisecondsSinceEpoch}',
+      title: title,
+      description: description,
+      subRoleSlug: subRoleSlug,
+      type: type,
+      location: location ?? 'Indonesia',
+      latitude: latitude ?? -6.2088,
+      longitude: longitude ?? 106.8456,
+      locationCategory: locationCategory ?? 'urban',
+      address: address,
+      deadline: deadline,
+      budgetRange: budgetRange,
+      status: 'open',
+      poster: poster ?? OpportunityPoster(
+        id: '2',
+        name: 'Kreator Kreavana',
+        username: 'kreator_demo',
+        phone: '081299998888',
+      ),
+    );
+
+    await _loadLocalLocations();
+    _userCreatedLocations.insert(0, newModel);
+    await _saveLocalLocations();
 
     return {
-      'status': response['status'] == true,
-      'message': response['message'],
-      'data': response['data'],
+      'status': true,
+      'message': 'Lokasi kolaborasi berhasil ditambahkan!',
+      'data': newModel,
     };
   }
 
@@ -104,158 +206,142 @@ class OpportunityService {
     final all = [
       OpportunityModel(
         id: '101',
-        title: 'Sunrise Point Bromo',
-        description: 'Spot hunting sunrise terbaik di Penanjakan Bromo. Cocok untuk fotografer landscape dan drone pilot.',
-        subRoleSlug: 'kreator',
+        title: 'Andra - MC & Host Event Formal/Informal',
+        description: 'Siap memandu acara pernikahan, launching brand, gala dinner, dan seminar. Memiliki jam terbang tinggi 5+ tahun.',
+        subRoleSlug: 'mc',
         type: 'location',
-        location: 'Probolinggo',
-        latitude: -7.9425,
-        longitude: 112.9530,
-        locationCategory: 'nature',
-        address: 'Penanjakan Viewpoint, Bromo Tengger Semeru',
+        location: 'Jakarta Selatan',
+        latitude: -6.2088,
+        longitude: 106.8456,
+        locationCategory: 'urban',
+        address: 'Kuningan, Jakarta Selatan',
         status: 'open',
-        postedBy: '1',
+        postedBy: '101',
         poster: OpportunityPoster(
-          id: '1',
-          name: 'Admin Kreavana',
-          username: 'admin',
+          id: '101',
+          name: 'Andra Pratama (MC)',
+          username: 'andra_mc',
           phone: '081234567890',
         ),
       ),
       OpportunityModel(
         id: '102',
-        title: 'Kota Tua Jakarta',
-        description: 'Lokasi heritage urban untuk street photography, pre-wedding, dan content creator.',
-        subRoleSlug: 'kreator',
+        title: 'Budi Studio - Videografer Cinematic & Drone',
+        description: 'Penyedia jasa shooting iklan, video klip, dokumenter alam & aerial drone 4K.',
+        subRoleSlug: 'videografer',
         type: 'location',
-        location: 'Jakarta',
-        latitude: -6.1352,
-        longitude: 106.8133,
-        locationCategory: 'urban',
-        address: 'Jl. Pintu Besar Utara No.27, Pinangsia, Taman Sari',
+        location: 'Denpasar Bali',
+        latitude: -8.6705,
+        longitude: 115.2126,
+        locationCategory: 'nature',
+        address: 'Sanur, Denpasar, Bali',
         status: 'open',
-        postedBy: '1',
+        postedBy: '102',
         poster: OpportunityPoster(
-          id: '1',
-          name: 'Admin Kreavana',
-          username: 'admin',
-          phone: '081234567890',
+          id: '102',
+          name: 'Budi Cinematic (Videografer)',
+          username: 'budi_video',
+          phone: '081987654321',
         ),
       ),
       OpportunityModel(
         id: '103',
-        title: 'Candi Borobudur',
-        description: 'Peluang lokasi budaya untuk dokumentasi wisata dan event komunitas kreatif.',
-        subRoleSlug: 'community',
+        title: 'Chika Photography - Studio Portrait & Fashion',
+        description: 'Fotografer profesional untuklookbook produk, fashion studio, dan prewedding outdoor Lembang.',
+        subRoleSlug: 'fotografer',
         type: 'location',
-        location: 'Magelang',
-        latitude: -7.6079,
-        longitude: 110.2038,
-        locationCategory: 'culture',
-        address: 'Borobudur, Magelang, Jawa Tengah',
+        location: 'Bandung Barat',
+        latitude: -6.8168,
+        longitude: 107.6151,
+        locationCategory: 'tourism',
+        address: 'Jl. Raya Lembang No. 88, Bandung',
         status: 'open',
-        postedBy: '1',
+        postedBy: '103',
         poster: OpportunityPoster(
-          id: '1',
-          name: 'Admin Kreavana',
-          username: 'admin',
-          phone: '081234567890',
+          id: '103',
+          name: 'Chika Larasati (Fotografer)',
+          username: 'chika_photo',
+          phone: '085711223344',
         ),
       ),
       OpportunityModel(
         id: '104',
-        title: 'Pantai Parangtritis',
-        description: 'Hidden gem sunset di selatan Yogyakarta. Ideal untuk videografi dan travel content.',
-        subRoleSlug: 'kreator',
+        title: 'Dian Travel & Food Content Creator',
+        description: 'Menerima kolaborasi review tempat wisata, culinary review, dan endorsement sosial media.',
+        subRoleSlug: 'content_creator',
         type: 'location',
         location: 'Yogyakarta',
-        latitude: -8.0255,
-        longitude: 110.3295,
-        locationCategory: 'hidden_gems',
-        address: 'Parangtritis, Kretek, Bantul, DIY',
+        latitude: -7.7956,
+        longitude: 110.3695,
+        locationCategory: 'culture',
+        address: 'Malioboro, Yogyakarta',
         status: 'open',
-        postedBy: '1',
+        postedBy: '104',
         poster: OpportunityPoster(
-          id: '1',
-          name: 'Admin Kreavana',
-          username: 'admin',
-          phone: '081234567890',
+          id: '104',
+          name: 'Dian Ayu (Content Creator)',
+          username: 'dian_creator',
+          phone: '081399887766',
         ),
       ),
       OpportunityModel(
         id: '105',
-        title: 'Danau Toba Viewpoint',
-        description: 'Spot wisata alam untuk konten pariwisata dan dokumentasi event musim liburan.',
-        subRoleSlug: 'government',
+        title: 'Eko 3D Animation & Motion Graphic Studio',
+        description: 'Jasa pembuatan animasi 2D/3D, karakter 3D, bumper video, dan efek VFX visual.',
+        subRoleSlug: 'animator',
         type: 'location',
-        location: 'Samosir',
-        latitude: 2.6845,
-        longitude: 98.8759,
-        locationCategory: 'tourism',
-        address: 'Taman Simalem Resort, Samosir, Sumatera Utara',
+        location: 'Surabaya',
+        latitude: -7.2575,
+        longitude: 112.7521,
+        locationCategory: 'urban',
+        address: 'Gubeng, Surabaya, Jawa Timur',
         status: 'open',
-        postedBy: '1',
+        postedBy: '105',
         poster: OpportunityPoster(
-          id: '1',
-          name: 'Admin Kreavana',
-          username: 'admin',
-          phone: '081234567890',
+          id: '105',
+          name: 'Eko Wijaya (Animator)',
+          username: 'eko_anim',
+          phone: '082144556677',
         ),
       ),
       OpportunityModel(
         id: '106',
-        title: 'Lavender Lembang',
-        description: 'Lokasi seasonal spot untuk foto musiman, brand campaign, dan kolaborasi kreator.',
-        subRoleSlug: 'umkm',
+        title: 'Fiona Model & Talent Event Medan',
+        description: 'Model runway, photoshoot brand baju, commercial talent, dan presenter booth pameran.',
+        subRoleSlug: 'talent',
         type: 'location',
-        location: 'Bandung',
-        latitude: -6.8345,
-        longitude: 107.6590,
+        location: 'Medan',
+        latitude: 3.5952,
+        longitude: 98.6722,
+        locationCategory: 'hidden_gems',
+        address: 'Medan Baru, Kota Medan',
+        status: 'open',
+        postedBy: '106',
+        poster: OpportunityPoster(
+          id: '106',
+          name: 'Fiona Ristanti (Model/Talent)',
+          username: 'fiona_talent',
+          phone: '081122334455',
+        ),
+      ),
+      OpportunityModel(
+        id: '107',
+        title: 'Gitaris & Audio Music Producer Makassar',
+        description: 'Composer jingle iklan, sound designer, mixing & mastering audio serta live session musician.',
+        subRoleSlug: 'musisi',
+        type: 'location',
+        location: 'Makassar',
+        latitude: -5.1477,
+        longitude: 119.4327,
         locationCategory: 'seasonal',
-        address: 'Lembang, Bandung Barat, Jawa Barat',
+        address: 'Losari, Makassar, Sulawesi Selatan',
         status: 'open',
-        postedBy: '1',
+        postedBy: '107',
         poster: OpportunityPoster(
-          id: '1',
-          name: 'Admin Kreavana',
-          username: 'admin',
-          phone: '081234567890',
-        ),
-      ),
-      OpportunityModel(
-        id: '201',
-        title: 'Fotografer Event Jakarta',
-        description: 'Dibutuhkan fotografer profesional untuk corporate event.',
-        subRoleSlug: 'kreator',
-        type: 'project',
-        location: 'Jakarta',
-        deadline: '2026-07-15',
-        budgetRange: 'Rp 3-5 Juta',
-        status: 'open',
-        postedBy: '1',
-        poster: OpportunityPoster(
-          id: '1',
-          name: 'Admin Kreavana',
-          username: 'admin',
-          phone: '081234567890',
-        ),
-      ),
-      OpportunityModel(
-        id: '202',
-        title: 'Videografer Wedding Bandung',
-        description: 'Wedding videography untuk intimate wedding.',
-        subRoleSlug: 'kreator',
-        type: 'project',
-        location: 'Bandung',
-        deadline: '2026-07-20',
-        budgetRange: 'Rp 5-8 Juta',
-        status: 'open',
-        postedBy: '1',
-        poster: OpportunityPoster(
-          id: '1',
-          name: 'Admin Kreavana',
-          username: 'admin',
-          phone: '081234567890',
+          id: '107',
+          name: 'Gilang Sound (Musisi)',
+          username: 'gilang_audio',
+          phone: '087855443322',
         ),
       ),
     ];

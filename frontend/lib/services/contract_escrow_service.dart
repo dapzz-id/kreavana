@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import 'api_service.dart';
 import 'chat_service.dart';
 import 'wallet_service.dart';
 

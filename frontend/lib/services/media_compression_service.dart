@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 
@@ -97,7 +96,6 @@ class MediaCompressionService {
         mimeType: mime,
       );
     } catch (e) {
-      debugPrint('MediaCompressionService Error: $e');
       return null;
     }
   }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use App\Services\WalletService;
 use App\Http\Requests\TopupRequest;
 use App\Http\Requests\SimulatePayRequest;
@@ -28,7 +29,69 @@ class WalletController extends Controller
         $user = Auth::guard('api')->user();
         $info = $this->walletService->getInfo($user->id);
 
+        // Expose whether wallet PIN is configured (so frontend can gate transactions)
+        $info['has_pin'] = !empty($user->wallet_pin);
+
         return $this->successResponse('Data dompet berhasil diambil', $info);
+    }
+
+    /**
+     * GET /wallet/has-pin
+     * Returns whether the authenticated user has configured a wallet PIN.
+     * Use this to decide if the wallet is "activated" (like ShopeePay).
+     */
+    public function hasPin()
+    {
+        $user = Auth::guard('api')->user();
+        $hasPin = !empty($user->wallet_pin);
+
+        return $this->successResponse('Status PIN dompet.', [
+            'has_pin' => $hasPin,
+        ]);
+    }
+
+    /**
+     * POST /wallet/set-pin
+     * Sets the wallet PIN if it hasn't been set yet.
+     */
+    public function setPin(Request $request)
+    {
+        $request->validate(['pin' => 'required|string|min:4|max:8']);
+
+        $user = Auth::guard('api')->user();
+
+        if (!empty($user->wallet_pin)) {
+            return $this->errorResponse('PIN wallet sudah diatur sebelumnya.', 422);
+        }
+
+        $user->wallet_pin = Hash::make($request->pin);
+        $user->save();
+
+        return $this->successResponse('PIN wallet berhasil diatur dan wallet diaktifkan.');
+    }
+
+    /**
+     * POST /wallet/verify-pin
+     * Validates the user's wallet PIN without executing any transaction.
+     * Returns {valid: true/false}.
+     */
+    public function verifyPin(Request $request)
+    {
+        $request->validate(['pin' => 'required|string|min:4|max:8']);
+
+        $user = Auth::guard('api')->user();
+
+        if (empty($user->wallet_pin)) {
+            return $this->errorResponse('Wallet PIN belum diatur. Aktifkan wallet terlebih dahulu.', 422);
+        }
+
+        $valid = Hash::check($request->pin, $user->wallet_pin);
+
+        if (!$valid) {
+            return $this->errorResponse('PIN salah.', 401);
+        }
+
+        return $this->successResponse('PIN valid.', ['valid' => true]);
     }
 
     public function topup(TopupRequest $request)

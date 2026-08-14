@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'access_ttl_minutes' => (int) env('JWT_TTL', 5),
+    'access_ttl_minutes' => (int) env('JWT_TTL', 10),
 
     'jwt' => [
         'production_algo' => 'RS256',
@@ -12,9 +12,9 @@ return [
 
     'refresh' => [
         'cookie' => env('AUTH_REFRESH_COOKIE', 'refresh_token'),
-        'ttl_minutes' => (int) env('AUTH_REFRESH_TTL', 60 * 24 * 7),
+        'ttl_minutes' => (int) env('AUTH_REFRESH_TTL', 60 * 24 * 30),
         'path' => '/api/auth/refresh',
-        'same_site' => 'Strict',
+        'same_site' => env('AUTH_REFRESH_SAME_SITE', 'Lax'),
     ],
 
     'redis_prefixes' => [

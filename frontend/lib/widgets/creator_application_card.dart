@@ -161,7 +161,6 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
   }
 
   Future<void> _processKtpImage(String imagePath) async {
-    print('Starting OCR scan for: $imagePath');
     setState(() => _isScanning = true);
 
     // Read image file and convert to base64
@@ -174,9 +173,6 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
     });
 
     final ocr = await ktp_ocr.KtpOcrService.scanFromFile(imagePath);
-    print(
-      'OCR result: hasData=${ocr.hasData}, nik=${ocr.nik}, name=${ocr.fullName}',
-    );
     if (mounted) {
       setState(() => _isScanning = false);
       if (ocr.hasData) {

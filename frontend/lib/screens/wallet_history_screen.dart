@@ -4,6 +4,8 @@ import '../services/api_service.dart';
 import '../models/wallet_transaction_model.dart';
 import '../app/theme.dart';
 
+import '../widgets/skeleton/skeleton_list.dart';
+
 class WalletHistoryScreen extends StatefulWidget {
   const WalletHistoryScreen({super.key});
 
@@ -49,7 +51,7 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
 
     try {
       final response = await ApiService.get('profile/history?page=$_currentPage&year=$_selectedYear');
-      if (response['success'] == true && response['data'] != null) {
+      if ((response['success'] == true || response['status'] == true) && response['data'] != null) {
         final data = response['data']['data'] as List;
         final currentTransactions = data.map((tx) => WalletTransactionModel.fromJson(tx)).toList();
         
@@ -59,8 +61,8 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
           _hasMore = response['data']['next_page_url'] != null;
         });
       }
-    } catch (e) {
-      debugPrint('Error fetching history: $e');
+    } catch (_) {
+      // Silently handle history fetch error
     } finally {
       setState(() {
         _isLoading = false;
@@ -118,7 +120,7 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
                 if (index == _transactions.length) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: SkeletonList(),
                   );
                 }
 

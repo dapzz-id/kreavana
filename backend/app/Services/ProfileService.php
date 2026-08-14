@@ -64,21 +64,27 @@ class ProfileService extends BaseService
         if (isset($data['avatar_url'])) {
             $avatarUrl = $data['avatar_url'];
             if (str_starts_with($avatarUrl, 'data:image')) {
-                if (preg_match('/^data:image\/(\w+);base64,/', $avatarUrl, $type)) {
+                if (preg_match('/^data:image\/([a-zA-Z0-9\+\-]+);base64,/', $avatarUrl, $type)) {
                     $imageData = substr($avatarUrl, strpos($avatarUrl, ',') + 1);
                     $ext = strtolower($type[1]);
-                    if (in_array($ext, ['jpg', 'jpeg', 'gif', 'png'])) {
-                        $imageData = str_replace(' ', '+', $imageData);
-                        $decoded = base64_decode($imageData);
-                        if ($decoded !== false) {
-                            $fileName = 'avatar_' . $user->id . '_' . time() . '.' . $ext;
-                            $dirPath = public_path('avatars');
-                            if (!file_exists($dirPath)) {
-                                mkdir($dirPath, 0755, true);
-                            }
-                            file_put_contents($dirPath . '/' . $fileName, $decoded);
-                            $user->avatar_url = url('avatars/' . $fileName);
-                        }
+                    if ($ext === 'jpeg') $ext = 'jpg';
+                    if ($ext === 'svg+xml') $ext = 'svg';
+
+                    $imageData = str_replace(' ', '+', $imageData);
+                    $decoded = base64_decode($imageData);
+                    if ($decoded !== false) {
+                        $fileName = 'avatar_' . $user->id . '_' . time() . '.' . $ext;
+                        $tempPath = sys_get_temp_dir() . '/' . $fileName;
+                        file_put_contents($tempPath, $decoded);
+                        
+                        $uploadedFile = new \Illuminate\Http\UploadedFile($tempPath, $fileName, 'image/' . $ext, null, true);
+                        
+                        /** @var \App\Services\StorageService $storageService */
+                        $storageService = app(\App\Services\StorageService::class);
+                        $storageFile = $storageService->store($user, $uploadedFile, 'avatar', 'public');
+                        
+                        $user->avatar_url = url('storage/' . $storageFile->path);
+                        @unlink($tempPath);
                     }
                 }
             } else {
@@ -165,12 +171,18 @@ class ProfileService extends BaseService
                 $decoded = base64_decode($data);
                 if ($decoded !== false) {
                     $fileName = $prefix . '_' . $userId . '_' . time() . '.' . $ext;
-                    $dirPath = public_path($prefix);
-                    if (!file_exists($dirPath)) {
-                        mkdir($dirPath, 0755, true);
-                    }
-                    file_put_contents($dirPath . '/' . $fileName, $decoded);
-                    return url($prefix . '/' . $fileName);
+                    $tempPath = sys_get_temp_dir() . '/' . $fileName;
+                    file_put_contents($tempPath, $decoded);
+                    
+                    $uploadedFile = new \Illuminate\Http\UploadedFile($tempPath, $fileName, 'image/' . $ext, null, true);
+                    
+                    $user = \App\Models\User::find($userId);
+                    /** @var \App\Services\StorageService $storageService */
+                    $storageService = app(\App\Services\StorageService::class);
+                    $storageFile = $storageService->store($user, $uploadedFile, $prefix, 'public');
+                    
+                    @unlink($tempPath);
+                    return url('storage/' . $storageFile->path);
                 }
             }
         }

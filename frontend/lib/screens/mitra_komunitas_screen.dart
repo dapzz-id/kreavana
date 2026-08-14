@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../app/theme.dart';
+import '../models/user_model.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 
 class MitraKomunitasScreen extends StatelessWidget {
-  const MitraKomunitasScreen({super.key});
+  final UserModel? user;
+  final ValueChanged<UserModel>? onUserUpdated;
+
+  const MitraKomunitasScreen({super.key, this.user, this.onUserUpdated});
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +22,7 @@ class MitraKomunitasScreen extends StatelessWidget {
       {'name': 'Koperasi Kreator Nusantara', 'members': '890', 'category': 'Koperasi', 'color': Color(0xFFF59E0B)},
     ];
 
-    return Scaffold(
+    final content = Scaffold(
       appBar: AppBar(
         toolbarHeight: 75,
         title: const Text('Mitra & Komunitas', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -64,5 +69,16 @@ class MitraKomunitasScreen extends StatelessWidget {
         },
       ),
     );
+
+    if (user != null) {
+      return DesktopSidebarLayout(
+        user: user!,
+        activeRoute: 'mitra_komunitas',
+        onUserUpdated: onUserUpdated,
+        child: content,
+      );
+    }
+
+    return content;
   }
 }

@@ -3,9 +3,14 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  firebase_app_check
+  firebase_auth
+  firebase_core
   flutter_secure_storage_windows
   flutter_webrtc
   permission_handler_windows
+  record_windows
+  share_plus
   url_launcher_windows
 )
 

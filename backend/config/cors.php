@@ -15,14 +15,11 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie', 'avatars/*'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => array_values(array_filter(array_map(
-        'trim',
-        explode(',', (string) env('CORS_ALLOWED_ORIGINS', ''))
-    ))),
+    'allowed_origins' => [],
 
     'allowed_origins_patterns' => in_array(env('APP_ENV', 'production'), ['local', 'testing'], true)
         ? [

@@ -1,0 +1,1793 @@
+{
+  "info": {
+    "name": "Kreavana Backend API (Fixed)",
+    "description": "Postman collection for Kreavana backend API.\nSet {{baseUrl}} to your API host, e.g. http://localhost/api.\nSet {{baseUrlRoot}} to your web host, e.g. http://localhost.\nAfter a successful login, the token is saved automatically to {{authToken}} for later requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseProtocol",
+      "value": "http",
+      "type": "string"
+    },
+    {
+      "key": "baseHost",
+      "value": "localhost",
+      "type": "string"
+    },
+    {
+      "key": "basePort",
+      "value": "8000",
+      "type": "string"
+    },
+    {
+      "key": "basePath",
+      "value": "api",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "registerUserUsername",
+      "value": "user",
+      "type": "string"
+    },
+    {
+      "key": "registerUserEmail",
+      "value": "user@example.com",
+      "type": "string"
+    },
+    {
+      "key": "registerUserPassword",
+      "value": "password123",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "chat",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "tx_id",
+      "value": "sample-tx-id",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set JSON accept header for all requests.",
+          "pm.request.headers.upsert({key: 'Accept', value: 'application/json'});",
+          "var token = pm.collectionVariables.get('authToken');",
+          "if (token) {",
+          "    pm.request.headers.upsert({key: 'Authorization', value: 'Bearer ' + token});",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Web",
+      "item": [
+        {
+          "name": "Root Welcome",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": []
+            },
+            "description": "Laravel welcome route from backend/routes/web.php."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "item": [
+        {
+          "name": "Creator Sub-Roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/roles/creator/sub-roles",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "roles",
+                "creator",
+                "sub-roles"
+              ]
+            },
+            "description": "Public endpoint to list creator sub-roles. No request body is required."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register User",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var suffix = Math.floor(Math.random() * 1000000);",
+                  "pm.collectionVariables.set('registerUserUsername', 'user' + suffix);",
+                  "pm.collectionVariables.set('registerUserEmail', 'user' + suffix + '@example.com');",
+                  "pm.collectionVariables.set('registerUserPassword', 'password123');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "User Name",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "{{registerUserUsername}}",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{registerUserEmail}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{registerUserPassword}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password_confirmation",
+                  "value": "{{registerUserPassword}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/auth/register",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Public registration endpoint for a normal user account."
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "email",
+                  "value": "{{registerUserEmail}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{registerUserPassword}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/auth/login",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Public user login endpoint. Returns auth token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var json = {};",
+                  "try { json = pm.response.json(); } catch(e) { }",
+                  "var token = json.access_token || json.token || (json.data && json.data.access_token) || (json.data && json.data.token);",
+                  "if (token) {",
+                  "    pm.collectionVariables.set('authToken', token);",
+                  "    pm.environment.set('authToken', token);",
+                  "    pm.test('Saved authToken', function () { pm.expect(token).to.be.a('string'); });",
+                  "} else {",
+                  "    pm.test('No auth token found', function () { pm.expect(token).to.not.be.undefined; });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login as Seeded User",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "email",
+                  "value": "user@kreavana.id",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "password123",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/auth/login",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login via the single auth/login route using the seeded user account."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var json = {};",
+                  "try { json = pm.response.json(); } catch(e) { }",
+                  "var token = json.access_token || json.token || (json.data && json.data.access_token) || (json.data && json.data.token);",
+                  "if (token) {",
+                  "    pm.collectionVariables.set('authToken', token);",
+                  "    pm.environment.set('authToken', token);",
+                  "    pm.test('Saved authToken', function () { pm.expect(token).to.be.a('string'); });",
+                  "} else {",
+                  "    pm.test('No auth token found', function () { pm.expect(token).to.not.be.undefined; });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login as Seeded Creator",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "email",
+                  "value": "creator@kreavana.id",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "password123",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/auth/login",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login via the single auth/login route using the seeded creator account."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var json = {};",
+                  "try { json = pm.response.json(); } catch(e) { }",
+                  "var token = json.access_token || json.token || (json.data && json.data.access_token) || (json.data && json.data.token);",
+                  "if (token) {",
+                  "    pm.collectionVariables.set('authToken', token);",
+                  "    pm.environment.set('authToken', token);",
+                  "    pm.test('Saved authToken', function () { pm.expect(token).to.be.a('string'); });",
+                  "} else {",
+                  "    pm.test('No auth token found', function () { pm.expect(token).to.not.be.undefined; });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login as Seeded Admin",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "email",
+                  "value": "admin@kreavana.id",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "password123",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/auth/login",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login via the single auth/login route using the seeded admin account."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var json = {};",
+                  "try { json = pm.response.json(); } catch(e) { }",
+                  "var token = json.access_token || json.token || (json.data && json.data.access_token) || (json.data && json.data.token);",
+                  "if (token) {",
+                  "    pm.collectionVariables.set('authToken', token);",
+                  "    pm.environment.set('authToken', token);",
+                  "    pm.test('Saved authToken', function () { pm.expect(token).to.be.a('string'); });",
+                  "} else {",
+                  "    pm.test('No auth token found', function () { pm.expect(token).to.not.be.undefined; });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "refresh_token",
+                  "value": "<refresh_token>",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/auth/refresh",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Refresh JWT token endpoint. Throttled and skips JTI validation."
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/auth/me",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Protected endpoint to retrieve current authenticated user."
+          }
+        },
+        {
+          "name": "Get Authenticated User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/user",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "user"
+              ]
+            },
+            "description": "Protected endpoint to retrieve the currently authenticated user via /user. Requires auth token in Authorization header. No request body needed."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/profile",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "profile"
+              ]
+            },
+            "description": "Protected profile retrieval. Requires manage_own_profile permission."
+          }
+        },
+        {
+          "name": "Get Profile Identity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/profile/identity",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "profile",
+                "identity"
+              ]
+            },
+            "description": "Protected profile identity details. Requires manage_own_profile permission."
+          }
+        },
+        {
+          "name": "Get Profile Application",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/profile/application",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "profile",
+                "application"
+              ]
+            },
+            "description": "Protected creator application status. Requires manage_own_profile permission."
+          }
+        },
+        {
+          "name": "Get Profile Permissions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/profile/permissions",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "profile",
+                "permissions"
+              ]
+            },
+            "description": "Protected permissions list. Requires manage_own_profile permission."
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Updated Name",
+                  "type": "text"
+                },
+                {
+                  "key": "bio",
+                  "value": "Your bio here",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/profile",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "profile"
+              ]
+            },
+            "description": "Protected profile update. Requires manage_own_profile permission."
+          }
+        },
+        {
+          "name": "Profile History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/profile/history",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "profile",
+                "history"
+              ]
+            },
+            "description": "Protected profile history endpoint. Requires manage_own_profile permission."
+          }
+        },
+        {
+          "name": "Apply Creator",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "reason",
+                  "value": "I want to become a creator",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/profile/apply-creator",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "profile",
+                "apply-creator"
+              ]
+            },
+            "description": "Protected creator application submission. Requires user role."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Follow",
+      "item": [
+        {
+          "name": "Follow User",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/follow/{{userId}}",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "follow",
+                "{{userId}}"
+              ]
+            },
+            "description": "Follow another user by userId. Protected endpoint."
+          }
+        },
+        {
+          "name": "Unfollow User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/follow/{{userId}}",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "follow",
+                "{{userId}}"
+              ]
+            },
+            "description": "Unfollow a user by userId. Protected endpoint."
+          }
+        },
+        {
+          "name": "List Followers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/users/{{userId}}/followers",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "users",
+                "{{userId}}",
+                "followers"
+              ]
+            },
+            "description": "Get followers of a user. Protected endpoint."
+          }
+        },
+        {
+          "name": "List Following",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/users/{{userId}}/following",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "users",
+                "{{userId}}",
+                "following"
+              ]
+            },
+            "description": "Get users followed by a user. Protected endpoint."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/dashboard/stats",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "dashboard",
+                "stats"
+              ]
+            },
+            "description": "Dashboard stats. Requires view_dashboard permission."
+          }
+        },
+        {
+          "name": "Dashboard Opportunities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/dashboard/opportunities",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "dashboard",
+                "opportunities"
+              ]
+            },
+            "description": "Dashboard opportunities listing."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wallet",
+      "item": [
+        {
+          "name": "Wallet Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/wallet/info",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "wallet",
+                "info"
+              ]
+            },
+            "description": "Protected wallet info. Requires manage_own_profile permission."
+          }
+        },
+        {
+          "name": "Wallet Topup",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "amount",
+                  "value": "100",
+                  "type": "text"
+                },
+                {
+                  "key": "payment_method",
+                  "value": "card",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/wallet/topup",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "wallet",
+                "topup"
+              ]
+            },
+            "description": "Protected wallet top-up. Requires manage_own_profile permission."
+          }
+        },
+        {
+          "name": "Wallet Topup Simulate",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "amount",
+                  "value": "100",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/wallet/topup/simulate",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "wallet",
+                "topup",
+                "simulate"
+              ]
+            },
+            "description": "Simulate wallet top-up. Requires manage_own_profile permission."
+          }
+        },
+        {
+          "name": "Wallet Transfer",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "recipient_id",
+                  "value": "123",
+                  "type": "text"
+                },
+                {
+                  "key": "amount",
+                  "value": "50",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/wallet/transfer",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "wallet",
+                "transfer"
+              ]
+            },
+            "description": "Protected wallet transfer. Requires manage_own_profile permission."
+          }
+        },
+        {
+          "name": "Wallet Withdraw",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "amount",
+                  "value": "100",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/wallet/withdraw",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "wallet",
+                "withdraw"
+              ]
+            },
+            "description": "Protected wallet withdrawal. Requires manage_own_profile permission."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Opportunities",
+      "item": [
+        {
+          "name": "List Opportunities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/opportunities",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "opportunities"
+              ]
+            },
+            "description": "Protected opportunities listing. Requires view_opportunities permission."
+          }
+        },
+        {
+          "name": "Create Opportunity",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "title",
+                  "value": "New Opportunity",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Opportunity details",
+                  "type": "text"
+                },
+                {
+                  "key": "location",
+                  "value": "Jakarta",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/opportunities",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "opportunities"
+              ]
+            },
+            "description": "Protected opportunity creation. Requires create_opportunity permission."
+          }
+        },
+        {
+          "name": "Opportunities Map",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/opportunities/map",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "opportunities",
+                "map"
+              ]
+            },
+            "description": "Protected map locations for opportunities. Requires view_opportunities permission."
+          }
+        },
+        {
+          "name": "Submit Opportunity Report",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "opportunity_id",
+                  "value": "123",
+                  "type": "text"
+                },
+                {
+                  "key": "message",
+                  "value": "Report details",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/opportunities/report",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "opportunities",
+                "report"
+              ]
+            },
+            "description": "Protected report submission. Requires submit_report permission."
+          }
+        },
+        {
+          "name": "Get Opportunity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/opportunities/{{id}}",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "opportunities",
+                "{{id}}"
+              ]
+            },
+            "description": "Protected opportunity details. Requires view_opportunities permission."
+          }
+        },
+        {
+          "name": "Get Opportunity Poster",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/opportunities/{{id}}/poster",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "opportunities",
+                "{{id}}",
+                "poster"
+              ]
+            },
+            "description": "Protected opportunity poster retrieval. Requires view_opportunities permission."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/notifications",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "notifications"
+              ]
+            },
+            "description": "Protected notification listing."
+          }
+        },
+        {
+          "name": "Mark Notifications Read",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "notification_ids[]",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "notification_ids[]",
+                  "value": "2",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/notifications/read",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "notifications",
+                "read"
+              ]
+            },
+            "description": "Protected endpoint to mark notifications read."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Call",
+      "item": [
+        {
+          "name": "Call Signal",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "room",
+                  "value": "room-id",
+                  "type": "text"
+                },
+                {
+                  "key": "signal",
+                  "value": "{\"type\": \"offer\"}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/call/signal",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "call",
+                "signal"
+              ]
+            },
+            "description": "Protected call signaling endpoint."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Search Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/users/search",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "users",
+                "search"
+              ]
+            },
+            "description": "Protected user search. Requires use_chat permission. Add query params as needed."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chats",
+      "item": [
+        {
+          "name": "List Chats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/chats",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "chats"
+              ]
+            },
+            "description": "Protected chat list. Requires use_chat permission."
+          }
+        },
+        {
+          "name": "Start Personal Chat",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "recipient_id",
+                  "value": "123",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/chats/personal",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "chats",
+                "personal"
+              ]
+            },
+            "description": "Protected endpoint to start a personal chat. Requires use_chat permission."
+          }
+        },
+        {
+          "name": "Mark Chat Read",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/chats/{{chat}}/read",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "chats",
+                "{{chat}}",
+                "read"
+              ]
+            },
+            "description": "Protected endpoint to mark a chat as read. Requires use_chat permission."
+          }
+        },
+        {
+          "name": "Get Chat Messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/chats/{{chat}}/messages",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "chats",
+                "{{chat}}",
+                "messages"
+              ]
+            },
+            "description": "Protected chat messages list. Requires use_chat permission."
+          }
+        },
+        {
+          "name": "Send Chat Message",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "message",
+                  "value": "Hello",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/chats/{{chat}}/messages",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "chats",
+                "{{chat}}",
+                "messages"
+              ]
+            },
+            "description": "Protected endpoint to send a message in a chat. Requires use_chat permission."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Groups & Invitations",
+      "item": [
+        {
+          "name": "List Invitations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/invitations",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "invitations"
+              ]
+            },
+            "description": "Protected invitation list. Requires use_chat permission."
+          }
+        },
+        {
+          "name": "Respond to Invitation",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "response",
+                  "value": "accept",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/invitations/{{chat}}/respond",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "invitations",
+                "{{chat}}",
+                "respond"
+              ]
+            },
+            "description": "Protected invitation response. Requires use_chat permission."
+          }
+        },
+        {
+          "name": "Create Group",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "New Group",
+                  "type": "text"
+                },
+                {
+                  "key": "member_ids[]",
+                  "value": "123",
+                  "type": "text"
+                },
+                {
+                  "key": "member_ids[]",
+                  "value": "456",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/groups",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "groups"
+              ]
+            },
+            "description": "Protected create group endpoint. Requires use_chat permission."
+          }
+        },
+        {
+          "name": "List Group Members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/groups/{{chat}}/members",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "groups",
+                "{{chat}}",
+                "members"
+              ]
+            },
+            "description": "Protected group member list. Requires use_chat permission."
+          }
+        },
+        {
+          "name": "Add Group Member",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "user_id",
+                  "value": "123",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/groups/{{chat}}/members",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "groups",
+                "{{chat}}",
+                "members"
+              ]
+            },
+            "description": "Protected add member to group. Requires use_chat permission."
+          }
+        },
+        {
+          "name": "Remove Group Member",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/groups/{{chat}}/members/{{userId}}",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "groups",
+                "{{chat}}",
+                "members",
+                "{{userId}}"
+              ]
+            },
+            "description": "Protected remove a user from a group. Requires use_chat permission."
+          }
+        },
+        {
+          "name": "Make Group Admin",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/groups/{{chat}}/members/{{userId}}/admin",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "groups",
+                "{{chat}}",
+                "members",
+                "{{userId}}",
+                "admin"
+              ]
+            },
+            "description": "Protected promote a member to group admin. Requires use_chat permission."
+          }
+        },
+        {
+          "name": "Leave Group",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/groups/{{chat}}/leave",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "groups",
+                "{{chat}}",
+                "leave"
+              ]
+            },
+            "description": "Protected leave group action. Requires use_chat permission."
+          }
+        },
+        {
+          "name": "Update Group Settings",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "settings",
+                  "value": "{\"notifications\":true}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/groups/{{chat}}/settings",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "groups",
+                "{{chat}}",
+                "settings"
+              ]
+            },
+            "description": "Protected update group settings. Requires use_chat permission."
+          }
+        },
+        {
+          "name": "Update Group Details",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Updated Group Name",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "New description",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/groups/{{chat}}/details",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "groups",
+                "{{chat}}",
+                "details"
+              ]
+            },
+            "description": "Protected update group details. Requires use_chat permission."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "List Applications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/admin/applications",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "admin",
+                "applications"
+              ]
+            },
+            "description": "Admin-only application listing. Requires admin role."
+          }
+        },
+        {
+          "name": "Approve Application",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/admin/applications/{{id}}/approve",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "admin",
+                "applications",
+                "{{id}}",
+                "approve"
+              ]
+            },
+            "description": "Admin-only application approval. Requires admin role."
+          }
+        },
+        {
+          "name": "Reject Application",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/admin/applications/{{id}}/reject",
+              "protocol": "{{baseProtocol}}",
+              "host": [
+                "{{baseHost}}"
+              ],
+              "port": "{{basePort}}",
+              "path": [
+                "{{basePath}}",
+                "admin",
+                "applications",
+                "{{id}}",
+                "reject"
+              ]
+            },
+            "description": "Admin-only application rejection. Requires admin role."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Logout",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseProtocol}}://{{baseHost}}:{{basePort}}/{{basePath}}/auth/logout",
+          "protocol": "{{baseProtocol}}",
+          "host": [
+            "{{baseHost}}"
+          ],
+          "port": "{{basePort}}",
+          "path": [
+            "{{basePath}}",
+            "auth",
+            "logout"
+          ]
+        },
+        "description": "Protected logout endpoint. Requires auth."
+      }
+    }
+  ]
+}

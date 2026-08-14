@@ -27,6 +27,12 @@ class CallController extends Controller
         if ($request->type === 'offer') {
             $data['callerName'] = $caller->name;
             $data['callerAvatar'] = $caller->avatar_url ?? '';
+            
+            // Inject authoritative duration from backend
+            $isVideo = isset($request->data['video']) && $request->data['video'] === true;
+            $data['max_duration'] = $isVideo 
+                ? $caller->max_video_call_duration_seconds 
+                : $caller->max_voice_call_duration_seconds;
         }
 
         broadcast(new CallSignaling(
@@ -58,7 +64,7 @@ class CallController extends Controller
             $projectId = env('FIREBASE_PROJECT_ID');
             if (!$projectId) return;
 
-            $accessToken = app(KreavanaNotificationController::class)->getGoogleAccessToken();
+            $accessToken = app(\App\Services\FcmService::class)->getGoogleAccessToken();
 
             $payload = [
                 'message' => [

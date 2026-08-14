@@ -16,6 +16,7 @@ return [
     'user' => [
         'view_dashboard',
         'view_opportunities',
+        'create_opportunity',
         'manage_own_profile',
         'use_chat',
         'submit_report',

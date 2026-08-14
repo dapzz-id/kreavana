@@ -11,7 +11,7 @@ import 'package:flutter_callkit_incoming/entities/android_params.dart';
 import 'package:flutter_callkit_incoming/entities/ios_params.dart';
 import 'package:dart_pusher_channels/dart_pusher_channels.dart';
 import 'api_service.dart';
-import 'auth_service.dart';
+import '../features/auth/services/auth_service.dart';
 import '../main.dart';
 import '../screens/call_screen.dart';
 
@@ -25,7 +25,7 @@ class CallService extends ChangeNotifier {
   MediaStream? _remoteStream;
 
   String? currentCallId;
-  int? remoteUserId;
+  String? remoteUserId;
   bool isCaller = false;
   bool isVideoCall = false;
 
@@ -51,11 +51,40 @@ class CallService extends ChangeNotifier {
     return '$minutes:$seconds';
   }
 
+  String currentTier = 'free';
+
+  int? _maxDurationFromBackend;
+
+  int get maxCallDurationSeconds {
+    if (_maxDurationFromBackend != null) return _maxDurationFromBackend!;
+    // Fallback if not initialized via signal (e.g. legacy/error)
+    return isVideoCall ? 1800 : 3600;
+  }
+
+  bool get isCallWarningActive {
+    if (!isConnected || isEnded) return false;
+    final remaining = maxCallDurationSeconds - callDurationSeconds;
+    return remaining > 0 && remaining <= 300; // 5 minutes warning
+  }
+  
+  int get remainingCallSeconds {
+    final remaining = maxCallDurationSeconds - callDurationSeconds;
+    return remaining > 0 ? remaining : 0;
+  }
+
+  String get remainingCallFormatted {
+    final remaining = remainingCallSeconds;
+    final minutes = (remaining ~/ 60).toString().padLeft(2, '0');
+    final seconds = (remaining % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
   // ICE candidate buffer — stores candidates that arrive before peer connection is ready
   final List<dynamic> _pendingCandidates = [];
   bool _hasRemoteDescription = false;
 
   PusherChannelsClient? _pusher;
+  bool _callChannelSubscribed = false;
   final _uuid = const Uuid();
 
   RTCVideoRenderer? _localRenderer;
@@ -87,6 +116,8 @@ class CallService extends ChangeNotifier {
   Future<void> initPusher() async {
     final currentUser = await AuthService.getCurrentUser();
     if (currentUser == null) return;
+    
+    currentTier = currentUser.subscriptionTier;
 
     try {
       if (_pusher == null) {
@@ -99,23 +130,19 @@ class CallService extends ChangeNotifier {
           ),
           connectionErrorHandler: (exception, trace, refresh) {
             debugPrint('Pusher call connection error: $exception');
-            Future.delayed(const Duration(seconds: 5), refresh);
+            _callChannelSubscribed = false;
+            Future.delayed(const Duration(seconds: 3), refresh);
           },
         );
         _pusher!.onConnectionEstablished.listen((event) {
           debugPrint('Pusher Call Connection Event: Connected');
-          
-          // Subscribe to personal call channel (using public channel for prototyping)
-          final channel = _pusher!.publicChannel('call.${currentUser.id ?? ''}');
-          channel.subscribe();
-          
-          channel.bind('call.signal').listen((callEvent) {
-            if (callEvent.data != null) {
-              _onSignalingEvent(callEvent.data!);
-            }
-          });
+          _subscribeCallChannel(currentUser.id ?? '');
         });
         _pusher!.connect();
+      } else {
+        // If already created, attempt reconnect by re-subscribing
+        debugPrint('Pusher already exists, re-subscribing call channel...');
+        _subscribeCallChannel(currentUser.id ?? '');
       }
 
       // Listen to CallKit Events (Android/iOS only)
@@ -141,6 +168,24 @@ class CallService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint("Pusher Init Error for Calls: $e");
+    }
+  }
+
+  void _subscribeCallChannel(String userId) {
+    if (userId.isEmpty || _pusher == null || _callChannelSubscribed) return;
+    _callChannelSubscribed = true;
+    try {
+      final channel = _pusher!.publicChannel('call.$userId');
+      channel.subscribe();
+      channel.bind('call.signal').listen((callEvent) {
+        if (callEvent.data != null) {
+          debugPrint('📞 Received call signal: ${callEvent.data}');
+          _onSignalingEvent(callEvent.data!);
+        }
+      });
+      debugPrint('📡 Subscribed to call.$userId');
+    } catch (e) {
+      debugPrint('Error subscribing to call channel: $e');
     }
   }
 
@@ -251,7 +296,12 @@ class CallService extends ChangeNotifier {
   }
 
   /// Start a Call
-  Future<void> startCall(int receiverId, bool video, {String remoteUserName = 'User', String remoteAvatarUrl = ''}) async {
+  Future<void> startCall(String receiverId, bool video, {String remoteUserName = 'User', String remoteAvatarUrl = ''}) async {
+    final currentUser = await AuthService.getCurrentUser();
+    _maxDurationFromBackend = video 
+        ? currentUser?.maxVideoCallDurationSeconds 
+        : currentUser?.maxVoiceCallDurationSeconds;
+
     isCaller = true;
     isVideoCall = video;
     remoteUserId = receiverId;
@@ -288,7 +338,7 @@ class CallService extends ChangeNotifier {
   }
 
   /// Accept an incoming call (initializes WebRTC for receiver)
-  Future<void> acceptCall(String callId, int callerId, bool video) async {
+  Future<void> acceptCall(String callId, String callerId, bool video) async {
     isCaller = false;
     isVideoCall = video;
     currentCallId = callId;
@@ -353,7 +403,14 @@ class CallService extends ChangeNotifier {
     callDurationSeconds = 0;
     _callTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       callDurationSeconds++;
-      notifyListeners();
+      
+      if (remainingCallSeconds <= 0) {
+        // Auto end call when max duration reached
+        endCall();
+        // Notify the user globally (e.g. via toast or alert) if possible, but state will handle closing it
+      } else {
+        notifyListeners();
+      }
     });
   }
 
@@ -445,7 +502,13 @@ class CallService extends ChangeNotifier {
         remoteUserId = remoteId;
         isVideoCall = signalData['video'] ?? false;
         incomingCallerName = signalData['callerName'] ?? 'Panggilan Masuk';
-        incomingCallerAvatar = signalData['callerAvatar'] ?? '';
+        incomingCallerAvatar = ApiService.resolveAssetUrl(signalData['callerAvatar']?.toString() ?? '');
+
+        // Authoritative limit from backend payload
+        if (signalData['max_duration'] != null) {
+          _maxDurationFromBackend = int.tryParse(signalData['max_duration'].toString());
+        }
+
         notifyListeners();
         
         _tempOffer = RTCSessionDescription(_fixSdp(signalData['sdp']), signalData['type']);

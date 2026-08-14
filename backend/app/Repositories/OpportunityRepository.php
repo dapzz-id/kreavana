@@ -13,7 +13,7 @@ class OpportunityRepository extends BaseRepository
 
     public function getList(string $subRoleSlug = 'all', ?string $type = null, int $limit = 50)
     {
-        $query = $this->model->where('status', 'open');
+        $query = $this->model->with('user:id,name,username,phone,email,avatar_url,sub_role');
 
         if ($subRoleSlug !== 'all') {
             $query->where('sub_role_slug', $subRoleSlug);
@@ -23,7 +23,10 @@ class OpportunityRepository extends BaseRepository
             $query->where('type', $type);
         }
 
-        return $query->orderBy('created_at', 'desc')->limit($limit)->get();
+        return $query->where('status', 'open')
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get();
     }
 
     public function countByUser(string $userId): int
@@ -40,7 +43,8 @@ class OpportunityRepository extends BaseRepository
 
     public function getMapLocations(string $subRoleSlug = 'all')
     {
-        $query = $this->model->where('status', 'open')
+        $query = $this->model->with('user:id,name,username,phone,email,avatar_url,sub_role')
+            ->where('status', 'open')
             ->where('type', 'location')
             ->whereNotNull('latitude')
             ->whereNotNull('longitude');
@@ -54,7 +58,7 @@ class OpportunityRepository extends BaseRepository
 
     public function findWithUser(int $id)
     {
-        return $this->model->with('user:id,name,username,phone,email,avatar_url,selected_sub_role')->find($id);
+        return $this->model->with('user:id,name,username,phone,email,avatar_url,sub_role')->find($id);
     }
 
     public function getByUser(string $userId, ?string $status = null, string $orderBy = 'created_at', string $direction = 'desc', int $limit = 5)
