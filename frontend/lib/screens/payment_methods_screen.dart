@@ -8,6 +8,8 @@ import '../widgets/app_empty_state.dart';
 import '../widgets/gradient_button.dart';
 import '../widgets/animated_input_field.dart';
 
+import '../widgets/skeleton/skeleton_list.dart';
+
 class PaymentMethodsScreen extends StatefulWidget {
   const PaymentMethodsScreen({super.key});
 
@@ -122,7 +124,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
         title: const Text('Metode Pembayaran', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryPurple))
+          ? const SkeletonList()
           : _methods.isEmpty
               ? RefreshIndicator(
                   onRefresh: _load,

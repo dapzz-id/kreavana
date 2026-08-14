@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io' as io;
 import 'package:http/http.dart' as http;
+import 'package:file_picker/file_picker.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -8,12 +11,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart' as record;
 
 import '../services/badge_service.dart';
+import '../services/encryption_service.dart';
 import '../services/chat_service.dart';
 import '../services/call_service.dart';
 import '../services/audio_player_service.dart';
 import '../widgets/skeleton_box.dart';
 import '../features/auth/services/auth_service.dart';
 import '../services/api_service.dart';
+import '../services/ai_service.dart';
 import '../app/theme.dart';
 import '../app/app_animations.dart';
 import '../utils/app_errors.dart';
@@ -21,8 +26,13 @@ import 'call_screen.dart';
 import 'transfer_screen.dart';
 import 'contacts_screen.dart';
 
+import '../models/user_model.dart';
+
 class DirectMessageScreen extends StatefulWidget {
-  const DirectMessageScreen({super.key});
+  final UserModel? currentUser;
+  final dynamic chatId;
+
+  const DirectMessageScreen({super.key, this.currentUser, this.chatId});
 
   @override
   State<DirectMessageScreen> createState() => _DirectMessageScreenState();
@@ -75,6 +85,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                   child: selectedChat == null
                       ? _buildEmptyState(context)
                       : ChatDetailSection(
+                          key: ValueKey(selectedChat!['id'].toString()),
                           chat: selectedChat!,
                           onMessageSent: () {
                             chatListKey.currentState?.loadChats();
@@ -295,6 +306,11 @@ class ChatListSectionState extends State<ChatListSection> {
           _invitations = invs.map((i) => Map<String, dynamic>.from(i)).toList();
           isLoading = false;
         });
+
+        // Auto-select first chat if none selected (outside setState)
+        if (widget.selectedChat == null && _personalChats.isNotEmpty) {
+          widget.onChatSelected(_personalChats.first);
+        }
 
         for (var chat in chats) {
           final chatId = chat['id'].toString();
@@ -1107,6 +1123,42 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
   Timer? _pingTimer;
   bool _isRefreshingPresence = false;
 
+  Map<String, dynamic> _processMessage(Map<String, dynamic> msg) {
+    final rawText = msg['text'] ?? msg['message'] ?? msg['body'] ?? '';
+    msg['text'] = rawText;
+
+    if (msg['encryption_version'] == 1 && (msg['ciphertext'] as String?)?.isNotEmpty == true) {
+      if (EncryptionService().isInitialized) {
+        final messageKeys = msg['message_keys'] as List<dynamic>? ?? [];
+        final deviceId = EncryptionService().deviceId;
+
+        final envelope = messageKeys.firstWhere(
+          (k) => k['device_id'] == deviceId,
+          orElse: () => null,
+        );
+
+        if (envelope != null) {
+          final plaintext = EncryptionService().decryptMessageMultiDevice(
+            msg['ciphertext'] ?? '',
+            msg['iv'] ?? '',
+            envelope['encrypted_key'] ?? '',
+          );
+
+          if (plaintext != null && plaintext.isNotEmpty) {
+            msg['text'] = plaintext;
+            msg['_decrypt_failed'] = false;
+            return msg;
+          }
+        }
+      }
+      final isMediaOrAudio = msg['type'] == 'audio' || msg['media_url'] != null;
+      msg['_decrypt_failed'] = !isMediaOrAudio && ((msg['text'] as String?)?.isEmpty ?? true);
+    } else {
+      msg['_decrypt_failed'] = false;
+    }
+    return msg;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1119,7 +1171,8 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
           ChatService.markAsRead(widget.chat['id'].toString());
           setState(() {
             if (!_messages.any((m) => m['id'].toString() == msg['id'].toString())) {
-              _messages.insert(0, Map<String, dynamic>.from(msg));
+              final processed = _processMessage(Map<String, dynamic>.from(msg));
+              _messages.insert(0, processed);
             }
           });
         }
@@ -1189,7 +1242,7 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
   @override
   void didUpdateWidget(ChatDetailSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.chat['id'] != widget.chat['id']) {
+    if (oldWidget.chat['id']?.toString() != widget.chat['id']?.toString()) {
       ChatService.markAsRead(widget.chat['id'].toString());
       _loadMessages();
     }
@@ -1203,7 +1256,10 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
       );
       if (mounted) {
         setState(() {
-          _messages = msgs.map((m) => Map<String, dynamic>.from(m)).toList();
+          _messages = msgs.map((m) {
+            final map = Map<String, dynamic>.from(m);
+            return _processMessage(map);
+          }).toList();
           isLoading = false;
         });
       }
@@ -1232,7 +1288,8 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         if (msgData != null) {
           setState(() {
             if (!_messages.any((m) => m['id'].toString() == msgData['id'].toString())) {
-              _messages.insert(0, Map<String, dynamic>.from(msgData));
+              final processed = _processMessage(Map<String, dynamic>.from(msgData));
+              _messages.insert(0, processed);
             }
           });
         }
@@ -1241,6 +1298,107 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         debugPrint('Error sending message: $e');
       }
     }
+  }
+
+  void _showAiCopilotBottomSheet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const accent = AppTheme.primaryPurple;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF13111F) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: accent.withValues(alpha: 0.2)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.asset(
+                      'assets/brandlogo.png',
+                      width: 24,
+                      height: 24,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Kreavana AI Assistant',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: accent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'PRO / SUPER',
+                      style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.psychology_rounded, color: accent),
+                title: const Text('Generasi Balasan Otomatis AI'),
+                subtitle: const Text('Buat opsi respons cepat sesuai pesan terakhir'),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final res = await AiService.messageAssistant(mode: 'smart_reply');
+                  if (res != null && AiService.isProSubscriptionRequiredError(res)) {
+                    if (mounted) AiService.promptProUpgrade(context);
+                    return;
+                  }
+                  if (res != null && res['data'] != null && res['data']['replies'] != null) {
+                    final replies = (res['data']['replies'] as List).cast<String>();
+                    if (replies.isNotEmpty && mounted) {
+                      setState(() {
+                        _messageController.text = replies.first;
+                      });
+                    }
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.auto_fix_high_rounded, color: accent),
+                title: const Text('Polishing & Rapikan Pesan'),
+                subtitle: const Text('Ubah teks yang diketik menjadi pesan sangat profesional'),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final text = _messageController.text;
+                  final res = await AiService.messageAssistant(mode: 'polish', message: text);
+                  if (res != null && AiService.isProSubscriptionRequiredError(res)) {
+                    if (mounted) AiService.promptProUpgrade(context);
+                    return;
+                  }
+                  if (res != null && res['data'] != null && res['data']['polished_message'] != null) {
+                    if (mounted) {
+                      setState(() {
+                        _messageController.text = res['data']['polished_message'];
+                      });
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _toggleRecording() async {
@@ -1416,12 +1574,30 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         onError: (err) {
           if (mounted) {
             setState(() => _playingMessageId = null);
-            AppSnackbar.error(context, err);
+            final errorStr = err.toString();
+            if (errorStr.contains('410') || errorStr.contains('Media telah dihapus') || errorStr.contains('404')) {
+              setState(() {
+                message['is_media_deleted'] = true;
+              });
+              AppSnackbar.error(context, 'Media telah dihapus');
+            } else {
+              AppSnackbar.error(context, errorStr);
+            }
           }
         },
       );
     } catch (e) {
-      if (mounted) AppSnackbar.error(context, AppErrors.friendly(e));
+      if (mounted) {
+        final errorStr = e.toString();
+        if (errorStr.contains('410') || errorStr.contains('Media telah dihapus') || errorStr.contains('404')) {
+          setState(() {
+            message['is_media_deleted'] = true;
+          });
+          AppSnackbar.error(context, 'Media telah dihapus');
+        } else {
+          AppSnackbar.error(context, AppErrors.friendly(e));
+        }
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -1459,11 +1635,26 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         : 0.0;
     final theme = Theme.of(context);
 
+    final isDeleted = message['is_media_deleted'] == true;
+
     return Column(
       crossAxisAlignment:
           isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
-        InkWell(
+        if (isDeleted)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.broken_image, size: 24, color: isMe ? theme.colorScheme.onPrimary : theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text('Media telah dihapus', style: TextStyle(color: isMe ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface, fontStyle: FontStyle.italic)),
+              ],
+            ),
+          )
+        else
+          InkWell(
           onTap: () => _toggleAudioPlayback(message),
           borderRadius: BorderRadius.circular(16),
           child: Padding(
@@ -2161,25 +2352,75 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                         );
                       },
                     )
-                  : ListView.builder(
-                      reverse: true,
-                      padding: const EdgeInsets.all(16.0),
-                      itemCount: _messages.length,
-                      itemBuilder: (context, index) {
+                  : _messages.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.chat_bubble_outline_rounded,
+                                size: 48,
+                                color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Belum ada pesan di obrolan ini',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Ketik pesan di bawah untuk memulai percakapan.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          reverse: true,
+                          padding: const EdgeInsets.all(16.0),
+                          itemCount: _messages.length,
+                          itemBuilder: (context, index) {
                         final message = _messages[index];
+
+                        if (message['_decrypt_failed'] == true && (message['text']?.toString().isEmpty ?? true)) {
+                          return const SizedBox.shrink();
+                        }
+
                         final isMe = message['isMe'] == true;
                         final isAudio = message['type'] == 'audio';
 
                         return AnimatedEntrance(
                           duration: AppMotion.fast,
                           delay: const Duration(milliseconds: 30),
-                          child: Align(
-                            alignment: isMe
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                            child: GestureDetector(
-                              onLongPress: () => _showMessageActions(message),
-                              child: Container(
+                          child: Dismissible(
+                            key: Key('msg_${message['id']}'),
+                            direction: DismissDirection.startToEnd,
+                            confirmDismiss: (direction) async {
+                              HapticFeedback.lightImpact();
+                              setState(() {
+                                _replyingTo = message;
+                              });
+                              return false;
+                            },
+                            background: Container(
+                              alignment: Alignment.centerLeft,
+                              padding: const EdgeInsets.only(left: 16),
+                              child: const Icon(Icons.reply_rounded, color: AppTheme.primaryPurple, size: 24),
+                            ),
+                            child: Align(
+                              alignment: isMe
+                                  ? Alignment.centerRight
+                                  : Alignment.centerLeft,
+                              child: GestureDetector(
+                                onLongPress: () => _showMessageActions(message),
+                                child: Container(
                                 margin: const EdgeInsets.only(bottom: 12.0),
                                 constraints: BoxConstraints(
                                   maxWidth:
@@ -2269,7 +2510,8 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                               ),
                             ),
                           ),
-                        );
+                        ),
+                      );
                       },
                     ),
             ),
@@ -2348,6 +2590,19 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                             icon: const Icon(Icons.add_circle_outline),
                             color: theme.colorScheme.primary,
                             onPressed: _showAttachmentMenu,
+                          ),
+                          IconButton(
+                            icon: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: Image.asset(
+                                'assets/brandlogo.png',
+                                width: 22,
+                                height: 22,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                            tooltip: 'Kreavana AI',
+                            onPressed: _showAiCopilotBottomSheet,
                           ),
                           IconButton(
                             icon: Icon(
@@ -2632,8 +2887,9 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
 class GroupInfoScreen extends StatefulWidget {
   final Map<String, dynamic> chat;
   final VoidCallback? onGroupLeft;
+  final dynamic currentUser;
 
-  const GroupInfoScreen({super.key, required this.chat, this.onGroupLeft});
+  const GroupInfoScreen({super.key, required this.chat, this.onGroupLeft, this.currentUser});
 
   @override
   State<GroupInfoScreen> createState() => _GroupInfoScreenState();
@@ -2645,6 +2901,8 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
   bool isLoading = true;
   late String groupName;
   late String groupDescription;
+  String? groupAvatarUrl;
+  UserModel? _currentUser;
 
   @override
   void initState() {
@@ -2652,7 +2910,84 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
     onlyAdminCanAdd = widget.chat['onlyAdminCanAdd'] ?? false;
     groupName = widget.chat['name'] ?? 'Grup';
     groupDescription = widget.chat['description'] ?? '';
+    groupAvatarUrl = widget.chat['avatar_url'] ?? widget.chat['avatarUrl'];
+    _loadCurrentUser();
     _loadMembers();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    try {
+      final u = widget.currentUser ?? await AuthService.getCurrentUser();
+      if (mounted) {
+        setState(() {
+          _currentUser = u;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _pickAndUploadGroupAvatar() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.image,
+        withData: true,
+      );
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        Uint8List? bytes = file.bytes;
+        if (bytes == null && file.path != null && file.path!.isNotEmpty) {
+          bytes = await io.File(file.path!).readAsBytes();
+        }
+        if (bytes != null) {
+          final ext = file.extension ?? 'png';
+          final base64Str = base64Encode(bytes);
+          final dataUrl = 'data:image/$ext;base64,$base64Str';
+
+          final res = await ChatService.updateGroupDetails(
+            widget.chat['id'].toString(),
+            groupName,
+            groupDescription,
+            avatarUrl: dataUrl,
+          );
+
+          if (res['status'] == true && res['data'] != null && res['data']['avatar_url'] != null) {
+            setState(() {
+              groupAvatarUrl = res['data']['avatar_url'];
+              widget.chat['avatar_url'] = res['data']['avatar_url'];
+              widget.chat['avatarUrl'] = res['data']['avatar_url'];
+            });
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Foto profil grup berhasil diperbarui!'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          } else {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(res['message'] ?? 'Gagal memperbarui foto profil grup.'),
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengunggah foto: ${e.toString()}'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _loadMembers() async {
@@ -2675,234 +3010,533 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Info Grup'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Nama Grup',
-                border: OutlineInputBorder(),
-              ),
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          backgroundColor: isDark ? const Color(0xFF1B182E) : Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryPurple.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Icons.edit_note_rounded, color: AppTheme.primaryPurple, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Edit Informasi Grup',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Ubah nama dan deskripsi grup',
+                            style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Nama Grup',
+                    hintText: 'Masukkan nama grup...',
+                    filled: true,
+                    fillColor: isDark ? const Color(0xFF25223A) : Colors.grey.shade100,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: descController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: 'Deskripsi Grup',
+                    hintText: 'Tuliskan deskripsi atau petunjuk aktivitas grup...',
+                    filled: true,
+                    fillColor: isDark ? const Color(0xFF25223A) : Colors.grey.shade100,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Batal'),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final name = nameController.text.trim();
+                        if (name.isEmpty) return;
+                        Navigator.pop(context);
+                        try {
+                          await ChatService.updateGroupDetails(
+                            widget.chat['id'].toString(),
+                            name,
+                            descController.text.trim(),
+                          );
+                          setState(() {
+                            groupName = name;
+                            groupDescription = descController.text.trim();
+                            widget.chat['name'] = name;
+                            widget.chat['description'] = descController.text.trim();
+                          });
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Info grup berhasil diperbarui!')),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Gagal memperbarui info grup.')),
+                            );
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryPurple,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                      child: const Text('Simpan Perubahan', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: descController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Deskripsi Grup',
-                hintText: 'Tuliskan deskripsi atau tujuan grup...',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
           ),
-          FilledButton(
-            onPressed: () async {
-              final name = nameController.text.trim();
-              if (name.isEmpty) return;
-              Navigator.pop(context);
-              try {
-                await ChatService.updateGroupDetails(
-                  widget.chat['id'].toString(),
-                  name,
-                  descController.text.trim(),
-                );
-                setState(() {
-                  groupName = name;
-                  groupDescription = descController.text.trim();
-                });
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Info grup berhasil diperbarui!')),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Gagal memperbarui info grup.')),
-                  );
-                }
-              }
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   void _addMember() {
+    final controller = TextEditingController();
+    List<dynamic> allContacts = [];
+    List<dynamic> searchResults = [];
+    List<dynamic> selectedUsers = [];
+    bool isLoadingInitial = true;
+    bool isSearching = false;
+
     showDialog(
       context: context,
       builder: (context) {
-        final controller = TextEditingController();
-        bool isSearching = false;
-        List<dynamic> searchResults = [];
-        List<dynamic> selectedUsers = [];
-
         return StatefulBuilder(
           builder: (context, setStateDialog) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+
+            if (isLoadingInitial && allContacts.isEmpty) {
+              ChatService.fetchContacts().then((contacts) {
+                if (context.mounted) {
+                  setStateDialog(() {
+                    allContacts = contacts;
+                    searchResults = contacts;
+                    isLoadingInitial = false;
+                  });
+                }
+              }).catchError((_) {
+                if (context.mounted) {
+                  setStateDialog(() {
+                    isLoadingInitial = false;
+                  });
+                }
+              });
+            }
+
+            final queryText = controller.text.trim();
             List<dynamic> displayList = List.from(selectedUsers);
-            for (var result in searchResults) {
+
+            if (queryText.isNotEmpty) {
+              final isEmail = queryText.contains('@');
+              final virtualId = isEmail ? 'email:${queryText.toLowerCase()}' : 'email:$queryText';
+              final virtualUser = {
+                'id': virtualId,
+                'name': isEmail ? queryText : 'Undang "$queryText"',
+                'email': isEmail ? queryText : '$queryText (Undangan via Email)',
+                'username': queryText.split('@').first,
+                'avatar_url': null,
+                'isInviteAction': true,
+              };
+
+              final existsInDb = searchResults.any((u) => u['email']?.toString().toLowerCase() == queryText.toLowerCase() || u['id']?.toString() == virtualId);
+              if (!existsInDb && !displayList.any((u) => u['id'] == virtualId)) {
+                displayList.insert(0, virtualUser);
+              }
+            }
+
+            final sourceList = queryText.isEmpty ? allContacts : searchResults;
+            for (var result in sourceList) {
               if (!displayList.any((u) => u['id'] == result['id'])) {
                 displayList.add(result);
               }
             }
 
-            return AlertDialog(
-              title: const Text('Tambah Anggota'),
-              content: SizedBox(
-                width: 350,
-                height: 400,
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+              backgroundColor: isDark ? const Color(0xFF17152B) : Colors.white,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: Container(
+                width: 480,
+                constraints: const BoxConstraints(maxHeight: 620),
+                padding: const EdgeInsets.all(24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextField(
-                      controller: controller,
-                      decoration: InputDecoration(
-                        hintText: 'Cari Nama Anggota...',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: controller.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  controller.clear();
-                                  setStateDialog(() {
-                                    searchResults = [];
-                                    isSearching = false;
-                                  });
-                                },
-                              )
-                            : null,
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.primaryGradient,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.primaryPurple.withValues(alpha: 0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.person_add_alt_1_rounded, color: Colors.white, size: 24),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Tambah Anggota Grup',
+                                style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Cari nama, email, atau username pengguna',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF221F3A) : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark ? Colors.white10 : Colors.grey.shade200,
+                        ),
                       ),
-                      onChanged: (value) async {
-                        setStateDialog(() {
-                          isSearching = true;
-                        });
-                        if (value.isNotEmpty) {
-                          try {
-                            final results = await ChatService.searchUsers(
-                              value,
-                            );
+                      child: TextField(
+                        controller: controller,
+                        style: const TextStyle(fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: 'Cari Nama, Email, atau Username...',
+                          hintStyle: TextStyle(
+                            fontSize: 13,
+                            color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                          ),
+                          prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primaryPurple),
+                          suffixIcon: controller.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.cancel_rounded, size: 20),
+                                  color: Colors.grey,
+                                  onPressed: () {
+                                    controller.clear();
+                                    setStateDialog(() {
+                                      searchResults = allContacts;
+                                      isSearching = false;
+                                    });
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        ),
+                        onChanged: (value) async {
+                          final q = value.trim().toLowerCase();
+                          setStateDialog(() {
+                            isSearching = true;
+                          });
+                          if (q.isNotEmpty) {
+                            try {
+                              final results = await ChatService.searchUsers(q);
+                              setStateDialog(() {
+                                searchResults = results;
+                                isSearching = false;
+                              });
+                            } catch (e) {
+                              setStateDialog(() => isSearching = false);
+                            }
+                          } else {
                             setStateDialog(() {
-                              searchResults = results;
+                              searchResults = allContacts;
                               isSearching = false;
                             });
-                          } catch (e) {
-                            setStateDialog(() => isSearching = false);
                           }
-                        } else {
-                          setStateDialog(() {
-                            searchResults = [];
-                            isSearching = false;
-                          });
-                        }
-                      },
+                        },
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    if (isSearching)
-                      const CircularProgressIndicator()
-                    else if (controller.text.isNotEmpty &&
-                        searchResults.isEmpty &&
-                        selectedUsers.isEmpty)
-                      const Text(
-                        'Pengguna tidak ditemukan',
-                        style: TextStyle(color: Colors.red),
-                      )
-                    else if (displayList.isNotEmpty)
-                      Expanded(
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: displayList.length,
+                    const SizedBox(height: 14),
+                    if (selectedUsers.isNotEmpty) ...[
+                      SizedBox(
+                        height: 42,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: selectedUsers.length,
+                          separatorBuilder: (context, index) => const SizedBox(width: 8),
                           itemBuilder: (context, index) {
-                            final user = displayList[index];
-                            final isAlreadyMember = members.any(
-                              (m) => m['id'] == user['id'],
-                            );
-                            final isSelected = selectedUsers.any(
-                              (u) => u['id'] == user['id'],
-                            );
-
-                            return ListTile(
-                              leading: const CircleAvatar(
-                                child: Icon(Icons.person),
+                            final u = selectedUsers[index];
+                            return Chip(
+                              avatar: CircleAvatar(
+                                backgroundColor: AppTheme.primaryPurple,
+                                child: Text(
+                                  (u['name'] ?? 'U')[0].toUpperCase(),
+                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                ),
                               ),
-                              title: Text(user['name']),
-                              subtitle: Text(
-                                isAlreadyMember
-                                    ? 'Sudah berada di dalam grup'
-                                    : user['email'],
+                              label: Text(
+                                u['name'] ?? '',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                               ),
-                              enabled: !isAlreadyMember,
-                              trailing: isAlreadyMember
-                                  ? const Icon(Icons.groups, color: Colors.grey)
-                                  : Checkbox(
-                                      value: isSelected,
-                                      onChanged: (val) {
-                                        setStateDialog(() {
-                                          if (val == true) {
-                                            selectedUsers.add(user);
-                                          } else {
-                                            selectedUsers.removeWhere(
-                                              (u) => u['id'] == user['id'],
-                                            );
-                                          }
-                                        });
-                                      },
-                                    ),
-                              onTap: isAlreadyMember
-                                  ? null
-                                  : () {
-                                      setStateDialog(() {
-                                        if (isSelected) {
-                                          selectedUsers.removeWhere(
-                                            (u) => u['id'] == user['id'],
-                                          );
-                                        } else {
-                                          selectedUsers.add(user);
-                                        }
-                                      });
-                                    },
+                              deleteIcon: const Icon(Icons.close_rounded, size: 16),
+                              onDeleted: () {
+                                setStateDialog(() {
+                                  selectedUsers.removeWhere((item) => item['id'] == u['id']);
+                                });
+                              },
+                              backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.15),
+                              side: BorderSide.none,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                             );
                           },
                         ),
                       ),
+                      const SizedBox(height: 14),
+                    ],
+                    Expanded(
+                      child: isSearching || isLoadingInitial
+                          ? const Center(
+                              child: CircularProgressIndicator(color: AppTheme.primaryPurple),
+                            )
+                          : displayList.isEmpty
+                              ? Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.person_off_rounded, size: 48, color: Colors.grey.shade400),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Pengguna tidak ditemukan',
+                                        style: TextStyle(
+                                          color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : ListView.separated(
+                                      itemCount: displayList.length,
+                                      separatorBuilder: (context, index) => const SizedBox(height: 6),
+                                      itemBuilder: (context, index) {
+                                        final user = displayList[index];
+                                        final isAlreadyMember = members.any(
+                                          (m) => m['id'] == user['id'],
+                                        );
+                                        final isSelected = selectedUsers.any(
+                                          (u) => u['id'] == user['id'],
+                                        );
+
+                                        final avatarUrl = ApiService.resolveAssetUrl(user['avatar_url']?.toString() ?? '');
+                                        final isInvite = user['isInviteAction'] == true;
+
+                                        return Container(
+                                          decoration: BoxDecoration(
+                                            color: isSelected
+                                                ? AppTheme.primaryPurple.withValues(alpha: 0.12)
+                                                : (isDark ? const Color(0xFF211E38) : Colors.grey.shade50),
+                                            borderRadius: BorderRadius.circular(14),
+                                            border: Border.all(
+                                              color: isSelected
+                                                  ? AppTheme.primaryPurple
+                                                  : (isDark ? Colors.white10 : Colors.grey.shade200),
+                                            ),
+                                          ),
+                                          child: ListTile(
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                                            leading: isInvite
+                                                ? Container(
+                                                    padding: const EdgeInsets.all(8),
+                                                    decoration: const BoxDecoration(
+                                                      color: AppTheme.primaryPurple,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: const Icon(Icons.mark_email_unread_rounded, size: 18, color: Colors.white),
+                                                  )
+                                                : CircleAvatar(
+                                                    radius: 20,
+                                                    backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.2),
+                                                    backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+                                                    child: avatarUrl.isEmpty
+                                                        ? Text(
+                                                            (user['name'] ?? 'U')[0].toUpperCase(),
+                                                            style: const TextStyle(
+                                                              color: AppTheme.primaryPurple,
+                                                              fontWeight: FontWeight.bold,
+                                                            ),
+                                                          )
+                                                        : null,
+                                                  ),
+                                            title: Text(
+                                              user['name'] ?? '',
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                                            ),
+                                            subtitle: Text(
+                                              isAlreadyMember
+                                                  ? 'Sudah berada di grup'
+                                                  : (isInvite
+                                                      ? 'Undang pengguna ini via email ke grup'
+                                                      : (user['email'] ?? user['username'] ?? '')),
+                                              style: TextStyle(
+                                                fontSize: 11.5,
+                                                color: isAlreadyMember
+                                                    ? Colors.orange.shade700
+                                                    : (isInvite
+                                                        ? AppTheme.primaryPurple
+                                                        : (isDark ? AppTheme.textMuted : Colors.grey.shade600)),
+                                                fontWeight: isInvite ? FontWeight.w600 : FontWeight.normal,
+                                              ),
+                                            ),
+                                            enabled: !isAlreadyMember,
+                                            trailing: isAlreadyMember
+                                                ? Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.orange.withValues(alpha: 0.15),
+                                                      borderRadius: BorderRadius.circular(8),
+                                                    ),
+                                                    child: const Text(
+                                                      'Anggota',
+                                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.orange),
+                                                    ),
+                                                  )
+                                                : Checkbox(
+                                                    value: isSelected,
+                                                    activeColor: AppTheme.primaryPurple,
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+                                                    onChanged: (val) {
+                                                      setStateDialog(() {
+                                                        if (val == true) {
+                                                          selectedUsers.add(user);
+                                                        } else {
+                                                          selectedUsers.removeWhere((u) => u['id'] == user['id']);
+                                                        }
+                                                      });
+                                                    },
+                                                  ),
+                                            onTap: isAlreadyMember
+                                                ? null
+                                                : () {
+                                                    setStateDialog(() {
+                                                      if (isSelected) {
+                                                        selectedUsers.removeWhere((u) => u['id'] == user['id']);
+                                                      } else {
+                                                        selectedUsers.add(user);
+                                                      }
+                                                    });
+                                                  },
+                                          ),
+                                        );
+                                      },
+                                    ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: TextButton.styleFrom(
+                            foregroundColor: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+                          ),
+                          child: const Text('Batal'),
+                        ),
+                        const SizedBox(width: 10),
+                        ElevatedButton(
+                          onPressed: selectedUsers.isEmpty
+                              ? null
+                              : () async {
+                                  for (var user in selectedUsers) {
+                                    try {
+                                      await ChatService.addGroupMember(
+                                        widget.chat['id'].toString(),
+                                        user['id'],
+                                      );
+                                    } catch (_) {}
+                                  }
+                                  _loadMembers();
+                                  if (context.mounted) {
+                                    final count = selectedUsers.length;
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Undangan dikirim ke $count pengguna. Menunggu persetujuan di akun mereka.'),
+                                        behavior: SnackBarBehavior.floating,
+                                        backgroundColor: AppTheme.primaryPurple,
+                                      ),
+                                    );
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryPurple,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: isDark ? const Color(0xFF2C2847) : Colors.grey.shade300,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: Text(
+                            selectedUsers.isEmpty
+                                ? 'Pilih Anggota'
+                                : 'Tambah ${selectedUsers.length} Anggota',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Batal'),
-                ),
-                FilledButton(
-                  onPressed: selectedUsers.isEmpty
-                      ? null
-                      : () async {
-                          for (var user in selectedUsers) {
-                            try {
-                              await ChatService.addGroupMember(
-                                widget.chat['id'].toString(),
-                                user['id'],
-                              );
-                            } catch (e) {
-                              debugPrint('Failed to add ${user['id']}: $e');
-                            }
-                          }
-                          _loadMembers();
-                          if (context.mounted) Navigator.pop(context);
-                        },
-                  child: const Text('Tambah'),
-                ),
-              ],
             );
           },
         );
@@ -2913,238 +3547,405 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final myMember = members.firstWhere(
+      (m) {
+        if (m['name'] == 'Anda') return true;
+        if (widget.currentUser != null) {
+          final cId = widget.currentUser?.id?.toString();
+          final cEmail = widget.currentUser?.email?.toString().toLowerCase();
+          if (cId != null && m['id']?.toString() == cId) return true;
+          if (cEmail != null && m['email']?.toString().toLowerCase() == cEmail) return true;
+        }
+        if (_currentUser != null) {
+          final cId = _currentUser?.id?.toString();
+          final cEmail = _currentUser?.email?.toString().toLowerCase();
+          if (cId != null && m['id']?.toString() == cId) return true;
+          if (cEmail != null && m['email']?.toString().toLowerCase() == cEmail) return true;
+        }
+        return false;
+      },
+      orElse: () {
+        if (members.length == 1 && members.first['isAdmin'] == true) {
+          return members.first;
+        }
+        return {'isAdmin': false};
+      },
+    );
+    final isMeAdmin = myMember['isAdmin'] == true;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: isDark ? const Color(0xFF0E0C1A) : const Color(0xFFF8F9FE),
       appBar: AppBar(
-        title: const Text('Info Grup'),
-        backgroundColor: theme.colorScheme.surface,
+        title: const Text('Info Grup', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+        centerTitle: true,
+        backgroundColor: isDark ? const Color(0xFF141224) : Colors.white,
+        elevation: 0,
         actions: [
-          // Tombol edit hanya muncul jika user adalah admin
-          if (members.any((m) => m['name'] == 'Anda' && m['isAdmin'] == true))
+          if (isMeAdmin)
             IconButton(
-              icon: const Icon(Icons.edit_outlined),
-              tooltip: 'Edit Nama & Deskripsi',
+              icon: const Icon(Icons.edit_outlined, color: AppTheme.primaryPurple),
+              tooltip: 'Edit Nama & Deskripsi Grup',
               onPressed: _showEditGroupDialog,
             ),
         ],
       ),
       body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         children: [
-          const SizedBox(height: 20),
-          Center(
-            child: CircleAvatar(
-              radius: 60,
-              backgroundColor: theme.colorScheme.tertiaryContainer,
-              child: Icon(
-                Icons.group,
-                size: 60,
-                color: theme.colorScheme.onTertiaryContainer,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Center(
-            child: Text(
-              groupName,
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          Center(
-            child: Text(
-              'Grup · ${members.length} Anggota',
-              style: const TextStyle(color: Colors.grey),
-            ),
-          ),
-          // Tampilkan deskripsi jika ada
-          if (groupDescription.isNotEmpty) ... [
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Text(
-                groupDescription,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontSize: 13,
-                  height: 1.5,
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF161428) : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, 6),
                 ),
-              ),
+              ],
             ),
-          ],
-          const SizedBox(height: 20),
-          Divider(
-            thickness: 8,
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-          ),
-
-          // Pengaturan
-          ListTile(
-            leading: const Icon(Icons.security),
-            title: const Text('Pengaturan Grup'),
-            subtitle: const Text(
-              'Hanya Admin yang dapat menambahkan anggota baru',
-            ),
-            trailing: Switch(
-              value: onlyAdminCanAdd,
-              activeThumbColor: theme.colorScheme.primary,
-              onChanged: (val) {
-                ChatService.updateGroupSettings(
-                  widget.chat['id'].toString(),
-                  val,
-                ).then((_) {
-                  setState(() {
-                    onlyAdminCanAdd = val;
-                  });
-                });
-              },
-            ),
-          ),
-          Divider(
-            thickness: 8,
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-          ),
-
-          // Daftar Anggota
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 12.0,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
               children: [
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 96,
+                      height: 96,
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.primaryGradient,
+                        shape: BoxShape.circle,
+                        image: groupAvatarUrl != null && groupAvatarUrl!.isNotEmpty
+                            ? DecorationImage(
+                                image: NetworkImage(ApiService.resolveAssetUrl(groupAvatarUrl!)),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primaryPurple.withValues(alpha: 0.4),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: (groupAvatarUrl == null || groupAvatarUrl!.isEmpty)
+                          ? const Icon(Icons.groups_rounded, size: 48, color: Colors.white)
+                          : null,
+                    ),
+                    if (isMeAdmin)
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Material(
+                          color: AppTheme.primaryPurple,
+                          shape: const CircleBorder(),
+                          elevation: 4,
+                          child: InkWell(
+                            onTap: _pickAndUploadGroupAvatar,
+                            customBorder: const CircleBorder(),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                              ),
+                              child: const Icon(Icons.camera_alt_rounded, size: 16, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
                 Text(
-                  '${members.length} Anggota',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: theme.colorScheme.primary,
+                  groupName,
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.3),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryPurple.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Grup Publik · ${members.length} Anggota',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryPurple,
+                    ),
                   ),
                 ),
-                const Icon(Icons.search, color: Colors.grey),
+                const SizedBox(height: 18),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF211E38) : const Color(0xFFF7F5FF),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppTheme.primaryPurple.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.description_outlined, size: 16, color: AppTheme.primaryPurple),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Deskripsi Grup',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white70 : Colors.grey.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (isMeAdmin)
+                            InkWell(
+                              onTap: _showEditGroupDialog,
+                              child: const Padding(
+                                padding: EdgeInsets.all(2),
+                                child: Text(
+                                  'Edit',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryPurple),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        groupDescription.isNotEmpty
+                            ? groupDescription
+                            : 'Belum ada deskripsi grup. Ketuk tombol edit di atas untuk menambahkan deskripsi grup.',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          height: 1.4,
+                          color: groupDescription.isNotEmpty
+                              ? (isDark ? Colors.white : Colors.black87)
+                              : (isDark ? AppTheme.textMuted : Colors.grey.shade500),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
-
-          // Tombol Tambah Anggota
-          ListTile(
-            leading: CircleAvatar(
-              backgroundColor: theme.colorScheme.primary,
-              child: Icon(Icons.person_add, color: theme.colorScheme.onPrimary),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF161428) : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
             ),
-            title: const Text(
-              'Tambah Anggota',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
-            onTap: () {
-              if (onlyAdminCanAdd) {
-                // Check if I am admin
-                final myMember = members.firstWhere(
-                  (m) => m['name'] == 'Anda',
-                  orElse: () => {'isAdmin': false},
-                );
-                final isMeAdmin = myMember['isAdmin'];
-                if (!isMeAdmin) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Hanya Admin yang dapat menambahkan anggota!',
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.blueAccent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.blueAccent, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Akses Penambahan Anggota',
+                        style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
                       ),
-                    ),
-                  );
-                  return;
-                }
-              }
-              _addMember();
-            },
+                      const SizedBox(height: 2),
+                      Text(
+                        'Hanya Admin yang dapat menambahkan anggota baru',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: onlyAdminCanAdd,
+                  activeColor: AppTheme.primaryPurple,
+                  onChanged: (val) {
+                    ChatService.updateGroupSettings(
+                      widget.chat['id'].toString(),
+                      val,
+                    ).then((_) {
+                      setState(() {
+                        onlyAdminCanAdd = val;
+                      });
+                    });
+                  },
+                ),
+              ],
+            ),
           ),
-
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Daftar Anggota (${members.length})',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  if (onlyAdminCanAdd && !isMeAdmin) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Hanya Admin yang dapat menambahkan anggota!'),
+                      ),
+                    );
+                    return;
+                  }
+                  _addMember();
+                },
+                icon: const Icon(Icons.person_add_rounded, size: 16),
+                label: const Text('Tambah Anggota', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  minimumSize: const Size(0, 44),
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           if (isLoading)
             ...List.generate(
               4,
               (i) => const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: EdgeInsets.symmetric(vertical: 6),
                 child: ChatListSkeleton(),
               ),
             )
           else
-            ...members.map(
-              (m) => ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  backgroundImage: NetworkImage(
-                    'https://ui-avatars.com/api/?name=${m['name']}&background=random',
+            ...members.map((m) {
+              final isMe = m['name'] == 'Anda' ||
+                  (widget.currentUser != null &&
+                      (m['id']?.toString() == widget.currentUser?.id?.toString() ||
+                       (m['email'] != null && widget.currentUser?.email != null &&
+                        m['email'].toString().toLowerCase() == widget.currentUser!.email.toLowerCase()))) ||
+                  (_currentUser != null &&
+                      (m['id']?.toString() == _currentUser?.id?.toString() ||
+                       (m['email'] != null && _currentUser?.email != null &&
+                        m['email'].toString().toLowerCase() == _currentUser!.email.toLowerCase()))) ||
+                  (members.length == 1);
+              final isAdmin = m['isAdmin'] == true;
+              final avatarUrl = ApiService.resolveAssetUrl(m['avatarUrl']?.toString() ?? '');
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF161428) : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  leading: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.15),
+                    backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+                    child: avatarUrl.isEmpty
+                        ? Text(
+                            (m['name'] ?? 'A')[0].toUpperCase(),
+                            style: const TextStyle(color: AppTheme.primaryPurple, fontWeight: FontWeight.bold),
+                          )
+                        : null,
                   ),
-                ),
-                title: Text(
-                  m['name'],
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: m['name'] == 'Anda' ? const Text('Ponsel ini') : null,
-                trailing: m['isAdmin']
-                    ? Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.tertiaryContainer,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          'Admin',
-                          style: TextStyle(
-                            color: theme.colorScheme.onTertiaryContainer,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                  title: Row(
+                    children: [
+                      Text(
+                        m['name'] ?? '',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                      ),
+                      if (isMe) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(6),
                           ),
+                          child: const Text('Anda', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                         ),
-                      )
-                    : null,
-                onTap: m['name'] == 'Anda'
-                    ? null
-                    : () {
-                        final myMember = members.firstWhere(
-                          (memb) => memb['name'] == 'Anda',
-                          orElse: () => {'isAdmin': false},
-                        );
-                        if (myMember['isAdmin']) {
+                      ],
+                    ],
+                  ),
+                  subtitle: Text(
+                    m['email'] ?? m['username'] ?? '',
+                    style: TextStyle(fontSize: 11.5, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
+                  ),
+                  trailing: isAdmin
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.primaryGradient,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'Admin',
+                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        )
+                      : null,
+                  onTap: isMe || !isMeAdmin
+                      ? null
+                      : () {
                           showModalBottomSheet(
                             context: context,
+                            backgroundColor: isDark ? const Color(0xFF19172B) : Colors.white,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                            ),
                             builder: (context) => SafeArea(
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   ListTile(
-                                    leading: const Icon(
-                                      Icons.admin_panel_settings,
-                                    ),
-                                    title: const Text('Jadikan Admin'),
+                                    leading: const Icon(Icons.admin_panel_settings_rounded, color: AppTheme.primaryPurple),
+                                    title: const Text('Jadikan Admin Grup'),
                                     onTap: () {
                                       Navigator.pop(context);
                                       ChatService.makeAdmin(
                                         widget.chat['id'].toString(),
-                                        m['id'].toString(),
+                                        m['id'],
                                       ).then((_) => _loadMembers());
                                     },
                                   ),
                                   ListTile(
-                                    leading: const Icon(
-                                      Icons.person_remove,
-                                      color: Colors.red,
-                                    ),
-                                    title: const Text(
-                                      'Keluarkan dari Grup',
-                                      style: TextStyle(color: Colors.red),
-                                    ),
+                                    leading: const Icon(Icons.person_remove_rounded, color: Colors.redAccent),
+                                    title: const Text('Keluarkan dari Grup', style: TextStyle(color: Colors.redAccent)),
                                     onTap: () {
                                       Navigator.pop(context);
                                       ChatService.kickMember(
                                         widget.chat['id'].toString(),
-                                        m['id'].toString(),
+                                        m['id'],
                                       ).then((_) => _loadMembers());
                                     },
                                   ),
@@ -3152,29 +3953,49 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                               ),
                             ),
                           );
-                        }
-                      },
-              ),
-            ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: OutlinedButton.icon(
-              onPressed: () {
-                ChatService.leaveGroup(widget.chat['id'].toString()).then((_) {
-                  if (!context.mounted) return;
+                        },
+                ),
+              );
+            }),
+
+          const SizedBox(height: 24),
+          OutlinedButton.icon(
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Keluar dari Grup'),
+                  content: const Text('Apakah Anda yakin ingin keluar dari grup ini?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Batal'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                      child: const Text('Keluar', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                await ChatService.leaveGroup(widget.chat['id'].toString());
+                if (context.mounted) {
                   Navigator.pop(context);
-                  widget.onGroupLeft?.call();
-                });
-              },
-              icon: const Icon(Icons.exit_to_app, color: Colors.red),
-              label: const Text(
-                'Keluar dari Grup',
-                style: TextStyle(color: Colors.red),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.red),
-              ),
+                }
+              }
+            },
+            icon: const Icon(Icons.logout_rounded, color: Colors.redAccent, size: 18),
+            label: const Text(
+              'Keluar dari Grup',
+              style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+            ),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              side: const BorderSide(color: Colors.redAccent),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
           ),
           const SizedBox(height: 32),

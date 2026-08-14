@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
 import 'dart:convert';
 import '../app/theme.dart';
 import '../models/user_model.dart';
@@ -37,7 +36,7 @@ class CreatorServiceItem {
         'tag': tag,
         'value': value,
         'active': active,
-        'gradientColorsHex': gradient?.map((c) => '#${c.value.toRadixString(16).padLeft(8, '0')}').toList(),
+        'gradientColorsHex': gradient?.map((c) => '#${c.toARGB32().toRadixString(16).padLeft(8, '0')}').toList(),
       };
 
   static CreatorServiceItem fromJson(Map<String, dynamic> j) {
@@ -50,11 +49,7 @@ class CreatorServiceItem {
       id: j['id']?.toString() ?? j['title']?.toString() ?? '',
       title: (j['title'] ?? '').toString(),
       subtitle: (j['subtitle'] ?? '').toString(),
-      icon: IconData(
-        j['iconCodepoint'] as int? ?? Icons.edit_outlined.codePoint,
-        fontFamily: j['iconFontFamily']?.toString(),
-        fontPackage: j['iconFontPackage']?.toString(),
-      ),
+      icon: Icons.edit_outlined,
       tag: j['tag']?.toString(),
       value: j['value']?.toString(),
       active: (j['active'] as bool?) ?? true,
@@ -1357,11 +1352,6 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     } catch (_) {}
   }
 
-  void _persistSavedSubmitted() {
-    // Best-effort async fire-and-forget
-    CreatorLocalStorage.setSavedItems(_savedItems.map((i) => i.toString()).toSet());
-    CreatorLocalStorage.setSubmittedItems(_likedItems.map((i) => i.toString()).toSet());
-  }
 
   @override
   void dispose() {
@@ -1483,7 +1473,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                     children: [
                       Container(
                         width: 40, height: 40,
-                        decoration: BoxDecoration(color: const Color(0xFFF59E0B).withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
+                        decoration: BoxDecoration(color: const Color(0xFFF59E0B).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
                         child: const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 22),
                       ),
                       const SizedBox(width: 12),
@@ -1651,21 +1641,18 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
   }
 
   Widget _buildHeader(BuildContext context, CreatorServiceData data) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryPurple.withOpacity(0.22),
+            color: AppTheme.primaryPurple.withValues(alpha: 0.22),
             blurRadius: 30,
             offset: const Offset(0, 14),
           ),
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -1693,7 +1680,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                       height: 180,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white.withOpacity(0.08),
+                        color: Colors.white.withValues(alpha: 0.08),
                       ),
                     ),
                   ),
@@ -1705,7 +1692,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                       height: 200,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white.withOpacity(0.06),
+                        color: Colors.white.withValues(alpha: 0.06),
                       ),
                     ),
                   ),
@@ -1717,7 +1704,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                       height: 30,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white.withOpacity(0.12),
+                        color: Colors.white.withValues(alpha: 0.12),
                       ),
                     ),
                   ),
@@ -1729,7 +1716,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                       height: 18,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white.withOpacity(0.14),
+                        color: Colors.white.withValues(alpha: 0.14),
                       ),
                     ),
                   ),
@@ -1745,15 +1732,15 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                               width: 64,
                               height: 64,
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.18),
+                                color: Colors.white.withValues(alpha: 0.18),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.3),
+                                  color: Colors.white.withValues(alpha: 0.3),
                                   width: 1.5,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
+                                    color: Colors.black.withValues(alpha: 0.1),
                                     blurRadius: 12,
                                     offset: const Offset(0, 6),
                                   ),
@@ -1806,7 +1793,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                   Text(
                                     data.subtitle,
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.88),
+                                      color: Colors.white.withValues(alpha: 0.88),
                                       fontSize: 13.5,
                                       height: 1.35,
                                     ),
@@ -1818,7 +1805,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 10, vertical: 5),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.2),
+                                          color: Colors.white.withValues(alpha: 0.2),
                                           borderRadius:
                                               BorderRadius.circular(20),
                                         ),
@@ -1844,7 +1831,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 10, vertical: 5),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.2),
+                                          color: Colors.white.withValues(alpha: 0.2),
                                           borderRadius:
                                               BorderRadius.circular(20),
                                         ),
@@ -1926,22 +1913,16 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     ];
   }
 
-  String _getResponseTurnaround(String key) {
-    if (key.contains('edit')) return '24-48 jam';
-    if (key.contains('foto') || key.contains('video')) return '2-3 hari';
-    if (key.contains('desain')) return '1-2 hari';
-    return '48 jam';
-  }
 
   Widget _buildDecorativeStats(BuildContext context, CreatorServiceData data) {
     final personalized = _personalizeStats(data);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.14),
+        color: Colors.white.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withOpacity(0.25),
+          color: Colors.white.withValues(alpha: 0.25),
           width: 1,
         ),
       ),
@@ -1956,7 +1937,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                 width: 1,
                 height: 44,
                 margin: const EdgeInsets.symmetric(horizontal: 8),
-                color: Colors.white.withOpacity(0.25),
+                color: Colors.white.withValues(alpha: 0.25),
               ),
           ],
         ],
@@ -1972,7 +1953,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
           height: 34,
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.22),
+            color: Colors.white.withValues(alpha: 0.22),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(stat.$3, size: 16, color: Colors.white),
@@ -1991,7 +1972,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
           stat.$2,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.85),
+            color: Colors.white.withValues(alpha: 0.85),
             fontSize: 11,
             fontWeight: FontWeight.w500,
           ),
@@ -2068,7 +2049,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: highlight
-              ? AppTheme.primaryPurple.withOpacity(0.4)
+              ? AppTheme.primaryPurple.withValues(alpha: 0.4)
               : (isDark ? AppTheme.inputBorder : Colors.grey.shade200),
         ),
         boxShadow: AppTheme.cardShadowLight,
@@ -2083,8 +2064,8 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                   ? AppTheme.primaryGradient
                   : LinearGradient(
                       colors: [
-                        AppTheme.primaryPurple.withOpacity(0.12),
-                        AppTheme.lightPurple.withOpacity(0.12),
+                        AppTheme.primaryPurple.withValues(alpha: 0.12),
+                        AppTheme.lightPurple.withValues(alpha: 0.12),
                       ],
                     ),
               borderRadius: BorderRadius.circular(12),
@@ -2142,7 +2123,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.primaryPurple.withOpacity(0.06),
+              color: AppTheme.primaryPurple.withValues(alpha: 0.06),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -2263,7 +2244,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                       return Padding(
                                         padding: const EdgeInsets.only(bottom: 6),
                                         child: Material(
-                                          color: selected ? AppTheme.primaryPurple.withOpacity(0.08) : Colors.transparent,
+                                          color: selected ? AppTheme.primaryPurple.withValues(alpha: 0.08) : Colors.transparent,
                                           borderRadius: BorderRadius.circular(12),
                                           child: InkWell(
                                             borderRadius: BorderRadius.circular(12),
@@ -2369,7 +2350,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _availableFilters.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
                   final filter = _availableFilters[index];
                   final selected = filter == _selectedFilter;
@@ -2511,14 +2492,14 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppTheme.primaryPurple.withOpacity(0.15),
-                  AppTheme.lightPurple.withOpacity(0.15),
+                  AppTheme.primaryPurple.withValues(alpha: 0.15),
+                  AppTheme.lightPurple.withValues(alpha: 0.15),
                 ],
               ),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.primaryPurple.withOpacity(0.1),
+                  color: AppTheme.primaryPurple.withValues(alpha: 0.1),
                   blurRadius: 24,
                   spreadRadius: 8,
                 ),
@@ -2643,7 +2624,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                   height: 100,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: Colors.white.withOpacity(0.08),
+                                    color: Colors.white.withValues(alpha: 0.08),
                                   ),
                                 ),
                               ),
@@ -2655,7 +2636,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                   height: 90,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: Colors.white.withOpacity(0.06),
+                                    color: Colors.white.withValues(alpha: 0.06),
                                   ),
                                 ),
                               ),
@@ -2664,10 +2645,10 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                   width: 64,
                                   height: 64,
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.18),
+                                    color: Colors.white.withValues(alpha: 0.18),
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: Colors.white.withOpacity(0.3),
+                                      color: Colors.white.withValues(alpha: 0.3),
                                     ),
                                   ),
                                   child: Icon(item.icon,
@@ -2686,11 +2667,11 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.92),
+                              color: Colors.white.withValues(alpha: 0.92),
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.08),
+                                  color: Colors.black.withValues(alpha: 0.08),
                                   blurRadius: 6,
                                   offset: const Offset(0, 2),
                                 ),
@@ -2742,13 +2723,13 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                             decoration: BoxDecoration(
                               color: _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
                                   ? const Color(0xFFEC4899)
-                                  : Colors.black.withOpacity(0.2),
+                                  : Colors.black.withValues(alpha: 0.2),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.25),
+                                color: Colors.white.withValues(alpha: 0.25),
                               ),
                               boxShadow: _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
-                                  ? [BoxShadow(color: const Color(0xFFEC4899).withOpacity(0.5), blurRadius: 10, spreadRadius: 1)]
+                                  ? [BoxShadow(color: const Color(0xFFEC4899).withValues(alpha: 0.5), blurRadius: 10, spreadRadius: 1)]
                                   : null,
                             ),
                             child: Icon(
@@ -2817,8 +2798,8 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                   gradient: LinearGradient(
                                     colors: [
                                       AppTheme.primaryPurple
-                                          .withOpacity(0.08),
-                                      AppTheme.lightPurple.withOpacity(0.08),
+                                          .withValues(alpha: 0.08),
+                                      AppTheme.lightPurple.withValues(alpha: 0.08),
                                     ],
                                   ),
                                   borderRadius: BorderRadius.circular(10),
@@ -2934,9 +2915,13 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       children: [
         ...List.generate(5, (i) {
           IconData icn;
-          if (i < fullStars) icn = Icons.star_rounded;
-          else if (i < totalFill) icn = hasHalf ? Icons.star_half_rounded : Icons.star_rounded;
-          else icn = Icons.star_outline_rounded;
+          if (i < fullStars) {
+            icn = Icons.star_rounded;
+          } else if (i < totalFill) {
+            icn = hasHalf ? Icons.star_half_rounded : Icons.star_rounded;
+          } else {
+            icn = Icons.star_outline_rounded;
+          }
           return Padding(
             padding: const EdgeInsets.only(right: 2),
             child: Icon(
@@ -3035,7 +3020,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.primaryPurple.withOpacity(0.3),
+                            color: AppTheme.primaryPurple.withValues(alpha: 0.3),
                             blurRadius: 14,
                             offset: const Offset(0, 6),
                           ),
@@ -3118,16 +3103,16 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                         gradient: LinearGradient(
                                           colors: [
                                             AppTheme.primaryPurple
-                                                .withOpacity(0.1),
+                                                .withValues(alpha: 0.1),
                                             AppTheme.lightPurple
-                                                .withOpacity(0.1),
+                                                .withValues(alpha: 0.1),
                                           ],
                                         ),
                                         borderRadius:
                                             BorderRadius.circular(8),
                                         border: Border.all(
                                           color: AppTheme.primaryPurple
-                                              .withOpacity(0.2),
+                                              .withValues(alpha: 0.2),
                                         ),
                                       ),
                                       child: Text(
@@ -3182,12 +3167,12 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                                   decoration: BoxDecoration(
                                     color: _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
-                                        ? const Color(0xFFEC4899).withOpacity(0.1)
+                                        ? const Color(0xFFEC4899).withValues(alpha: 0.1)
                                         : (isDark ? AppTheme.cardDark2 : Colors.grey.shade100),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
                                       color: _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
-                                          ? const Color(0xFFEC4899).withOpacity(0.3)
+                                          ? const Color(0xFFEC4899).withValues(alpha: 0.3)
                                           : (isDark ? AppTheme.inputBorder : Colors.grey.shade200),
                                     ),
                                   ),
@@ -3235,12 +3220,12 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                                   decoration: BoxDecoration(
                                     color: _savedItems.contains('save:${data.key}:${item.title}'.hashCode.abs())
-                                        ? AppTheme.success.withOpacity(0.1)
+                                        ? AppTheme.success.withValues(alpha: 0.1)
                                         : (isDark ? AppTheme.cardDark2 : Colors.grey.shade100),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
                                       color: _savedItems.contains('save:${data.key}:${item.title}'.hashCode.abs())
-                                          ? AppTheme.success.withOpacity(0.3)
+                                          ? AppTheme.success.withValues(alpha: 0.3)
                                           : (isDark ? AppTheme.inputBorder : Colors.grey.shade200),
                                     ),
                                   ),
@@ -3375,15 +3360,15 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     Color fg;
     if (tag.toLowerCase().contains('selesai') ||
         tag.toLowerCase().contains('selesai')) {
-      bg = const Color(0xFF10B981).withOpacity(0.12);
+      bg = const Color(0xFF10B981).withValues(alpha: 0.12);
       fg = const Color(0xFF10B981);
     } else if (tag.toLowerCase().contains('berjalan') ||
         tag.toLowerCase().contains('aktif') ||
         tag.toLowerCase().contains('sedang')) {
-      bg = const Color(0xFFF59E0B).withOpacity(0.12);
+      bg = const Color(0xFFF59E0B).withValues(alpha: 0.12);
       fg = const Color(0xFFF59E0B);
     } else {
-      bg = AppTheme.primaryPurple.withOpacity(0.12);
+      bg = AppTheme.primaryPurple.withValues(alpha: 0.12);
       fg = AppTheme.primaryPurple;
     }
     return Container(
@@ -3391,7 +3376,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: fg.withOpacity(0.25)),
+        border: Border.all(color: fg.withValues(alpha: 0.25)),
       ),
       child: Text(
         tag,
@@ -3447,7 +3432,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.primaryPurple.withOpacity(0.3),
+                            color: AppTheme.primaryPurple.withValues(alpha: 0.3),
                             blurRadius: 14,
                             offset: const Offset(0, 6),
                           ),
@@ -3583,12 +3568,12 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                         decoration: BoxDecoration(
                           color: _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
-                              ? const Color(0xFFEC4899).withOpacity(0.1)
+                              ? const Color(0xFFEC4899).withValues(alpha: 0.1)
                               : (isDark ? AppTheme.cardDark2 : Colors.grey.shade100),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
                             color: _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
-                                ? const Color(0xFFEC4899).withOpacity(0.3)
+                                ? const Color(0xFFEC4899).withValues(alpha: 0.3)
                                 : (isDark ? AppTheme.inputBorder : Colors.grey.shade200),
                           ),
                         ),
@@ -3636,12 +3621,12 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                         decoration: BoxDecoration(
                           color: _savedItems.contains('save:${data.key}:${item.title}'.hashCode.abs())
-                              ? AppTheme.success.withOpacity(0.1)
+                              ? AppTheme.success.withValues(alpha: 0.1)
                               : (isDark ? AppTheme.cardDark2 : Colors.grey.shade100),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
                             color: _savedItems.contains('save:${data.key}:${item.title}'.hashCode.abs())
-                                ? AppTheme.success.withOpacity(0.3)
+                                ? AppTheme.success.withValues(alpha: 0.3)
                                 : (isDark ? AppTheme.inputBorder : Colors.grey.shade200),
                           ),
                         ),
@@ -3745,17 +3730,17 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     IconData icon;
     switch ((tag ?? '').toLowerCase()) {
       case 'expert':
-        bg = AppTheme.primaryGradient.colors.first.withOpacity(0.12);
+        bg = AppTheme.primaryGradient.colors.first.withValues(alpha: 0.12);
         fg = AppTheme.primaryPurple;
         icon = Icons.workspace_premium_rounded;
         break;
       case 'advanced':
-        bg = const Color(0xFFF59E0B).withOpacity(0.12);
+        bg = const Color(0xFFF59E0B).withValues(alpha: 0.12);
         fg = const Color(0xFFF59E0B);
         icon = Icons.auto_awesome_rounded;
         break;
       case 'intermediate':
-        bg = const Color(0xFF10B981).withOpacity(0.12);
+        bg = const Color(0xFF10B981).withValues(alpha: 0.12);
         fg = const Color(0xFF10B981);
         icon = Icons.trending_up_rounded;
         break;
@@ -3769,7 +3754,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: fg.withOpacity(0.2)),
+        border: Border.all(color: fg.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -3816,10 +3801,10 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       decoration: BoxDecoration(
         gradient: grad,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: border.withOpacity(0.4)),
+        border: Border.all(color: border.withValues(alpha: 0.4)),
         boxShadow: [
           BoxShadow(
-            color: border.withOpacity(0.3),
+            color: border.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -3878,7 +3863,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
         border: Border.all(color: Colors.white, width: 2),
         boxShadow: [
           BoxShadow(
-            color: c.withOpacity(0.5),
+            color: c.withValues(alpha: 0.5),
             blurRadius: 6,
             spreadRadius: 1,
           ),
@@ -3937,12 +3922,12 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
             borderRadius: BorderRadius.circular(30),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.primaryPurple.withOpacity(0.45),
+                color: AppTheme.primaryPurple.withValues(alpha: 0.45),
                 blurRadius: 18,
                 offset: const Offset(0, 8),
               ),
               BoxShadow(
-                color: AppTheme.deepPurple.withOpacity(0.2),
+                color: AppTheme.deepPurple.withValues(alpha: 0.2),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -3957,7 +3942,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                 width: 26,
                 height: 26,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.22),
+                  color: Colors.white.withValues(alpha: 0.22),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, size: 15, color: Colors.white),
@@ -4033,7 +4018,7 @@ class _AnimatedSkillPercentState extends State<_AnimatedSkillPercent>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _anim,
-      builder: (_, __) {
+      builder: (_, _) {
         final pct = (_anim.value * 100).round();
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
@@ -4094,7 +4079,6 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
 
   final List<({String name, String city, String text, int stars, String date, bool verified, int likes})> _customReviews = [];
   bool _itemSubmitted = false;
-  DateTime? _itemSubmittedAt;
   bool _itemSaved = false;
 
   final List<String> _availableFormTags = const [
@@ -4198,6 +4182,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
     );
     if (result != null) {
       onSave(result);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
@@ -4424,6 +4409,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
       },
     );
     if (picked != null) {
+      if (!mounted) return;
       final t = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.fromDateTime(_formDate ?? now),
@@ -4438,6 +4424,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
       );
       final full = DateTime(picked.year, picked.month, picked.day, t?.hour ?? 9, t?.minute ?? 0);
       onSave(full);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
@@ -4561,7 +4548,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                            decoration: BoxDecoration(color: AppTheme.success.withOpacity(0.12), borderRadius: BorderRadius.circular(7)),
+                            decoration: BoxDecoration(color: AppTheme.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(7)),
                             child: const Text('Terbeli', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: AppTheme.success)),
                           ),
                         ],
@@ -4585,7 +4572,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                 filled ? Icons.star_rounded : Icons.star_border_rounded,
                                 size: 32,
                                 color: filled ? Colors.amber.shade600 : Colors.grey.shade400,
-                                shadows: filled ? [BoxShadow(color: Colors.amber.withOpacity(0.35), blurRadius: 8, offset: const Offset(0, 2))] : null,
+                                shadows: filled ? [BoxShadow(color: Colors.amber.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 2))] : null,
                               ),
                             ),
                           ),
@@ -4624,7 +4611,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                     const SizedBox(height: 6),
                     AnimatedBuilder(
                       animation: ctrl,
-                      builder: (_, __) => Text('${ctrl.text.length}/500 karakter', style: TextStyle(fontSize: 9.5, color: ctrl.text.length > 450 ? Colors.orange.shade700 : Colors.grey.shade500, fontWeight: FontWeight.w700)),
+                      builder: (_, _) => Text('${ctrl.text.length}/500 karakter', style: TextStyle(fontSize: 9.5, color: ctrl.text.length > 450 ? Colors.orange.shade700 : Colors.grey.shade500, fontWeight: FontWeight.w700)),
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -4780,7 +4767,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
     return GestureDetector(
       onTap: () => Navigator.pop(context),
       child: Container(
-        color: Colors.black.withOpacity(0.55),
+        color: Colors.black.withValues(alpha: 0.55),
         child: GestureDetector(
           onTap: () {},
           child: FadeTransition(
@@ -4828,7 +4815,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                   boxShadow: [
                                     BoxShadow(
                                       color: AppTheme.primaryPurple
-                                          .withOpacity(0.28),
+                                          .withValues(alpha: 0.28),
                                       blurRadius: 12,
                                       offset: const Offset(0, 5),
                                     ),
@@ -4850,7 +4837,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                   children: [
                                     Text(
                                       isNew
-                                          ? '${widget.data.actionLabel}'
+                                          ? widget.data.actionLabel
                                           : (item?.title ?? '-'),
                                       style: TextStyle(
                                         fontSize: 16,
@@ -4905,14 +4892,14 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
-                                    AppTheme.deepPurple.withOpacity(0.08),
-                                    AppTheme.lightPurple.withOpacity(0.08),
+                                    AppTheme.deepPurple.withValues(alpha: 0.08),
+                                    AppTheme.lightPurple.withValues(alpha: 0.08),
                                   ],
                                 ),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: AppTheme.primaryPurple
-                                      .withOpacity(0.15),
+                                      .withValues(alpha: 0.15),
                                 ),
                               ),
                               child: Row(
@@ -5035,7 +5022,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                 : Colors.white,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.06),
+                                color: Colors.black.withValues(alpha: 0.06),
                                 blurRadius: 12,
                                 offset: const Offset(0, -4),
                               ),
@@ -5106,7 +5093,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                         width: _itemSaved ? 1.5 : 1.0,
                                       ),
                                       backgroundColor: _itemSaved
-                                          ? AppTheme.primaryPurple.withOpacity(0.06)
+                                          ? AppTheme.primaryPurple.withValues(alpha: 0.06)
                                           : null,
                                       shape: RoundedRectangleBorder(
                                         borderRadius:
@@ -5181,7 +5168,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                           vertical: 15),
                                       side: BorderSide(
                                         color: AppTheme.primaryPurple
-                                            .withOpacity(0.4),
+                                            .withValues(alpha: 0.4),
                                       ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius:
@@ -5211,9 +5198,9 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                       boxShadow: [
                                         BoxShadow(
                                           color: _itemSubmitted && !isNew
-                                              ? Colors.blue.withOpacity(0.35)
+                                              ? Colors.blue.withValues(alpha: 0.35)
                                               : AppTheme.primaryPurple
-                                                  .withOpacity(0.4),
+                                                  .withValues(alpha: 0.4),
                                           blurRadius: 16,
                                           offset: const Offset(0, 6),
                                         ),
@@ -5229,7 +5216,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                           final actionName = isNew ? 'Buat Baru' : widget.actionLabel;
                                           final targetName = item?.title ?? widget.data.title;
                                           if (isNew) {
-                                            String _fmtIDR(String raw) {
+                                            String fmtIDR(String raw) {
                                               final n = int.tryParse(raw.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
                                               if (n == 0) return raw;
                                               final s = n.toString();
@@ -5303,14 +5290,14 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                               if (_formTag.isNotEmpty)
                                                                 Container(
                                                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                                                  decoration: BoxDecoration(color: AppTheme.primaryPurple.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                                                                  decoration: BoxDecoration(color: AppTheme.primaryPurple.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                                                                   child: Text(_formTag, style: TextStyle(fontSize: 9.5, color: AppTheme.primaryPurple, fontWeight: FontWeight.w800)),
                                                                 ),
                                                             ],
                                                           ),
                                                           if (_formDesc.isNotEmpty) ...[
                                                             const SizedBox(height: 6),
-                                                            Text(_formDesc.trim().length > 110 ? _formDesc.trim().substring(0, 110) + '...' : _formDesc.trim(), style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600, height: 1.4)),
+                                                            Text(_formDesc.trim().length > 110 ? '${_formDesc.trim().substring(0, 110)}...' : _formDesc.trim(), style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600, height: 1.4)),
                                                           ],
                                                           if (_formPrice.isNotEmpty || _formDate != null) ...[
                                                             const SizedBox(height: 8),
@@ -5323,7 +5310,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                                     children: [
                                                                       Icon(Icons.sell_outlined, size: 13, color: Colors.green.shade700),
                                                                       const SizedBox(width: 4),
-                                                                      Text(_fmtIDR(_formPrice), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.green.shade700)),
+                                                                      Text(fmtIDR(_formPrice), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.green.shade700)),
                                                                     ],
                                                                   )),
                                                                 if (_formDate != null)
@@ -5350,7 +5337,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                       final finalName = _formName.trim();
                                                       final finalDesc = _formDesc.trim().isNotEmpty ? _formDesc.trim() : 'Item baru di ${widget.data.title}';
                                                       final finalTag = _formTag.isNotEmpty ? _formTag : 'Baru';
-                                                      final finalValue = _formPrice.isNotEmpty ? _fmtIDR(_formPrice) : (_formDate != null ? '${_formDate!.day} ${_monthId(_formDate!.month)} ${_formDate!.year}' : '-');
+                                                      final finalValue = _formPrice.isNotEmpty ? fmtIDR(_formPrice) : (_formDate != null ? '${_formDate!.day} ${_monthId(_formDate!.month)} ${_formDate!.year}' : '-');
                                                       final finalIcon = _formIcon ?? Icons.edit_outlined;
                                                       final finalGrad = widget.data.gradient;
                                                       final newItem = CreatorServiceItem(
@@ -5411,7 +5398,6 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                               );
                                               return;
                                             }
-                                            final now = DateTime.now();
                                             showDialog(
                                               context: context,
                                               builder: (dctx) => AlertDialog(
@@ -5488,7 +5474,6 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                     onPressed: () {
                                                       setState(() {
                                                         _itemSubmitted = true;
-                                                        _itemSubmittedAt = DateTime.now();
                                                       });
                                                       Navigator.pop(dctx);
                                                       ScaffoldMessenger.of(context).showSnackBar(
@@ -5587,7 +5572,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
         children: [
           Container(
             width: 52, height: 52,
-            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
             child: Icon(icon, size: 22, color: color),
           ),
           const SizedBox(height: 6),
@@ -5604,7 +5589,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
     final now = DateTime.now();
     final createdDate = DateTime(now.year, now.month - 1, now.day - 3);
     final updatedDate = DateTime(now.year, now.month, now.day - 1);
-    String _fmtPrice(String raw) {
+    String fmtPrice(String raw) {
       if (raw.isEmpty) return '';
       final n = int.tryParse(raw.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
       if (n == 0) return raw;
@@ -5621,7 +5606,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
             ('Nama item', Icons.drive_file_rename_outline, _formName.isEmpty ? 'Klik untuk mengisi nama item/layanan' : _formName, _formName.isNotEmpty ? 'Siap' : 'Wajib'),
             ('Deskripsi singkat', Icons.description_outlined, _formDesc.isEmpty ? 'Klik untuk menulis deskripsi (min. 30 kata)' : _formDesc, _formDesc.length > 60 ? '${_formDesc.length} karakter' : (_formDesc.isNotEmpty ? 'Draft' : 'Opsional')),
             ('Kategori / Tag', Icons.label_outline_rounded, _formTag.isEmpty ? 'Klik untuk memilih tag kategori' : 'Tag aktif: $_formTag', _formTag.isNotEmpty ? _formTag : 'Pilih'),
-            ('Nilai / Harga', Icons.price_change_outlined, _formPrice.isEmpty ? 'Klik untuk memasukkan nilai harga' : _fmtPrice(_formPrice), _formPrice.isNotEmpty ? _fmtPrice(_formPrice).replaceAll('Rp ', 'Rp ') : ''),
+            ('Nilai / Harga', Icons.price_change_outlined, _formPrice.isEmpty ? 'Klik untuk memasukkan nilai harga' : fmtPrice(_formPrice), _formPrice.isNotEmpty ? fmtPrice(_formPrice).replaceAll('Rp ', 'Rp ') : ''),
             ('Thumbnail / Icon', Icons.image_outlined, _formIcon == null ? 'Klik untuk memilih icon thumbnail' : 'Icon terpilih', _formIcon != null ? 'Terpilih' : ''),
             ('Tanggal dibuat', Icons.event_available_rounded, _formDate == null ? 'Klik untuk memilih tanggal & waktu' : '${_formDate!.day} ${_monthId(_formDate!.month)} ${_formDate!.year} • ${_formDate!.hour.toString().padLeft(2,'0')}:${_formDate!.minute.toString().padLeft(2,'0')} WIB', _formDate != null ? 'Terjadwal' : ''),
           ]
@@ -5631,7 +5616,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
             ('Terakhir diperbarui', Icons.update_outlined, '${updatedDate.day} ${_monthId(updatedDate.month)} ${updatedDate.year} • ${updatedDate.hour.toString().padLeft(2,'0')}:${(updatedDate.minute).toString().padLeft(2,'0')} WIB', user.name),
             ('Riwayat perubahan', Icons.history_outlined, '4 revisi • terakhir oleh ${user.name}', 'Lihat Riwayat'),
             ('Lampiran & File', Icons.attach_file_outlined, item?.value ?? '-', '${item != null ? _guessFileCount(item.title) : 0} File'),
-            ('Kolaborator', Icons.people_outline, user.name + ', Tim Kreavana', '2 Orang'),
+            ('Kolaborator', Icons.people_outline, '${user.name}, Tim Kreavana', '2 Orang'),
           ];
     return ListView(
       controller: scrollCtrl,
@@ -5753,8 +5738,8 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            AppTheme.primaryPurple.withOpacity(0.12),
-                            AppTheme.lightPurple.withOpacity(0.12),
+                            AppTheme.primaryPurple.withValues(alpha: 0.12),
+                            AppTheme.lightPurple.withValues(alpha: 0.12),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(12),
@@ -5794,7 +5779,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: AppTheme.primaryPurple.withOpacity(0.08),
+                                color: AppTheme.primaryPurple.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(f.$4, style: TextStyle(fontSize: 9.5, color: AppTheme.primaryPurple, fontWeight: FontWeight.w800)),
@@ -5905,13 +5890,13 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                AppTheme.deepPurple.withOpacity(0.08),
-                AppTheme.lightPurple.withOpacity(0.08),
+                AppTheme.deepPurple.withValues(alpha: 0.08),
+                AppTheme.lightPurple.withValues(alpha: 0.08),
               ],
             ),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: AppTheme.primaryPurple.withOpacity(0.15),
+              color: AppTheme.primaryPurple.withValues(alpha: 0.15),
             ),
           ),
           child: Row(
@@ -6037,7 +6022,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: filterLabels.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (c, i) => GestureDetector(
               onTap: () => setState(() => _selectedFilterReview = i),
               child: AnimatedContainer(
@@ -6137,7 +6122,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                 const SizedBox(width: 6),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(color: AppTheme.success.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+                                  decoration: BoxDecoration(color: AppTheme.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
                                   child: Row(mainAxisSize: MainAxisSize.min, children: const [
                                     Icon(Icons.verified_rounded, size: 9, color: AppTheme.success),
                                     SizedBox(width: 3),
@@ -6194,7 +6179,11 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                       borderRadius: BorderRadius.circular(8),
                       onTap: () {
                         setState(() {
-                          if (liked) _likedReviews.remove(idx); else _likedReviews.add(idx);
+                          if (liked) {
+                            _likedReviews.remove(idx);
+                          } else {
+                            _likedReviews.add(idx);
+                          }
                         });
                       },
                       child: Padding(

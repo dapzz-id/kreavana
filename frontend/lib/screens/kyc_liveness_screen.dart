@@ -52,9 +52,6 @@ class _KycLivenessScreenState extends State<KycLivenessScreen> {
       setState(() {
         _hasCameraPermissionError = true;
       });
-      if (kDebugMode) {
-        print("Camera initialization error: $e");
-      }
     }
   }
 
@@ -103,10 +100,8 @@ class _KycLivenessScreenState extends State<KycLivenessScreen> {
             }
           }
         }
-      } catch (e) {
-        if (kDebugMode) {
-          print("Error processing frame: $e");
-        }
+      } catch (_) {
+        // Silently swallow frame processing error
       } finally {
         _isProcessing = false;
       }

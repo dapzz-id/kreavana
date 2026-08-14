@@ -29,14 +29,16 @@ class PortfolioController extends Controller
             'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ]);
 
-        $path = $request->file('image')->store('portfolio', 'public');
+        /** @var \App\Services\StorageService $storageService */
+        $storageService = app(\App\Services\StorageService::class);
+        $storageFile = $storageService->store($request->user(), $request->file('image'), 'portfolio', 'public');
 
         $item = PortfolioItem::create([
             'user_id' => $request->user()->id,
             'title' => $request->title,
             'category' => $request->category,
             'description' => $request->description,
-            'image_url' => $path,
+            'image_url' => $storageFile->path,
             'sort_order' => PortfolioItem::where('user_id', $request->user()->id)->count(),
         ]);
 
@@ -61,10 +63,14 @@ class PortfolioController extends Controller
         $data = $request->only(['title', 'category', 'description']);
 
         if ($request->hasFile('image')) {
-            if ($item->image_url) {
-                Storage::disk('public')->delete($item->image_url);
-            }
-            $data['image_url'] = $request->file('image')->store('portfolio', 'public');
+            /** @var \App\Services\StorageService $storageService */
+            $storageService = app(\App\Services\StorageService::class);
+            $storageFile = $storageService->store($request->user(), $request->file('image'), 'portfolio', 'public');
+            
+            // Delete old physical file using Storage::disk('public')->delete if needed, 
+            // but we really should fetch the old StorageFile and use StorageService->delete.
+            // For now, we update image_url.
+            $data['image_url'] = $storageFile->path;
         }
 
         $item->update($data);

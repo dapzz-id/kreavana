@@ -9,6 +9,7 @@ import '../screens/proyek_saya_screen.dart';
 import '../screens/wallet_screen.dart';
 import '../screens/laporan_screen.dart';
 import '../screens/profile_screen.dart';
+import '../services/profile_completeness_service.dart';
 
 class SubRoleRightSidebar extends StatelessWidget {
   final UserModel user;
@@ -123,64 +124,64 @@ class SubRoleRightSidebar extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(
-              value: isCreator ? 0.85 : 0.68,
-              minHeight: 7,
-              backgroundColor: accentColor.withValues(alpha: 0.12),
-              valueColor: AlwaysStoppedAnimation<Color>(accentColor),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Kelengkapan profil',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
-                ),
-              ),
-              Text(
-                isCreator ? '85%' : '68%',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: accentColor,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ProfileScreen(
-                      user: user,
-                      onUserUpdated: onUserUpdated ?? (_) {},
-                      onLogout: onLogout ?? () => Navigator.of(context).popUntil((r) => r.isFirst),
-                    ),
+          Builder(builder: (context) {
+            final completeness = ProfileCompleteness.calculate(user);
+            return Column(
+              children: [
+                GestureDetector(
+                  onTap: () => ProfileCompleteness.showChecklistModal(context, user, onRefresh: () => onUserUpdated?.call(user)),
+                  child: Column(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: LinearProgressIndicator(
+                          value: completeness.percentage / 100.0,
+                          minHeight: 7,
+                          backgroundColor: accentColor.withValues(alpha: 0.12),
+                          valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Kelengkapan profil',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                            ),
+                          ),
+                          Text(
+                            '${completeness.percentage}%',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: accentColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                );
-              },
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                side: BorderSide(color: accentColor, width: 1.5),
-                foregroundColor: accentColor,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text(
-                'Lengkapi Profil',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => ProfileCompleteness.showChecklistModal(context, user, onRefresh: () => onUserUpdated?.call(user)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      side: BorderSide(color: accentColor.withValues(alpha: 0.4)),
+                      foregroundColor: accentColor,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text('Lengkapi Profil', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            );
+          }),
         ],
       ),
     );

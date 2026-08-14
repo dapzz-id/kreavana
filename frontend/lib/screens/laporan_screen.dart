@@ -3,6 +3,8 @@ import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 
+import '../widgets/ai_report_summary_widget.dart';
+
 class LaporanScreen extends StatelessWidget {
   final UserModel? user;
   final ValueChanged<UserModel>? onUserUpdated;
@@ -30,9 +32,16 @@ class LaporanScreen extends StatelessWidget {
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: reports.length,
+        itemCount: reports.length + 1,
         itemBuilder: (context, index) {
-          final r = reports[index];
+          if (index == 0) {
+            return const AiReportSummaryWidget(
+              title: 'Laporan Performa & Keuangan Bulanan',
+              content: 'Laporan evaluasi pengeluaran, proyek aktif, dan performa kreator periode berjalan.',
+              contextType: 'laporan_bulanan',
+            );
+          }
+          final r = reports[index - 1];
           final color = r['color'] as Color;
           return Container(
             margin: const EdgeInsets.only(bottom: 14),

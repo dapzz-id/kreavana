@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:kreavana/services/kyc_dio_client.dart';
 
 /// Result of an S3 upload operation, including the S3 key for later reference.
@@ -46,10 +45,7 @@ class S3UploadService {
         };
       }
       return null;
-    } on DioException catch (e) {
-      if (kDebugMode) {
-        print('S3UploadService.getUploadUrls error: ${e.message}');
-      }
+    } on DioException catch (_) {
       return null;
     }
   }
@@ -108,15 +104,9 @@ class S3UploadService {
 
         // URL expired (403) — caller should refresh and retry
         if (e.response?.statusCode == 403) {
-          if (kDebugMode) {
-            print('S3UploadService: pre-signed URL expired (403)');
-          }
           return false;
         }
 
-        if (kDebugMode) {
-          print('S3UploadService.uploadToS3 attempt $attempt error: ${e.message}');
-        }
         return false;
       }
     }
@@ -140,7 +130,7 @@ class S3UploadService {
     int ktpSent = 0;
     int selfieSent = 0;
 
-    void _updateProgress() {
+    void updateProgress() {
       if (onOverallProgress != null && totalBytes > 0) {
         onOverallProgress((ktpSent + selfieSent) / totalBytes);
       }
@@ -150,11 +140,11 @@ class S3UploadService {
     var results = await Future.wait([
       uploadToS3(ktpUrl, ktpFile, (sent, total) {
         ktpSent = sent;
-        _updateProgress();
+        updateProgress();
       }),
       uploadToS3(selfieUrl, selfieFile, (sent, total) {
         selfieSent = sent;
-        _updateProgress();
+        updateProgress();
       }),
     ]);
 
@@ -172,7 +162,7 @@ class S3UploadService {
               ktpFile,
               (sent, total) {
                 ktpSent = sent;
-                _updateProgress();
+                updateProgress();
               },
             )
           else
@@ -183,7 +173,7 @@ class S3UploadService {
               selfieFile,
               (sent, total) {
                 selfieSent = sent;
-                _updateProgress();
+                updateProgress();
               },
             )
           else

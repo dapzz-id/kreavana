@@ -75,19 +75,38 @@ class ChatController extends Controller
     {
         $userId = $request->user()->id;
 
-        $count = \App\Models\ChatParticipant::where('user_id', $userId)
-            ->where('status', 'joined')
-            ->with('chat')
-            ->get()
-            ->sum(function ($participant) {
-                if (!$participant->chat) return 0;
-                $lastRead = $participant->last_read_at ?? $participant->created_at ?? now();
-                return $participant->chat->messages()
-                    ->where('user_id', '!=', $participant->user_id)
-                    ->where('created_at', '>', $lastRead)
-                    ->count();
-            });
+        $count = \App\Models\ChatParticipant::where('chat_participants.user_id', $userId)
+            ->where('chat_participants.status', 'joined')
+            ->join('messages', function ($join) use ($userId) {
+                $join->on('messages.chat_id', '=', 'chat_participants.chat_id')
+                     ->where('messages.user_id', '!=', $userId)
+                     ->whereRaw('messages.created_at > COALESCE(chat_participants.last_read_at, chat_participants.created_at, "2000-01-01 00:00:00")');
+            })
+            ->count();
 
         return $this->successResponse('Jumlah pesan belum dibaca', ['count' => $count]);
+    }
+
+    public function devices(Request $request, Chat $chat)
+    {
+        $userId = $request->user()->id;
+        
+        // Ensure user is participant
+        $isParticipant = $chat->participants()->where('user_id', $userId)->exists();
+        if (!$isParticipant) {
+            return $this->errorResponse('Unauthorized', 403);
+        }
+
+        $participantIds = $chat->participants()->pluck('user_id')->toArray();
+        
+        // Get all active devices of all participants
+        $devices = \App\Models\UserDevice::whereIn('user_id', $participantIds)
+            ->where('is_active', true)
+            ->whereNull('revoked_at')
+            ->whereNotNull('public_key')
+            ->get(['user_id', 'device_id', 'public_key'])
+            ->toArray();
+
+        return $this->successResponse('Devices fetched', $devices);
     }
 }

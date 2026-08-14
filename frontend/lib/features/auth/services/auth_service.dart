@@ -4,6 +4,9 @@ import '../../../models/user_model.dart';
 import '../../../services/api_service.dart';
 import '../../../services/auth_session_state.dart';
 import '../../../services/secure_storage_service.dart';
+import '../../../services/realtime_service.dart';
+import '../../../services/fcm_service.dart';
+import '../../../services/encryption_service.dart';
 
 class AuthService {
   /// Register user baru
@@ -35,36 +38,41 @@ class AuthService {
     if (result['status'] == true && result['data'] != null) {
       final data = result['data'];
       final accessToken = data['access_token'];
+      final refreshToken = data['refresh_token']; // Parse from JSON
+
       if (accessToken is! String || accessToken.isEmpty) {
         return {'success': false, 'message': 'Login gagal.'};
       }
 
       authSignedOutNotifier.value = false;
-      await saveTokens(access: accessToken);
+      await saveTokens(access: accessToken, refresh: refreshToken);
 
       Map<String, dynamic>? userDataToSave;
 
-      final profileResult = await ApiService.get('profile/identity');
-      if (profileResult['status'] == true && profileResult['data'] != null) {
-        userDataToSave = profileResult['data'] is Map<String, dynamic>
-            ? Map<String, dynamic>.from(profileResult['data'] as Map)
-            : null;
+      if (data['user'] is Map<String, dynamic>) {
+        userDataToSave = Map<String, dynamic>.from(data['user'] as Map);
       }
 
-      if (userDataToSave == null) {
-        final meResult = await ApiService.get('auth/me');
-        final meData = meResult['data'];
-        if (meResult['status'] == true && meData is Map<String, dynamic>) {
-          final user = meData['user'];
-          if (user is Map<String, dynamic>) {
-            userDataToSave = Map<String, dynamic>.from(user);
-          }
+      final profileResult = await ApiService.get('profile/identity');
+      if (profileResult['status'] == true && profileResult['data'] != null) {
+        final pData = profileResult['data'] is Map<String, dynamic>
+            ? Map<String, dynamic>.from(profileResult['data'] as Map)
+            : null;
+        if (pData != null) {
+          userDataToSave = {...?userDataToSave, ...pData};
         }
       }
 
       if (userDataToSave != null) {
         await saveUserData(userDataToSave);
         final user = UserModel.fromJson(userDataToSave);
+        
+        RealtimeService().init(user.id ?? '', accessToken);
+        FCMService().init();
+        
+        // Initialize E2EE Keys
+        EncryptionService().initializeKeys();
+        
         return {
           'success': true,
           'message': result['message'] ?? 'Login berhasil.',
@@ -86,13 +94,17 @@ class AuthService {
     try {
       await ApiService.post('auth/logout', {});
     } finally {
+      RealtimeService().dispose();
       await clearSession();
     }
   }
 
-  static Future<void> saveTokens({required String access}) async {
+  static Future<void> saveTokens({required String access, String? refresh}) async {
     final secureStorage = SecureStorageService();
     await secureStorage.saveToken(access);
+    if (refresh != null && refresh.isNotEmpty) {
+      await secureStorage.saveRefreshToken(refresh);
+    }
   }
 
   // Save user data locally
@@ -115,7 +127,7 @@ class AuthService {
   static Future<void> clearSession() async {
     authSignedOutNotifier.value = true;
     final secureStorage = SecureStorageService();
-    await secureStorage.clearAll();
+    await secureStorage.clearTokens();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user_data');
   }
@@ -183,6 +195,7 @@ class AuthService {
     if (result['status'] == true && result['data'] != null) {
       final data = result['data'];
       final token = data['access_token'];
+      final refreshToken = data['refresh_token']; // Extract refresh token for social login
       final bool isNewUser = data['is_new_user'] == true;
       
       if (token is! String || token.isEmpty) {
@@ -190,7 +203,7 @@ class AuthService {
       }
 
       authSignedOutNotifier.value = false;
-      await saveTokens(access: token);
+      await saveTokens(access: token, refresh: refreshToken);
 
       // Get profile
       Map<String, dynamic>? userDataToSave;
@@ -215,6 +228,10 @@ class AuthService {
       if (userDataToSave != null) {
         await saveUserData(userDataToSave);
         final user = UserModel.fromJson(userDataToSave);
+        
+        // Initialize E2EE Keys
+        EncryptionService().initializeKeys();
+        
         return {
           'success': true,
           'message': 'Login berhasil dengan $provider.',

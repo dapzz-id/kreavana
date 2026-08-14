@@ -57,8 +57,8 @@ class PortfolioService {
     try {
       final formData = FormData.fromMap({
         'title': title,
-        if (category != null) 'category': category,
-        if (description != null) 'description': description,
+        'category': ?category,
+        'description': ?description,
         'image': await MultipartFile.fromFile(imageFile.path),
       });
 

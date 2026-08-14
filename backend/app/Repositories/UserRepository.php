@@ -22,6 +22,7 @@ class UserRepository extends BaseRepository
         return $this->model
             ->where('role', 'creator')
             ->where('is_creator_approved', true)
+            ->orderBy('performance_boost', 'desc')
             ->orderBy('created_at', 'desc')
             ->limit($limit)
             ->get();

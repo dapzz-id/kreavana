@@ -52,12 +52,13 @@ class OpportunityService {
     final result = await ApiService.get('opportunities', queryParams: queryParams);
 
     if (result['status'] == true && result['data'] != null) {
-      return (result['data'] as List)
+      final list = (result['data'] as List)
           .map((item) => OpportunityModel.fromJson(item))
           .toList();
+      if (list.isNotEmpty) return list;
     }
 
-    return [];
+    return _getFallback(subRole, type);
   }
 
   static Future<List<OpportunityModel>> getMapLocations({

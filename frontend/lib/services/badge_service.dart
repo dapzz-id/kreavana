@@ -75,6 +75,16 @@ class BadgeService extends ChangeNotifier {
     fetchCounts();
   }
 
+  void incrementUnreadNotifications() {
+    _unreadNotifications++;
+    notifyListeners();
+  }
+
+  void incrementUnreadMessages() {
+    _unreadMessages++;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     stopPolling();

@@ -80,7 +80,7 @@ class _GlobalCallOverlayState extends State<GlobalCallOverlay> {
             width: isVideo ? 120 : 180,
             height: isVideo ? 160 : 60,
             decoration: BoxDecoration(
-              color: isVideo ? Colors.black : Colors.green.shade700,
+              color: isVideo ? Colors.black : (callService.isCallWarningActive ? Colors.red.shade700 : Colors.green.shade700),
               borderRadius: BorderRadius.circular(isVideo ? 12 : 30),
               boxShadow: [
                 BoxShadow(
@@ -109,6 +109,21 @@ class _GlobalCallOverlayState extends State<GlobalCallOverlay> {
                           onPressed: _maximizeCall,
                         ),
                       ),
+                      if (callService.isCallWarningActive)
+                        Positioned(
+                          bottom: 4,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            color: Colors.black54,
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Text(
+                              '-${callService.remainingCallFormatted}',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 12),
+                            ),
+                          ),
+                        ),
                     ],
                   )
                 : Row(
@@ -116,11 +131,13 @@ class _GlobalCallOverlayState extends State<GlobalCallOverlay> {
                     children: [
                       const Icon(Icons.call, color: Colors.white),
                       Text(
-                        _formatDuration(callService.callDurationSeconds),
+                        callService.isCallWarningActive 
+                            ? '-${callService.remainingCallFormatted}'
+                            : _formatDuration(callService.callDurationSeconds),
                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.call_end, color: Colors.redAccent),
+                        icon: const Icon(Icons.call_end, color: Colors.white),
                         onPressed: () {
                           callService.endCall();
                         },

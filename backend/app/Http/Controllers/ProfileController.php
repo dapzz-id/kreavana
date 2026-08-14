@@ -109,4 +109,29 @@ class ProfileController extends Controller
 
         return $this->successResponse('Riwayat transaksi berhasil diambil', ['history' => $history]);
     }
+
+    public function updatePublicKey(Request $request)
+    {
+        $request->validate([
+            'public_key' => 'required|string|max:2048',
+        ]);
+
+        $publicKey = trim($request->public_key);
+
+        // Simple validation to ensure it's a valid PEM public key format and not a private key
+        if (!(str_starts_with($publicKey, '-----BEGIN PUBLIC KEY-----') || str_starts_with($publicKey, '-----BEGIN RSA PUBLIC KEY-----')) || 
+            !(str_ends_with($publicKey, '-----END PUBLIC KEY-----') || str_ends_with($publicKey, '-----END RSA PUBLIC KEY-----'))) {
+            return $this->errorResponse('Format public key tidak valid.', 422);
+        }
+
+        if (str_contains($publicKey, 'PRIVATE KEY')) {
+            return $this->errorResponse('Private key tidak diizinkan.', 422);
+        }
+
+        $user = Auth::guard('api')->user();
+        $user->public_key = $publicKey;
+        $user->save();
+
+        return $this->successResponse('Public key berhasil diperbarui.', ['public_key' => $user->public_key]);
+    }
 }

@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Contracts\AuthServiceInterface;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
 use App\Models\User;
 use App\Models\AuthLog;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use App\Jobs\SendSocialLoginPasswordJob;
+use App\Contracts\AuthServiceInterface;
+use Illuminate\Support\Facades\Http;
 
 class AuthController extends Controller
 {
@@ -103,6 +106,69 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         return $this->handleLogout($request);
+    }
+
+    /**
+     * Get active sessions for the current user.
+     */
+    public function getSessions(Request $request)
+    {
+        $user = Auth::guard('api')->user();
+        
+        $sessions = \App\Models\UserSession::where('user_id', $user->id)
+            ->whereNull('revoked_at')
+            ->where('expires_at', '>', now())
+            ->orderBy('last_used_at', 'desc')
+            ->get(['id', 'device_name', 'platform', 'ip_address', 'user_agent', 'last_used_at', 'expires_at']);
+
+        return response()->json([
+            'status' => true,
+            'data' => $sessions
+        ]);
+    }
+
+    /**
+     * Revoke a specific session.
+     */
+    public function revokeSession(Request $request, $id)
+    {
+        $user = Auth::guard('api')->user();
+        
+        $session = \App\Models\UserSession::where('id', $id)
+            ->where('user_id', $user->id) // Prevent IDOR
+            ->first();
+
+        if (!$session) {
+            return response()->json(['status' => false, 'message' => 'Session not found'], 404);
+        }
+
+        app(\App\Services\RefreshTokenRepository::class)->revokeSession($session->id);
+
+        return response()->json(['status' => true, 'message' => 'Session revoked']);
+    }
+
+    /**
+     * Logout from all sessions.
+     */
+    public function logoutAll(Request $request)
+    {
+        $user = Auth::guard('api')->user();
+        
+        app(\App\Services\RefreshTokenRepository::class)->revokeAllForUser($user->id);
+
+        $this->revokeBearerJtiIfPresent();
+        
+        AuthLog::create([
+            'user_id' => $user->id,
+            'action' => 'logout_all',
+            'ip_address' => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 255)
+        ]);
+        
+        Auth::guard('api')->logout();
+
+        return response()->json(['status' => true, 'message' => 'Berhasil logout dari semua perangkat.'])
+            ->withoutCookie(config('auth_tokens.refresh.cookie'), config('auth_tokens.refresh.path'));
     }
 
     /**
@@ -256,15 +322,21 @@ class AuthController extends Controller
             if (!$user) {
                 // Create new user
                 $username = $this->generateUsername($email);
+                $plainPassword = Str::random(10);
                 
                 $user = User::create([
                     'name' => $name ?? 'User',
                     'username' => $username,
                     'email' => $email,
-                    'password' => \Illuminate\Support\Facades\Hash::make(uniqid()), // Random password
+                    'password' => \Illuminate\Support\Facades\Hash::make($plainPassword),
+                    'avatar_url' => $photoUrl,
                     'role' => 'user',
                     'email_verified_at' => now(), // Auto-verify for social login
                 ]);
+                
+                // Dispatch job to send email in the background
+                SendSocialLoginPasswordJob::dispatch($email, $plainPassword);
+
                 $isNewUser = true;
             }
 

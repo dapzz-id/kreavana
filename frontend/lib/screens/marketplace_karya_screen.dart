@@ -7,7 +7,7 @@ import '../services/marketplace_service.dart';
 import '../widgets/app_empty_state.dart';
 import 'marketplace_detail_screen.dart';
 import 'jual_karya_screen.dart';
-
+import '../widgets/skeleton/skeleton_base.dart';
 class MarketplaceKaryaScreen extends StatefulWidget {
   final UserModel? user;
   final ValueChanged<UserModel>? onUserUpdated;
@@ -32,17 +32,11 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
   int _currentPage = 1;
   bool _hasMore = true;
 
-  late final AnimationController _skeletonCtrl;
-
   static const _allCategories = ['Semua', 'Fotografi', 'Videografi', 'Desain', 'Konten', 'Branding'];
 
   @override
   void initState() {
     super.initState();
-    _skeletonCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat();
     _loadAll();
     _scrollCtrl.addListener(_onScroll);
   }
@@ -51,7 +45,7 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
   void dispose() {
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
-    _skeletonCtrl.dispose();
+    
     super.dispose();
   }
 
@@ -389,10 +383,8 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
   }
 
   Widget _buildSkeletonLoading(bool isDark, bool isWide) {
-    return AnimatedBuilder(
-      animation: _skeletonCtrl,
-      builder: (context, _) {
-        return SingleChildScrollView(
+    return SkeletonAnimator(
+      child: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(isWide ? 32 : 16, 20, isWide ? 32 : 16, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -434,30 +426,15 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
               ),
             ],
           ),
-        );
-      },
+        )
     );
   }
 
   Widget _shimmerBox(bool isDark, double height, {double? width, double radius = 14}) {
-    return Container(
-      width: width,
+    return SkeletonBox(
+      width: width ?? double.infinity,
       height: height,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
-        gradient: LinearGradient(
-          colors: [
-            (isDark ? AppTheme.cardDark2 : AppTheme.inputLight),
-            (isDark ? AppTheme.inputDark : Colors.white),
-            (isDark ? AppTheme.cardDark2 : AppTheme.inputLight),
-          ],
-          stops: [
-            (_skeletonCtrl.value - 0.3).clamp(0.0, 1.0),
-            _skeletonCtrl.value,
-            (_skeletonCtrl.value + 0.3).clamp(0.0, 1.0),
-          ],
-        ),
-      ),
+      borderRadius: radius,
     );
   }
 

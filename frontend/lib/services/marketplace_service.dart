@@ -89,7 +89,9 @@ class MarketplaceService {
     });
   }
 
-  static Future<Map<String, dynamic>> purchaseItem(String id) async {
-    return await ApiService.post('marketplace/$id/purchase', {});
+  static Future<Map<String, dynamic>> purchaseItem(String id, {required String pin}) async {
+    return await ApiService.post('marketplace/$id/purchase', {
+      'pin': pin,
+    });
   }
 }

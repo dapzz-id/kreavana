@@ -14,6 +14,9 @@ class Message extends Model
         'chat_id',
         'user_id',
         'message',
+        'encryption_version',
+        'ciphertext',
+        'iv',
         'type',
         'media_url',
         'deleted_for',
@@ -22,6 +25,7 @@ class Message extends Model
 
     protected $casts = [
         'deleted_for' => 'array',
+        'encryption_version' => 'integer',
     ];
 
     public function chat()
@@ -37,5 +41,10 @@ class Message extends Model
     public function replyTo()
     {
         return $this->belongsTo(Message::class, 'reply_to_id');
+    }
+
+    public function messageKeys()
+    {
+        return $this->hasMany(MessageKey::class);
     }
 }

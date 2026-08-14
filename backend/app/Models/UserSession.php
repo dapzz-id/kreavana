@@ -11,17 +11,29 @@ class UserSession extends Model
 
     protected $fillable = [
         'user_id',
-        'session_token',
-        'refresh_token',
+        'device_id',
+        'device_name',
+        'platform',
+        'ip_address',
+        'user_agent',
+        'revoked_at',
         'expires_at',
+        'last_used_at',
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
+        'revoked_at' => 'datetime',
+        'last_used_at' => 'datetime',
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function refreshTokens()
+    {
+        return $this->hasMany(RefreshToken::class);
     }
 }

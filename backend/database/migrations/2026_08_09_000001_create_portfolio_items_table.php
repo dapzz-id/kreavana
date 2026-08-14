@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('portfolio_items', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
             $table->char('user_id', 36);
             $table->string('title');
             $table->string('category')->nullable();

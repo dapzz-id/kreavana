@@ -7,6 +7,8 @@ import '../services/api_service.dart';
 import 'direct_message_screen.dart';
 import 'buat_kebutuhan_screen.dart';
 
+import '../widgets/skeleton/skeleton_list.dart';
+
 class ProyekSayaScreen extends StatefulWidget {
   final UserModel? user;
   final ValueChanged<UserModel>? onUserUpdated;
@@ -200,7 +202,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
 
               // ── Projects List ──
               if (_isLoading)
-                const Padding(padding: EdgeInsets.symmetric(vertical: 40), child: Center(child: CircularProgressIndicator()))
+                const SkeletonList()
               else if (filtered.isEmpty)
                 _buildEmptyState(isDark)
               else

@@ -7,6 +7,8 @@ import '../widgets/app_empty_state.dart';
 import '../widgets/animated_input_field.dart';
 import '../widgets/gradient_button.dart';
 
+import '../widgets/skeleton/skeleton_list.dart';
+
 class AddressesScreen extends StatefulWidget {
   const AddressesScreen({super.key});
 
@@ -121,7 +123,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
         title: const Text('Alamat Saya', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryPurple))
+          ? const SkeletonList()
           : _addresses.isEmpty
               ? RefreshIndicator(
                   onRefresh: _load,
