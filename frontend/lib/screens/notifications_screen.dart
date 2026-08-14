@@ -3,9 +3,12 @@ import 'package:intl/intl.dart';
 import '../app/theme.dart';
 import '../models/notification_model.dart';
 import '../services/notification_service.dart';
+import '../services/chat_service.dart';
 import '../services/badge_service.dart';
 import '../utils/app_errors.dart';
 import '../widgets/app_empty_state.dart';
+
+import '../widgets/skeleton/skeleton_list.dart';
 
 class NotificationsScreen extends StatefulWidget {
   final String userId;
@@ -241,7 +244,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const SkeletonList()
           : _filteredNotifications.isEmpty
               ? AppEmptyState(
                   icon: _filter == 'unread' ? Icons.mark_email_read_outlined : Icons.notifications_none,
@@ -386,14 +389,73 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 6),
-                      Text(
-                        formattedDate,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: isDark ? AppTheme.textMuted.withValues(alpha: 0.7) : AppTheme.textMutedLight.withValues(alpha: 0.8),
-                          fontWeight: FontWeight.w500,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            formattedDate,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: isDark ? AppTheme.textMuted.withValues(alpha: 0.7) : AppTheme.textMutedLight.withValues(alpha: 0.8),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
+                      if (notif.type == 'group_invite' || notif.type == 'group') ...[
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            ElevatedButton(
+                              onPressed: () async {
+                                final chatId = notif.data != null ? notif.data!['chat_id']?.toString() : null;
+                                if (chatId != null && chatId.isNotEmpty) {
+                                  try {
+                                    await ChatService.respondInvitation(chatId, true);
+                                    if (context.mounted) {
+                                      AppSnackbar.success(context, 'Berhasil bergabung dengan grup!');
+                                      _loadNotifications();
+                                    }
+                                  } catch (_) {}
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryPurple,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('Setujui', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(width: 8),
+                            OutlinedButton(
+                              onPressed: () async {
+                                final chatId = notif.data != null ? notif.data!['chat_id']?.toString() : null;
+                                if (chatId != null && chatId.isNotEmpty) {
+                                  try {
+                                    await ChatService.respondInvitation(chatId, false);
+                                    if (context.mounted) {
+                                      AppSnackbar.info(context, 'Undangan grup ditolak');
+                                      _loadNotifications();
+                                    }
+                                  } catch (_) {}
+                                }
+                              },
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.redAccent,
+                                side: const BorderSide(color: Colors.redAccent),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('Tolak', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),

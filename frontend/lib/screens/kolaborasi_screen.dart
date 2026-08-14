@@ -5,6 +5,8 @@ import '../models/user_model.dart';
 import '../services/api_service.dart';
 import 'direct_message_screen.dart';
 
+import '../widgets/skeleton/skeleton_list.dart';
+
 class KolaborasiScreen extends StatefulWidget {
   final UserModel? user;
   final ValueChanged<UserModel>? onUserUpdated;
@@ -186,7 +188,7 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
 
               // ── List Items ──
               if (_isLoading)
-                const Padding(padding: EdgeInsets.symmetric(vertical: 40), child: Center(child: CircularProgressIndicator()))
+                const SkeletonList()
               else if (filtered.isEmpty)
                 _buildEmptyState(isDark)
               else

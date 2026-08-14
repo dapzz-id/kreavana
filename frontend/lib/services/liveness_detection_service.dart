@@ -131,9 +131,6 @@ class LivenessDetectionService {
       );
 
     } catch (e) {
-      if (kDebugMode) {
-        print("Error processing face: $e");
-      }
       return null;
     } finally {
       _isProcessing = false;

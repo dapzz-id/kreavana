@@ -4,13 +4,14 @@ import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../main.dart' show themeNotifier;
 import '../features/auth/services/auth_service.dart';
-import '../services/api_service.dart';
 import '../utils/app_errors.dart';
 import 'profile_screen.dart';
 import 'payment_methods_screen.dart';
 import 'addresses_screen.dart';
 import 'help_screen.dart';
 import 'privacy_policy_screen.dart';
+import 'storage_management_screen.dart';
+import '../widgets/kreavana_image.dart';
 
 class PengaturanScreen extends StatefulWidget {
   final UserModel? user;
@@ -112,15 +113,10 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                   ),
                 ),
                 child: Row(children: [
-                  CircleAvatar(
+                  KreavanaAvatar(
+                    url: widget.user!.avatarUrl,
                     radius: 28,
                     backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.15),
-                    backgroundImage: widget.user!.avatarUrl?.isNotEmpty == true
-                        ? NetworkImage(ApiService.resolveAssetUrl(widget.user!.avatarUrl!))
-                        : null,
-                    child: widget.user!.avatarUrl?.isNotEmpty != true
-                        ? Icon(Icons.person, color: AppTheme.primaryPurple, size: 28)
-                        : null,
                   ),
                   const SizedBox(width: 14),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -174,9 +170,19 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                 title: 'Alamat',
                 subtitle: 'Kelola alamat pengiriman',
                 isDark: isDark,
-                isLast: true,
                 onTap: () => Navigator.push(context, MaterialPageRoute(
                   builder: (_) => const AddressesScreen(),
+                )),
+              ),
+              _buildNavTile(
+                icon: Icons.storage_outlined,
+                iconColor: const Color(0xFF8B5CF6),
+                title: 'Manajemen Storage',
+                subtitle: 'Kelola file, media, dan kuota',
+                isDark: isDark,
+                isLast: true,
+                onTap: () => Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => const StorageManagementScreen(),
                 )),
               ),
             ],

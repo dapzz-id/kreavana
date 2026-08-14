@@ -23,6 +23,10 @@ class AppServiceProvider extends ServiceProvider
             \App\Contracts\DashboardServiceInterface::class,
             \App\Services\DashboardService::class
         );
+        $this->app->bind(
+            \App\Contracts\AiServiceInterface::class,
+            \App\Services\AiService::class
+        );
     }
 
     /**

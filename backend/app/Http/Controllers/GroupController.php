@@ -55,9 +55,10 @@ class GroupController extends Controller
         $request->validate([
             'name' => 'required|string|max:100',
             'description' => 'nullable|string|max:500',
+            'avatar_url' => 'nullable|string',
         ]);
 
-        $chatData = $this->groupService->updateDetails($chat, $request->only('name', 'description'));
+        $chatData = $this->groupService->updateDetails($chat, $request->only('name', 'description', 'avatar_url'));
 
         return $this->successResponse('Detail grup berhasil diperbarui', $chatData);
     }

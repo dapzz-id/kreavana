@@ -9,26 +9,42 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 class AvatarController extends Controller
 {
     /**
-     * Sajikan file avatar dari public/avatars.
+     * Sajikan file avatar dari public/avatars atau storage/avatar.
      * Route ini lewat middleware CORS (api/*) sehingga gambar bisa dimuat
      * dari Flutter Web yang berjalan di origin berbeda.
      */
     public function show(Request $request, string $file): BinaryFileResponse
     {
-        if (!preg_match('/^[a-zA-Z0-9_\-\.]+\.(jpg|jpeg|png|gif|webp)$/', $file)) {
+        if (!preg_match('/^[a-zA-Z0-9_\-\.]+\.(jpg|jpeg|png|gif|webp|svg|heic)$/i', $file)) {
             abort(404);
         }
 
-        $path = public_path('avatars/' . $file);
+        // Cari di beberapa lokasi penyimpanan avatar
+        $possiblePaths = [
+            public_path('avatars/' . $file),
+            storage_path('app/public/avatar/' . $file),
+            storage_path('app/public/avatars/' . $file),
+            public_path('storage/avatar/' . $file),
+            public_path('storage/avatars/' . $file),
+        ];
 
-        if (!file_exists($path)) {
+        $path = null;
+        foreach ($possiblePaths as $p) {
+            if (file_exists($p)) {
+                $path = $p;
+                break;
+            }
+        }
+
+        if (!$path) {
             abort(404);
         }
 
-        $mime = match (pathinfo($file, PATHINFO_EXTENSION)) {
+        $mime = match (strtolower(pathinfo($file, PATHINFO_EXTENSION))) {
             'png' => 'image/png',
             'gif' => 'image/gif',
             'webp' => 'image/webp',
+            'svg' => 'image/svg+xml',
             default => 'image/jpeg',
         };
 

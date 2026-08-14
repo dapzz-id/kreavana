@@ -244,10 +244,8 @@ class KycService {
             return;
           }
         }
-      } catch (e) {
-        if (kDebugMode) {
-          print('KycService.pollUntilComplete error on attempt $i: $e');
-        }
+      } catch (_) {
+        // Silently handle polling error
       }
 
       await Future.delayed(interval);

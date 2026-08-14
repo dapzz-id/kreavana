@@ -47,6 +47,11 @@ return Application::configure(basePath: dirname(__DIR__))
                     return null; 
                 }
                 
+                // Let HTTP exceptions pass through (e.g. 404 Not Found, 429 Too Many Attempts)
+                if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                    return null;
+                }
+                
                 return response()->json([
                     'status' => false,
                     'message' => 'Terjadi kesalahan internal pada server.',

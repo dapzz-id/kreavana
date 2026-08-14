@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'upgrade_plan_modal.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../features/auth/screens/login_screen.dart';
@@ -313,6 +314,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   }
 
   Widget _buildUpgradePromoCard(bool isDark) {
+    final isCreator = widget.user.role == 'creator';
     return Column(
       children: [
         const SizedBox(height: 18),
@@ -330,13 +332,15 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
               children: [
                 const Icon(Icons.workspace_premium_outlined, color: Colors.white, size: 28),
                 const SizedBox(height: 8),
-                const Text(
-                  'Upgrade Akun',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                Text(
+                  isCreator ? 'Upgrade Akun Kreator' : 'Upgrade Plan & Paket',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Tingkatkan peluang & fitur premium untuk kreator.',
+                  isCreator
+                      ? 'Tingkatkan peluang & fitur premium untuk kreator.'
+                      : 'Nikmati kuota lebih tinggi, fitur AI, dan prioritas proyek.',
                   style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.8)),
                   textAlign: TextAlign.center,
                 ),
@@ -344,14 +348,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Upgrade Sekarang — Segera Hadir'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    },
+                    onPressed: () => UpgradePlanModal.show(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: AppTheme.primaryPurple,
@@ -734,6 +731,14 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             label: 'Pembayaran',
                             onTap: () => _pushLink('pembayaran'),
                             isSelected: widget.activeRoute == 'pembayaran',
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          _buildNavRow(
+                            icon: Icons.workspace_premium_outlined,
+                            label: 'Upgrade Plan / Paket',
+                            onTap: () => UpgradePlanModal.show(context),
+                            isSelected: false,
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),

@@ -51,6 +51,34 @@ class CallService extends ChangeNotifier {
     return '$minutes:$seconds';
   }
 
+  String currentTier = 'free';
+
+  int? _maxDurationFromBackend;
+
+  int get maxCallDurationSeconds {
+    if (_maxDurationFromBackend != null) return _maxDurationFromBackend!;
+    // Fallback if not initialized via signal (e.g. legacy/error)
+    return isVideoCall ? 1800 : 3600;
+  }
+
+  bool get isCallWarningActive {
+    if (!isConnected || isEnded) return false;
+    final remaining = maxCallDurationSeconds - callDurationSeconds;
+    return remaining > 0 && remaining <= 300; // 5 minutes warning
+  }
+  
+  int get remainingCallSeconds {
+    final remaining = maxCallDurationSeconds - callDurationSeconds;
+    return remaining > 0 ? remaining : 0;
+  }
+
+  String get remainingCallFormatted {
+    final remaining = remainingCallSeconds;
+    final minutes = (remaining ~/ 60).toString().padLeft(2, '0');
+    final seconds = (remaining % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
   // ICE candidate buffer — stores candidates that arrive before peer connection is ready
   final List<dynamic> _pendingCandidates = [];
   bool _hasRemoteDescription = false;
@@ -88,6 +116,8 @@ class CallService extends ChangeNotifier {
   Future<void> initPusher() async {
     final currentUser = await AuthService.getCurrentUser();
     if (currentUser == null) return;
+    
+    currentTier = currentUser.subscriptionTier;
 
     try {
       if (_pusher == null) {
@@ -267,6 +297,11 @@ class CallService extends ChangeNotifier {
 
   /// Start a Call
   Future<void> startCall(String receiverId, bool video, {String remoteUserName = 'User', String remoteAvatarUrl = ''}) async {
+    final currentUser = await AuthService.getCurrentUser();
+    _maxDurationFromBackend = video 
+        ? currentUser?.maxVideoCallDurationSeconds 
+        : currentUser?.maxVoiceCallDurationSeconds;
+
     isCaller = true;
     isVideoCall = video;
     remoteUserId = receiverId;
@@ -368,7 +403,14 @@ class CallService extends ChangeNotifier {
     callDurationSeconds = 0;
     _callTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       callDurationSeconds++;
-      notifyListeners();
+      
+      if (remainingCallSeconds <= 0) {
+        // Auto end call when max duration reached
+        endCall();
+        // Notify the user globally (e.g. via toast or alert) if possible, but state will handle closing it
+      } else {
+        notifyListeners();
+      }
     });
   }
 
@@ -461,6 +503,12 @@ class CallService extends ChangeNotifier {
         isVideoCall = signalData['video'] ?? false;
         incomingCallerName = signalData['callerName'] ?? 'Panggilan Masuk';
         incomingCallerAvatar = ApiService.resolveAssetUrl(signalData['callerAvatar']?.toString() ?? '');
+
+        // Authoritative limit from backend payload
+        if (signalData['max_duration'] != null) {
+          _maxDurationFromBackend = int.tryParse(signalData['max_duration'].toString());
+        }
+
         notifyListeners();
         
         _tempOffer = RTCSessionDescription(_fixSdp(signalData['sdp']), signalData['type']);

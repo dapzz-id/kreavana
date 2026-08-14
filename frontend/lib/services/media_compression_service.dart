@@ -96,7 +96,6 @@ class MediaCompressionService {
         mimeType: mime,
       );
     } catch (e) {
-      debugPrint('MediaCompressionService Error: $e');
       return null;
     }
   }

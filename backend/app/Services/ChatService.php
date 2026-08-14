@@ -60,7 +60,7 @@ class ChatService extends BaseService
                 'description' => $chat->description,
                 'user_id' => $otherUserId,
                 'username' => $otherUsername,
-                'avatar_url' => $otherAvatar,
+                'avatar_url' => $chat->type === 'group' ? $chat->avatar_url : $otherAvatar,
                 'isOnline' => $lastOnline ? \Carbon\Carbon::parse($lastOnline)->diffInSeconds(now()) < 10 : false,
                 'last_online' => $lastOnline ? \Carbon\Carbon::parse($lastOnline)->diffForHumans() : null,
                 'last_online_raw' => $lastOnline,

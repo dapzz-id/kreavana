@@ -15,6 +15,12 @@ import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
 import '../../../screens/transfer_screen.dart';
 import '../../../screens/laporan_screen.dart';
+import '../../../screens/peluang_proyek_screen.dart';
+import '../../../services/badge_service.dart';
+import '../../../widgets/ai_recommendation_card.dart';
+import '../../../widgets/opportunity_detail_sheet.dart';
+import '../../../models/opportunity_model.dart';
+import '../../../services/profile_completeness_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -202,7 +208,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         Navigator.push(context, MaterialPageRoute(builder: (_) => LaporanScreen(user: widget.user, onUserUpdated: widget.onUserUpdated)));
         break;
       case 'Cari Peluang':
-        Navigator.push(context, MaterialPageRoute(builder: (_) => ExploreScreen(user: widget.user)));
+      case 'Lihat Detail':
+      case 'Lihat Semua':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => PeluangProyekScreen(user: widget.user)));
         break;
       case 'Bandingkan':
       case 'Setujui Proyek':
@@ -475,6 +483,11 @@ class _DashboardScreenState extends State<DashboardScreen>
           onViewAll: () => _navigateTo('Lihat Semua'),
         ),
         const SizedBox(height: 12),
+        AiRecommendationCard(
+          role: _isCreator ? 'creator' : 'client',
+          niche: _isCreator ? 'Fotografi & Video' : 'Kebutuhan Kreatif',
+        ),
+        const SizedBox(height: 12),
         SizedBox(
           height: 260,
           child: ListView.builder(
@@ -549,14 +562,32 @@ class _DashboardScreenState extends State<DashboardScreen>
                   SizedBox(
                     width: double.infinity, height: 28,
                     child: ElevatedButton(
-                      onPressed: () => _navigateTo(item['action_label']?.toString() ?? ''),
+                      onPressed: () {
+                        final opp = OpportunityModel(
+                          id: item['id']?.toString() ?? '1',
+                          title: item['title']?.toString() ?? 'Peluang Proyek',
+                          description: 'Proyek ${item['title']} - Peluang kerja kreatif berkualitas tinggi dengan alokasi budget transparan.',
+                          subRoleSlug: (item['badge']?.toString() ?? 'kreator').toLowerCase(),
+                          type: 'project',
+                          location: item['location']?.toString() ?? 'Indonesia',
+                          budgetRange: item['price']?.toString() ?? 'Sesuaikan',
+                          status: 'open',
+                          postedBy: 'admin',
+                          poster: OpportunityPoster(
+                            id: 'admin',
+                            name: 'Kreavana Verified Client',
+                            username: 'client_official',
+                          ),
+                        );
+                        OpportunityDetailSheet.show(context, opportunity: opp, currentUserId: widget.user.id);
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: badgeColor,
                         foregroundColor: Colors.white,
                         padding: EdgeInsets.zero,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      child: Text(item['action_label']?.toString() ?? 'Lihat', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      child: Text(item['action_label']?.toString() ?? 'Lihat Detail', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],
@@ -917,34 +948,51 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           ]),
           const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(
-              value: _isCreator ? 0.83 : 0.68,
-              minHeight: 6,
-              backgroundColor: isDark ? AppTheme.inputBorder : AppTheme.dividerLight,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryPurple),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text('Kelengkapan profil', style: TextStyle(fontSize: 10, color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight)),
-            Text(_isCreator ? '83%' : '68%', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryPurple)),
-          ]),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () => _navigateTo('Lengkapi Profil'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                side: BorderSide(color: AppTheme.primaryPurple.withValues(alpha: 0.4)),
-                foregroundColor: AppTheme.primaryPurple,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: const Text('Lengkapi Profil', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-            ),
-          ),
+          Builder(builder: (context) {
+            final completeness = ProfileCompleteness.calculate(widget.user);
+            return Column(
+              children: [
+                GestureDetector(
+                  onTap: () => ProfileCompleteness.showChecklistModal(context, widget.user),
+                  child: Column(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: LinearProgressIndicator(
+                          value: completeness.percentage / 100.0,
+                          minHeight: 6,
+                          backgroundColor: isDark ? AppTheme.inputBorder : AppTheme.dividerLight,
+                          valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryPurple),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Kelengkapan profil', style: TextStyle(fontSize: 10, color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight)),
+                          Text('${completeness.percentage}%', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryPurple)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => ProfileCompleteness.showChecklistModal(context, widget.user),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      side: BorderSide(color: AppTheme.primaryPurple.withValues(alpha: 0.4)),
+                      foregroundColor: AppTheme.primaryPurple,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text('Lengkapi Profil', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            );
+          }),
         ],
       ),
     );
@@ -1099,11 +1147,26 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ),
         const SizedBox(width: 12),
-        // Notification
-        _NotifIconBtn(icon: Icons.notifications_none_outlined, count: _isCreator ? 9 : 2, onTap: () => _navigateTo('Notifikasi'), isDark: isDark),
+        ListenableBuilder(
+          listenable: BadgeService(),
+          builder: (_, _) => _NotifIconBtn(
+            icon: Icons.notifications_none_outlined,
+            count: BadgeService().unreadNotifications,
+            onTap: () => _navigateTo('Notifikasi'),
+            isDark: isDark,
+          ),
+        ),
         const SizedBox(width: 2),
         // Chat
-        _NotifIconBtn(icon: Icons.chat_bubble_outline, count: _isCreator ? 5 : 3, onTap: () => _navigateTo('Pesan'), isDark: isDark),
+        ListenableBuilder(
+          listenable: BadgeService(),
+          builder: (_, _) => _NotifIconBtn(
+            icon: Icons.chat_bubble_outline,
+            count: BadgeService().unreadMessages,
+            onTap: () => _navigateTo('Pesan'),
+            isDark: isDark,
+          ),
+        ),
         const SizedBox(width: 8),
         // Theme toggle
         Builder(builder: (btnCtx) => IconButton(
@@ -1221,7 +1284,7 @@ class _HeroButton extends StatelessWidget {
       return OutlinedButton.icon(
         onPressed: onTap,
         icon: Icon(icon, size: 16),
-        label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        label: FittedBox(fit: BoxFit.scaleDown, child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           side: BorderSide(color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight),
@@ -1246,7 +1309,7 @@ class _HeroButton extends StatelessWidget {
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(icon, color: Colors.white, size: 16),
               const SizedBox(width: 6),
-              Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+              Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)))),
             ]),
           ),
         ),

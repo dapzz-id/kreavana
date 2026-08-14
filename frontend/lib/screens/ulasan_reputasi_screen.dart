@@ -4,6 +4,8 @@ import '../app/subrole_theme_engine.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
 
+import '../widgets/skeleton/skeleton_list.dart';
+
 class UlasanReputasiScreen extends StatefulWidget {
   final UserModel? user;
   final ValueChanged<UserModel>? onUserUpdated;
@@ -158,7 +160,7 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
               if (_isLoading)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 40),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: SkeletonList(),
                 )
               else if (filteredReviews.isEmpty)
                 _buildEmptyState(isDark)

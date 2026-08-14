@@ -5,11 +5,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app/theme.dart';
 import 'services/auth_session_state.dart';
 import 'features/auth/services/auth_service.dart';
+
+import 'services/realtime_service.dart';
+import 'services/fcm_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/call_service.dart';
 import 'services/badge_service.dart';
 import 'services/user_store.dart';
 import 'services/app_router.dart';
+import 'services/encryption_service.dart';
+import 'services/secure_storage_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -19,13 +24,13 @@ import 'firebase_options.dart';
 import 'widgets/global_call_overlay.dart';
 import 'services/url_strategy.dart';
 
-import 'services/navigator_key.dart';
 export 'services/navigator_key.dart' show navigatorKey;
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  ServicesBinding.instance.channelBuffers.resize('flutter/lifecycle', 64);
 
   // Pakai path-based URL (/login) bukan hash-based (/#/login).
   // No-op di platform native (Windows/Android/iOS) via conditional import.
@@ -45,10 +50,15 @@ void main() async {
     providerApple: AppleAppAttestProvider(),
   );
 
-  // Aktivasi Crashlytics hanya untuk Mobile (Non-Web)
-  if (!kIsWeb) {
+  // Aktivasi Crashlytics hanya untuk Mobile (Android & iOS)
+  final isCrashlyticsSupported = !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+
+  if (isCrashlyticsSupported) {
     PlatformDispatcher.instance.onError = (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      try {
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      } catch (_) {}
       return true;
     };
   }
@@ -75,22 +85,7 @@ void main() async {
   // Inisialisasi notifikasi di background — jangan blokir splash/login.
   unawaited(PushNotificationService.initialize());
 
-  // Restore session dari local storage → set ke global user notifier
-  try {
-    final loggedIn = await AuthService.isLoggedIn();
-    if (loggedIn) {
-      final user = await AuthService.getCurrentUser();
-      if (user != null) {
-        currentUserNotifier.value = user;
-        authSignedOutNotifier.value = false;
-        CallService().initPusher();
-        BadgeService().startPolling();
-      }
-    }
-  } catch (_) {
-    // Session load failed, proceed to login screen
-  }
-
+  // Error handling global Flutter.
   FlutterError.onError = (FlutterErrorDetails details) {
     // Ignore only known-benign GPU/engine hiccups — NOT everything with 'context'.
     final msg = details.exceptionAsString().toLowerCase();
@@ -100,13 +95,42 @@ void main() async {
       return;
     }
     
-    // Laporkan ke Crashlytics jika bukan di web
-    if (!kIsWeb) {
-      FirebaseCrashlytics.instance.recordFlutterFatalError(details);
+    // Laporkan ke Crashlytics jika di mobile (Android/iOS)
+    if (isCrashlyticsSupported) {
+      try {
+        FirebaseCrashlytics.instance.recordFlutterFatalError(details);
+      } catch (_) {}
     }
     
     FlutterError.presentError(details);
   };
+
+  // Restore session dari local storage → set ke global user notifier
+  try {
+    final loggedIn = await AuthService.isLoggedIn();
+    if (loggedIn) {
+      final user = await AuthService.getCurrentUser();
+      if (user != null) {
+        currentUserNotifier.value = user;
+        authSignedOutNotifier.value = false;
+        CallService().initPusher();
+        
+        final token = await SecureStorageService().getToken();
+        if (token != null) {
+          RealtimeService().init(user.id ?? '', token);
+        }
+        
+        
+        FCMService().init();
+        BadgeService().startPolling();
+        
+        // Initialize E2EE Keys
+        EncryptionService().initializeKeys();
+      }
+    }
+  } catch (_) {
+    // Session load failed, proceed to login screen
+  }
 
   runApp(const KreavanaApp());
 }

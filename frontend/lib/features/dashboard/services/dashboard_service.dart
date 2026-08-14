@@ -90,24 +90,18 @@ class DashboardService {
     required String subRole,
     int limit = 5,
   }) async {
-    print('DEBUG: Fetching opportunities for subRole: $subRole');
     final result = await ApiService.get(
       'dashboard/opportunities',
       queryParams: {'sub_role_slug': subRole, 'limit': limit.toString()},
     );
 
-    print('DEBUG: API result status: ${result['status']}');
-    print('DEBUG: API result data: ${result['data']}');
-
     if (result['status'] == true && result['data'] != null) {
       final List<dynamic> data = result['data'];
-      print('DEBUG: Parsed ${data.length} opportunities from API');
       if (data.isNotEmpty) {
         return data.map((item) => OpportunityModel.fromJson(item)).toList();
       }
     }
 
-    print('DEBUG: Using fallback data for opportunities');
     // Fallback data
     return _getFallbackOpportunities(subRole);
   }

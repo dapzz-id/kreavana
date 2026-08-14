@@ -17,6 +17,11 @@ class ApiService {
   /// dan bisa dimuat dari Flutter Web.
   static String resolveAssetUrl(String? url) {
     if (url == null || url.isEmpty) return '';
+    // Rewrite /storage/avatar/file.jpg → /api/avatars/file.jpg
+    if (url.contains('/storage/avatar/') && !url.contains('/api/avatars/')) {
+      return url.replaceFirst(RegExp(r'/storage/avatar/'), '/api/avatars/');
+    }
+    // Rewrite /avatars/file.jpg → /api/avatars/file.jpg
     if (url.contains('/avatars/') && !url.contains('/api/avatars/')) {
       return url.replaceFirst('/avatars/', '/api/avatars/');
     }
@@ -86,9 +91,12 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> delete(String endpoint) async {
+  static Future<Map<String, dynamic>> delete(
+    String endpoint, {
+    Map<String, dynamic>? data,
+  }) async {
     try {
-      final response = await _dio.delete('/$endpoint');
+      final response = await _dio.delete('/$endpoint', data: data);
       return _formatResponse(response);
     } on DioException catch (e) {
       return _handleError(e);

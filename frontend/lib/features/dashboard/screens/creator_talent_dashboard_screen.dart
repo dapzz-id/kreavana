@@ -1,3 +1,4 @@
+import '../../../services/badge_service.dart';
 import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../../models/user_model.dart';
@@ -13,7 +14,7 @@ import '../../../screens/profile_screen.dart';
 import '../../../services/portfolio_service.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
-import '../../../services/badge_service.dart';
+import '../../../widgets/skeleton/skeleton_grid.dart';
 
 class CreatorTalentDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -283,49 +284,52 @@ class _CreatorTalentDashboardScreenState
 
   Widget _buildAppBarBadge(IconData icon, String count, bool isDark) {
     final isNotification = icon == Icons.notifications_none_outlined;
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        IconButton(
-          icon: Icon(
-            icon,
-            color: isDark ? Colors.white70 : Colors.grey.shade700,
-            size: 24,
-          ),
-          onPressed: () {
+    return ListenableBuilder(
+      listenable: BadgeService(),
+      builder: (context, _) {
+        final badgeCount = isNotification ? BadgeService().unreadNotificationsText : BadgeService().unreadMessagesText;
+        return GestureDetector(
+          onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => isNotification
-                    ? NotificationsScreen(userId: widget.user.id ?? '')
+                    ? NotificationsScreen(userId: '')
                     : const DirectMessageScreen(),
               ),
             );
           },
-        ),
-        Positioned(
-          top: 6,
-          right: 6,
           child: Container(
-            width: 18,
-            height: 18,
-            decoration: const BoxDecoration(
-              color: Colors.red,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade100,
               shape: BoxShape.circle,
             ),
-            child: Center(
-              child: Text(
-                count,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(icon, size: 20, color: isDark ? Colors.white : Colors.black87),
+                if (badgeCount.isNotEmpty && badgeCount != '0')
+                  Positioned(
+                    right: -4,
+                    top: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.redAccent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        badgeCount,
+                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -821,7 +825,7 @@ class _CreatorTalentDashboardScreenState
           ),
           const SizedBox(height: 12),
           if (_isLoadingPortfolio)
-            const Center(child: CircularProgressIndicator())
+            const SkeletonGrid(itemCount: 4)
           else if (_portfolioItems.isEmpty)
             GridView.count(
               crossAxisCount: 3,

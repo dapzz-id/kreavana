@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:dart_pusher_channels/dart_pusher_channels.dart';
 import 'api_service.dart';
 import 'badge_service.dart';
+import 'encryption_service.dart';
 
 class ChatService {
   static PusherChannelsClient? _pusher;
@@ -163,6 +164,14 @@ class ChatService {
     return [];
   }
 
+  static Future<List<dynamic>> fetchDevices(String chatId) async {
+    final response = await ApiService.get('chats/$chatId/devices');
+    if (response['status'] == true && response['data'] is List) {
+      return response['data'];
+    }
+    return [];
+  }
+
   static Future<List<dynamic>> fetchMessages(String chatId) async {
     final response = await ApiService.get('chats/$chatId/messages');
     if (response['status'] == true && response['data'] is List) {
@@ -171,12 +180,26 @@ class ChatService {
     return [];
   }
 
-  static Future<Map<String, dynamic>> sendMessage(String chatId, String text, {String? replyToId}) async {
+  static Future<Map<String, dynamic>> sendMessage(String chatId, String text, {String? replyToId, bool encrypt = true}) async {
     final body = <String, dynamic>{
       'type': 'text',
       'message': text,
     };
     if (replyToId != null) body['reply_to_id'] = replyToId;
+
+    if (encrypt && EncryptionService().isInitialized) {
+      // 1. Fetch active devices for all participants in this chat
+      final devices = await fetchDevices(chatId);
+      
+      // 2. Encrypt the message for all those devices
+      final List<Map<String, dynamic>> deviceList = List<Map<String, dynamic>>.from(devices);
+      final encryptedPayload = EncryptionService().encryptMessageForMultipleDevices(text, deviceList);
+      
+      body.addAll(encryptedPayload);
+      body.remove('message'); // Do not send plaintext
+    } else {
+      body['encryption_version'] = 0;
+    }
 
     final response = await ApiService.post('chats/$chatId/messages', body);
     return response;
@@ -250,11 +273,31 @@ class ChatService {
   }
 
   static Future<List<dynamic>> searchUsers(String query) async {
-    final response = await ApiService.get('users/search?q=$query');
+    final cleanQ = query.trim().toLowerCase();
+    if (cleanQ.isEmpty) return [];
+
+    final response = await ApiService.get('users/search?q=${Uri.encodeComponent(cleanQ)}');
+    final list = <dynamic>[];
     if (response['status'] == true && response['data'] is List) {
-      return response['data'];
+      list.addAll(response['data']);
     }
-    return [];
+
+    try {
+      final contacts = await fetchContacts();
+      for (var c in contacts) {
+        final id = c['id']?.toString() ?? '';
+        final name = (c['name'] ?? '').toString().toLowerCase();
+        final username = (c['username'] ?? '').toString().toLowerCase();
+        final email = (c['email'] ?? '').toString().toLowerCase();
+
+        if ((name.contains(cleanQ) || username.contains(cleanQ) || email.contains(cleanQ)) &&
+            !list.any((u) => u['id']?.toString() == id)) {
+          list.add(c);
+        }
+      }
+    } catch (_) {}
+
+    return list;
   }
 
   /// Daftar kontak (admin, kreator, klien) untuk memulai obrolan/panggilan.
@@ -275,11 +318,21 @@ class ChatService {
     await ApiService.delete('groups/$chatId/members/$userId');
   }
 
-  static Future<void> updateGroupDetails(String chatId, String name, String description) async {
-    await ApiService.put('groups/$chatId/details', {
+  static Future<Map<String, dynamic>> updateGroupDetails(
+    String chatId,
+    String name,
+    String description, {
+    String? avatarUrl,
+  }) async {
+    final body = <String, dynamic>{
       'name': name,
       'description': description,
-    });
+    };
+    if (avatarUrl != null) {
+      body['avatar_url'] = avatarUrl;
+    }
+    final response = await ApiService.put('groups/$chatId/details', body);
+    return response;
   }
 
   static Future<void> makeAdmin(String chatId, String userId) async {

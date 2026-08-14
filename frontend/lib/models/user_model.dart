@@ -13,6 +13,15 @@ class UserModel {
   final int followersCount;
   final int followingCount;
   final bool isFollowing;
+  final String subscriptionTier;
+  final int storageLimitBytes;
+  final int usedStorageBytes;
+  final int maxVoiceCallDurationSeconds;
+  final int maxVideoCallDurationSeconds;
+  final double performanceBoost;
+  final String? publicKey;
+  final String? bio;
+  final String? location;
 
   UserModel({
     this.id,
@@ -21,6 +30,8 @@ class UserModel {
     required this.email,
     this.avatarUrl,
     this.phone,
+    this.bio,
+    this.location,
     this.role = 'user',
     this.subRole,
     this.isCreatorApproved = false,
@@ -29,6 +40,13 @@ class UserModel {
     this.followersCount = 0,
     this.followingCount = 0,
     this.isFollowing = false,
+    this.subscriptionTier = 'free',
+    this.storageLimitBytes = 104857600, // 100MB default
+    this.usedStorageBytes = 0,
+    this.publicKey,
+    this.maxVoiceCallDurationSeconds = 3600,
+    this.maxVideoCallDurationSeconds = 1800,
+    this.performanceBoost = 1.0,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -39,6 +57,8 @@ class UserModel {
       email: json['email'] ?? '',
       avatarUrl: json['avatar_url'],
       phone: json['phone'],
+      bio: json['bio']?.toString() ?? json['description']?.toString(),
+      location: json['location']?.toString() ?? json['city']?.toString(),
       role: json['role'] ?? 'user',
       subRole: json['sub_role'] is Map
           ? json['sub_role']['value']?.toString()
@@ -51,6 +71,13 @@ class UserModel {
       followersCount: json['followers_count'] ?? 0,
       followingCount: json['following_count'] ?? 0,
       isFollowing: json['is_following'] ?? false,
+      subscriptionTier: json['subscription_tier'] ?? 'free',
+      storageLimitBytes: json['storage_limit_bytes'] ?? 104857600,
+      usedStorageBytes: json['used_storage_bytes'] ?? 0,
+      publicKey: json['public_key'],
+      maxVoiceCallDurationSeconds: json['max_voice_call_duration_seconds'] ?? 3600,
+      maxVideoCallDurationSeconds: json['max_video_call_duration_seconds'] ?? 1800,
+      performanceBoost: json['performance_boost'] != null ? double.parse(json['performance_boost'].toString()) : 1.0,
     );
   }
 
@@ -62,6 +89,8 @@ class UserModel {
       'email': email,
       'avatar_url': avatarUrl,
       'phone': phone,
+      'bio': bio,
+      'location': location,
       'role': role,
       'sub_role': subRole,
       'is_creator_approved': isCreatorApproved ? 1 : 0,
@@ -70,6 +99,13 @@ class UserModel {
       'followers_count': followersCount,
       'following_count': followingCount,
       'is_following': isFollowing,
+      'subscription_tier': subscriptionTier,
+      'storage_limit_bytes': storageLimitBytes,
+      'used_storage_bytes': usedStorageBytes,
+      'public_key': publicKey,
+      'max_voice_call_duration_seconds': maxVoiceCallDurationSeconds,
+      'max_video_call_duration_seconds': maxVideoCallDurationSeconds,
+      'performance_boost': performanceBoost,
     };
   }
 
@@ -87,6 +123,13 @@ class UserModel {
     int? followersCount,
     int? followingCount,
     bool? isFollowing,
+    String? subscriptionTier,
+    int? storageLimitBytes,
+    int? usedStorageBytes,
+    String? publicKey,
+    int? maxVoiceCallDurationSeconds,
+    int? maxVideoCallDurationSeconds,
+    double? performanceBoost,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -98,11 +141,18 @@ class UserModel {
       role: role ?? this.role,
       subRole: subRole ?? this.subRole,
       isCreatorApproved: isCreatorApproved ?? this.isCreatorApproved,
-      createdAt: createdAt,
+      createdAt: createdAt ?? createdAt,
       balance: balance ?? this.balance,
       followersCount: followersCount ?? this.followersCount,
       followingCount: followingCount ?? this.followingCount,
       isFollowing: isFollowing ?? this.isFollowing,
+      subscriptionTier: subscriptionTier ?? this.subscriptionTier,
+      storageLimitBytes: storageLimitBytes ?? this.storageLimitBytes,
+      usedStorageBytes: usedStorageBytes ?? this.usedStorageBytes,
+      publicKey: publicKey ?? this.publicKey,
+      maxVoiceCallDurationSeconds: maxVoiceCallDurationSeconds ?? this.maxVoiceCallDurationSeconds,
+      maxVideoCallDurationSeconds: maxVideoCallDurationSeconds ?? this.maxVideoCallDurationSeconds,
+      performanceBoost: performanceBoost ?? this.performanceBoost,
     );
   }
 

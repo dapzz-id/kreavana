@@ -4,6 +4,7 @@ class NotificationModel {
   final String title;
   final String body;
   final String type;
+  final Map<String, dynamic>? data;
   bool isRead;
   final String createdAt;
 
@@ -13,6 +14,7 @@ class NotificationModel {
     required this.title,
     required this.body,
     this.type = 'info',
+    this.data,
     this.isRead = false,
     required this.createdAt,
   });
@@ -24,6 +26,7 @@ class NotificationModel {
       title: json['title'] ?? '',
       body: json['body'] ?? json['message'] ?? '',
       type: json['type'] ?? 'info',
+      data: json['data'] is Map ? Map<String, dynamic>.from(json['data']) : null,
       isRead: json['is_read'] == 1 ||
           json['is_read'] == true ||
           json['is_read'] == '1',

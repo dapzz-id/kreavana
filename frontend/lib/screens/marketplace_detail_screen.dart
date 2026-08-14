@@ -7,11 +7,10 @@ import '../app/app_animations.dart';
 import '../models/marketplace_item.dart';
 import '../services/marketplace_service.dart';
 import '../services/follow_service.dart';
-import '../services/chat_service.dart';
 import '../features/auth/services/auth_service.dart';
-import '../services/api_service.dart';
 import '../utils/app_errors.dart';
-import 'direct_message_screen.dart';
+import '../widgets/wallet_pin_dialog.dart';
+import 'package:go_router/go_router.dart';
 
 class MarketplaceDetailScreen extends StatefulWidget {
   final String itemId;
@@ -132,52 +131,27 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
     }
   }
 
-  Future<void> _contactCreator() async {
-    final item = _item;
-    final creatorId = item?.userId;
-    if (creatorId == null || creatorId.isEmpty) {
-      if (mounted) AppSnackbar.error(context, 'Kreator tidak ditemukan.');
-      return;
-    }
-    try {
-      final result = await ChatService.startPersonalChat(creatorId);
-      if (!mounted) return;
-
-      final chatData = result['data'];
-      if (chatData == null) {
-        if (mounted) AppSnackbar.error(context, 'Gagal membuka chat.');
-        return;
-      }
-
-      final chat = Map<String, dynamic>.from(chatData is Map ? chatData : result);
-      chat['username'] = item?.creator?.username;
-      chat['phone'] = item?.creator?.phone;
-      chat['email'] = item?.creator?.email;
-      chat['avatar_url'] = ApiService.resolveAssetUrl(item?.creator?.avatarUrl);
-      chat['user_id'] = creatorId;
-      chat['isOnline'] = item?.creator?.isOnline == true;
-      chat['isTyping'] = item?.creator?.isTyping == true;
-      chat['last_online'] = item?.creator?.lastOnline;
-      chat['isGroup'] = false;
-
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => Scaffold(
-            body: ChatDetailSection(chat: chat, isMobile: true),
-          ),
-        ),
-      );
-    } catch (e) {
-      if (mounted) AppSnackbar.error(context, AppErrors.friendly(e));
-    }
-  }
 
   Future<void> _purchaseItem() async {
     if (_item == null) return;
+
+    final pin = await WalletPinDialog.show(
+      context,
+      title: 'Konfirmasi Pembelian',
+      subtitle: 'Masukkan PIN wallet untuk membeli "${_item!.title}".',
+    );
+
+    if (pin == 'GO_WALLET') {
+      if (!mounted) return;
+      context.go('/wallet');
+      return;
+    }
+
+    if (pin == null || !mounted) return;
+
     setState(() => _isSubmitting = true);
     try {
-      final result = await MarketplaceService.purchaseItem(_item!.id);
+      final result = await MarketplaceService.purchaseItem(_item!.id, pin: pin);
       if (mounted) {
         setState(() => _isSubmitting = false);
         if (result['status'] == true) {
