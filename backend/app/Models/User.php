@@ -13,7 +13,7 @@ use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-#[Fillable(['name', 'username', 'email', 'password', 'avatar_url', 'phone', 'role', 'sub_role', 'is_creator_approved', 'balance', 'last_online', 'used_storage_bytes', 'public_key', 'performance_boost'])]
+#[Fillable(['name', 'username', 'email', 'password', 'avatar_url', 'phone', 'role', 'sub_role', 'is_creator_approved', 'balance', 'last_online', 'used_storage_bytes', 'public_key', 'performance_boost', 'email_verification_code_hash', 'email_verification_expires_at', 'email_verification_attempts'])]
 #[Hidden(['password', 'remember_token', 'wallet_pin'])]
 class User extends Authenticatable implements JWTSubject
 {
@@ -29,6 +29,7 @@ class User extends Authenticatable implements JWTSubject
     {
         return [
             'email_verified_at' => 'datetime',
+            'email_verification_expires_at' => 'datetime',
             'last_online' => 'datetime',
             'password' => 'hashed',
         ];
