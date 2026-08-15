@@ -255,4 +255,25 @@ class AuthService {
       'message': result['message'] ?? 'Login dengan $provider gagal.',
     };
   }
+
+  /// Verifikasi email dengan kode OTP
+  static Future<Map<String, dynamic>> verifyEmail({
+    required String email,
+    required String code,
+  }) async {
+    return ApiService.post('auth/verify-email', {
+      'email': email,
+      'code': code,
+    });
+  }
+
+  /// Kirim ulang kode verifikasi email
+  static Future<Map<String, dynamic>> resendVerificationCode({
+    required String email,
+  }) async {
+    return ApiService.post('auth/resend-verification', {
+      'email': email,
+    });
+  }
 }
+

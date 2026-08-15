@@ -89,9 +89,20 @@ class _LoginScreenState extends State<LoginScreen>
           PushNotificationService.initialize();
           if (mounted) context.go(AppRoutes.beranda);
         } else {
-          setState(() {
-            _errorMessage = AppErrors.messageFromResult(result);
-          });
+          // Check for email_not_verified from API error response
+          final errorCode = result['error_code']?.toString() ?? '';
+          if (errorCode == 'email_not_verified') {
+            final email = result['data']?['email']?.toString() ?? _usernameOrEmailController.text.trim();
+            if (mounted) {
+              // Auto-send new OTP and redirect to verification screen
+              AuthService.resendVerificationCode(email: email);
+              context.go(AppRoutes.verifyEmail, extra: {'email': email, 'autoResend': true});
+            }
+          } else {
+            setState(() {
+              _errorMessage = AppErrors.messageFromResult(result);
+            });
+          }
         }
       }
     }

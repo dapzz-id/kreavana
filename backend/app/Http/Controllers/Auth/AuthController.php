@@ -43,7 +43,14 @@ class AuthController extends Controller
             'password' => $request->password,
         ]);
 
-        return response()->json(['status' => true], 201);
+        return response()->json([
+            'status' => true,
+            'message' => 'Pendaftaran berhasil. Silakan verifikasi email Anda.',
+            'data' => [
+                'email' => $user->email,
+                'requires_verification' => true,
+            ],
+        ], 201);
     }
 
     /**
@@ -91,6 +98,17 @@ class AuthController extends Controller
 
         if ($token === null) {
             return response()->json(['status' => false, 'message' => 'Email atau kata sandi salah.'], 401);
+        }
+
+        if ($token === 'email_not_verified') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Email Anda belum diverifikasi.',
+                'error_code' => 'email_not_verified',
+                'data' => [
+                    'email' => $request->email,
+                ],
+            ], 403);
         }
 
         if ($token === 'forbidden') {
@@ -338,6 +356,16 @@ class AuthController extends Controller
                 SendSocialLoginPasswordJob::dispatch($email, $plainPassword);
 
                 $isNewUser = true;
+            } else {
+                // Auto-verify existing user's email if not yet verified
+                if ($user->email_verified_at === null) {
+                    $user->update([
+                        'email_verified_at' => now(),
+                        'email_verification_code_hash' => null,
+                        'email_verification_expires_at' => null,
+                        'email_verification_attempts' => 0,
+                    ]);
+                }
             }
 
             // Log successful login
@@ -540,5 +568,73 @@ class AuthController extends Controller
         }
         
         return $username;
+    }
+
+    /**
+     * Verify email with OTP code.
+     */
+    public function verifyEmail(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|string|email',
+            'code' => 'required|string|size:6|regex:/^[0-9]{6}$/',
+        ]);
+
+        $result = $this->authService->verifyEmail($request->email, $request->code);
+
+        return match ($result) {
+            'success' => response()->json([
+                'status' => true,
+                'message' => 'Email berhasil diverifikasi.',
+            ]),
+            'verification_code_expired' => response()->json([
+                'status' => false,
+                'message' => 'Kode verifikasi sudah kedaluwarsa. Silakan minta kode baru.',
+                'error_code' => 'verification_code_expired',
+            ], 422),
+            'verification_attempts_exceeded' => response()->json([
+                'status' => false,
+                'message' => 'Terlalu banyak percobaan. Silakan minta kode verifikasi baru.',
+                'error_code' => 'verification_attempts_exceeded',
+            ], 422),
+            default => response()->json([
+                'status' => false,
+                'message' => 'Kode verifikasi tidak valid.',
+                'error_code' => 'invalid_verification_code',
+            ], 422),
+        };
+    }
+
+    /**
+     * Resend email verification OTP.
+     */
+    public function resendVerificationCode(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|string|email',
+        ]);
+
+        $result = $this->authService->resendVerificationCode($request->email);
+
+        return match ($result) {
+            'success' => response()->json([
+                'status' => true,
+                'message' => 'Kode verifikasi baru telah dikirim ke email Anda.',
+            ]),
+            'email_already_verified' => response()->json([
+                'status' => true,
+                'message' => 'Email sudah terverifikasi.',
+                'error_code' => 'email_already_verified',
+            ]),
+            'verification_resend_rate_limited' => response()->json([
+                'status' => false,
+                'message' => 'Mohon tunggu sebelum meminta kode verifikasi baru.',
+                'error_code' => 'verification_resend_rate_limited',
+            ], 429),
+            default => response()->json([
+                'status' => false,
+                'message' => 'Gagal mengirim kode verifikasi.',
+            ], 400),
+        };
     }
 }
