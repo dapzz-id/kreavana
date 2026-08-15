@@ -24,4 +24,21 @@ interface AuthServiceInterface
      * @return string|null (Token or null if failed, 'forbidden' if wrong role)
      */
     public function attemptLogin(array $credentials, string $ip, string $userAgent, ?string $requiredRole = null): ?string;
+
+    /**
+     * Verify email using OTP code.
+     *
+     * @param string $email
+     * @param string $code
+     * @return string 'success' | error identifier
+     */
+    public function verifyEmail(string $email, string $code): string;
+
+    /**
+     * Resend email verification code.
+     *
+     * @param string $email
+     * @return string 'success' | error identifier
+     */
+    public function resendVerificationCode(string $email): string;
 }
