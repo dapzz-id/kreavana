@@ -115,7 +115,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                 children: [
                   Icon(Icons.check_circle, color: Colors.white, size: 18),
                   SizedBox(width: 8),
-                  Text('Pendaftaran berhasil! Silakan masuk.'),
+                  Expanded(child: Text('Pendaftaran berhasil! Silakan verifikasi email Anda.')),
                 ],
               ),
               backgroundColor: AppTheme.success,
@@ -124,7 +124,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                   borderRadius: BorderRadius.circular(12)),
             ),
           );
-          context.go(AppRoutes.login);
+          final email = result['data']?['email']?.toString() ?? _emailController.text.trim();
+          context.go(AppRoutes.verifyEmail, extra: email);
         } else {
           setState(() {
             _errorMessage = result['message']?.toString() ??

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
+import '../features/auth/screens/email_verification_screen.dart';
 import '../screens/main_navigation.dart';
 import 'user_store.dart';
 import 'auth_session_state.dart';
@@ -31,6 +32,7 @@ class AppRoutes {
   static const adminDashboard = '/dashboard';
   static const adminVerification = '/verifikasi';
   static const adminResolution = '/resolusi';
+  static const verifyEmail = '/verify-email';
 }
 
 const _routeIndexMap = {
@@ -57,7 +59,7 @@ const _adminRouteIndexMap = {
 };
 
 /// Route-route yang tidak memerlukan autentikasi.
-const _publicRoutes = [AppRoutes.login, AppRoutes.register];
+const _publicRoutes = [AppRoutes.login, AppRoutes.register, AppRoutes.verifyEmail];
 
 /// GoRouter instance global aplikasi.
 final GoRouter appRouter = GoRouter(
@@ -97,6 +99,28 @@ final GoRouter appRouter = GoRouter(
       path: AppRoutes.register,
       name: 'register',
       builder: (context, state) => const RegisterScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.verifyEmail,
+      name: 'verify-email',
+      redirect: (context, state) {
+        final extra = state.extra;
+        if (extra == null) return AppRoutes.login;
+        if (extra is String && extra.isEmpty) return AppRoutes.login;
+        if (extra is Map && (extra['email'] == null || (extra['email'] as String).isEmpty)) return AppRoutes.login;
+        if (extra is! String && extra is! Map) return AppRoutes.login;
+        return null;
+      },
+      builder: (context, state) {
+        final extra = state.extra;
+        if (extra is Map) {
+          return EmailVerificationScreen(
+            email: extra['email'] as String,
+            autoResend: extra['autoResend'] == true,
+          );
+        }
+        return EmailVerificationScreen(email: extra as String);
+      },
     ),
 
     // ── Authenticated routes (semua via MainNavigation) ──────────────────
