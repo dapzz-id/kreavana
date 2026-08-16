@@ -286,13 +286,20 @@ class AppTheme {
       // Snackbar
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
+        backgroundColor: cardDark,
+        elevation: 12,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radiusMD),
+          borderRadius: BorderRadius.circular(radiusLG),
+          side: BorderSide(color: primaryPurple.withValues(alpha: 0.3), width: 1),
         ),
         contentTextStyle: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
         ),
+        actionTextColor: accentPink,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       ),
       // Bottom Sheet
       bottomSheetTheme: const BottomSheetThemeData(
@@ -524,13 +531,20 @@ class AppTheme {
       // Snackbar
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF1A1726),
+        elevation: 12,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radiusMD),
+          borderRadius: BorderRadius.circular(radiusLG),
+          side: BorderSide(color: lightPurple.withValues(alpha: 0.3), width: 1),
         ),
         contentTextStyle: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
         ),
+        actionTextColor: accentPink,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       ),
       // Bottom Sheet
       bottomSheetTheme: const BottomSheetThemeData(
