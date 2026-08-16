@@ -3,9 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\{
-    ChatController, MessageController, GroupController, UserController,
+    Auth\AuthController, ChatController, MessageController, GroupController, UserController,
     DashboardController, ProfileController, NotificationController,
     CallController, AdminController, OpportunityController, WalletController,
     RoleController, FollowController, MarketplaceController,
