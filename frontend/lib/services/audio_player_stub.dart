@@ -12,4 +12,5 @@ abstract class BaseAudioPlayer {
   void dispose();
 }
 
-BaseAudioPlayer createAudioPlayer() => throw UnsupportedError('Cannot create audio player');
+BaseAudioPlayer createAudioPlayer() =>
+    throw UnsupportedError('Cannot create audio player');

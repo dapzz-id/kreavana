@@ -24,11 +24,8 @@ class E2EEHardeningPhase5Test extends TestCase
             'is_active' => true,
         ]);
 
-        // Fake login with JWT
-        $token = \Tymon\JWTAuth\Facades\JWTAuth::fromUser($user);
-
         // Perform logout
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $response = $this->actingAsApi($user)
                          ->postJson('/api/auth/logout');
 
         $response->assertStatus(200);

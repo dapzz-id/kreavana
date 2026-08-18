@@ -92,13 +92,13 @@ class OpportunityModel {
       location: json['location'],
       latitude: json['latitude'] != null
           ? (json['latitude'] is double
-              ? json['latitude']
-              : double.tryParse(json['latitude'].toString()))
+                ? json['latitude']
+                : double.tryParse(json['latitude'].toString()))
           : null,
       longitude: json['longitude'] != null
           ? (json['longitude'] is double
-              ? json['longitude']
-              : double.tryParse(json['longitude'].toString()))
+                ? json['longitude']
+                : double.tryParse(json['longitude'].toString()))
           : null,
       locationCategory: json['location_category'],
       address: json['address'],

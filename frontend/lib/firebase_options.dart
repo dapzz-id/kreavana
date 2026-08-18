@@ -63,7 +63,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1093327579845',
     projectId: 'kreavana-com',
     storageBucket: 'kreavana-com.firebasestorage.app',
-    iosClientId: '1093327579845-3coe8jgs9k99vcfvrf20oij24jsuc9bq.apps.googleusercontent.com',
+    iosClientId:
+        '1093327579845-3coe8jgs9k99vcfvrf20oij24jsuc9bq.apps.googleusercontent.com',
     iosBundleId: 'cv.alamkreasi.kreavana',
   );
   static const FirebaseOptions macos = FirebaseOptions(
@@ -72,7 +73,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1093327579845',
     projectId: 'kreavana-com',
     storageBucket: 'kreavana-com.firebasestorage.app',
-    iosClientId: '1093327579845-3coe8jgs9k99vcfvrf20oij24jsuc9bq.apps.googleusercontent.com',
+    iosClientId:
+        '1093327579845-3coe8jgs9k99vcfvrf20oij24jsuc9bq.apps.googleusercontent.com',
     iosBundleId: 'cv.alamkreasi.kreavana',
   );
 

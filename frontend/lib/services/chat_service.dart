@@ -12,11 +12,15 @@ class ChatService {
   static bool _isConnected = false;
   static final Set<String> _subscribedChatIds = {};
   static final Set<String> _pendingChatIds = {};
-  static final StreamController<Map<String, dynamic>> _messageStreamController = StreamController.broadcast();
-  static final StreamController<Map<String, dynamic>> _deletedMessageStreamController = StreamController.broadcast();
-  
-  static Stream<Map<String, dynamic>> get messageStream => _messageStreamController.stream;
-  static Stream<Map<String, dynamic>> get deletedMessageStream => _deletedMessageStreamController.stream;
+  static final StreamController<Map<String, dynamic>> _messageStreamController =
+      StreamController.broadcast();
+  static final StreamController<Map<String, dynamic>>
+  _deletedMessageStreamController = StreamController.broadcast();
+
+  static Stream<Map<String, dynamic>> get messageStream =>
+      _messageStreamController.stream;
+  static Stream<Map<String, dynamic>> get deletedMessageStream =>
+      _deletedMessageStreamController.stream;
 
   static Future<void> markAsRead(String chatId) async {
     await ApiService.post('chats/$chatId/read', {});
@@ -81,7 +85,9 @@ class ChatService {
       debugPrint('📨 Received message.sent event on chat.$chatId');
       if (event.data != null) {
         try {
-          final data = event.data is String ? jsonDecode(event.data) : event.data;
+          final data = event.data is String
+              ? jsonDecode(event.data)
+              : event.data;
           final msg = data['message'];
           if (msg != null) {
             msg['chat_id'] = chatId;
@@ -101,7 +107,9 @@ class ChatService {
       debugPrint('🗑️ Received message.deleted event on chat.$chatId');
       if (event.data != null) {
         try {
-          final data = event.data is String ? jsonDecode(event.data) : event.data;
+          final data = event.data is String
+              ? jsonDecode(event.data)
+              : event.data;
           final payload = data['payload'] ?? data;
           if (payload != null && payload['id'] != null) {
             _deletedMessageStreamController.add({
@@ -130,7 +138,9 @@ class ChatService {
         _bindChannel(chatId);
       } else {
         _pendingChatIds.add(chatId);
-        debugPrint('⏳ Queued subscription for chat.$chatId (waiting for connection)');
+        debugPrint(
+          '⏳ Queued subscription for chat.$chatId (waiting for connection)',
+        );
       }
     } catch (e) {
       debugPrint('Pusher chat error: $e');
@@ -180,21 +190,25 @@ class ChatService {
     return [];
   }
 
-  static Future<Map<String, dynamic>> sendMessage(String chatId, String text, {String? replyToId, bool encrypt = true}) async {
-    final body = <String, dynamic>{
-      'type': 'text',
-      'message': text,
-    };
+  static Future<Map<String, dynamic>> sendMessage(
+    String chatId,
+    String text, {
+    String? replyToId,
+    bool encrypt = true,
+  }) async {
+    final body = <String, dynamic>{'type': 'text', 'message': text};
     if (replyToId != null) body['reply_to_id'] = replyToId;
 
     if (encrypt && EncryptionService().isInitialized) {
       // 1. Fetch active devices for all participants in this chat
       final devices = await fetchDevices(chatId);
-      
+
       // 2. Encrypt the message for all those devices
-      final List<Map<String, dynamic>> deviceList = List<Map<String, dynamic>>.from(devices);
-      final encryptedPayload = EncryptionService().encryptMessageForMultipleDevices(text, deviceList);
-      
+      final List<Map<String, dynamic>> deviceList =
+          List<Map<String, dynamic>>.from(devices);
+      final encryptedPayload = EncryptionService()
+          .encryptMessageForMultipleDevices(text, deviceList);
+
       body.addAll(encryptedPayload);
       body.remove('message'); // Do not send plaintext
     } else {
@@ -205,14 +219,23 @@ class ChatService {
     return response;
   }
 
-  static Future<Map<String, dynamic>> sendAudioMessage(String chatId, String filePath, {String? replyToId}) async {
+  static Future<Map<String, dynamic>> sendAudioMessage(
+    String chatId,
+    String filePath, {
+    String? replyToId,
+  }) async {
     final bytes = await File(filePath).readAsBytes();
     final ext = filePath.split('.').last.toLowerCase();
     final mime = _getAudioMime(ext);
     return sendAudioBytes(chatId, bytes, mime, replyToId: replyToId);
   }
 
-  static Future<Map<String, dynamic>> sendAudioBytes(String chatId, Uint8List bytes, String mimeType, {String? replyToId}) async {
+  static Future<Map<String, dynamic>> sendAudioBytes(
+    String chatId,
+    Uint8List bytes,
+    String mimeType, {
+    String? replyToId,
+  }) async {
     final base64Data = base64Encode(bytes);
     final body = <String, dynamic>{
       'type': 'audio',
@@ -244,15 +267,26 @@ class ChatService {
     }
   }
 
-  static Future<Map<String, dynamic>> deleteMessage(String chatId, String messageId, {String scope = 'me'}) async {
-    final response = await ApiService.post('chats/$chatId/messages/$messageId/delete', {
-      'scope': scope,
-    });
+  static Future<Map<String, dynamic>> deleteMessage(
+    String chatId,
+    String messageId, {
+    String scope = 'me',
+  }) async {
+    final response = await ApiService.post(
+      'chats/$chatId/messages/$messageId/delete',
+      {'scope': scope},
+    );
     return response;
   }
 
-  static Future<Map<String, dynamic>> createGroup(String name, String description) async {
-    final res = await ApiService.post('groups', {'name': name, 'description': description});
+  static Future<Map<String, dynamic>> createGroup(
+    String name,
+    String description,
+  ) async {
+    final res = await ApiService.post('groups', {
+      'name': name,
+      'description': description,
+    });
     return res;
   }
 
@@ -269,14 +303,18 @@ class ChatService {
   }
 
   static Future<void> updateGroupSettings(String chatId, bool onlyAdmin) async {
-    await ApiService.put('groups/$chatId/settings', {'only_admin_can_add': onlyAdmin});
+    await ApiService.put('groups/$chatId/settings', {
+      'only_admin_can_add': onlyAdmin,
+    });
   }
 
   static Future<List<dynamic>> searchUsers(String query) async {
     final cleanQ = query.trim().toLowerCase();
     if (cleanQ.isEmpty) return [];
 
-    final response = await ApiService.get('users/search?q=${Uri.encodeComponent(cleanQ)}');
+    final response = await ApiService.get(
+      'users/search?q=${Uri.encodeComponent(cleanQ)}',
+    );
     final list = <dynamic>[];
     if (response['status'] == true && response['data'] is List) {
       list.addAll(response['data']);
@@ -290,7 +328,9 @@ class ChatService {
         final username = (c['username'] ?? '').toString().toLowerCase();
         final email = (c['email'] ?? '').toString().toLowerCase();
 
-        if ((name.contains(cleanQ) || username.contains(cleanQ) || email.contains(cleanQ)) &&
+        if ((name.contains(cleanQ) ||
+                username.contains(cleanQ) ||
+                email.contains(cleanQ)) &&
             !list.any((u) => u['id']?.toString() == id)) {
           list.add(c);
         }
@@ -310,7 +350,9 @@ class ChatService {
   }
 
   static Future<Map<String, dynamic>> startPersonalChat(String userId) async {
-    final response = await ApiService.post('chats/personal', {'user_id': userId});
+    final response = await ApiService.post('chats/personal', {
+      'user_id': userId,
+    });
     return response;
   }
 
@@ -324,10 +366,7 @@ class ChatService {
     String description, {
     String? avatarUrl,
   }) async {
-    final body = <String, dynamic>{
-      'name': name,
-      'description': description,
-    };
+    final body = <String, dynamic>{'name': name, 'description': description};
     if (avatarUrl != null) {
       body['avatar_url'] = avatarUrl;
     }

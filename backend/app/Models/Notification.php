@@ -26,6 +26,7 @@ class Notification extends Model
         'data' => 'array',
         'is_read' => 'boolean',
         'created_at' => 'datetime',
+        'type' => \App\Enums\NotificationType::class,
     ];
 
     public function user()

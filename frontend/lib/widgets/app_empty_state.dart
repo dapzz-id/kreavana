@@ -39,7 +39,9 @@ class AppEmptyState extends StatelessWidget {
                 height: iconSize + 24,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppTheme.primaryPurple.withValues(alpha: isDark ? 0.12 : 0.08),
+                  color: AppTheme.primaryPurple.withValues(
+                    alpha: isDark ? 0.12 : 0.08,
+                  ),
                 ),
                 child: Icon(
                   icon,
@@ -62,7 +64,9 @@ class AppEmptyState extends StatelessWidget {
                   subtitle!,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                    color: isDark
+                        ? AppTheme.textMuted
+                        : AppTheme.textMutedLight,
                     height: 1.5,
                   ),
                 ),
@@ -77,7 +81,9 @@ class AppEmptyState extends StatelessWidget {
                     backgroundColor: AppTheme.primaryPurple,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppTheme.radiusMD),
                     ),
@@ -153,7 +159,9 @@ class AppErrorState extends StatelessWidget {
                   foregroundColor: AppTheme.primaryPurple,
                   side: const BorderSide(color: AppTheme.primaryPurple),
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 10),
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppTheme.radiusMD),
                   ),
@@ -211,11 +219,7 @@ class AppDot extends StatelessWidget {
   final Color color;
   final double size;
 
-  const AppDot({
-    super.key,
-    this.color = AppTheme.error,
-    this.size = 8,
-  });
+  const AppDot({super.key, this.color = AppTheme.error, this.size = 8});
 
   @override
   Widget build(BuildContext context) {

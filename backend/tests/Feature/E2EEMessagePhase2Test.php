@@ -14,17 +14,7 @@ class E2EEMessagePhase2Test extends TestCase
 {
     use RefreshDatabase;
 
-    private function getAuthHeaders(User $user)
-    {
-        $token = JWTAuth::fromUser($user);
-        $payload = JWTAuth::setToken($token)->getPayload();
-        $jti = $payload->get('jti');
-        if ($jti) {
-            \App\Services\JtiService::store($jti, 3600);
-        }
-        return ['Authorization' => "Bearer $token"];
-    }
-
+    
     public function test_legacy_plaintext_message_still_works()
     {
         $user1 = User::factory()->create();
@@ -95,8 +85,8 @@ class E2EEMessagePhase2Test extends TestCase
             'ciphertext' => 'Base64Ciphertext',
             'iv' => 'Base64IV',
             'message_keys' => [
-                ['device_id' => $device1->id, 'encrypted_key' => 'KeyForDev1'],
-                ['device_id' => $device2->id, 'encrypted_key' => 'KeyForDev2'],
+                ['device_id' => $device1->device_id, 'encrypted_key' => 'KeyForDev1'],
+                ['device_id' => $device2->device_id, 'encrypted_key' => 'KeyForDev2'],
             ],
         ]);
 

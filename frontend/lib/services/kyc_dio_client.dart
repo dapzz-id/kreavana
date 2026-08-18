@@ -23,25 +23,31 @@ class KycDioClient {
     dio = Dio(
       BaseOptions(
         baseUrl: DioClient.baseUrl,
-        connectTimeout: const Duration(milliseconds: 3000), // Strict 3000ms timeout
-        receiveTimeout: const Duration(milliseconds: 3000), // Strict 3000ms timeout
+        connectTimeout: const Duration(
+          milliseconds: 3000,
+        ), // Strict 3000ms timeout
+        receiveTimeout: const Duration(
+          milliseconds: 3000,
+        ), // Strict 3000ms timeout
         extra: const {'withCredentials': true},
         headers: {
-            'Accept': 'application/json',
-            'Connection': 'keep-alive', // Connection pooling
+          'Accept': 'application/json',
+          'Connection': 'keep-alive', // Connection pooling
         },
       ),
     );
 
     // Logging interceptor (Task 11.5)
-    dio.interceptors.add(LogInterceptor(
-      request: true,
-      requestHeader: true,
-      requestBody: true,
-      responseHeader: true,
-      responseBody: true,
-      error: true,
-    ));
+    dio.interceptors.add(
+      LogInterceptor(
+        request: true,
+        requestHeader: true,
+        requestBody: true,
+        responseHeader: true,
+        responseBody: true,
+        error: true,
+      ),
+    );
 
     dio.interceptors.add(
       InterceptorsWrapper(
@@ -68,10 +74,10 @@ class KycDioClient {
             int retryCount = error.requestOptions.extra[_retryCountKey] ?? 0;
             if (retryCount < _maxRetries) {
               retryCount++;
-              
+
               // Exponential backoff
               await Future.delayed(Duration(milliseconds: 500 * retryCount));
-              
+
               try {
                 final opts = Options(
                   method: error.requestOptions.method,
@@ -81,7 +87,7 @@ class KycDioClient {
                     _retryCountKey: retryCount,
                   },
                 );
-                
+
                 final response = await dio.request(
                   error.requestOptions.path,
                   options: opts,
@@ -146,9 +152,11 @@ class KycDioClient {
 
   bool _shouldRetry(DioException error) {
     return error.type == DioExceptionType.connectionTimeout ||
-           error.type == DioExceptionType.sendTimeout ||
-           error.type == DioExceptionType.receiveTimeout ||
-           (error.response != null && error.response!.statusCode != null && error.response!.statusCode! >= 500);
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        (error.response != null &&
+            error.response!.statusCode != null &&
+            error.response!.statusCode! >= 500);
   }
 
   Future<bool> _refreshToken() async {

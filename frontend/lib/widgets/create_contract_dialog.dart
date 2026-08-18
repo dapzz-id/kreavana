@@ -24,7 +24,10 @@ class _CreateContractDialogState extends State<CreateContractDialog> {
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
   final _amountController = TextEditingController();
-  final _termsController = TextEditingController(text: 'Penyelesaian wajib disetujui kedua pihak sebelum pencairan dana. Garansi revisi 2x.');
+  final _termsController = TextEditingController(
+    text:
+        'Penyelesaian wajib disetujui kedua pihak sebelum pencairan dana. Garansi revisi 2x.',
+  );
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 7));
 
   @override
@@ -50,9 +53,15 @@ class _CreateContractDialogState extends State<CreateContractDialog> {
 
   void _submit() {
     if (_formKey.currentState?.validate() ?? false) {
-      final amount = double.tryParse(_amountController.text.replaceAll('.', '').replaceAll(',', '')) ?? 0.0;
-      final contractId = 'KONTRAK-${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}';
-      final deadlineStr = '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
+      final amount =
+          double.tryParse(
+            _amountController.text.replaceAll('.', '').replaceAll(',', ''),
+          ) ??
+          0.0;
+      final contractId =
+          'KONTRAK-${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}';
+      final deadlineStr =
+          '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
 
       final contract = JobContract(
         id: contractId,
@@ -84,10 +93,17 @@ class _CreateContractDialogState extends State<CreateContractDialog> {
               color: theme.colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(Icons.description, color: theme.colorScheme.primary, size: 24),
+            child: Icon(
+              Icons.description,
+              color: theme.colorScheme.primary,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 12),
-          const Text('Buat Kontrak Pekerjaan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Buat Kontrak Pekerjaan',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
       content: SingleChildScrollView(
@@ -99,7 +115,10 @@ class _CreateContractDialogState extends State<CreateContractDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Isi kesepakatan job antara Klien & Kreator secara transparan dan aman.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                const Text(
+                  'Isi kesepakatan job antara Klien & Kreator secara transparan dan aman.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _titleController,
@@ -109,7 +128,9 @@ class _CreateContractDialogState extends State<CreateContractDialog> {
                     prefixIcon: Icon(Icons.work_outline),
                     border: OutlineInputBorder(),
                   ),
-                  validator: (val) => val == null || val.trim().isEmpty ? 'Judul pekerjaan wajib diisi' : null,
+                  validator: (val) => val == null || val.trim().isEmpty
+                      ? 'Judul pekerjaan wajib diisi'
+                      : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -117,10 +138,13 @@ class _CreateContractDialogState extends State<CreateContractDialog> {
                   maxLines: 3,
                   decoration: const InputDecoration(
                     labelText: 'Deskripsi & Lingkup Pekerjaan',
-                    hintText: 'Tuliskan rincian hasil karya, format deliverable, dan revisi...',
+                    hintText:
+                        'Tuliskan rincian hasil karya, format deliverable, dan revisi...',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (val) => val == null || val.trim().isEmpty ? 'Deskripsi pekerjaan wajib diisi' : null,
+                  validator: (val) => val == null || val.trim().isEmpty
+                      ? 'Deskripsi pekerjaan wajib diisi'
+                      : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -133,9 +157,13 @@ class _CreateContractDialogState extends State<CreateContractDialog> {
                     border: OutlineInputBorder(),
                   ),
                   validator: (val) {
-                    if (val == null || val.trim().isEmpty) return 'Nilai kontrak wajib diisi';
-                    final num = double.tryParse(val.replaceAll('.', '').replaceAll(',', ''));
-                    if (num == null || num <= 0) return 'Nilai kontrak tidak valid';
+                    if (val == null || val.trim().isEmpty)
+                      return 'Nilai kontrak wajib diisi';
+                    final num = double.tryParse(
+                      val.replaceAll('.', '').replaceAll(',', ''),
+                    );
+                    if (num == null || num <= 0)
+                      return 'Nilai kontrak tidak valid';
                     return null;
                   },
                 ),
@@ -151,7 +179,10 @@ class _CreateContractDialogState extends State<CreateContractDialog> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('${_selectedDate.day}-${_selectedDate.month}-${_selectedDate.year}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                          '${_selectedDate.day}-${_selectedDate.month}-${_selectedDate.year}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         const Icon(Icons.edit_calendar, size: 18),
                       ],
                     ),

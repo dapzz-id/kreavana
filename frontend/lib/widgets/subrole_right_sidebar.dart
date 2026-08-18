@@ -9,6 +9,7 @@ import '../screens/proyek_saya_screen.dart';
 import '../screens/wallet_screen.dart';
 import '../screens/laporan_screen.dart';
 import '../screens/profile_screen.dart';
+import '../screens/creator_calendar_screen.dart';
 import '../services/profile_completeness_service.dart';
 
 class SubRoleRightSidebar extends StatelessWidget {
@@ -27,7 +28,10 @@ class SubRoleRightSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accentColor = SubRoleThemeEngine.getAccentColor(user.role, user.subRole);
+    final accentColor = SubRoleThemeEngine.getAccentColor(
+      user.role,
+      user.subRole,
+    );
 
     return Column(
       children: [
@@ -41,7 +45,6 @@ class SubRoleRightSidebar extends StatelessWidget {
   }
 
   Widget _buildProfileCard(BuildContext context, Color accentColor) {
-    final isCreator = user.role == 'creator' || user.isCreator;
     final subRoleConfig = SubRoleThemeEngine.getConfig(user.role, user.subRole);
     final subRoleLabel = subRoleConfig.label;
 
@@ -66,7 +69,8 @@ class SubRoleRightSidebar extends StatelessWidget {
               CircleAvatar(
                 radius: 28,
                 backgroundColor: accentColor.withValues(alpha: 0.12),
-                backgroundImage: user.avatarUrl != null && user.avatarUrl!.isNotEmpty
+                backgroundImage:
+                    user.avatarUrl != null && user.avatarUrl!.isNotEmpty
                     ? NetworkImage(ApiService.resolveAssetUrl(user.avatarUrl!))
                     : null,
                 child: user.avatarUrl == null || user.avatarUrl!.isEmpty
@@ -110,78 +114,114 @@ class SubRoleRightSidebar extends StatelessWidget {
                       builder: (_) => ProfileScreen(
                         user: user,
                         onUserUpdated: onUserUpdated ?? (_) {},
-                        onLogout: onLogout ?? () => Navigator.of(context).popUntil((r) => r.isFirst),
+                        onLogout:
+                            onLogout ??
+                            () => Navigator.of(
+                              context,
+                            ).popUntil((r) => r.isFirst),
                       ),
                     ),
                   );
                 },
                 style: TextButton.styleFrom(
                   foregroundColor: accentColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                 ),
-                child: const Text('Profil', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Profil',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          Builder(builder: (context) {
-            final completeness = ProfileCompleteness.calculate(user);
-            return Column(
-              children: [
-                GestureDetector(
-                  onTap: () => ProfileCompleteness.showChecklistModal(context, user, onRefresh: () => onUserUpdated?.call(user)),
-                  child: Column(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: LinearProgressIndicator(
-                          value: completeness.percentage / 100.0,
-                          minHeight: 7,
-                          backgroundColor: accentColor.withValues(alpha: 0.12),
-                          valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+          Builder(
+            builder: (context) {
+              final completeness = ProfileCompleteness.calculate(user);
+              return Column(
+                children: [
+                  GestureDetector(
+                    onTap: () => ProfileCompleteness.showChecklistModal(
+                      context,
+                      user,
+                      onRefresh: () => onUserUpdated?.call(user),
+                    ),
+                    child: Column(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: LinearProgressIndicator(
+                            value: completeness.percentage / 100.0,
+                            minHeight: 7,
+                            backgroundColor: accentColor.withValues(
+                              alpha: 0.12,
+                            ),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              accentColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Kelengkapan profil',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark
+                                    ? AppTheme.textMuted
+                                    : AppTheme.textMutedLight,
+                              ),
+                            ),
+                            Text(
+                              '${completeness.percentage}%',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: accentColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () => ProfileCompleteness.showChecklistModal(
+                        context,
+                        user,
+                        onRefresh: () => onUserUpdated?.call(user),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        side: BorderSide(
+                          color: accentColor.withValues(alpha: 0.4),
+                        ),
+                        foregroundColor: accentColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Kelengkapan profil',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
-                            ),
-                          ),
-                          Text(
-                            '${completeness.percentage}%',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: accentColor,
-                            ),
-                          ),
-                        ],
+                      child: const Text(
+                        'Lengkapi Profil',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => ProfileCompleteness.showChecklistModal(context, user, onRefresh: () => onUserUpdated?.call(user)),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      side: BorderSide(color: accentColor.withValues(alpha: 0.4)),
-                      foregroundColor: accentColor,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    child: const Text('Lengkapi Profil', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                   ),
-                ),
-              ],
-            );
-          }),
+                ],
+              );
+            },
+          ),
         ],
       ),
     );
@@ -213,7 +253,9 @@ class SubRoleRightSidebar extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
@@ -250,15 +292,56 @@ class SubRoleRightSidebar extends StatelessWidget {
                 onTap: () {
                   final label = action['label'] as String;
                   if (label == 'Buat Kebutuhan') {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const BuatKebutuhanScreen()));
-                  } else if (label == 'Cari Kreator' || label == 'Cari Peluang') {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => ExploreScreen(user: user)));
-                  } else if (label == 'Bandingkan' || label == 'Setujui Proyek' || label == 'Kirim Proposal') {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => ProyekSayaScreen(user: user)));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const BuatKebutuhanScreen(),
+                      ),
+                    );
+                  } else if (label == 'Cari Kreator' ||
+                      label == 'Cari Peluang') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ExploreScreen(user: user),
+                      ),
+                    );
+                  } else if (label == 'Bandingkan' ||
+                      label == 'Setujui Proyek' ||
+                      label == 'Kirim Proposal') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ProyekSayaScreen(user: user),
+                      ),
+                    );
+                  } else if (label == 'Atur Jadwal') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CreatorCalendarScreen(),
+                      ),
+                    );
                   } else if (label == 'Bayar DP' || label == 'Tarik Dana') {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => WalletScreen(user: user, onUserUpdated: onUserUpdated ?? (_) {})));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => WalletScreen(
+                          user: user,
+                          onUserUpdated: onUserUpdated ?? (_) {},
+                        ),
+                      ),
+                    );
                   } else if (label == 'Laporan') {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => LaporanScreen(user: user, onUserUpdated: onUserUpdated ?? (_) {})));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => LaporanScreen(
+                          user: user,
+                          onUserUpdated: onUserUpdated ?? (_) {},
+                        ),
+                      ),
+                    );
                   }
                 },
                 borderRadius: BorderRadius.circular(12),
@@ -266,12 +349,20 @@ class SubRoleRightSidebar extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: accentColor.withValues(alpha: isDark ? 0.12 : 0.06),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: accentColor.withValues(alpha: isDark ? 0.25 : 0.15)),
+                    border: Border.all(
+                      color: accentColor.withValues(
+                        alpha: isDark ? 0.25 : 0.15,
+                      ),
+                    ),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon((action['icon'] as IconData?) ?? Icons.image_outlined, color: accentColor, size: 22),
+                      Icon(
+                        (action['icon'] as IconData?) ?? Icons.image_outlined,
+                        color: accentColor,
+                        size: 22,
+                      ),
                       const SizedBox(height: 8),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -329,7 +420,11 @@ class SubRoleRightSidebar extends StatelessWidget {
                   color: accentColor,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                child: const Icon(
+                  Icons.auto_awesome,
+                  color: Colors.white,
+                  size: 16,
+                ),
               ),
               const SizedBox(width: 10),
               Text(
@@ -365,7 +460,9 @@ class SubRoleRightSidebar extends StatelessWidget {
                         tip,
                         style: TextStyle(
                           fontSize: 12,
-                          color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
+                          color: isDark
+                              ? AppTheme.textMuted
+                              : Colors.grey.shade700,
                           height: 1.4,
                         ),
                       ),

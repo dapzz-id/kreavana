@@ -128,10 +128,15 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       final matchedUsers = allUsers.where((u) {
         final name = (u['name'] ?? '').toString().toLowerCase();
         final username = (u['username'] ?? '').toString().toLowerCase();
-        final subRole = (u['selected_sub_role'] ?? u['sub_role'] ?? '').toString().toLowerCase();
+        final subRole = (u['selected_sub_role'] ?? u['sub_role'] ?? '')
+            .toString()
+            .toLowerCase();
         final email = (u['email'] ?? '').toString().toLowerCase();
 
-        return name.contains(q) || username.contains(q) || subRole.contains(q) || email.contains(q);
+        return name.contains(q) ||
+            username.contains(q) ||
+            subRole.contains(q) ||
+            email.contains(q);
       }).toList();
 
       final matchedOpps = opps.where((o) {
@@ -171,10 +176,20 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       case 'Proyek':
         return _opportunityResults.where((o) => o.isProject).toList();
       case 'Lokasi':
-        return _opportunityResults.where((o) => o.isLocation || (o.location != null && o.location!.isNotEmpty)).toList();
+        return _opportunityResults
+            .where(
+              (o) =>
+                  o.isLocation ||
+                  (o.location != null && o.location!.isNotEmpty),
+            )
+            .toList();
       case 'Komunitas':
         return _opportunityResults
-            .where((o) => o.subRoleSlug.toLowerCase() == 'community' || o.title.toLowerCase().contains('komunitas'))
+            .where(
+              (o) =>
+                  o.subRoleSlug.toLowerCase() == 'community' ||
+                  o.title.toLowerCase().contains('komunitas'),
+            )
             .toList();
       default:
         return _opportunityResults;
@@ -187,7 +202,14 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     }
     if (_selectedFilter == 'Lokasi') {
       final q = _searchController.text.toLowerCase();
-      return _userResults.where((u) => (u['location'] ?? u['city'] ?? '').toString().toLowerCase().contains(q)).toList();
+      return _userResults
+          .where(
+            (u) => (u['location'] ?? u['city'] ?? '')
+                .toString()
+                .toLowerCase()
+                .contains(q),
+          )
+          .toList();
     }
     return [];
   }
@@ -198,7 +220,9 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F0D1B) : const Color(0xFFF8F9FE),
+      backgroundColor: isDark
+          ? const Color(0xFF0F0D1B)
+          : const Color(0xFFF8F9FE),
       appBar: AppBar(
         toolbarHeight: 70,
         backgroundColor: isDark ? const Color(0xFF141221) : Colors.white,
@@ -213,7 +237,9 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             color: isDark ? const Color(0xFF1E1B32) : Colors.grey.shade100,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isDark ? AppTheme.inputBorder : AppTheme.primaryPurple.withValues(alpha: 0.2),
+              color: isDark
+                  ? AppTheme.inputBorder
+                  : AppTheme.primaryPurple.withValues(alpha: 0.2),
             ),
           ),
           child: Row(
@@ -289,13 +315,21 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                         f,
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                          color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.grey.shade700),
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.w500,
+                          color: isSelected
+                              ? Colors.white
+                              : (isDark
+                                    ? Colors.white70
+                                    : Colors.grey.shade700),
                         ),
                       ),
                       selected: isSelected,
                       selectedColor: AppTheme.primaryPurple,
-                      backgroundColor: isDark ? const Color(0xFF1E1B32) : Colors.grey.shade100,
+                      backgroundColor: isDark
+                          ? const Color(0xFF1E1B32)
+                          : Colors.grey.shade100,
                       onSelected: (_) {
                         setState(() => _selectedFilter = f);
                       },
@@ -329,7 +363,11 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.local_fire_department_rounded, color: Colors.orangeAccent, size: 20),
+                const Icon(
+                  Icons.local_fire_department_rounded,
+                  color: Colors.orangeAccent,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 const Text(
                   'Pencarian Populer',
@@ -348,11 +386,17 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: isDark ? Colors.white.withValues(alpha: 0.9) : Colors.grey.shade800,
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.9)
+                          : Colors.grey.shade800,
                     ),
                   ),
-                  backgroundColor: isDark ? const Color(0xFF1E1B32) : Colors.white,
-                  side: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade200),
+                  backgroundColor: isDark
+                      ? const Color(0xFF1E1B32)
+                      : Colors.white,
+                  side: BorderSide(
+                    color: isDark ? Colors.white10 : Colors.grey.shade200,
+                  ),
                   onPressed: () => _applyTagQuery(tag),
                 );
               }).toList(),
@@ -364,17 +408,27 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.history_rounded, color: AppTheme.primaryPurple, size: 20),
+                    const Icon(
+                      Icons.history_rounded,
+                      color: AppTheme.primaryPurple,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     const Text(
                       'Pencarian Terakhir',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
                 TextButton(
                   onPressed: () => setState(() => _recentSearches.clear()),
-                  child: const Text('Hapus', style: TextStyle(fontSize: 12, color: Colors.redAccent)),
+                  child: const Text(
+                    'Hapus',
+                    style: TextStyle(fontSize: 12, color: Colors.redAccent),
+                  ),
                 ),
               ],
             ),
@@ -384,15 +438,23 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
               runSpacing: 8,
               children: _recentSearches.map<Widget>((tag) {
                 return Chip(
-                  avatar: const Icon(Icons.search_rounded, size: 14, color: AppTheme.primaryPurple),
+                  avatar: const Icon(
+                    Icons.search_rounded,
+                    size: 14,
+                    color: AppTheme.primaryPurple,
+                  ),
                   label: Text(
                     tag,
                     style: TextStyle(
                       fontSize: 12,
-                      color: isDark ? Colors.white.withValues(alpha: 0.9) : Colors.grey.shade800,
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.9)
+                          : Colors.grey.shade800,
                     ),
                   ),
-                  backgroundColor: isDark ? const Color(0xFF1A1830) : Colors.grey.shade100,
+                  backgroundColor: isDark
+                      ? const Color(0xFF1A1830)
+                      : Colors.grey.shade100,
                   deleteIcon: const Icon(Icons.arrow_forward_rounded, size: 14),
                   onDeleted: () => _applyTagQuery(tag),
                 );
@@ -406,7 +468,9 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF161426) : Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
+                  border: Border.all(
+                    color: isDark ? Colors.white10 : Colors.grey.shade200,
+                  ),
                 ),
                 child: Column(
                   children: [
@@ -416,12 +480,19 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                         color: AppTheme.primaryPurple.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.search_rounded, size: 40, color: AppTheme.primaryPurple),
+                      child: const Icon(
+                        Icons.search_rounded,
+                        size: 40,
+                        color: AppTheme.primaryPurple,
+                      ),
                     ),
                     const SizedBox(height: 14),
                     const Text(
                       'Temukan Kreator & Proyek Terbaik',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
@@ -429,7 +500,9 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 12,
-                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                        color: isDark
+                            ? AppTheme.textMuted
+                            : Colors.grey.shade600,
                       ),
                     ),
                   ],
@@ -452,7 +525,9 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF161426) : Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
+            border: Border.all(
+              color: isDark ? Colors.white10 : Colors.grey.shade200,
+            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -516,7 +591,9 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     final name = user['name'] ?? 'Unknown';
     final username = user['username'] ?? '';
     final subRole = user['selected_sub_role'] ?? user['sub_role'] ?? 'Kreator';
-    final avatarUrl = ApiService.resolveAssetUrl(user['avatar_url']?.toString() ?? '');
+    final avatarUrl = ApiService.resolveAssetUrl(
+      user['avatar_url']?.toString() ?? '',
+    );
     final userId = user['id']?.toString() ?? '';
 
     return Container(
@@ -524,14 +601,18 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF161426) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.grey.shade200,
+        ),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         leading: CircleAvatar(
           radius: 24,
           backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.15),
-          backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+          backgroundImage: avatarUrl.isNotEmpty
+              ? NetworkImage(avatarUrl)
+              : null,
           child: avatarUrl.isEmpty
               ? Text(
                   name.toString().isNotEmpty ? name[0].toUpperCase() : '?',
@@ -548,11 +629,18 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             Expanded(
               child: Text(
                 name,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const Icon(Icons.verified_rounded, size: 15, color: AppTheme.primaryPurple),
+            const Icon(
+              Icons.verified_rounded,
+              size: 15,
+              color: AppTheme.primaryPurple,
+            ),
           ],
         ),
         subtitle: Column(
@@ -604,14 +692,19 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             }
           },
           icon: const Icon(Icons.chat_bubble_outline_rounded, size: 14),
-          label: const Text('Chat', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+          label: const Text(
+            'Chat',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppTheme.primaryPurple,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             minimumSize: Size.zero,
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         ),
         onTap: () {
@@ -639,7 +732,9 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF161426) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.grey.shade200,
+        ),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -664,18 +759,29 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         subtitle: Row(
           children: [
             if (opp.location != null && opp.location!.isNotEmpty) ...[
-              Icon(Icons.place_outlined, size: 12, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
+              Icon(
+                Icons.place_outlined,
+                size: 12,
+                color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+              ),
               const SizedBox(width: 2),
               Text(
                 opp.location!,
-                style: TextStyle(fontSize: 11, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                ),
               ),
               const SizedBox(width: 8),
             ],
             if (opp.budgetRange != null && opp.budgetRange!.isNotEmpty)
               Text(
                 opp.budgetRange!,
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
               ),
           ],
         ),
@@ -687,9 +793,14 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             side: BorderSide(color: color.withValues(alpha: 0.5)),
             foregroundColor: color,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
-          child: const Text('Detail', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+          child: const Text(
+            'Detail',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+          ),
         ),
         onTap: () => _openDetail(opp),
       ),

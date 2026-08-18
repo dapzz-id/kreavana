@@ -16,7 +16,12 @@ class ContractCardWidget extends StatelessWidget {
   });
 
   String _formatAmount(double amount) {
-    return amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    return amount
+        .toStringAsFixed(0)
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
   }
 
   @override
@@ -27,41 +32,33 @@ class ContractCardWidget extends StatelessWidget {
     final isCreator = currentUserId == contract.creatorId;
     final isClient = currentUserId == contract.clientId;
 
-    Color statusColor;
-    String statusText;
+    Color statusColor = Colors.grey;
+    String statusText = 'Draft';
 
-    switch (contract.status) {
-      case 'APPROVED':
-        statusColor = const Color(0xFF3B82F6);
-        statusText = 'Disetujui kedua pihak';
-        break;
-      case 'ESCROW_PAID':
-        statusColor = const Color(0xFF10B981);
-        statusText = 'Escrow Terisi - Pekerjaan Berlangsung';
-        break;
-      case 'WORK_SUBMITTED':
-        statusColor = const Color(0xFFF59E0B);
-        statusText = 'Hasil Pekerjaan Dikirim';
-        break;
-      case 'COMPLETED':
-        statusColor = const Color(0xFF10B981);
-        statusText = 'Selesai & Dana Dicairkan';
-        break;
-      case 'CANCEL_REQUESTED':
-        statusColor = const Color(0xFFEF4444);
-        statusText = 'Pengajuan Pembatalan';
-        break;
-      case 'CANCELLED':
-        statusColor = Colors.grey;
-        statusText = 'Dibatalkan / Refund';
-        break;
-      case 'DISPUTED':
-        statusColor = const Color(0xFF8B5CF6);
-        statusText = 'Pendampingan Admin (Grup 3 Arah)';
-        break;
-      default:
-        statusColor = const Color(0xFF6366F1);
-        statusText = 'Draft / Menunggu Persetujuan';
+    if (contract.contractStatus == 'active' && contract.workStatus == 'pending') {
+      statusColor = const Color(0xFF3B82F6);
+      statusText = 'Disetujui kedua pihak';
+    } else if (contract.contractStatus == 'active' && contract.workStatus == 'in_progress') {
+      statusColor = const Color(0xFF10B981);
+      statusText = 'Escrow Terisi - Pekerjaan Berlangsung';
+    } else if (contract.contractStatus == 'active' && contract.workStatus == 'submitted') {
+      statusColor = const Color(0xFFF59E0B);
+      statusText = 'Hasil Pekerjaan Dikirim';
+    } else if (contract.contractStatus == 'completed') {
+      statusColor = const Color(0xFF10B981);
+      statusText = 'Selesai & Dana Dicairkan';
+    } else if (contract.contractStatus == 'proposed') {
+      statusColor = const Color(0xFFEF4444);
+      statusText = 'Pengajuan Pembatalan';
+    } else if (contract.contractStatus == 'cancelled') {
+      statusColor = Colors.grey;
+      statusText = 'Dibatalkan';
+    } else if (contract.contractStatus == 'disputed') {
+      statusColor = const Color(0xFF8B5CF6);
+      statusText = 'Dalam Pendampingan Admin';
+    } else {
+      statusColor = const Color(0xFF6366F1);
+      statusText = 'Draft / Menunggu Persetujuan';
     }
 
     return Container(
@@ -70,7 +67,10 @@ class ContractCardWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E1B4B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: statusColor.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(
+          color: statusColor.withValues(alpha: 0.5),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
             color: statusColor.withValues(alpha: 0.1),
@@ -87,7 +87,10 @@ class ContractCardWidget extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: statusColor.withValues(alpha: 0.12),
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(14), topRight: Radius.circular(14)),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(14),
+                topRight: Radius.circular(14),
+              ),
             ),
             child: Row(
               children: [
@@ -96,15 +99,29 @@ class ContractCardWidget extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Kontrak #${contract.id}',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: statusColor),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: statusColor,
+                    ),
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: statusColor, borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   child: Text(
                     statusText,
-                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -117,9 +134,23 @@ class ContractCardWidget extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(contract.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                Text(
+                  contract.title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(contract.description, style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : Colors.grey.shade700), maxLines: 3, overflow: TextOverflow.ellipsis),
+                Text(
+                  contract.description,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.white70 : Colors.grey.shade700,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -127,8 +158,18 @@ class ContractCardWidget extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Nilai Kontrak', style: TextStyle(fontSize: 10, color: Colors.grey)),
-                          Text('Rp ${_formatAmount(contract.amount)}', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+                          const Text(
+                            'Nilai Kontrak',
+                            style: TextStyle(fontSize: 10, color: Colors.grey),
+                          ),
+                          Text(
+                            'Rp ${_formatAmount(contract.amount)}',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -136,26 +177,51 @@ class ContractCardWidget extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Tenggat Waktu', style: TextStyle(fontSize: 10, color: Colors.grey)),
-                          Text(contract.deadline, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          const Text(
+                            'Tenggat Waktu',
+                            style: TextStyle(fontSize: 10, color: Colors.grey),
+                          ),
+                          Text(
+                            contract.deadline,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ],
                 ),
-                if (contract.isPastDeadline && contract.status != 'COMPLETED' && contract.status != 'CANCELLED') ...[
+                if (contract.isPastDeadline &&
+                    contract.contractStatus != 'completed' &&
+                    contract.contractStatus != 'cancelled') ...[
                   const SizedBox(height: 10),
                   Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.amber.shade700)),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.shade700),
+                    ),
                     child: Row(
                       children: [
-                        Icon(Icons.warning_amber_rounded, size: 16, color: Colors.amber.shade800),
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          size: 16,
+                          color: Colors.amber.shade800,
+                        ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            contract.isPastOneWeekDeadline ? 'Tenggat waktu lewat 7 hari! Admin siap mendampingi di grup 3 arah.' : '⚠️ Tenggat waktu telah terlampaui.',
-                            style: TextStyle(fontSize: 10, color: Colors.amber.shade900, fontWeight: FontWeight.bold),
+                            contract.isPastOneWeekDeadline
+                                ? 'Tenggat waktu lewat 7 hari! Admin siap mendampingi di grup 3 arah.'
+                                : '⚠️ Tenggat waktu telah terlampaui.',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.amber.shade900,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -174,9 +240,15 @@ class ContractCardWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, bool isCreator, bool isClient) {
-    if (contract.status == 'DRAFT') {
-      final hasMyApproval = (isCreator && contract.creatorApproved) || (isClient && contract.clientApproved);
+  Widget _buildActionButtons(
+    BuildContext context,
+    bool isCreator,
+    bool isClient,
+  ) {
+    if (contract.contractStatus == 'draft') {
+      final hasMyApproval =
+          (isCreator && contract.creatorApproved) ||
+          (isClient && contract.clientApproved);
 
       return Row(
         children: [
@@ -185,19 +257,32 @@ class ContractCardWidget extends StatelessWidget {
               onPressed: hasMyApproval
                   ? null
                   : () async {
-                      final updated = await ContractEscrowService.approveContract(contract: contract, userId: currentUserId);
+                      final updated =
+                          await ContractEscrowService.approveContract(
+                            contract: contract,
+                            userId: currentUserId,
+                          );
                       onContractUpdated(updated);
                     },
-              icon: Icon(hasMyApproval ? Icons.check_circle : Icons.check, size: 16),
-              label: Text(hasMyApproval ? 'Sudah Anda Setujui' : 'Setujui Kontrak', style: const TextStyle(fontSize: 11)),
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), foregroundColor: Colors.white),
+              icon: Icon(
+                hasMyApproval ? Icons.check_circle : Icons.check,
+                size: 16,
+              ),
+              label: Text(
+                hasMyApproval ? 'Sudah Anda Setujui' : 'Setujui Kontrak',
+                style: const TextStyle(fontSize: 11),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF10B981),
+                foregroundColor: Colors.white,
+              ),
             ),
           ),
         ],
       );
     }
 
-    if (contract.status == 'APPROVED') {
+    if (contract.contractStatus == 'active' && contract.workStatus == 'pending') {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -205,37 +290,70 @@ class ContractCardWidget extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: () => _promptPayEscrow(context),
               icon: const Icon(Icons.shield_outlined, size: 16),
-              label: Text('Bayar Escrow (Rp ${_formatAmount(contract.amount)})', style: const TextStyle(fontSize: 11)),
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF3B82F6), foregroundColor: Colors.white, minimumSize: const Size(double.infinity, 36)),
+              label: Text(
+                'Bayar Escrow (Rp ${_formatAmount(contract.amount)})',
+                style: const TextStyle(fontSize: 11),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF3B82F6),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 36),
+              ),
             )
           else
-            const Text('Menunggu pembayaran Escrow dari Klien...', style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey)),
+            const Text(
+              'Menunggu pembayaran Escrow dari Klien...',
+              style: TextStyle(
+                fontSize: 11,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey,
+              ),
+            ),
         ],
       );
     }
 
-    if (contract.status == 'ESCROW_PAID' || contract.status == 'WORK_SUBMITTED') {
+    if (contract.contractStatus == 'active' && contract.workStatus == 'in_progress' ||
+        contract.contractStatus == 'active' && contract.workStatus == 'submitted') {
       return Column(
         children: [
-          if (isCreator && contract.status == 'ESCROW_PAID')
+          if (isCreator && contract.contractStatus == 'active' && contract.workStatus == 'in_progress')
             ElevatedButton.icon(
               onPressed: () {
                 final updated = ContractEscrowService.submitWork(contract);
                 onContractUpdated(updated);
               },
               icon: const Icon(Icons.file_upload_outlined, size: 16),
-              label: const Text('Kirim Hasil Pekerjaan', style: TextStyle(fontSize: 11)),
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF59E0B), foregroundColor: Colors.white, minimumSize: const Size(double.infinity, 36)),
+              label: const Text(
+                'Kirim Hasil Pekerjaan',
+                style: TextStyle(fontSize: 11),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF59E0B),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 36),
+              ),
             ),
-          if (isClient && (contract.status == 'WORK_SUBMITTED' || contract.status == 'ESCROW_PAID'))
+          if (isClient &&
+              (contract.contractStatus == 'active' && contract.workStatus == 'submitted' ||
+                  contract.contractStatus == 'active' && contract.workStatus == 'in_progress'))
             ElevatedButton.icon(
               onPressed: () {
-                final updated = ContractEscrowService.releaseEscrowToCreator(contract);
+                final updated = ContractEscrowService.releaseEscrowToCreator(
+                  contract,
+                );
                 onContractUpdated(updated);
               },
               icon: const Icon(Icons.verified, size: 16),
-              label: const Text('Setujui Pekerjaan & Cairkan Dana', style: TextStyle(fontSize: 11)),
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), foregroundColor: Colors.white, minimumSize: const Size(double.infinity, 36)),
+              label: const Text(
+                'Setujui Pekerjaan & Cairkan Dana',
+                style: TextStyle(fontSize: 11),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF10B981),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 36),
+              ),
             ),
           const SizedBox(height: 6),
           Row(
@@ -243,8 +361,15 @@ class ContractCardWidget extends StatelessWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => _promptCancellation(context),
-                  icon: const Icon(Icons.cancel_outlined, size: 14, color: Colors.red),
-                  label: const Text('Ajukan Pembatalan', style: TextStyle(fontSize: 10, color: Colors.red)),
+                  icon: const Icon(
+                    Icons.cancel_outlined,
+                    size: 14,
+                    color: Colors.red,
+                  ),
+                  label: const Text(
+                    'Ajukan Pembatalan',
+                    style: TextStyle(fontSize: 10, color: Colors.red),
+                  ),
                 ),
               ),
               if (contract.isPastOneWeekDeadline || contract.disputeOpened) ...[
@@ -253,8 +378,14 @@ class ContractCardWidget extends StatelessWidget {
                   child: ElevatedButton.icon(
                     onPressed: onOpenDisputeGroup,
                     icon: const Icon(Icons.group, size: 14),
-                    label: const Text('Grup + Admin', style: TextStyle(fontSize: 10)),
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6), foregroundColor: Colors.white),
+                    label: const Text(
+                      'Grup + Admin',
+                      style: TextStyle(fontSize: 10),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF8B5CF6),
+                      foregroundColor: Colors.white,
+                    ),
                   ),
                 ),
               ],
@@ -264,21 +395,36 @@ class ContractCardWidget extends StatelessWidget {
       );
     }
 
-    if (contract.status == 'CANCEL_REQUESTED') {
+    if (contract.contractStatus == 'proposed') {
       return Column(
         children: [
-          Text('Alasan: ${contract.cancelReason ?? "-"}', style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.red)),
+          Text(
+            'Alasan: ${contract.cancelReason ?? "-"}',
+            style: const TextStyle(
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
+              color: Colors.red,
+            ),
+          ),
           const SizedBox(height: 6),
           Row(
             children: [
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
-                    final updated = ContractEscrowService.approveCancellation(contract);
+                    final updated = ContractEscrowService.approveCancellation(
+                      contract,
+                    );
                     onContractUpdated(updated);
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-                  child: const Text('Setujui Pembatalan & Refund', style: TextStyle(fontSize: 10)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text(
+                    'Setujui Pembatalan & Refund',
+                    style: TextStyle(fontSize: 10),
+                  ),
                 ),
               ),
             ],
@@ -287,12 +433,19 @@ class ContractCardWidget extends StatelessWidget {
       );
     }
 
-    if (contract.status == 'DISPUTED') {
+    if (contract.contractStatus == 'disputed') {
       return ElevatedButton.icon(
         onPressed: onOpenDisputeGroup,
         icon: const Icon(Icons.groups, size: 16),
-        label: const Text('Buka Grup Pendampingan Admin (3 Arah)', style: TextStyle(fontSize: 11)),
-        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6), foregroundColor: Colors.white, minimumSize: const Size(double.infinity, 36)),
+        label: const Text(
+          'Buka Grup Pendampingan Admin (3 Arah)',
+          style: TextStyle(fontSize: 11),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF8B5CF6),
+          foregroundColor: Colors.white,
+          minimumSize: const Size(double.infinity, 36),
+        ),
       );
     }
 
@@ -309,18 +462,26 @@ class ContractCardWidget extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Transfer Rp ${_formatAmount(contract.amount)} ke saldo Escrow terikat. Dana tidak akan dicairkan sampai Anda menyetujui hasil pekerjaan.'),
+            Text(
+              'Transfer Rp ${_formatAmount(contract.amount)} ke saldo Escrow terikat. Dana tidak akan dicairkan sampai Anda menyetujui hasil pekerjaan.',
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: pinController,
               obscureText: true,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Masukkan PIN Transaksi', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Masukkan PIN Transaksi',
+                border: OutlineInputBorder(),
+              ),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -332,7 +493,9 @@ class ContractCardWidget extends StatelessWidget {
                 );
                 onContractUpdated(updated);
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Error: $e')));
               }
             },
             child: const Text('Bayar'),
@@ -351,17 +514,29 @@ class ContractCardWidget extends StatelessWidget {
         content: TextField(
           controller: reasonController,
           maxLines: 2,
-          decoration: const InputDecoration(labelText: 'Alasan Pembatalan', border: OutlineInputBorder()),
+          decoration: const InputDecoration(
+            labelText: 'Alasan Pembatalan',
+            border: OutlineInputBorder(),
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              final updated = ContractEscrowService.requestCancellation(contract, reasonController.text.trim());
+              final updated = ContractEscrowService.requestCancellation(
+                contract,
+                reasonController.text.trim(),
+              );
               onContractUpdated(updated);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Kirim Pengajuan'),
           ),
         ],

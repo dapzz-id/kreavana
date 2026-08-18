@@ -112,7 +112,11 @@ class _WalletPinDialogState extends State<WalletPinDialog> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.lock_rounded, color: Colors.white, size: 22),
+                    const Icon(
+                      Icons.lock_rounded,
+                      color: Colors.white,
+                      size: 22,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -138,8 +142,11 @@ class _WalletPinDialogState extends State<WalletPinDialog> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded,
-                          color: Colors.white, size: 20),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                       onPressed: () => Navigator.pop(context, null),
                       tooltip: 'Batal',
                     ),
@@ -165,14 +172,14 @@ class _WalletPinDialogState extends State<WalletPinDialog> {
                             color: filled
                                 ? AppTheme.primaryPurple
                                 : (isDark
-                                    ? Colors.grey.shade700
-                                    : Colors.grey.shade300),
+                                      ? Colors.grey.shade700
+                                      : Colors.grey.shade300),
                             border: Border.all(
                               color: filled
                                   ? AppTheme.primaryPurple
                                   : (isDark
-                                      ? Colors.grey.shade600
-                                      : Colors.grey.shade400),
+                                        ? Colors.grey.shade600
+                                        : Colors.grey.shade400),
                               width: 1.5,
                             ),
                           ),
@@ -209,7 +216,9 @@ class _WalletPinDialogState extends State<WalletPinDialog> {
                     _Numpad(
                       onDigit: _onDigit,
                       onDelete: _onDelete,
-                      onConfirm: _digits.length == _pinLength ? _onConfirm : null,
+                      onConfirm: _digits.length == _pinLength
+                          ? _onConfirm
+                          : null,
                     ),
                   ],
                 ),
@@ -251,16 +260,18 @@ class _Numpad extends StatelessWidget {
             decoration: BoxDecoration(
               color: isAction
                   ? (onTap != null
-                      ? AppTheme.primaryPurple
-                      : AppTheme.primaryPurple.withValues(alpha: 0.3))
+                        ? AppTheme.primaryPurple
+                        : AppTheme.primaryPurple.withValues(alpha: 0.3))
                   : (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Center(
               child: label == '⌫'
-                  ? Icon(Icons.backspace_rounded,
+                  ? Icon(
+                      Icons.backspace_rounded,
                       size: 20,
-                      color: isDark ? Colors.white70 : Colors.black54)
+                      color: isDark ? Colors.white70 : Colors.black54,
+                    )
                   : Text(
                       label,
                       style: TextStyle(
@@ -279,26 +290,34 @@ class _Numpad extends StatelessWidget {
 
     return Column(
       children: [
-        Row(children: [
-          key('1', onTap: () => onDigit('1')),
-          key('2', onTap: () => onDigit('2')),
-          key('3', onTap: () => onDigit('3')),
-        ]),
-        Row(children: [
-          key('4', onTap: () => onDigit('4')),
-          key('5', onTap: () => onDigit('5')),
-          key('6', onTap: () => onDigit('6')),
-        ]),
-        Row(children: [
-          key('7', onTap: () => onDigit('7')),
-          key('8', onTap: () => onDigit('8')),
-          key('9', onTap: () => onDigit('9')),
-        ]),
-        Row(children: [
-          key('⌫', onTap: onDelete),
-          key('0', onTap: () => onDigit('0')),
-          key('OK', onTap: onConfirm, isAction: true),
-        ]),
+        Row(
+          children: [
+            key('1', onTap: () => onDigit('1')),
+            key('2', onTap: () => onDigit('2')),
+            key('3', onTap: () => onDigit('3')),
+          ],
+        ),
+        Row(
+          children: [
+            key('4', onTap: () => onDigit('4')),
+            key('5', onTap: () => onDigit('5')),
+            key('6', onTap: () => onDigit('6')),
+          ],
+        ),
+        Row(
+          children: [
+            key('7', onTap: () => onDigit('7')),
+            key('8', onTap: () => onDigit('8')),
+            key('9', onTap: () => onDigit('9')),
+          ],
+        ),
+        Row(
+          children: [
+            key('⌫', onTap: onDelete),
+            key('0', onTap: () => onDigit('0')),
+            key('OK', onTap: onConfirm, isAction: true),
+          ],
+        ),
       ],
     );
   }
@@ -335,8 +354,9 @@ class _WalletNotActivatedDialog extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF4F46E5),
             foregroundColor: Colors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         ),
       ],

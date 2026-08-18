@@ -13,23 +13,19 @@ class AdminDisputeTest extends TestCase
 
     public function test_admin_can_get_assigned_disputes()
     {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $token = auth()->login($admin);
-
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)->getJson('/api/admin/assigned-disputes');
+        $admin = User::factory()->create(['role' => \App\Enums\RoleType::Admin]);
+        $response = $this->actingAsApi($admin)->getJson('/api/admin/assigned-disputes');
 
         $response->assertStatus(200)
                  ->assertJsonStructure([
-                     'disputes' => []
+                     'data' => []
                  ]);
     }
 
     public function test_non_admin_cannot_get_assigned_disputes()
     {
-        $user = User::factory()->create(['role' => 'user']);
-        $token = auth()->login($user);
-
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)->getJson('/api/admin/assigned-disputes');
+        $user = User::factory()->create(['role' => \App\Enums\RoleType::User]);
+        $response = $this->actingAsApi($user)->getJson('/api/admin/assigned-disputes');
 
         $response->assertStatus(403);
     }

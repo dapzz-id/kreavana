@@ -36,7 +36,7 @@ class AuthService implements AuthServiceInterface
         });
     }
 
-    public function attemptLogin(array $credentials, string $ip, string $userAgent, ?string $requiredRole = null): ?string
+    public function attemptLogin(array $credentials, string $ip, string $userAgent, ?\App\Enums\RoleType $requiredRole = null): ?string
     {
         if (! $token = Auth::guard('api')->attempt($credentials)) {
             AuthLog::create([

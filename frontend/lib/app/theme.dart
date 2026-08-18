@@ -186,8 +186,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: inputLight,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMD),
           borderSide: BorderSide(color: inputBorderLight, width: 1),
@@ -245,20 +247,14 @@ class AppTheme {
             borderRadius: BorderRadius.circular(radiusMD),
           ),
           foregroundColor: textDark,
-          textStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
       // Text Button
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: primaryPurple,
-          textStyle: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
+          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
       ),
@@ -290,7 +286,10 @@ class AppTheme {
         elevation: 12,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusLG),
-          side: BorderSide(color: primaryPurple.withValues(alpha: 0.3), width: 1),
+          side: BorderSide(
+            color: primaryPurple.withValues(alpha: 0.3),
+            width: 1,
+          ),
         ),
         contentTextStyle: const TextStyle(
           color: Colors.white,
@@ -320,10 +319,7 @@ class AppTheme {
             borderRadius: BorderRadius.circular(radiusMD),
           ),
           elevation: 0,
-          textStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-          ),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
       // Progress indicators
@@ -430,8 +426,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: inputDark,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMD),
           borderSide: const BorderSide(color: inputBorder, width: 1),
@@ -489,20 +487,14 @@ class AppTheme {
             borderRadius: BorderRadius.circular(radiusMD),
           ),
           foregroundColor: textWhite,
-          textStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
       // Text Button
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: lightPurple,
-          textStyle: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
+          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
       ),
@@ -510,8 +502,7 @@ class AppTheme {
       tabBarTheme: TabBarThemeData(
         labelColor: lightPurple,
         unselectedLabelColor: textMuted,
-        labelStyle:
-            const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
         unselectedLabelStyle: const TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w500,
@@ -565,10 +556,7 @@ class AppTheme {
             borderRadius: BorderRadius.circular(radiusMD),
           ),
           elevation: 0,
-          textStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-          ),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
       // Progress indicators
@@ -609,14 +597,10 @@ class AppTheme {
 
 // ── Helper extension ──────────────────────────────────────────────────────────
 extension ColorWithValues on Color {
-  Color withValues({
-    double? alpha,
-    int? red,
-    int? green,
-    int? blue,
-  }) {
-    final opacity =
-        alpha == null ? a.toDouble() / 255.0 : alpha.clamp(0.0, 1.0);
+  Color withValues({double? alpha, int? red, int? green, int? blue}) {
+    final opacity = alpha == null
+        ? a.toDouble() / 255.0
+        : alpha.clamp(0.0, 1.0);
     return Color.fromARGB(
       (opacity * 255).round(),
       red ?? r.toInt(),

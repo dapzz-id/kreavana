@@ -15,17 +15,50 @@ class TimHakAksesScreen extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     final tim = [
-      {'name': 'Budi Santoso', 'role': 'Administrator', 'email': 'budi@kominfo.go.id', 'role_color': Color(0xFFEF4444), 'isOnline': true},
-      {'name': 'Siti Rahayu', 'role': 'Editor', 'email': 'siti@kominfo.go.id', 'role_color': Color(0xFF3B82F6), 'isOnline': true},
-      {'name': 'Ahmad Fauzi', 'role': 'Viewer', 'email': 'ahmad@kominfo.go.id', 'role_color': Color(0xFF10B981), 'isOnline': false},
-      {'name': 'Dewi Lestari', 'role': 'Editor', 'email': 'dewi@kominfo.go.id', 'role_color': Color(0xFF3B82F6), 'isOnline': true},
-      {'name': 'Rizky Pratama', 'role': 'Viewer', 'email': 'rizky@kominfo.go.id', 'role_color': Color(0xFF10B981), 'isOnline': false},
+      {
+        'name': 'Budi Santoso',
+        'role': 'Administrator',
+        'email': 'budi@kominfo.go.id',
+        'role_color': Color(0xFFEF4444),
+        'isOnline': true,
+      },
+      {
+        'name': 'Siti Rahayu',
+        'role': 'Editor',
+        'email': 'siti@kominfo.go.id',
+        'role_color': Color(0xFF3B82F6),
+        'isOnline': true,
+      },
+      {
+        'name': 'Ahmad Fauzi',
+        'role': 'Viewer',
+        'email': 'ahmad@kominfo.go.id',
+        'role_color': Color(0xFF10B981),
+        'isOnline': false,
+      },
+      {
+        'name': 'Dewi Lestari',
+        'role': 'Editor',
+        'email': 'dewi@kominfo.go.id',
+        'role_color': Color(0xFF3B82F6),
+        'isOnline': true,
+      },
+      {
+        'name': 'Rizky Pratama',
+        'role': 'Viewer',
+        'email': 'rizky@kominfo.go.id',
+        'role_color': Color(0xFF10B981),
+        'isOnline': false,
+      },
     ];
 
     final content = Scaffold(
       appBar: AppBar(
         toolbarHeight: 75,
-        title: const Text('Tim & Hak Akses', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Tim & Hak Akses',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
@@ -36,7 +69,9 @@ class TimHakAksesScreen extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryPurple,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
           ),
@@ -50,7 +85,9 @@ class TimHakAksesScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: isDark ? AppTheme.cardBg : Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+              ),
             ),
             child: Row(
               children: [
@@ -72,16 +109,29 @@ class TimHakAksesScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isDark ? AppTheme.cardBg : Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+                    border: Border.all(
+                      color: isDark
+                          ? AppTheme.inputBorder
+                          : Colors.grey.shade200,
+                    ),
                   ),
                   child: Row(
                     children: [
                       CircleAvatar(
                         radius: 20,
-                        backgroundColor: (t['role_color'] as Color).withValues(alpha: 0.1),
+                        backgroundColor: (t['role_color'] as Color).withValues(
+                          alpha: 0.1,
+                        ),
                         child: Text(
-                          (t['name'] as String).split(' ').map((n) => n[0]).join(),
-                          style: TextStyle(color: t['role_color'] as Color, fontWeight: FontWeight.bold, fontSize: 14),
+                          (t['name'] as String)
+                              .split(' ')
+                              .map((n) => n[0])
+                              .join(),
+                          style: TextStyle(
+                            color: t['role_color'] as Color,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -91,26 +141,68 @@ class TimHakAksesScreen extends StatelessWidget {
                           children: [
                             Row(
                               children: [
-                                Text(t['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                Text(
+                                  t['name'] as String,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
                                 const SizedBox(width: 6),
                                 if (t['isOnline'] as bool)
-                                  Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle)),
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF10B981),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
                               ],
                             ),
                             const SizedBox(height: 2),
-                            Text(t['email'] as String, style: TextStyle(fontSize: 11, color: isDark ? AppTheme.textMuted : Colors.grey.shade500)),
+                            Text(
+                              t['email'] as String,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark
+                                    ? AppTheme.textMuted
+                                    : Colors.grey.shade500,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(color: (t['role_color'] as Color).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
-                        child: Text(t['role'] as String, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: t['role_color'] as Color)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: (t['role_color'] as Color).withValues(
+                            alpha: 0.12,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          t['role'] as String,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: t['role_color'] as Color,
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 8),
                       IconButton(
                         onPressed: () {},
-                        icon: Icon(Icons.more_vert, size: 18, color: isDark ? AppTheme.textMuted : Colors.grey.shade500),
+                        icon: Icon(
+                          Icons.more_vert,
+                          size: 18,
+                          color: isDark
+                              ? AppTheme.textMuted
+                              : Colors.grey.shade500,
+                        ),
                       ),
                     ],
                   ),
@@ -138,9 +230,22 @@ class TimHakAksesScreen extends StatelessWidget {
     return Expanded(
       child: Column(
         children: [
-          Text(count, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
+          Text(
+            count,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(role, style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMuted : Colors.grey.shade600)),
+          Text(
+            role,
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+            ),
+          ),
         ],
       ),
     );

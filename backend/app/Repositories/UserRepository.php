@@ -20,7 +20,7 @@ class UserRepository extends BaseRepository
     public function getRecommendedCreators(int $limit = 5)
     {
         return $this->model
-            ->where('role', 'creator')
+            ->where('role', \App\Enums\RoleType::Creator)
             ->where('is_creator_approved', true)
             ->orderBy('performance_boost', 'desc')
             ->orderBy('created_at', 'desc')

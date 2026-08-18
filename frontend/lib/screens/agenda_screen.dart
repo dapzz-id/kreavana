@@ -97,7 +97,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
       final res = await ApiService.get('/agenda');
       if (res['status'] == true && res['data'] != null) {
         final list = List<Map<String, dynamic>>.from(res['data']);
-        if (list.isNotEmpty && mounted) {
+        if (mounted) {
           setState(() {
             _agendaList = list;
           });
@@ -134,7 +134,10 @@ class _AgendaScreenState extends State<AgendaScreen> {
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 75,
-        title: const Text('Agenda Kegiatan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Agenda Kegiatan',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -162,8 +165,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   hintText: 'Cari agenda, meeting, atau deadline...',
                   prefixIcon: const Icon(Icons.search, size: 20),
                   filled: true,
-                  fillColor: isDark ? const Color(0xFF1A1830) : Colors.grey.shade100,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  fillColor: isDark
+                      ? const Color(0xFF1A1830)
+                      : Colors.grey.shade100,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -183,8 +191,14 @@ class _AgendaScreenState extends State<AgendaScreen> {
                         selected: isSel,
                         selectedColor: accentColor,
                         labelStyle: TextStyle(
-                          color: isSel ? Colors.white : (isDark ? Colors.white70 : Colors.grey.shade800),
-                          fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                          color: isSel
+                              ? Colors.white
+                              : (isDark
+                                    ? Colors.white70
+                                    : Colors.grey.shade800),
+                          fontWeight: isSel
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                           fontSize: 12,
                         ),
                         onSelected: (val) {
@@ -203,7 +217,9 @@ class _AgendaScreenState extends State<AgendaScreen> {
               else if (filtered.isEmpty)
                 _buildEmptyState(isDark)
               else
-                ...filtered.map((item) => _buildAgendaCard(item, accentColor, isDark)),
+                ...filtered.map(
+                  (item) => _buildAgendaCard(item, accentColor, isDark),
+                ),
             ],
           ),
         ),
@@ -212,7 +228,10 @@ class _AgendaScreenState extends State<AgendaScreen> {
         onPressed: () => _showAddAgendaModal(context, accentColor),
         backgroundColor: accentColor,
         icon: const Icon(Icons.event, color: Colors.white),
-        label: const Text('Tambah Agenda', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        label: const Text(
+          'Tambah Agenda',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }
@@ -233,7 +252,11 @@ class _AgendaScreenState extends State<AgendaScreen> {
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: accentColor.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 6)),
+          BoxShadow(
+            color: accentColor.withValues(alpha: 0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
         ],
       ),
       child: Row(
@@ -242,22 +265,43 @@ class _AgendaScreenState extends State<AgendaScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Jadwal & Agenda Terdekat', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              const Text(
+                'Jadwal & Agenda Terdekat',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 4),
-              Text('Anda memiliki $upcomingCount agenda terjadwal', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              Text(
+                'Anda memiliki $upcomingCount agenda terjadwal',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
             ],
           ),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
-            child: const Icon(Icons.calendar_month_rounded, color: Colors.white, size: 28),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.calendar_month_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAgendaCard(Map<String, dynamic> item, Color accentColor, bool isDark) {
+  Widget _buildAgendaCard(
+    Map<String, dynamic> item,
+    Color accentColor,
+    bool isDark,
+  ) {
     final typeColor = item['typeColor'] as Color;
 
     return Container(
@@ -266,9 +310,15 @@ class _AgendaScreenState extends State<AgendaScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Row(
@@ -287,11 +337,19 @@ class _AgendaScreenState extends State<AgendaScreen> {
               children: [
                 Text(
                   item['date'] as String,
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: accentColor),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: accentColor,
+                  ),
                 ),
                 Text(
                   item['month'] as String,
-                  style: TextStyle(fontSize: 11, color: accentColor, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: accentColor,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -307,35 +365,72 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     Expanded(
                       child: Text(
                         item['title'] as String,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-                      child: Text(item['type'] as String, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: typeColor)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: typeColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        item['type'] as String,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: typeColor,
+                        ),
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    Icon((item['icon'] as IconData?) ?? Icons.image_outlined, size: 13, color: isDark ? AppTheme.textMuted : Colors.grey.shade500),
+                    Icon(
+                      (item['icon'] as IconData?) ?? Icons.image_outlined,
+                      size: 13,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                    ),
                     const SizedBox(width: 4),
-                    Text(item['time'] as String, style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMuted : Colors.grey.shade600)),
+                    Text(
+                      item['time'] as String,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark
+                            ? AppTheme.textMuted
+                            : Colors.grey.shade600,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.place_outlined, size: 13, color: isDark ? AppTheme.textMuted : Colors.grey.shade500),
+                    Icon(
+                      Icons.place_outlined,
+                      size: 13,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         item['location'] as String,
-                        style: TextStyle(fontSize: 11, color: isDark ? AppTheme.textMuted : Colors.grey.shade500),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark
+                              ? AppTheme.textMuted
+                              : Colors.grey.shade500,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -355,26 +450,42 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     });
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(isReminded 
-                          ? 'Pengingat dibatalkan untuk agenda ini.' 
-                          : 'Pengingat (Alarm) berhasil disetel!'),
+                        content: Text(
+                          isReminded
+                              ? 'Pengingat dibatalkan untuk agenda ini.'
+                              : 'Pengingat (Alarm) berhasil disetel!',
+                        ),
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
                   },
                   icon: Icon(
-                    _remindedAgendas.contains(item['id']) ? Icons.notifications_off : Icons.notifications_active,
-                    size: 16
+                    _remindedAgendas.contains(item['id'])
+                        ? Icons.notifications_off
+                        : Icons.notifications_active,
+                    size: 16,
                   ),
                   label: Text(
-                    _remindedAgendas.contains(item['id']) ? 'Batal Ingatkan' : 'Ingatkan Saya', 
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)
+                    _remindedAgendas.contains(item['id'])
+                        ? 'Batal Ingatkan'
+                        : 'Ingatkan Saya',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _remindedAgendas.contains(item['id']) ? Colors.grey.shade600 : accentColor,
+                    backgroundColor: _remindedAgendas.contains(item['id'])
+                        ? Colors.grey.shade600
+                        : accentColor,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ],
@@ -391,9 +502,19 @@ class _AgendaScreenState extends State<AgendaScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.event_busy_outlined, size: 48, color: isDark ? AppTheme.textMuted : Colors.grey.shade400),
+          Icon(
+            Icons.event_busy_outlined,
+            size: 48,
+            color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
+          ),
           const SizedBox(height: 12),
-          Text('Tidak ada agenda pada kategori ini', style: TextStyle(fontSize: 14, color: isDark ? AppTheme.textMuted : Colors.grey.shade600)),
+          Text(
+            'Tidak ada agenda pada kategori ini',
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+            ),
+          ),
         ],
       ),
     );
@@ -407,80 +528,142 @@ class _AgendaScreenState extends State<AgendaScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                20,
+                20,
+                MediaQuery.of(ctx).viewInsets.bottom + 20,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Tambah Agenda Baru', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Tambah Agenda Baru',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: titleCtrl,
-                    decoration: const InputDecoration(labelText: 'Judul Agenda / Meeting', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: 'Judul Agenda / Meeting',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: timeCtrl,
-                    decoration: const InputDecoration(labelText: 'Waktu (misal: 10:00 - 11:00 WIB)', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: 'Waktu (misal: 10:00 - 11:00 WIB)',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     initialValue: typeSel,
                     items: const [
-                      DropdownMenuItem(value: 'Online', child: Text('Online Meeting')),
-                      DropdownMenuItem(value: 'Offline', child: Text('Offline / Shooting Day')),
-                      DropdownMenuItem(value: 'Deadline', child: Text('Deadline Penyerahan')),
-                      DropdownMenuItem(value: 'Review', child: Text('Review Project')),
-                      DropdownMenuItem(value: 'Client', child: Text('Client Briefing')),
-                      DropdownMenuItem(value: 'Lainnya', child: Text('Lainnya')),
+                      DropdownMenuItem(
+                        value: 'Online',
+                        child: Text('Online Meeting'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Offline',
+                        child: Text('Offline / Shooting Day'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Deadline',
+                        child: Text('Deadline Penyerahan'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Review',
+                        child: Text('Review Project'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Client',
+                        child: Text('Client Briefing'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Lainnya',
+                        child: Text('Lainnya'),
+                      ),
                     ],
                     onChanged: (v) => setModalState(() => typeSel = v!),
-                    decoration: const InputDecoration(labelText: 'Tipe Agenda', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: 'Tipe Agenda',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
                   const SizedBox(height: 20),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: accentColor, padding: const EdgeInsets.symmetric(vertical: 14)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentColor,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
                       onPressed: () {
                         if (titleCtrl.text.isNotEmpty) {
                           setState(() {
                             final now = DateTime.now();
                             Color getTypeColor(String type) {
-                              if (type == 'Online' || type == 'Client') return const Color(0xFF3B82F6);
-                              if (type == 'Offline') return const Color(0xFFF97316);
-                              if (type == 'Deadline' || type == 'Review') return const Color(0xFFEF4444);
+                              if (type == 'Online' || type == 'Client')
+                                return const Color(0xFF3B82F6);
+                              if (type == 'Offline')
+                                return const Color(0xFFF97316);
+                              if (type == 'Deadline' || type == 'Review')
+                                return const Color(0xFFEF4444);
                               return Colors.grey.shade600; // Lainnya
                             }
+
                             IconData getTypeIcon(String type) {
-                              if (type == 'Online' || type == 'Client') return Icons.videocam_outlined;
-                              if (type == 'Offline') return Icons.location_on_outlined;
-                              if (type == 'Deadline') return Icons.alarm_outlined;
-                              if (type == 'Review') return Icons.rate_review_outlined;
+                              if (type == 'Online' || type == 'Client')
+                                return Icons.videocam_outlined;
+                              if (type == 'Offline')
+                                return Icons.location_on_outlined;
+                              if (type == 'Deadline')
+                                return Icons.alarm_outlined;
+                              if (type == 'Review')
+                                return Icons.rate_review_outlined;
                               return Icons.event_note_outlined; // Lainnya
                             }
+
                             _agendaList.insert(0, {
                               'id': '${now.millisecondsSinceEpoch}',
                               'title': titleCtrl.text,
                               'date': '${now.day}',
                               'month': 'Agu',
-                              'time': timeCtrl.text.isEmpty ? '10:00 WIB' : timeCtrl.text,
+                              'time': timeCtrl.text.isEmpty
+                                  ? '10:00 WIB'
+                                  : timeCtrl.text,
                               'type': typeSel,
                               'typeColor': getTypeColor(typeSel),
                               'icon': getTypeIcon(typeSel),
-                              'location': (typeSel == 'Online' || typeSel == 'Client') ? 'Virtual Call Room' : (typeSel == 'Offline' ? 'Venue / Studio' : '-'),
+                              'location':
+                                  (typeSel == 'Online' || typeSel == 'Client')
+                                  ? 'Virtual Call Room'
+                                  : (typeSel == 'Offline'
+                                        ? 'Venue / Studio'
+                                        : '-'),
                               'organizer': widget.user?.name ?? 'Saya',
                             });
                           });
                           Navigator.pop(ctx);
                         }
                       },
-                      child: const Text('Simpan Agenda', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'Simpan Agenda',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ],

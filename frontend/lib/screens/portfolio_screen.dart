@@ -8,7 +8,7 @@ import '../widgets/kreavana_image.dart';
 
 class PortfolioScreen extends StatefulWidget {
   final UserModel? user;
-  
+
   const PortfolioScreen({super.key, this.user});
 
   @override
@@ -47,7 +47,10 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
     return Scaffold(
       backgroundColor: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
       appBar: AppBar(
-        title: const Text('Portfolio Saya', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Portfolio Saya',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: isDark ? AppTheme.cardBg : Colors.white,
         elevation: 1,
         actions: [
@@ -56,7 +59,11 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
             tooltip: 'Tambah Portfolio',
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Fitur tambah portfolio belum tersedia secara penuh di halaman ini.')),
+                const SnackBar(
+                  content: Text(
+                    'Fitur tambah portfolio belum tersedia secara penuh di halaman ini.',
+                  ),
+                ),
               );
             },
           ),
@@ -81,30 +88,30 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
               },
             )
           : _items.isEmpty
-              ? AppEmptyState(
-                  icon: Icons.photo_library_outlined,
-                  title: 'Belum Ada Portfolio',
-                  subtitle: 'Anda belum menambahkan karya apapun ke portfolio.',
-                  onAction: _loadPortfolio,
-                  actionLabel: 'Muat Ulang',
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadPortfolio,
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      childAspectRatio: 0.8,
-                    ),
-                    itemCount: _items.length,
-                    itemBuilder: (context, index) {
-                      final item = _items[index];
-                      return _buildPortfolioCard(item, isDark);
-                    },
-                  ),
+          ? AppEmptyState(
+              icon: Icons.photo_library_outlined,
+              title: 'Belum Ada Portfolio',
+              subtitle: 'Anda belum menambahkan karya apapun ke portfolio.',
+              onAction: _loadPortfolio,
+              actionLabel: 'Muat Ulang',
+            )
+          : RefreshIndicator(
+              onRefresh: _loadPortfolio,
+              child: GridView.builder(
+                padding: const EdgeInsets.all(16),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 0.8,
                 ),
+                itemCount: _items.length,
+                itemBuilder: (context, index) {
+                  final item = _items[index];
+                  return _buildPortfolioCard(item, isDark);
+                },
+              ),
+            ),
     );
   }
 
@@ -113,7 +120,9 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -131,7 +140,11 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                   )
                 : Container(
                     color: Colors.grey.withValues(alpha: 0.2),
-                    child: const Icon(Icons.image_outlined, color: Colors.grey, size: 40),
+                    child: const Icon(
+                      Icons.image_outlined,
+                      color: Colors.grey,
+                      size: 40,
+                    ),
                   ),
           ),
           Padding(
@@ -141,7 +154,10 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
               children: [
                 Text(
                   item.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),

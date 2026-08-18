@@ -38,12 +38,16 @@ _MockAdapter _buildProfileAdapter({required bool failOnLegacy}) {
     // ── FAIL if any legacy endpoint is hit ───────────────────────────────────
     if (failOnLegacy) {
       if (path == '/auth/me' || path.endsWith('/auth/me')) {
-        fail('Legacy endpoint /auth/me was called — remove all usages from the frontend');
+        fail(
+          'Legacy endpoint /auth/me was called — remove all usages from the frontend',
+        );
       }
       // Exact GET /profile (monolithic) — but allow sub-paths like /profile/identity
       if ((path == '/profile' || path.endsWith('/profile')) &&
           !path.contains('profile/')) {
-        fail('Legacy monolithic GET /profile was called — use granular endpoints instead');
+        fail(
+          'Legacy monolithic GET /profile was called — use granular endpoints instead',
+        );
       }
     }
 
@@ -64,10 +68,12 @@ _MockAdapter _buildProfileAdapter({required bool failOnLegacy}) {
             'balance': 0.0,
             'followers_count': 0,
             'following_count': 0,
-          }
+          },
         }),
         200,
-        headers: {Headers.contentTypeHeader: ['application/json']},
+        headers: {
+          Headers.contentTypeHeader: ['application/json'],
+        },
       );
     }
 
@@ -75,11 +81,16 @@ _MockAdapter _buildProfileAdapter({required bool failOnLegacy}) {
       return ResponseBody.fromString(
         '{"status":true,"data":null}',
         200,
-        headers: {Headers.contentTypeHeader: ['application/json']},
+        headers: {
+          Headers.contentTypeHeader: ['application/json'],
+        },
       );
     }
 
-    return ResponseBody.fromString('{"status":false,"message":"not found"}', 404);
+    return ResponseBody.fromString(
+      '{"status":false,"message":"not found"}',
+      404,
+    );
   });
 }
 
@@ -94,16 +105,25 @@ void main() {
   });
 
   // ── Test 1: ProfileService uses only granular endpoints ──────────────────
-  test('ProfileService.getProfile does NOT call /auth/me or monolithic /profile', () async {
-    DioClient.instance.dio.httpClientAdapter = _buildProfileAdapter(failOnLegacy: true);
+  test(
+    'ProfileService.getProfile does NOT call /auth/me or monolithic /profile',
+    () async {
+      DioClient.instance.dio.httpClientAdapter = _buildProfileAdapter(
+        failOnLegacy: true,
+      );
 
-    // If legacy endpoints are called, the adapter will fail() the test.
-    final result = await ProfileService.getProfile('u1');
+      // If legacy endpoints are called, the adapter will fail() the test.
+      final result = await ProfileService.getProfile('u1');
 
-    expect(result.success, true, reason: 'getProfile should succeed via granular endpoints');
-    expect(result.user, isNotNull);
-    expect(result.user!.name, 'Bob');
-  });
+      expect(
+        result.success,
+        true,
+        reason: 'getProfile should succeed via granular endpoints',
+      );
+      expect(result.user, isNotNull);
+      expect(result.user!.name, 'Bob');
+    },
+  );
 
   // ── Test 2: UserModel is fully parsed from granular identity payload ──────
   test('UserModel.fromJson correctly maps all identity fields', () {
@@ -132,15 +152,20 @@ void main() {
   });
 
   // ── Test 3: ProfileFetchResult is strongly typed (no Map access) ─────────
-  test('ProfileFetchResult exposes typed .user and .application — not raw maps', () async {
-    DioClient.instance.dio.httpClientAdapter = _buildProfileAdapter(failOnLegacy: false);
+  test(
+    'ProfileFetchResult exposes typed .user and .application — not raw maps',
+    () async {
+      DioClient.instance.dio.httpClientAdapter = _buildProfileAdapter(
+        failOnLegacy: false,
+      );
 
-    final result = await ProfileService.getProfile('u1');
+      final result = await ProfileService.getProfile('u1');
 
-    // These must be typed properties (if they were Map access, this would be a compile error)
-    expect(result.success, isA<bool>());
-    expect(result.user, isA<UserModel?>());
-    expect(result.application, isA<CreatorApplication?>());
-    expect(result.message, isA<String?>());
-  });
+      // These must be typed properties (if they were Map access, this would be a compile error)
+      expect(result.success, isA<bool>());
+      expect(result.user, isA<UserModel?>());
+      expect(result.application, isA<CreatorApplication?>());
+      expect(result.message, isA<String?>());
+    },
+  );
 }

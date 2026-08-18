@@ -24,7 +24,7 @@ class RateLimitTest extends TestCase
             'username' => 'testuser',
             'email' => 'ratelimit@test.com',
             'password' => Hash::make('password123'),
-            'role' => 'user'
+            'role' => \App\Enums\RoleType::User
         ]);
     }
 

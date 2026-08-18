@@ -54,7 +54,9 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const accent = AppTheme.primaryPurple;
     final cardBg = isDark ? const Color(0xFF13111F) : const Color(0xFFFAF9FE);
-    final borderColor = isDark ? const Color(0xFF2D264A) : const Color(0xFFE4DEF6);
+    final borderColor = isDark
+        ? const Color(0xFF2D264A)
+        : const Color(0xFFE4DEF6);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
@@ -84,7 +86,11 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                     color: accent.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.lightbulb_outline_rounded, color: accent, size: 20),
+                  child: const Icon(
+                    Icons.lightbulb_outline_rounded,
+                    color: accent,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -110,7 +116,10 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: accent,
                     borderRadius: BorderRadius.circular(20),
@@ -141,12 +150,24 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                           ? const SizedBox(
                               width: 14,
                               height: 14,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: accent),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: accent,
+                              ),
                             )
-                          : const Icon(Icons.auto_awesome_rounded, size: 16, color: accent),
+                          : const Icon(
+                              Icons.auto_awesome_rounded,
+                              size: 16,
+                              color: accent,
+                            ),
                       label: Text(
-                        _isLoading ? 'Menganalisis Rekomendasi...' : 'Dapatkan Rekomendasi AI',
-                        style: const TextStyle(color: accent, fontWeight: FontWeight.bold),
+                        _isLoading
+                            ? 'Menganalisis Rekomendasi...'
+                            : 'Dapatkan Rekomendasi AI',
+                        style: const TextStyle(
+                          color: accent,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: accent, width: 1.5),
@@ -163,16 +184,24 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                         margin: const EdgeInsets.only(bottom: 10),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1B182B) : Colors.white,
+                          color: isDark
+                              ? const Color(0xFF1B182B)
+                              : Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: accent.withValues(alpha: 0.15)),
+                          border: Border.all(
+                            color: accent.withValues(alpha: 0.15),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.stars_rounded, color: accent, size: 16),
+                                const Icon(
+                                  Icons.stars_rounded,
+                                  color: accent,
+                                  size: 16,
+                                ),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
@@ -195,7 +224,10 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                             ),
                             const SizedBox(height: 6),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: accent.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(6),

@@ -169,7 +169,9 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
               child: Container(
                 height: 44,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1A1830) : Colors.grey.shade100,
+                  color: isDark
+                      ? const Color(0xFF1A1830)
+                      : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
@@ -189,23 +191,32 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                         'Cari proyek, kreator, atau transaksi...',
                         style: TextStyle(
                           fontSize: 13,
-                          color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                          color: isDark
+                              ? AppTheme.textMuted
+                              : Colors.grey.shade500,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Container(
                       margin: const EdgeInsets.only(right: 12),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                        color: isDark
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade200,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         '⌘K',
                         style: TextStyle(
                           fontSize: 11,
-                          color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                          color: isDark
+                              ? AppTheme.textMuted
+                              : Colors.grey.shade600,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -218,12 +229,20 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
           const SizedBox(width: 20),
           ListenableBuilder(
             listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(Icons.notifications_none_outlined, BadgeService().unreadNotificationsText, isDark),
+            builder: (_, _) => _buildAppBarBadge(
+              Icons.notifications_none_outlined,
+              BadgeService().unreadNotificationsText,
+              isDark,
+            ),
           ),
           const SizedBox(width: 4),
           ListenableBuilder(
             listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(Icons.chat_bubble_outline, BadgeService().unreadMessagesText, isDark),
+            builder: (_, _) => _buildAppBarBadge(
+              Icons.chat_bubble_outline,
+              BadgeService().unreadMessagesText,
+              isDark,
+            ),
           ),
           const SizedBox(width: 12),
           IconButton(
@@ -233,11 +252,15 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
               size: 20,
             ),
             onPressed: () {
-              final box = _themeBtnKey.currentContext?.findRenderObject() as RenderBox?;
+              final box =
+                  _themeBtnKey.currentContext?.findRenderObject() as RenderBox?;
               final origin = box != null
                   ? box.localToGlobal(box.size.center(Offset.zero))
                   : const Offset(0, 0);
-              ThemeTransitionService.animateToggle(origin: origin, toDark: !isDark);
+              ThemeTransitionService.animateToggle(
+                origin: origin,
+                toDark: !isDark,
+              );
             },
           ),
           const SizedBox(width: 8),
@@ -254,7 +277,10 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                 children: [
                   Text(
                     widget.user.name,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Text(
                     'Perusahaan',
@@ -283,7 +309,9 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
     return ListenableBuilder(
       listenable: BadgeService(),
       builder: (context, _) {
-        final badgeCount = isNotification ? BadgeService().unreadNotificationsText : BadgeService().unreadMessagesText;
+        final badgeCount = isNotification
+            ? BadgeService().unreadNotificationsText
+            : BadgeService().unreadMessagesText;
         return GestureDetector(
           onTap: () {
             Navigator.push(
@@ -304,7 +332,11 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(icon, size: 20, color: isDark ? Colors.white : Colors.black87),
+                Icon(
+                  icon,
+                  size: 20,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
                 if (badgeCount.isNotEmpty && badgeCount != '0')
                   Positioned(
                     right: -4,
@@ -317,7 +349,11 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                       ),
                       child: Text(
                         badgeCount,
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -339,12 +375,18 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
             children: [
               Text(
                 'Selamat datang, ${widget.user.name}! 👋',
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Kelola proyek, temukan vendor, dan wujudkan kolaborasi yang tepat untuk bisnis Anda.',
-                style: TextStyle(fontSize: 14, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                ),
               ),
             ],
           ),
@@ -361,7 +403,9 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
             backgroundColor: _brandBlue,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],
@@ -431,7 +475,11 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                     color: (m['color'] as Color).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon((m['icon'] as IconData?) ?? Icons.image_outlined, color: m['color'] as Color, size: 20),
+                  child: Icon(
+                    (m['icon'] as IconData?) ?? Icons.image_outlined,
+                    color: m['color'] as Color,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -445,7 +493,10 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                 const SizedBox(height: 6),
                 Text(
                   m['value'] as String,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -494,12 +545,17 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Ringkasan Pengeluaran', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          const Text(
+            'Ringkasan Pengeluaran',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 20),
           SizedBox(
             height: 200,
@@ -508,20 +564,37 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
-                  getDrawingHorizontalLine: (v) => FlLine(color: isDark ? Colors.white12 : Colors.grey.shade200),
+                  getDrawingHorizontalLine: (v) => FlLine(
+                    color: isDark ? Colors.white12 : Colors.grey.shade200,
+                  ),
                 ),
                 borderData: FlBorderData(show: false),
                 titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (v, _) {
-                        const labels = ['Des \'24', 'Jan \'25', 'Feb \'25', 'Mar \'25', 'Apr \'25', 'Mei \'25'];
+                        const labels = [
+                          'Des \'24',
+                          'Jan \'25',
+                          'Feb \'25',
+                          'Mar \'25',
+                          'Apr \'25',
+                          'Mei \'25',
+                        ];
                         final i = v.toInt();
-                        if (i < 0 || i >= labels.length) return const SizedBox.shrink();
-                        return Text(labels[i], style: const TextStyle(fontSize: 10));
+                        if (i < 0 || i >= labels.length)
+                          return const SizedBox.shrink();
+                        return Text(
+                          labels[i],
+                          style: const TextStyle(fontSize: 10),
+                        );
                       },
                     ),
                   ),
@@ -534,7 +607,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                       FlSpot(2, 14),
                       FlSpot(3, 16.25),
                       FlSpot(4, 11),
-                      FlSpot(5, 15)
+                      FlSpot(5, 15),
                     ],
                     isCurved: true,
                     color: _brandBlue,
@@ -556,12 +629,17 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Pengeluaran Berdasarkan Kategori', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          const Text(
+            'Pengeluaran Berdasarkan Kategori',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 20),
           SizedBox(
             height: 140,
@@ -570,11 +648,36 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                 sectionsSpace: 2,
                 centerSpaceRadius: 35,
                 sections: [
-                  PieChartSectionData(value: 45, color: _brandBlue, radius: 18, showTitle: false),
-                  PieChartSectionData(value: 25, color: const Color(0xFF10B981), radius: 18, showTitle: false),
-                  PieChartSectionData(value: 15, color: const Color(0xFFF59E0B), radius: 18, showTitle: false),
-                  PieChartSectionData(value: 10, color: const Color(0xFF8B5CF6), radius: 18, showTitle: false),
-                  PieChartSectionData(value: 5, color: Colors.grey, radius: 18, showTitle: false),
+                  PieChartSectionData(
+                    value: 45,
+                    color: _brandBlue,
+                    radius: 18,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: 25,
+                    color: const Color(0xFF10B981),
+                    radius: 18,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: 15,
+                    color: const Color(0xFFF59E0B),
+                    radius: 18,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: 10,
+                    color: const Color(0xFF8B5CF6),
+                    radius: 18,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: 5,
+                    color: Colors.grey,
+                    radius: 18,
+                    showTitle: false,
+                  ),
                 ],
               ),
             ),
@@ -594,10 +697,17 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
           const SizedBox(width: 8),
           Expanded(child: Text(name, style: const TextStyle(fontSize: 11))),
-          Text(pct, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+          Text(
+            pct,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );
@@ -605,10 +715,30 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
 
   Widget _buildActiveProjectsCard(bool isDark) {
     final projects = [
-      {'title': 'Video Company Profile', 'creator': 'Kreasi Studio', 'progress': 0.60, 'status': 'Sedang Dikerjakan'},
-      {'title': 'Desain Kemasan Produk', 'creator': 'DesignLab', 'progress': 0.40, 'status': 'Sedang Dikerjakan'},
-      {'title': 'Event Gathering 2025', 'creator': 'EventPro Organizer', 'progress': 0.75, 'status': 'Dalam Proses'},
-      {'title': 'Konten Media Sosial', 'creator': 'Content Creativa', 'progress': 0.30, 'status': 'Review'},
+      {
+        'title': 'Video Company Profile',
+        'creator': 'Kreasi Studio',
+        'progress': 0.60,
+        'status': 'Sedang Dikerjakan',
+      },
+      {
+        'title': 'Desain Kemasan Produk',
+        'creator': 'DesignLab',
+        'progress': 0.40,
+        'status': 'Sedang Dikerjakan',
+      },
+      {
+        'title': 'Event Gathering 2025',
+        'creator': 'EventPro Organizer',
+        'progress': 0.75,
+        'status': 'Dalam Proses',
+      },
+      {
+        'title': 'Konten Media Sosial',
+        'creator': 'Content Creativa',
+        'progress': 0.30,
+        'status': 'Review',
+      },
     ];
 
     return Container(
@@ -616,7 +746,9 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -624,42 +756,67 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Proyek Aktif', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              const Text(
+                'Proyek Aktif',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
               TextButton(
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => ProyekSayaScreen(user: widget.user)),
+                  MaterialPageRoute(
+                    builder: (_) => ProyekSayaScreen(user: widget.user),
+                  ),
                 ),
-                child: const Text('Lihat Semua', style: TextStyle(fontSize: 12)),
+                child: const Text(
+                  'Lihat Semua',
+                  style: TextStyle(fontSize: 12),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          ...projects.map((p) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: _brandBlue.withValues(alpha: 0.1),
-                      child: Icon(Icons.work, color: _brandBlue, size: 18),
+          ...projects.map(
+            (p) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: _brandBlue.withValues(alpha: 0.1),
+                    child: Icon(Icons.work, color: _brandBlue, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          p['title'] as String,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          p['creator'] as String,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(p['title'] as String, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                          Text(p['creator'] as String, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                        ],
-                      ),
+                  ),
+                  Text(
+                    '${((p['progress'] as double) * 100).round()}%',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
                     ),
-                    Text(
-                      '${((p['progress'] as double) * 100).round()}%',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              )),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -696,23 +853,52 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Aktivitas Terbaru', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          const Text(
+            'Aktivitas Terbaru',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
-          _buildActItem('Kreasi Studio mengirimkan update pekerjaan', '2 jam lalu', Icons.send),
-          _buildActItem('Pembayaran sebesar Rp 7.500.000 berhasil', '4 jam lalu', Icons.check_circle, Colors.green),
-          _buildActItem('DesignLab mengirimkan penawaran baru', '1 hari lalu', Icons.local_offer, Colors.orange),
-          _buildActItem('EventPro Organizer menyelesaikan pekerjaan', '2 hari lalu', Icons.done_all, Colors.purple),
+          _buildActItem(
+            'Kreasi Studio mengirimkan update pekerjaan',
+            '2 jam lalu',
+            Icons.send,
+          ),
+          _buildActItem(
+            'Pembayaran sebesar Rp 7.500.000 berhasil',
+            '4 jam lalu',
+            Icons.check_circle,
+            Colors.green,
+          ),
+          _buildActItem(
+            'DesignLab mengirimkan penawaran baru',
+            '1 hari lalu',
+            Icons.local_offer,
+            Colors.orange,
+          ),
+          _buildActItem(
+            'EventPro Organizer menyelesaikan pekerjaan',
+            '2 hari lalu',
+            Icons.done_all,
+            Colors.purple,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildActItem(String title, String time, IconData icon, [Color? color]) {
+  Widget _buildActItem(
+    String title,
+    String time,
+    IconData icon, [
+    Color? color,
+  ]) {
     final effectiveColor = color ?? _brandBlue;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -744,40 +930,65 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Kreator Favorit', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          const Text(
+            'Kreator Favorit',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
-          ...creators.map((c) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundColor: _brandBlue.withValues(alpha: 0.1),
-                      child: Text(
-                        c['name']![0],
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
+          ...creators.map(
+            (c) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundColor: _brandBlue.withValues(alpha: 0.1),
+                    child: Text(
+                      c['name']![0],
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(c['name']!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          Text(c['cat']!, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                        ],
-                      ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          c['name']!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          c['cat']!,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
                     ),
-                    Icon(Icons.star, size: 14, color: Colors.amber.shade600),
-                    Text(c['rating']!, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              )),
+                  ),
+                  Icon(Icons.star, size: 14, color: Colors.amber.shade600),
+                  Text(
+                    c['rating']!,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -792,13 +1003,17 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
           decoration: BoxDecoration(
             color: const Color(0xFF10B981).withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.2)),
+            border: Border.all(
+              color: const Color(0xFF10B981).withValues(alpha: 0.2),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Tingkatkan efisiensi proyek Anda',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const Text(
+                'Tingkatkan efisiensi proyek Anda',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
               const SizedBox(height: 4),
               const Text(
                 'Gunakan fitur Brief Template untuk mempercepat proses pembuatan brief.',
@@ -806,9 +1021,21 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
               ),
               const SizedBox(height: 10),
               ElevatedButton(
-                onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => const BuatKebutuhanScreen())); },
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
-                child: const Text('Coba Sekarang', style: TextStyle(color: Colors.white, fontSize: 11)),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const BuatKebutuhanScreen(),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                ),
+                child: const Text(
+                  'Coba Sekarang',
+                  style: TextStyle(color: Colors.white, fontSize: 11),
+                ),
               ),
             ],
           ),
@@ -824,8 +1051,10 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Lihat Paket Langganan Enterprise',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const Text(
+                'Lihat Paket Langganan Enterprise',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
               const SizedBox(height: 4),
               const Text(
                 'Dapatkan keuntungan lebih untuk manajemen proyek skala besar.',
@@ -833,8 +1062,22 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
               ),
               const SizedBox(height: 10),
               OutlinedButton(
-                onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen(user: widget.user, onUserUpdated: widget.onUserUpdated, onLogout: () {}))); },
-                child: const Text('Lihat Paket', style: TextStyle(fontSize: 11)),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProfileScreen(
+                        user: widget.user,
+                        onUserUpdated: widget.onUserUpdated,
+                        onLogout: () {},
+                      ),
+                    ),
+                  );
+                },
+                child: const Text(
+                  'Lihat Paket',
+                  style: TextStyle(fontSize: 11),
+                ),
               ),
             ],
           ),
@@ -843,4 +1086,3 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
     );
   }
 }
- 

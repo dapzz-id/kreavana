@@ -53,7 +53,7 @@ class DashboardController extends Controller
             return $this->errorResponse('User tidak ditemukan.', 401);
         }
 
-        $roleType = $request->query('role_type', $user->role ?? 'user');
+        $roleType = $request->query('role_type', $user->role->value ?? 'user');
         $overview = $this->dashboardService->getClientDashboardOverview($user->id, $roleType);
 
         return $this->successResponse('Ringkasan dashboard klien berhasil diambil', $overview);

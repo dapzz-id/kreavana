@@ -84,7 +84,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
             ),
           ),
         );
-        
+
         if (didPay == true) {
           if (!mounted) return;
           Navigator.pop(context, true);
@@ -134,10 +134,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
                 children: [
                   const Text(
                     'Masukkan Nominal',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -172,13 +169,17 @@ class _TopUpScreenState extends State<TopUpScreen> {
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ActionChip(
-                      label: Text('Rp ${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}'),
+                      label: Text(
+                        'Rp ${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                      ),
                       onPressed: () => _onQuickAmountSelected(amount),
                       backgroundColor: isDark ? AppTheme.cardBg : Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                         side: BorderSide(
-                          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                          color: isDark
+                              ? AppTheme.inputBorder
+                              : Colors.grey.shade200,
                         ),
                       ),
                     ),
@@ -191,10 +192,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
             // 3. Payment Method Section
             const Text(
               'Metode Pembayaran',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
 
@@ -212,7 +210,11 @@ class _TopUpScreenState extends State<TopUpScreen> {
             // Bank Transfer Options
             const Text(
               'Transfer Bank Virtual Account',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
             ),
             const SizedBox(height: 8),
             ..._banks.map((bank) {
@@ -233,7 +235,11 @@ class _TopUpScreenState extends State<TopUpScreen> {
             // E-Wallet Options
             const Text(
               'E-Wallet Direct',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
             ),
             const SizedBox(height: 8),
             ..._ewallets.map((wallet) {
@@ -270,7 +276,10 @@ class _TopUpScreenState extends State<TopUpScreen> {
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text(
                         'Lanjut Pembayaran',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
               ),
             ),
@@ -296,7 +305,11 @@ class _TopUpScreenState extends State<TopUpScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 20),
+                Icon(
+                  Icons.qr_code_scanner_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 Text(
                   'QRIS',
                   style: TextStyle(
@@ -387,10 +400,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
             gradient: const LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFF15A22),
-                Color(0xFF005F3B),
-              ],
+              colors: [Color(0xFFF15A22), Color(0xFF005F3B)],
               stops: [0.5, 0.5],
             ),
           ),
@@ -443,8 +453,11 @@ class _TopUpScreenState extends State<TopUpScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.account_balance_wallet_rounded,
-                    color: Color(0xFF00AED6), size: 18),
+                Icon(
+                  Icons.account_balance_wallet_rounded,
+                  color: Color(0xFF00AED6),
+                  size: 18,
+                ),
                 Text(
                   'GoPay',
                   style: TextStyle(
@@ -467,10 +480,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF4C2A86),
-                Color(0xFF6B3FA0),
-              ],
+              colors: [Color(0xFF4C2A86), Color(0xFF6B3FA0)],
             ),
             borderRadius: BorderRadius.circular(10),
           ),

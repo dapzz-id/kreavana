@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 
-/// A lightweight animator that pulses opacity. 
+/// A lightweight animator that pulses opacity.
 /// Designed to wrap multiple skeletons or an entire skeleton layout
 /// so we only use one [AnimationController] per list/grid.
 class SkeletonAnimator extends StatefulWidget {
   final Widget child;
 
-  const SkeletonAnimator({
-    super.key,
-    required this.child,
-  });
+  const SkeletonAnimator({super.key, required this.child});
 
   @override
   State<SkeletonAnimator> createState() => _SkeletonAnimatorState();
@@ -54,16 +51,10 @@ class _SkeletonAnimatorState extends State<SkeletonAnimator>
   @override
   Widget build(BuildContext context) {
     if (MediaQuery.of(context).disableAnimations) {
-      return Opacity(
-        opacity: 0.5,
-        child: widget.child,
-      );
+      return Opacity(opacity: 0.5, child: widget.child);
     }
 
-    return FadeTransition(
-      opacity: _opacity,
-      child: widget.child,
-    );
+    return FadeTransition(opacity: _opacity, child: widget.child);
   }
 }
 
@@ -85,7 +76,7 @@ class SkeletonBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       width: width,
       height: height,

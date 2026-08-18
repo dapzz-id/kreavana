@@ -127,10 +127,7 @@ class ApiService {
       }
 
       if (statusCode == 401) {
-        return {
-          'status': false,
-          'message': 'Email atau kata sandi salah.',
-        };
+        return {'status': false, 'message': 'Email atau kata sandi salah.'};
       }
 
       if (statusCode == 403) {

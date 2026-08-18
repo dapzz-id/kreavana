@@ -4,7 +4,6 @@ import '../app/theme.dart';
 import '../services/subscription_service.dart';
 import '../widgets/wallet_pin_dialog.dart';
 
-
 // ─── Responsive breakpoints ───────────────────────────────────────────────────
 // mobile  : < 600
 // tablet  : 600 – 960
@@ -40,8 +39,9 @@ class UpgradePlanModal extends StatelessWidget {
       showDialog(
         context: context,
         builder: (ctx) {
-          final dialogMaxWidth =
-              sw >= 1400 ? 1360.0 : (sw >= 960 ? 1060.0 : 780.0);
+          final dialogMaxWidth = sw >= 1400
+              ? 1360.0
+              : (sw >= 960 ? 1060.0 : 780.0);
           return Dialog(
             backgroundColor: Colors.transparent,
             insetPadding: EdgeInsets.symmetric(
@@ -165,8 +165,9 @@ class _ModalBodyState extends State<_ModalBody> {
         final isTablet = w >= 600 && w < 960;
         final isTV = w >= 1400;
 
-        final padding =
-            isTV ? 32.0 : (isTablet ? 20.0 : (isMobile ? 16.0 : 24.0));
+        final padding = isTV
+            ? 32.0
+            : (isTablet ? 20.0 : (isMobile ? 16.0 : 24.0));
         final gap = isTV ? 20.0 : (isTablet ? 14.0 : 12.0);
 
         return SingleChildScrollView(
@@ -175,8 +176,8 @@ class _ModalBodyState extends State<_ModalBody> {
           child: isMobile
               ? _buildSingleColumn(gap)
               : isTablet
-                  ? _buildTwoColumnGrid(gap)
-                  : _buildFourColumnRow(gap),
+              ? _buildTwoColumnGrid(gap)
+              : _buildFourColumnRow(gap),
         );
       },
     );
@@ -202,10 +203,12 @@ class _ModalBodyState extends State<_ModalBody> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                  child: _PlanCard(plan: _plans[0], onPurchase: _handlePurchase)),
+                child: _PlanCard(plan: _plans[0], onPurchase: _handlePurchase),
+              ),
               SizedBox(width: gap),
               Expanded(
-                  child: _PlanCard(plan: _plans[1], onPurchase: _handlePurchase)),
+                child: _PlanCard(plan: _plans[1], onPurchase: _handlePurchase),
+              ),
             ],
           ),
         ),
@@ -215,10 +218,12 @@ class _ModalBodyState extends State<_ModalBody> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                  child: _PlanCard(plan: _plans[2], onPurchase: _handlePurchase)),
+                child: _PlanCard(plan: _plans[2], onPurchase: _handlePurchase),
+              ),
               SizedBox(width: gap),
               Expanded(
-                  child: _PlanCard(plan: _plans[3], onPurchase: _handlePurchase)),
+                child: _PlanCard(plan: _plans[3], onPurchase: _handlePurchase),
+              ),
             ],
           ),
         ),
@@ -234,7 +239,8 @@ class _ModalBodyState extends State<_ModalBody> {
           for (int i = 0; i < _plans.length; i++) ...[
             if (i > 0) SizedBox(width: gap),
             Expanded(
-                child: _PlanCard(plan: _plans[i], onPurchase: _handlePurchase)),
+              child: _PlanCard(plan: _plans[i], onPurchase: _handlePurchase),
+            ),
           ],
         ],
       ),
@@ -255,7 +261,8 @@ class _ModalBodyState extends State<_ModalBody> {
     final pin = await WalletPinDialog.show(
       context,
       title: 'Konfirmasi Pembelian',
-      subtitle: 'Masukkan PIN wallet untuk membeli Paket ${plan.name} (${plan.label}).',
+      subtitle:
+          'Masukkan PIN wallet untuk membeli Paket ${plan.name} (${plan.label}).',
     );
 
     if (pin == 'GO_WALLET') {
@@ -276,10 +283,7 @@ class _ModalBodyState extends State<_ModalBody> {
 
     try {
       // PIN + tier sent — backend verifies PIN and resolves price.
-      final result = await SubscriptionService.purchase(
-        plan.tier,
-        pin: pin,
-      );
+      final result = await SubscriptionService.purchase(plan.tier, pin: pin);
       if (!mounted) return;
       Navigator.pop(context); // close loading
 
@@ -288,7 +292,8 @@ class _ModalBodyState extends State<_ModalBody> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                result['message'] ?? 'Paket ${plan.name} berhasil diaktifkan!'),
+              result['message'] ?? 'Paket ${plan.name} berhasil diaktifkan!',
+            ),
             backgroundColor: Colors.green.shade700,
             behavior: SnackBarBehavior.floating,
           ),
@@ -317,7 +322,6 @@ class _ModalBodyState extends State<_ModalBody> {
     }
   }
 }
-
 
 // ─── Header widget ────────────────────────────────────────────────────────────
 class _Header extends StatelessWidget {
@@ -362,7 +366,11 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           IconButton(
-            icon: const Icon(Icons.close_rounded, color: Colors.white, size: 22),
+            icon: const Icon(
+              Icons.close_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
             onPressed: () => Navigator.pop(context),
             tooltip: 'Tutup',
           ),
@@ -464,8 +472,7 @@ class _PlanCard extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.check_circle,
-                      size: 15, color: Colors.green),
+                  const Icon(Icons.check_circle, size: 15, color: Colors.green),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -491,9 +498,7 @@ class _PlanCard extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: plan.isPopular
                     ? AppTheme.primaryPurple
-                    : (isDark
-                        ? Colors.grey.shade800
-                        : Colors.grey.shade200),
+                    : (isDark ? Colors.grey.shade800 : Colors.grey.shade200),
                 foregroundColor: plan.isPopular
                     ? Colors.white
                     : (isDark ? Colors.white : Colors.black87),

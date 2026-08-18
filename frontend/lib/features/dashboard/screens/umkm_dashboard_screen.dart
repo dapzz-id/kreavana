@@ -31,7 +31,6 @@ class UmkmDashboardScreen extends StatefulWidget {
 
 class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
   final Color _accentColor = SubRoleThemeEngine.getAccentColor('user', 'umkm');
-  bool _isLoading = true;
   List<Map<String, String>> _realtimeStats = [];
   Map<String, List<Map<String, String>>> _allSubRoleStats = {};
 
@@ -40,9 +39,13 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
     super.initState();
     _fetchRealtimeData();
   }
+
   Future<void> _fetchRealtimeData() async {
     try {
-      final stats = await DashboardService.getStats(subRole: 'umkm', roleType: 'user');
+      final stats = await DashboardService.getStats(
+        subRole: 'umkm',
+        roleType: 'user',
+      );
       final allStats = await DashboardService.getAllSubRoleStats(
         subRoleSlugs: ['umkm', 'company', 'government', 'community', 'school'],
         roleType: 'user',
@@ -51,11 +54,10 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
         setState(() {
           _realtimeStats = stats;
           _allSubRoleStats = allStats;
-          _isLoading = false;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+      // Ignore error for now
     }
   }
 
@@ -157,7 +159,9 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
               child: Container(
                 height: 44,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1A1830) : Colors.grey.shade100,
+                  color: isDark
+                      ? const Color(0xFF1A1830)
+                      : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
@@ -176,7 +180,9 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
                       'Cari kreator, paket foto UMKM, desain produk...',
                       style: TextStyle(
                         fontSize: 13,
-                        color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                        color: isDark
+                            ? AppTheme.textMuted
+                            : Colors.grey.shade500,
                       ),
                     ),
                   ],
@@ -211,12 +217,20 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
           const SizedBox(width: 12),
           ListenableBuilder(
             listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(Icons.notifications_none_outlined, BadgeService().unreadNotificationsText, isDark),
+            builder: (_, _) => _buildAppBarBadge(
+              Icons.notifications_none_outlined,
+              BadgeService().unreadNotificationsText,
+              isDark,
+            ),
           ),
           const SizedBox(width: 4),
           ListenableBuilder(
             listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(Icons.chat_bubble_outline, BadgeService().unreadMessagesText, isDark),
+            builder: (_, _) => _buildAppBarBadge(
+              Icons.chat_bubble_outline,
+              BadgeService().unreadMessagesText,
+              isDark,
+            ),
           ),
         ],
       ),
@@ -256,7 +270,11 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
             ),
             child: const Text(
               'Akselerasi Produk Lokal',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -293,19 +311,39 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
                   backgroundColor: Colors.white,
                   foregroundColor: _accentColor,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 icon: const Icon(Icons.add_a_photo_outlined, size: 18),
-                label: const Text('Buat Project Foto Produk', style: TextStyle(fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'Buat Project Foto Produk',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
               OutlinedButton.icon(
-                onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => PeluangProyekScreen(user: widget.user))); },
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PeluangProyekScreen(user: widget.user),
+                    ),
+                  );
+                },
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white,
                   side: const BorderSide(color: Colors.white70, width: 1.5),
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 icon: const Icon(Icons.card_giftcard, size: 18),
                 label: const Text('Klaim Subsidi Branding UMKM'),
@@ -328,10 +366,30 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
             };
           }).toList()
         : [
-            {'title': 'Project Aktif', 'value': '3 Katalog', 'icon': Icons.inventory_2_outlined, 'change': '+1 bulan ini'},
-            {'title': 'Kreator Terhubung', 'value': '8 Vendor', 'icon': Icons.people_outline, 'change': 'Rating avg 4.9'},
-            {'title': 'Total Investasi', 'value': 'Rp 4.250.000', 'icon': Icons.account_balance_wallet_outlined, 'change': 'Escrow Terjamin'},
-            {'title': 'Aset Selesai', 'value': '142 File HD', 'icon': Icons.cloud_download_outlined, 'change': 'Siap Pakai'},
+            {
+              'title': 'Project Aktif',
+              'value': '3 Katalog',
+              'icon': Icons.inventory_2_outlined,
+              'change': '+1 bulan ini',
+            },
+            {
+              'title': 'Kreator Terhubung',
+              'value': '8 Vendor',
+              'icon': Icons.people_outline,
+              'change': 'Rating avg 4.9',
+            },
+            {
+              'title': 'Total Investasi',
+              'value': 'Rp 4.250.000',
+              'icon': Icons.account_balance_wallet_outlined,
+              'change': 'Escrow Terjamin',
+            },
+            {
+              'title': 'Aset Selesai',
+              'value': '142 File HD',
+              'icon': Icons.cloud_download_outlined,
+              'change': 'Siap Pakai',
+            },
           ];
 
     return LayoutBuilder(
@@ -375,13 +433,19 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
                           m['title'] as String,
                           style: TextStyle(
                             fontSize: 12,
-                            color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                            color: isDark
+                                ? AppTheme.textMuted
+                                : AppTheme.textMutedLight,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      Icon((m['icon'] as IconData?) ?? Icons.image_outlined, color: _accentColor, size: 20),
+                      Icon(
+                        (m['icon'] as IconData?) ?? Icons.image_outlined,
+                        color: _accentColor,
+                        size: 20,
+                      ),
                     ],
                   ),
                   Text(
@@ -436,9 +500,24 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
 
   Widget _buildPackagesSection(bool isDark) {
     final packages = [
-      {'title': 'Paket Foto Katalog Minimarket', 'price': 'Rp 750.000', 'desc': '20 Foto Clean Background White + Lighting Studio', 'tag': 'Populer'},
-      {'title': 'Paket Video Reels IG/TikTok', 'price': 'Rp 1.200.000', 'desc': '3 Short Video 1080p dengan VO Model & Musik Trending', 'tag': 'Best Value'},
-      {'title': 'Paket Redesain Kemasan / Stiker', 'price': 'Rp 950.000', 'desc': 'Vector Master AI/PSD Siap Cetak + Mockup 3D', 'tag': 'Desain'},
+      {
+        'title': 'Paket Foto Katalog Minimarket',
+        'price': 'Rp 750.000',
+        'desc': '20 Foto Clean Background White + Lighting Studio',
+        'tag': 'Populer',
+      },
+      {
+        'title': 'Paket Video Reels IG/TikTok',
+        'price': 'Rp 1.200.000',
+        'desc': '3 Short Video 1080p dengan VO Model & Musik Trending',
+        'tag': 'Best Value',
+      },
+      {
+        'title': 'Paket Redesain Kemasan / Stiker',
+        'price': 'Rp 950.000',
+        'desc': 'Vector Master AI/PSD Siap Cetak + Mockup 3D',
+        'tag': 'Desain',
+      },
     ];
 
     return Column(
@@ -456,14 +535,16 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
               ),
             ),
             TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const DaftarKebutuhanScreen()),
-                    );
-                  },
-                  child: Text('Lihat Semua', style: TextStyle(color: _accentColor)),
-                ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const DaftarKebutuhanScreen(),
+                  ),
+                );
+              },
+              child: Text('Lihat Semua', style: TextStyle(color: _accentColor)),
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -485,7 +566,9 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
                     decoration: BoxDecoration(
                       color: isDark ? AppTheme.cardBg : Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: _accentColor.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: _accentColor.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -495,19 +578,30 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: _accentColor.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 pkg['tag'] as String,
-                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _accentColor),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: _accentColor,
+                                ),
                               ),
                             ),
                             Text(
                               pkg['price'] as String,
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: _accentColor),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: _accentColor,
+                              ),
                             ),
                           ],
                         ),
@@ -525,7 +619,9 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 11,
-                            color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                            color: isDark
+                                ? AppTheme.textMuted
+                                : AppTheme.textMutedLight,
                           ),
                         ),
                         SizedBox(
@@ -533,12 +629,19 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
                           height: 32,
                           child: ElevatedButton(
                             onPressed: () {
-                              final title = (pkg['title'] as String).toLowerCase();
+                              final title = (pkg['title'] as String)
+                                  .toLowerCase();
                               String kategori = 'lainnya';
-                              if (title.contains('foto') || title.contains('katalog')) {
+                              if (title.contains('foto') ||
+                                  title.contains('katalog')) {
                                 kategori = 'fotografi';
-                              } else if (title.contains('video') || title.contains('reels')) kategori = 'videografi';
-                              else if (title.contains('desain') || title.contains('redesain') || title.contains('stiker')) kategori = 'desain-grafis';
+                              } else if (title.contains('video') ||
+                                  title.contains('reels'))
+                                kategori = 'videografi';
+                              else if (title.contains('desain') ||
+                                  title.contains('redesain') ||
+                                  title.contains('stiker'))
+                                kategori = 'desain-grafis';
 
                               Navigator.push(
                                 context,
@@ -554,10 +657,18 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _accentColor,
                               foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                               padding: EdgeInsets.zero,
                             ),
-                            child: const Text('Pesan Paket Ini', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            child: const Text(
+                              'Pesan Paket Ini',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -574,8 +685,18 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
 
   Widget _buildActiveProjectsSection(bool isDark) {
     final active = [
-      {'name': 'Foto Makanan Keripik Pedas Bude', 'status': 'Proses Editing (80%)', 'vendor': 'Aruna Studio', 'deadline': 'Besok, 18:00'},
-      {'name': 'Desain Stiker Botol Minuman Herbal', 'status': 'Revisi Mockup', 'vendor': 'Nusantara Graphix', 'deadline': '10 Ags 2026'},
+      {
+        'name': 'Foto Makanan Keripik Pedas Bude',
+        'status': 'Proses Editing (80%)',
+        'vendor': 'Aruna Studio',
+        'deadline': 'Besok, 18:00',
+      },
+      {
+        'name': 'Desain Stiker Botol Minuman Herbal',
+        'status': 'Revisi Mockup',
+        'vendor': 'Nusantara Graphix',
+        'deadline': '10 Ags 2026',
+      },
     ];
 
     return Column(
@@ -598,7 +719,9 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
               decoration: BoxDecoration(
                 color: isDark ? AppTheme.cardBg : Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+                border: Border.all(
+                  color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                ),
               ),
               child: Row(
                 children: [
@@ -624,21 +747,30 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
                           'Vendor: ${proj['vendor']!} • Deadline: ${proj['deadline']!}',
                           style: TextStyle(
                             fontSize: 11,
-                            color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                            color: isDark
+                                ? AppTheme.textMuted
+                                : AppTheme.textMutedLight,
                           ),
                         ),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: _accentColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       proj['status']!,
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _accentColor),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: _accentColor,
+                      ),
                     ),
                   ),
                 ],
@@ -679,7 +811,9 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
                   'Tim AI Kreavana siap mencocokkan produk UMKM Anda dengan fotografer & desainer lokal terverifikasi.',
                   style: TextStyle(
                     fontSize: 12,
-                    color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                    color: isDark
+                        ? AppTheme.textMuted
+                        : AppTheme.textMutedLight,
                   ),
                 ),
               ],
@@ -687,11 +821,18 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
           ),
           const SizedBox(width: 12),
           ElevatedButton(
-            onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => const DirectMessageScreen())); },
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const DirectMessageScreen()),
+              );
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: _accentColor,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             child: const Text('Konsultasi Gratis'),
           ),
@@ -705,7 +846,9 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
     return ListenableBuilder(
       listenable: BadgeService(),
       builder: (context, _) {
-        final badgeCount = isNotification ? BadgeService().unreadNotificationsText : BadgeService().unreadMessagesText;
+        final badgeCount = isNotification
+            ? BadgeService().unreadNotificationsText
+            : BadgeService().unreadMessagesText;
         return GestureDetector(
           onTap: () {
             Navigator.push(
@@ -726,7 +869,11 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(icon, size: 20, color: isDark ? Colors.white : Colors.black87),
+                Icon(
+                  icon,
+                  size: 20,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
                 if (badgeCount.isNotEmpty && badgeCount != '0')
                   Positioned(
                     right: -4,
@@ -739,7 +886,11 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
                       ),
                       child: Text(
                         badgeCount,
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -756,9 +907,9 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
 class _DragScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
-        PointerDeviceKind.touch,
-        PointerDeviceKind.mouse,
-        PointerDeviceKind.stylus,
-        PointerDeviceKind.unknown,
-      };
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.stylus,
+    PointerDeviceKind.unknown,
+  };
 }

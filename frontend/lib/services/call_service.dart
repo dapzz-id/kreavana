@@ -66,7 +66,7 @@ class CallService extends ChangeNotifier {
     final remaining = maxCallDurationSeconds - callDurationSeconds;
     return remaining > 0 && remaining <= 300; // 5 minutes warning
   }
-  
+
   int get remainingCallSeconds {
     final remaining = maxCallDurationSeconds - callDurationSeconds;
     return remaining > 0 ? remaining : 0;
@@ -116,7 +116,7 @@ class CallService extends ChangeNotifier {
   Future<void> initPusher() async {
     final currentUser = await AuthService.getCurrentUser();
     if (currentUser == null) return;
-    
+
     currentTier = currentUser.subscriptionTier;
 
     try {
@@ -257,7 +257,7 @@ class CallService extends ChangeNotifier {
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
         _markConnected(sendSignal: true);
       } else if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
-                 state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected) {
+          state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected) {
         debugPrint('⚠️ WebRTC connection failed/disconnected');
       }
     };
@@ -277,13 +277,16 @@ class CallService extends ChangeNotifier {
         _peerConnection?.addTrack(track, _localStream!);
       }
     }
-
   }
 
   /// Flush buffered ICE candidates (call AFTER setRemoteDescription)
   Future<void> _flushPendingCandidates() async {
-    if (_hasRemoteDescription && _pendingCandidates.isNotEmpty && _peerConnection != null) {
-      debugPrint('📥 Flushing ${_pendingCandidates.length} buffered ICE candidates');
+    if (_hasRemoteDescription &&
+        _pendingCandidates.isNotEmpty &&
+        _peerConnection != null) {
+      debugPrint(
+        '📥 Flushing ${_pendingCandidates.length} buffered ICE candidates',
+      );
       for (var candidate in _pendingCandidates) {
         try {
           await _peerConnection!.addCandidate(candidate);
@@ -296,10 +299,15 @@ class CallService extends ChangeNotifier {
   }
 
   /// Start a Call
-  Future<void> startCall(String receiverId, bool video, {String remoteUserName = 'User', String remoteAvatarUrl = ''}) async {
+  Future<void> startCall(
+    String receiverId,
+    bool video, {
+    String remoteUserName = 'User',
+    String remoteAvatarUrl = '',
+  }) async {
     final currentUser = await AuthService.getCurrentUser();
-    _maxDurationFromBackend = video 
-        ? currentUser?.maxVideoCallDurationSeconds 
+    _maxDurationFromBackend = video
+        ? currentUser?.maxVideoCallDurationSeconds
         : currentUser?.maxVoiceCallDurationSeconds;
 
     isCaller = true;
@@ -348,7 +356,7 @@ class CallService extends ChangeNotifier {
     isMuted = false;
     callDurationSeconds = 0;
     _hasRemoteDescription = false;
-    
+
     notifyListeners();
 
     await _initRenderers();
@@ -403,7 +411,7 @@ class CallService extends ChangeNotifier {
     callDurationSeconds = 0;
     _callTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       callDurationSeconds++;
-      
+
       if (remainingCallSeconds <= 0) {
         // Auto end call when max duration reached
         endCall();
@@ -475,7 +483,9 @@ class CallService extends ChangeNotifier {
       } else if (eventData is Map) {
         payloadData = Map<String, dynamic>.from(eventData);
       } else {
-        debugPrint('Unknown signaling eventData type: ${eventData.runtimeType}');
+        debugPrint(
+          'Unknown signaling eventData type: ${eventData.runtimeType}',
+        );
         return;
       }
     } catch (e) {
@@ -488,7 +498,9 @@ class CallService extends ChangeNotifier {
     final callId = payloadData['call_id'];
     final signalData = payloadData['data'];
 
-    debugPrint('📡 Received signaling: type=$type, callId=$callId, from=$remoteId');
+    debugPrint(
+      '📡 Received signaling: type=$type, callId=$callId, from=$remoteId',
+    );
 
     // If we're already in a call and receive signal for different call, ignore
     if (currentCallId != null && currentCallId != callId) return;
@@ -502,23 +514,32 @@ class CallService extends ChangeNotifier {
         remoteUserId = remoteId;
         isVideoCall = signalData['video'] ?? false;
         incomingCallerName = signalData['callerName'] ?? 'Panggilan Masuk';
-        incomingCallerAvatar = ApiService.resolveAssetUrl(signalData['callerAvatar']?.toString() ?? '');
+        incomingCallerAvatar = ApiService.resolveAssetUrl(
+          signalData['callerAvatar']?.toString() ?? '',
+        );
 
         // Authoritative limit from backend payload
         if (signalData['max_duration'] != null) {
-          _maxDurationFromBackend = int.tryParse(signalData['max_duration'].toString());
+          _maxDurationFromBackend = int.tryParse(
+            signalData['max_duration'].toString(),
+          );
         }
 
         notifyListeners();
-        
-        _tempOffer = RTCSessionDescription(_fixSdp(signalData['sdp']), signalData['type']);
+
+        _tempOffer = RTCSessionDescription(
+          _fixSdp(signalData['sdp']),
+          signalData['type'],
+        );
 
         if (!kIsWeb) {
           final callKitParams = CallKitParams(
             id: callId,
             nameCaller: incomingCallerName,
             appName: 'Kreavana',
-            avatar: incomingCallerAvatar.isNotEmpty ? incomingCallerAvatar : 'https://i.pravatar.cc/100',
+            avatar: incomingCallerAvatar.isNotEmpty
+                ? incomingCallerAvatar
+                : 'https://i.pravatar.cc/100',
             handle: isVideoCall ? 'Video Call' : 'Voice Call',
             type: isVideoCall ? 1 : 0,
             duration: 30000,
@@ -560,7 +581,7 @@ class CallService extends ChangeNotifier {
       case 'answer':
         debugPrint('✅ Call answered! Setting remote description...');
         await _peerConnection?.setRemoteDescription(
-          RTCSessionDescription(_fixSdp(signalData['sdp']), signalData['type'])
+          RTCSessionDescription(_fixSdp(signalData['sdp']), signalData['type']),
         );
         _hasRemoteDescription = true;
         // Flush buffered ICE candidates now that remote description is set
@@ -597,7 +618,10 @@ class CallService extends ChangeNotifier {
         if (currentCallId != null && !kIsWeb) {
           await FlutterCallkitIncoming.endCall(currentCallId!);
         }
-        if (kIsWeb && isRinging && !isCaller && navigatorKey.currentState != null) {
+        if (kIsWeb &&
+            isRinging &&
+            !isCaller &&
+            navigatorKey.currentState != null) {
           navigatorKey.currentState!.pop();
         }
         // Don't send signal back — the remote already sent this
@@ -637,7 +661,7 @@ class CallService extends ChangeNotifier {
   Future<void> proceedAcceptingTempOffer() async {
     if (_tempOffer != null && currentCallId != null && remoteUserId != null) {
       debugPrint('📞 Accepting call, initializing WebRTC...');
-      
+
       isRinging = false;
       _stopRingingTimeout();
       notifyListeners();
@@ -652,7 +676,7 @@ class CallService extends ChangeNotifier {
 
       // Now flush buffered ICE candidates (remote description is set)
       await _flushPendingCandidates();
-      
+
       // Create and send answer
       RTCSessionDescription answer = await _peerConnection!.createAnswer();
       await _peerConnection!.setLocalDescription(answer);
@@ -665,7 +689,10 @@ class CallService extends ChangeNotifier {
     }
   }
 
-  Future<void> _sendSignalingMessage(String type, Map<String, dynamic> data) async {
+  Future<void> _sendSignalingMessage(
+    String type,
+    Map<String, dynamic> data,
+  ) async {
     if (remoteUserId == null || currentCallId == null) return;
     debugPrint('📤 Sending signal: $type to user $remoteUserId');
     await ApiService.post('call/signal', {
@@ -686,7 +713,9 @@ class CallService extends ChangeNotifier {
   }
 
   void toggleCamera() {
-    if (_localStream != null && isVideoCall && _localStream!.getVideoTracks().isNotEmpty) {
+    if (_localStream != null &&
+        isVideoCall &&
+        _localStream!.getVideoTracks().isNotEmpty) {
       bool enabled = _localStream!.getVideoTracks()[0].enabled;
       _localStream!.getVideoTracks()[0].enabled = !enabled;
       notifyListeners();
@@ -715,7 +744,9 @@ class CallService extends ChangeNotifier {
       barrierDismissible: false,
       builder: (dialogContext) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Text(
             isVideoCall
                 ? '📹 Video Call dari $incomingCallerName'
@@ -738,11 +769,16 @@ class CallService extends ChangeNotifier {
               const SizedBox(height: 12),
               Text(
                 incomingCallerName,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
-                isVideoCall ? 'Video Call Masuk...' : 'Panggilan Suara Masuk...',
+                isVideoCall
+                    ? 'Video Call Masuk...'
+                    : 'Panggilan Suara Masuk...',
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
             ],

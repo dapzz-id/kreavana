@@ -108,14 +108,18 @@ class _TransferScreenState extends State<TransferScreen> {
     final result = await WalletService.transfer(
       receiverUsername: username,
       amount: amount,
-      description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+      description: _descController.text.trim().isEmpty
+          ? null
+          : _descController.text.trim(),
     );
 
     if (mounted) {
       setState(() => _isLoading = false);
       if (result['success'] == true) {
         // Update user model state
-        final updatedUser = widget.user.copyWith(balance: result['sender_balance']);
+        final updatedUser = widget.user.copyWith(
+          balance: result['sender_balance'],
+        );
         if (widget.onUserUpdated != null) {
           widget.onUserUpdated!(updatedUser);
         }
@@ -153,7 +157,9 @@ class _TransferScreenState extends State<TransferScreen> {
                   Navigator.pop(context, {
                     'success': true,
                     'amount': amount,
-                    'fee': result['fee'] != null ? double.parse(result['fee'].toString()) : (amount * 0.05),
+                    'fee': result['fee'] != null
+                        ? double.parse(result['fee'].toString())
+                        : (amount * 0.05),
                   }); // Go back with transaction details
                 },
                 child: const Text('Selesai'),
@@ -249,7 +255,9 @@ class _TransferScreenState extends State<TransferScreen> {
                       prefixIcon: const Icon(Icons.alternate_email_rounded),
                       filled: widget.preFilledUsername != null,
                       fillColor: widget.preFilledUsername != null
-                          ? (isDark ? Colors.grey.shade900 : Colors.grey.shade100)
+                          ? (isDark
+                                ? Colors.grey.shade900
+                                : Colors.grey.shade100)
                           : null,
                     ),
                   ),
@@ -310,9 +318,18 @@ class _TransferScreenState extends State<TransferScreen> {
                 ),
                 child: Column(
                   children: [
-                    _buildRowBreakdown('Jumlah Kirim', _formatRupiah(_amount), theme, isBold: true),
+                    _buildRowBreakdown(
+                      'Jumlah Kirim',
+                      _formatRupiah(_amount),
+                      theme,
+                      isBold: true,
+                    ),
                     const SizedBox(height: 8),
-                    _buildRowBreakdown('Pajak Platform (5%)', _formatRupiah(_tax), theme),
+                    _buildRowBreakdown(
+                      'Pajak Platform (5%)',
+                      _formatRupiah(_tax),
+                      theme,
+                    ),
                     const SizedBox(height: 12),
                     const Divider(),
                     const SizedBox(height: 12),
@@ -326,7 +343,11 @@ class _TransferScreenState extends State<TransferScreen> {
                     const SizedBox(height: 8),
                     const Text(
                       '*Penerima akan menerima jumlah bersih setelah dipotong biaya pajak platform 5%.',
-                      style: TextStyle(fontSize: 10, color: Colors.grey, fontStyle: FontStyle.italic),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ],
                 ),
@@ -353,7 +374,10 @@ class _TransferScreenState extends State<TransferScreen> {
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text(
                         'Konfirmasi & Kirim',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
               ),
             ),

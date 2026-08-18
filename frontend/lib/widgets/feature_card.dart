@@ -64,7 +64,9 @@ class FeatureCard extends StatelessWidget {
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: accentColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
@@ -85,7 +87,9 @@ class FeatureCard extends StatelessWidget {
                     if (opportunity.budgetRange != null) ...[
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.success.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
@@ -137,9 +141,7 @@ class FeatureCard extends StatelessWidget {
 
                 // ── Divider ────────────────────────────────────────────────
                 Divider(
-                  color: isDark
-                      ? AppTheme.dividerDark
-                      : AppTheme.dividerLight,
+                  color: isDark ? AppTheme.dividerDark : AppTheme.dividerLight,
                   height: 1,
                 ),
                 const SizedBox(height: 10),
@@ -210,9 +212,9 @@ class FeatureCard extends StatelessWidget {
     return slug
         .replaceAll('_', ' ')
         .split(' ')
-        .map((w) => w.isNotEmpty
-            ? '${w[0].toUpperCase()}${w.substring(1)}'
-            : '')
+        .map(
+          (w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '',
+        )
         .join(' ')
         .toUpperCase();
   }

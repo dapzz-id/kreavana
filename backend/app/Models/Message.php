@@ -26,6 +26,7 @@ class Message extends Model
     protected $casts = [
         'deleted_for' => 'array',
         'encryption_version' => 'integer',
+        'type' => \App\Enums\MessageType::class,
     ];
 
     public function chat()

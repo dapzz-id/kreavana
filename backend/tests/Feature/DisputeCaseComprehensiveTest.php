@@ -19,28 +19,15 @@ class DisputeCaseComprehensiveTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        User::factory()->create(['role' => 'admin', 'is_creator_approved' => true]);
+        User::factory()->create(['role' => \App\Enums\RoleType::Admin, 'is_creator_approved' => true]);
     }
 
-    protected function getAuthHeaders($user)
-    {
-        $token = \Tymon\JWTAuth\Facades\JWTAuth::fromUser($user);
-        $payload = \Tymon\JWTAuth\Facades\JWTAuth::setToken($token)->getPayload();
-        $jti = $payload->get('jti');
-        if ($jti) {
-            \App\Services\JtiService::store($jti, 3600);
-        }
-        return [
-            'Authorization' => "Bearer $token",
-            'Accept' => 'application/json'
-        ];
-    }
-
+    
     public function test_insufficient_seller_balance_parks_dispute_as_awaiting_settlement()
     {
         $seller = User::factory()->create(['balance' => 0]); // Insufficient balance!
         $buyer = User::factory()->create(['balance' => 0]);
-        $admin = User::where('role', 'admin')->first();
+        $admin = User::where('role', \App\Enums\RoleType::Admin)->first();
 
         $item = MarketplaceItem::create([
             'id' => Str::uuid(),
@@ -91,7 +78,7 @@ class DisputeCaseComprehensiveTest extends TestCase
     {
         $seller = User::factory()->create(['balance' => 100000]); // Sufficient balance
         $buyer = User::factory()->create(['balance' => 0]);
-        $admin = User::where('role', 'admin')->first();
+        $admin = User::where('role', \App\Enums\RoleType::Admin)->first();
 
         $item = MarketplaceItem::create([
             'id' => Str::uuid(),
@@ -146,7 +133,7 @@ class DisputeCaseComprehensiveTest extends TestCase
         ]);
 
         $response = $this->withHeaders($this->getAuthHeaders($owner))
-                         ->postJson("/api/opportunities/{$opportunity->id}/review", [
+                         ->postJson("/api/opportunities/{$opportunity->id}/reviews", [
                              'creator_id' => $creator->id,
                              'rating' => 5,
                              'comment' => 'Great job'

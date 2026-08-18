@@ -14,6 +14,7 @@ class Chat extends Model
     
     protected $casts = [
         'only_admin_can_add' => 'boolean',
+        'type' => \App\Enums\ConversationType::class,
     ];
     
     public function participants()

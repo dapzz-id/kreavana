@@ -64,8 +64,9 @@ class KycService {
   final KycDioClient _kycDio = KycDioClient.instance;
   final S3UploadService _s3UploadService = S3UploadService();
 
-  final ValueNotifier<KycFlowState> stateNotifier =
-      ValueNotifier(KycFlowState());
+  final ValueNotifier<KycFlowState> stateNotifier = ValueNotifier(
+    KycFlowState(),
+  );
 
   KycFlowState get state => stateNotifier.value;
 
@@ -82,24 +83,31 @@ class KycService {
 
       if (response.statusCode == 201) {
         final txId = response.data['transaction_id'] as String;
-        _emit(state.copyWith(
-          step: KycFlowStep.livenessDetection,
-          transactionId: txId,
-          status: 'pending',
-        ));
+        _emit(
+          state.copyWith(
+            step: KycFlowStep.livenessDetection,
+            transactionId: txId,
+            status: 'pending',
+          ),
+        );
         return true;
       }
 
-      _emit(state.copyWith(
-        step: KycFlowStep.failed,
-        errorMessage: response.data['error'] ?? 'Session initialization failed',
-      ));
+      _emit(
+        state.copyWith(
+          step: KycFlowStep.failed,
+          errorMessage:
+              response.data['error'] ?? 'Session initialization failed',
+        ),
+      );
       return false;
     } catch (e) {
-      _emit(state.copyWith(
-        step: KycFlowStep.failed,
-        errorMessage: _friendlyError(e),
-      ));
+      _emit(
+        state.copyWith(
+          step: KycFlowStep.failed,
+          errorMessage: _friendlyError(e),
+        ),
+      );
       return false;
     }
   }
@@ -111,35 +119,44 @@ class KycService {
     required bool smileDetected,
   }) async {
     try {
-      final response = await _kycDio.dio.post('/v1/kyc/liveness/verify', data: {
-        'transaction_id': state.transactionId,
-        'blink_detected': blinkDetected,
-        'smile_detected': smileDetected,
-      });
+      final response = await _kycDio.dio.post(
+        '/v1/kyc/liveness/verify',
+        data: {
+          'transaction_id': state.transactionId,
+          'blink_detected': blinkDetected,
+          'smile_detected': smileDetected,
+        },
+      );
 
       if (response.statusCode == 200) {
         final passed = response.data['liveness_passed'] == true;
         if (passed) {
           _emit(state.copyWith(step: KycFlowStep.uploadingImages));
         } else {
-          _emit(state.copyWith(
-            step: KycFlowStep.failed,
-            errorMessage: 'Liveness check failed — please try again',
-          ));
+          _emit(
+            state.copyWith(
+              step: KycFlowStep.failed,
+              errorMessage: 'Liveness check failed — please try again',
+            ),
+          );
         }
         return passed;
       }
 
-      _emit(state.copyWith(
-        step: KycFlowStep.failed,
-        errorMessage: 'Liveness verification request failed',
-      ));
+      _emit(
+        state.copyWith(
+          step: KycFlowStep.failed,
+          errorMessage: 'Liveness verification request failed',
+        ),
+      );
       return false;
     } catch (e) {
-      _emit(state.copyWith(
-        step: KycFlowStep.failed,
-        errorMessage: _friendlyError(e),
-      ));
+      _emit(
+        state.copyWith(
+          step: KycFlowStep.failed,
+          errorMessage: _friendlyError(e),
+        ),
+      );
       return false;
     }
   }
@@ -154,10 +171,12 @@ class KycService {
 
     final urls = await _s3UploadService.getUploadUrls(state.transactionId!);
     if (urls == null) {
-      _emit(state.copyWith(
-        step: KycFlowStep.failed,
-        errorMessage: 'Failed to get upload URLs',
-      ));
+      _emit(
+        state.copyWith(
+          step: KycFlowStep.failed,
+          errorMessage: 'Failed to get upload URLs',
+        ),
+      );
       return false;
     }
 
@@ -179,10 +198,12 @@ class KycService {
       return true;
     }
 
-    _emit(state.copyWith(
-      step: KycFlowStep.failed,
-      errorMessage: result.errorMessage ?? 'Image upload failed',
-    ));
+    _emit(
+      state.copyWith(
+        step: KycFlowStep.failed,
+        errorMessage: result.errorMessage ?? 'Image upload failed',
+      ),
+    );
     return false;
   }
 
@@ -192,27 +213,37 @@ class KycService {
     _emit(state.copyWith(step: KycFlowStep.matchingFaces));
 
     try {
-      final response = await _kycDio.dio.post('/v1/kyc/face-match', data: {
-        'transaction_id': state.transactionId,
-        's3_ktp_uri': _s3UploadService.lastKtpKey,
-        's3_selfie_uri': _s3UploadService.lastSelfieKey,
-      });
+      final response = await _kycDio.dio.post(
+        '/v1/kyc/face-match',
+        data: {
+          'transaction_id': state.transactionId,
+          's3_ktp_uri': _s3UploadService.lastKtpKey,
+          's3_selfie_uri': _s3UploadService.lastSelfieKey,
+        },
+      );
 
       if (response.statusCode == 202 || response.statusCode == 200) {
-        _emit(state.copyWith(step: KycFlowStep.pollingResult, status: 'processing'));
+        _emit(
+          state.copyWith(step: KycFlowStep.pollingResult, status: 'processing'),
+        );
         return true;
       }
 
-      _emit(state.copyWith(
-        step: KycFlowStep.failed,
-        errorMessage: response.data['error'] ?? 'Face match initiation failed',
-      ));
+      _emit(
+        state.copyWith(
+          step: KycFlowStep.failed,
+          errorMessage:
+              response.data['error'] ?? 'Face match initiation failed',
+        ),
+      );
       return false;
     } catch (e) {
-      _emit(state.copyWith(
-        step: KycFlowStep.failed,
-        errorMessage: _friendlyError(e),
-      ));
+      _emit(
+        state.copyWith(
+          step: KycFlowStep.failed,
+          errorMessage: _friendlyError(e),
+        ),
+      );
       return false;
     }
   }
@@ -234,13 +265,18 @@ class KycService {
         if (response.statusCode == 200) {
           final status = response.data['status'] as String?;
 
-          if (status == 'approved' || status == 'rejected' || status == 'failed') {
-            _emit(state.copyWith(
-              step: KycFlowStep.completed,
-              status: status,
-              similarityScore: (response.data['similarity_score'] as num?)?.toDouble(),
-              completedAt: response.data['completed_at'] as String?,
-            ));
+          if (status == 'approved' ||
+              status == 'rejected' ||
+              status == 'failed') {
+            _emit(
+              state.copyWith(
+                step: KycFlowStep.completed,
+                status: status,
+                similarityScore: (response.data['similarity_score'] as num?)
+                    ?.toDouble(),
+                completedAt: response.data['completed_at'] as String?,
+              ),
+            );
             return;
           }
         }
@@ -252,10 +288,12 @@ class KycService {
     }
 
     // Timed out
-    _emit(state.copyWith(
-      step: KycFlowStep.failed,
-      errorMessage: 'Verification timed out — please check back later',
-    ));
+    _emit(
+      state.copyWith(
+        step: KycFlowStep.failed,
+        errorMessage: 'Verification timed out — please check back later',
+      ),
+    );
   }
 
   // --- Helpers ------------------------------------------------------------

@@ -20,7 +20,7 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
   bool _isLoading = false;
   String _selectedFilter = 'Semua';
   String _searchQuery = '';
-  
+
   List<Map<String, dynamic>> _reviews = [
     {
       'id': '1',
@@ -28,7 +28,8 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
       'role': 'Klien UMKM',
       'project': 'Foto Katalog Produk Premium',
       'rating': 5.0,
-      'comment': 'Hasil fotonya luar biasa! Produk jadi terlihat sangat premium dan profesional. Komunikasi lancar dan pengerjaan sesuai tenggat waktu.',
+      'comment':
+          'Hasil fotonya luar biasa! Produk jadi terlihat sangat premium dan profesional. Komunikasi lancar dan pengerjaan sesuai tenggat waktu.',
       'date': '20 Mei 2026',
       'avatar': Icons.person,
       'verified': true,
@@ -40,7 +41,8 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
       'role': 'Agency Director',
       'project': 'Video Promosi Instagram & TikTok',
       'rating': 4.8,
-      'comment': 'Video yang dihasilkan sangat kreatif dan sesuai brand guideline kami. Color grading ciamik dan audio jernih. Recommended!',
+      'comment':
+          'Video yang dihasilkan sangat kreatif dan sesuai brand guideline kami. Color grading ciamik dan audio jernih. Recommended!',
       'date': '18 Mei 2026',
       'avatar': Icons.person,
       'verified': true,
@@ -52,7 +54,8 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
       'role': 'Brand Manager',
       'project': 'Desain Poster Campaign Digital',
       'rating': 4.9,
-      'comment': 'Desainnya modern, bersih, dan eye-catching. Komunikasi selama proyek berjalan sangat baik dan responsif terhadap revisi.',
+      'comment':
+          'Desainnya modern, bersih, dan eye-catching. Komunikasi selama proyek berjalan sangat baik dan responsif terhadap revisi.',
       'date': '15 Mei 2026',
       'avatar': Icons.person,
       'verified': true,
@@ -64,7 +67,8 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
       'role': 'EO Coordinator',
       'project': 'Dokumentasi Video Offline Festival',
       'rating': 5.0,
-      'comment': 'Sangat memuaskan! Tim datang tepat waktu di venue, membawa peralatan lengkap, dan hasil liputan cinematic luar biasa.',
+      'comment':
+          'Sangat memuaskan! Tim datang tepat waktu di venue, membawa peralatan lengkap, dan hasil liputan cinematic luar biasa.',
       'date': '10 Mei 2026',
       'avatar': Icons.person,
       'verified': true,
@@ -84,7 +88,7 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
       final res = await ApiService.get('/reviews');
       if (res['status'] == true && res['data'] != null) {
         final list = List<Map<String, dynamic>>.from(res['data']);
-        if (list.isNotEmpty && mounted) {
+        if (mounted) {
           setState(() {
             _reviews = list;
           });
@@ -109,8 +113,10 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
     final filteredReviews = _reviews.where((r) {
       final rating = (r['rating'] as num).toDouble();
       if (_selectedFilter == '5★' && rating < 5.0) return false;
-      if (_selectedFilter == '4★' && (rating < 4.0 || rating >= 5.0)) return false;
-      if (_selectedFilter == '3★' && (rating < 3.0 || rating >= 4.0)) return false;
+      if (_selectedFilter == '4★' && (rating < 4.0 || rating >= 5.0))
+        return false;
+      if (_selectedFilter == '3★' && (rating < 3.0 || rating >= 4.0))
+        return false;
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
         final name = (r['name'] as String).toLowerCase();
@@ -165,7 +171,9 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
               else if (filteredReviews.isEmpty)
                 _buildEmptyState(isDark)
               else
-                ...filteredReviews.map((r) => _buildReviewCard(r, accentColor, isDark)),
+                ...filteredReviews.map(
+                  (r) => _buildReviewCard(r, accentColor, isDark),
+                ),
             ],
           ),
         ),
@@ -200,7 +208,11 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
         children: [
           _buildStatItem('4.9', 'Rating Rata-rata', Icons.star_rounded),
           Container(width: 1, height: 45, color: Colors.white24),
-          _buildStatItem('${_reviews.length}', 'Total Ulasan', Icons.rate_review_rounded),
+          _buildStatItem(
+            '${_reviews.length}',
+            'Total Ulasan',
+            Icons.rate_review_rounded,
+          ),
           Container(width: 1, height: 45, color: Colors.white24),
           _buildStatItem('98%', 'Tepat Waktu', Icons.verified_outlined),
         ],
@@ -256,47 +268,53 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          ...breakdown.map((b) => Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 32,
-                      child: Text(
-                        b['star'] as String,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+          ...breakdown.map(
+            (b) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 32,
+                    child: Text(
+                      b['star'] as String,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: b['pct'] as double,
-                          minHeight: 8,
-                          backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-                          valueColor: AlwaysStoppedAnimation<Color>(accentColor),
-                        ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: b['pct'] as double,
+                        minHeight: 8,
+                        backgroundColor: isDark
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade200,
+                        valueColor: AlwaysStoppedAnimation<Color>(accentColor),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    SizedBox(
-                      width: 24,
-                      child: Text(
-                        b['count'] as String,
-                        textAlign: TextAlign.end,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                        ),
+                  ),
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 24,
+                    child: Text(
+                      b['count'] as String,
+                      textAlign: TextAlign.end,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark
+                            ? AppTheme.textMuted
+                            : Colors.grey.shade600,
                       ),
                     ),
-                  ],
-                ),
-              )),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -313,7 +331,10 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
             prefixIcon: const Icon(Icons.search, size: 20),
             filled: true,
             fillColor: isDark ? const Color(0xFF1A1830) : Colors.grey.shade100,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -333,7 +354,9 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
                   selected: isSel,
                   selectedColor: accentColor,
                   labelStyle: TextStyle(
-                    color: isSel ? Colors.white : (isDark ? Colors.white70 : Colors.grey.shade800),
+                    color: isSel
+                        ? Colors.white
+                        : (isDark ? Colors.white70 : Colors.grey.shade800),
                     fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
                     fontSize: 12,
                   ),
@@ -349,7 +372,11 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
     );
   }
 
-  Widget _buildReviewCard(Map<String, dynamic> r, Color accentColor, bool isDark) {
+  Widget _buildReviewCard(
+    Map<String, dynamic> r,
+    Color accentColor,
+    bool isDark,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(18),
@@ -401,7 +428,9 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
                       '${r['role']} • ${r['project']}',
                       style: TextStyle(
                         fontSize: 11,
-                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                        color: isDark
+                            ? AppTheme.textMuted
+                            : Colors.grey.shade600,
                       ),
                     ),
                   ],

@@ -127,6 +127,8 @@ class MarketplaceController extends Controller
             'description' => 'nullable|string|max:2000',
             'category' => 'required|string|in:Fotografi,Videografi,Desain,Konten,Branding',
             'type' => 'required|in:free,paid',
+            'delivery_type' => 'sometimes|in:digital_download,service',
+            'duration_info' => 'nullable|string|max:100',
             'price' => 'required_if:type,paid|numeric|min:0',
             'media' => 'nullable|array|max:5',
             'media.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120', // max 5MB
@@ -139,7 +141,11 @@ class MarketplaceController extends Controller
                 'description' => $request->description,
                 'category' => $request->category,
                 'type' => $request->type,
+                'delivery_type' => $request->delivery_type ?? 'digital_download',
+                'duration_info' => $request->duration_info,
                 'price' => $request->type === 'paid' ? $request->price : 0,
+                'status' => 'draft',
+                'is_active' => false, // fallback
             ]);
 
             if ($request->hasFile('media')) {
@@ -214,12 +220,13 @@ class MarketplaceController extends Controller
             'description' => 'nullable|string|max:2000',
             'category' => 'sometimes|string|in:Fotografi,Videografi,Desain,Konten,Branding',
             'price' => 'sometimes|numeric|min:0',
+            'duration_info' => 'nullable|string|max:100',
             'image_url' => 'nullable|url|max:500',
             'is_active' => 'sometimes|boolean',
         ]);
 
         $item->update($request->only([
-            'title', 'description', 'category', 'price', 'image_url', 'is_active',
+            'title', 'description', 'category', 'price', 'duration_info', 'image_url', 'is_active',
         ]));
 
         return response()->json([
@@ -237,6 +244,36 @@ class MarketplaceController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Karya berhasil dihapus.',
+        ]);
+    }
+
+    public function publish($id)
+    {
+        $item = MarketplaceItem::where('user_id', Auth::id())->findOrFail($id);
+        $item->update([
+            'status' => 'published',
+            'is_active' => true,
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Karya berhasil dipublikasikan.',
+            'data' => $item,
+        ]);
+    }
+
+    public function archive($id)
+    {
+        $item = MarketplaceItem::where('user_id', Auth::id())->findOrFail($id);
+        $item->update([
+            'status' => 'archived',
+            'is_active' => false,
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Karya berhasil diarsipkan.',
+            'data' => $item,
         ]);
     }
 
@@ -424,7 +461,7 @@ class MarketplaceController extends Controller
                 'user_id' => $buyerId,
                 'title' => 'Pembelian Berhasil',
                 'message' => 'Anda berhasil membeli "' . $item->title . '" seharga Rp ' . number_format($item->price, 0, ',', '.') . '.',
-                'type' => 'transaction',
+                'type' => 'payment',
                 'data' => ['item_id' => $item->id, 'purchase_id' => $purchase->id],
                 'is_read' => false,
                 'created_at' => now(),

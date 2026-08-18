@@ -213,7 +213,7 @@ class MessageService extends BaseService
 
         $this->createMessageNotification($chat, $userId, $messageText, $type, $encryptionVersion, $message->id);
 
-        $this->createMessageNotification($chat, $userId, $messageText, $type);
+
 
         $messageData['isMe'] = true;
         return $messageData;

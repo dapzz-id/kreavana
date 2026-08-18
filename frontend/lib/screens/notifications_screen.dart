@@ -19,7 +19,8 @@ class NotificationsScreen extends StatefulWidget {
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
-class _NotificationsScreenState extends State<NotificationsScreen> with SingleTickerProviderStateMixin {
+class _NotificationsScreenState extends State<NotificationsScreen>
+    with SingleTickerProviderStateMixin {
   List<NotificationModel> _notifications = [];
   bool _isLoading = true;
   String _filter = 'all'; // all, unread, read
@@ -88,12 +89,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Hapus Semua Notifikasi?'),
-        content: const Text('Semua notifikasi akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.'),
+        content: const Text(
+          'Semua notifikasi akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Hapus Semua'),
           ),
         ],
@@ -118,11 +127,29 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
 
     List<NotificationModel> list;
     if (currentTab == 'project') {
-      list = _notifications.where((n) => n.type == 'project' || n.type == 'opportunity' || n.type == 'creator_applied' || n.type == 'creator_approved' || n.type == 'creator_rejected').toList();
+      list = _notifications
+          .where(
+            (n) =>
+                n.type == 'project' ||
+                n.type == 'opportunity' ||
+                n.type == 'creator_applied' ||
+                n.type == 'creator_approved' ||
+                n.type == 'creator_rejected',
+          )
+          .toList();
     } else if (currentTab == 'message') {
-      list = _notifications.where((n) => n.type == 'message' || n.type == 'chat').toList();
+      list = _notifications
+          .where((n) => n.type == 'message' || n.type == 'chat')
+          .toList();
     } else if (currentTab == 'transaction') {
-      list = _notifications.where((n) => n.type == 'payment' || n.type == 'transaction' || n.type == 'wallet').toList();
+      list = _notifications
+          .where(
+            (n) =>
+                n.type == 'payment' ||
+                n.type == 'transaction' ||
+                n.type == 'wallet',
+          )
+          .toList();
     } else {
       list = _notifications;
     }
@@ -177,10 +204,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Notifikasi', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Notifikasi',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             if (unreadCount > 0)
-              Text('$unreadCount belum dibaca',
-                  style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight)),
+              Text(
+                '$unreadCount belum dibaca',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                ),
+              ),
           ],
         ),
         actions: [
@@ -195,27 +230,66 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
               }
             },
             itemBuilder: (context) => [
-              PopupMenuItem(value: 'all', child: Row(children: [
-                Icon(_filter == 'all' ? Icons.check : Icons.circle_outlined, size: 18, color: AppTheme.primaryPurple),
-                const SizedBox(width: 10),
-                const Text('Semua'),
-              ])),
-              PopupMenuItem(value: 'unread', child: Row(children: [
-                Icon(_filter == 'unread' ? Icons.check : Icons.circle_outlined, size: 18, color: AppTheme.primaryPurple),
-                const SizedBox(width: 10),
-                const Text('Belum Dibaca'),
-              ])),
-              PopupMenuItem(value: 'read', child: Row(children: [
-                Icon(_filter == 'read' ? Icons.check : Icons.circle_outlined, size: 18, color: AppTheme.primaryPurple),
-                const SizedBox(width: 10),
-                const Text('Sudah Dibaca'),
-              ])),
+              PopupMenuItem(
+                value: 'all',
+                child: Row(
+                  children: [
+                    Icon(
+                      _filter == 'all' ? Icons.check : Icons.circle_outlined,
+                      size: 18,
+                      color: AppTheme.primaryPurple,
+                    ),
+                    const SizedBox(width: 10),
+                    const Text('Semua'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'unread',
+                child: Row(
+                  children: [
+                    Icon(
+                      _filter == 'unread' ? Icons.check : Icons.circle_outlined,
+                      size: 18,
+                      color: AppTheme.primaryPurple,
+                    ),
+                    const SizedBox(width: 10),
+                    const Text('Belum Dibaca'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'read',
+                child: Row(
+                  children: [
+                    Icon(
+                      _filter == 'read' ? Icons.check : Icons.circle_outlined,
+                      size: 18,
+                      color: AppTheme.primaryPurple,
+                    ),
+                    const SizedBox(width: 10),
+                    const Text('Sudah Dibaca'),
+                  ],
+                ),
+              ),
               const PopupMenuDivider(),
-              PopupMenuItem(value: 'delete_all', child: Row(children: [
-                const Icon(Icons.delete_sweep_outlined, size: 18, color: Colors.red),
-                const SizedBox(width: 10),
-                const Text('Hapus Semua', style: TextStyle(color: Colors.red)),
-              ])),
+              PopupMenuItem(
+                value: 'delete_all',
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.delete_sweep_outlined,
+                      size: 18,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Hapus Semua',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
           if (unreadCount > 0)
@@ -223,7 +297,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
               onPressed: _markAllAsRead,
               icon: const Icon(Icons.done_all, size: 18),
               label: const Text('Tandai Semua'),
-              style: TextButton.styleFrom(foregroundColor: AppTheme.primaryPurple),
+              style: TextButton.styleFrom(
+                foregroundColor: AppTheme.primaryPurple,
+              ),
             ),
           const SizedBox(width: 8),
         ],
@@ -235,10 +311,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
             tabAlignment: TabAlignment.start,
             onTap: (_) => setState(() {}),
             tabs: const [
-              Tab(icon: Icon(Icons.notifications_active_outlined, size: 18), text: 'Semua'),
+              Tab(
+                icon: Icon(Icons.notifications_active_outlined, size: 18),
+                text: 'Semua',
+              ),
               Tab(icon: Icon(Icons.work_outline, size: 18), text: 'Proyek'),
-              Tab(icon: Icon(Icons.chat_bubble_outline, size: 18), text: 'Pesan'),
-              Tab(icon: Icon(Icons.payments_outlined, size: 18), text: 'Transaksi'),
+              Tab(
+                icon: Icon(Icons.chat_bubble_outline, size: 18),
+                text: 'Pesan',
+              ),
+              Tab(
+                icon: Icon(Icons.payments_outlined, size: 18),
+                text: 'Transaksi',
+              ),
             ],
           ),
         ),
@@ -246,43 +331,59 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
       body: _isLoading
           ? const SkeletonList()
           : _filteredNotifications.isEmpty
-              ? AppEmptyState(
-                  icon: _filter == 'unread' ? Icons.mark_email_read_outlined : Icons.notifications_none,
-                  title: _filter == 'unread' ? 'Semua Sudah Dibaca!' : 'Belum Ada Notifikasi',
-                  subtitle: _filter == 'unread'
-                      ? 'Anda sudah membaca semua notifikasi.'
-                      : 'Notifikasi akan muncul di sini ketika ada aktivitas baru.',
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadNotifications,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
-                    itemCount: _groupedNotifications.entries.where((e) => e.value.isNotEmpty).length,
-                    itemBuilder: (context, sectionIndex) {
-                      final entries = _groupedNotifications.entries.where((e) => e.value.isNotEmpty).toList();
-                      final entry = entries[sectionIndex];
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(left: 4, top: 8, bottom: 10),
-                            child: Text(
-                              entry.key.toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
+          ? AppEmptyState(
+              icon: _filter == 'unread'
+                  ? Icons.mark_email_read_outlined
+                  : Icons.notifications_none,
+              title: _filter == 'unread'
+                  ? 'Semua Sudah Dibaca!'
+                  : 'Belum Ada Notifikasi',
+              subtitle: _filter == 'unread'
+                  ? 'Anda sudah membaca semua notifikasi.'
+                  : 'Notifikasi akan muncul di sini ketika ada aktivitas baru.',
+            )
+          : RefreshIndicator(
+              onRefresh: _loadNotifications,
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
+                itemCount: _groupedNotifications.entries
+                    .where((e) => e.value.isNotEmpty)
+                    .length,
+                itemBuilder: (context, sectionIndex) {
+                  final entries = _groupedNotifications.entries
+                      .where((e) => e.value.isNotEmpty)
+                      .toList();
+                  final entry = entries[sectionIndex];
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          left: 4,
+                          top: 8,
+                          bottom: 10,
+                        ),
+                        child: Text(
+                          entry.key.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? AppTheme.textMuted
+                                : AppTheme.textMutedLight,
+                            letterSpacing: 0.8,
                           ),
-                          ...entry.value.map((notif) => _buildNotificationCard(notif, isDark)),
-                          const SizedBox(height: 8),
-                        ],
-                      );
-                    },
-                  ),
-                ),
+                        ),
+                      ),
+                      ...entry.value.map(
+                        (notif) => _buildNotificationCard(notif, isDark),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  );
+                },
+              ),
+            ),
     );
   }
 
@@ -311,10 +412,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
             title: const Text('Hapus Notifikasi?'),
             content: const Text('Notifikasi ini akan dihapus permanen.'),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Batal'),
+              ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
                 child: const Text('Hapus'),
               ),
             ],
@@ -370,7 +477,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                               notif.title,
                               style: TextStyle(
                                 fontSize: 13,
-                                fontWeight: notif.isRead ? FontWeight.w600 : FontWeight.bold,
+                                fontWeight: notif.isRead
+                                    ? FontWeight.w600
+                                    : FontWeight.bold,
                               ),
                             ),
                           ),
@@ -382,7 +491,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                         notif.body,
                         style: TextStyle(
                           fontSize: 12,
-                          color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                          color: isDark
+                              ? AppTheme.textMuted
+                              : AppTheme.textMutedLight,
                           height: 1.4,
                         ),
                         maxLines: 2,
@@ -396,24 +507,37 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                             formattedDate,
                             style: TextStyle(
                               fontSize: 10,
-                              color: isDark ? AppTheme.textMuted.withValues(alpha: 0.7) : AppTheme.textMutedLight.withValues(alpha: 0.8),
+                              color: isDark
+                                  ? AppTheme.textMuted.withValues(alpha: 0.7)
+                                  : AppTheme.textMutedLight.withValues(
+                                      alpha: 0.8,
+                                    ),
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
-                      if (notif.type == 'group_invite' || notif.type == 'group') ...[
+                      if (notif.type == 'group_invite' ||
+                          notif.type == 'group') ...[
                         const SizedBox(height: 10),
                         Row(
                           children: [
                             ElevatedButton(
                               onPressed: () async {
-                                final chatId = notif.data != null ? notif.data!['chat_id']?.toString() : null;
+                                final chatId = notif.data != null
+                                    ? notif.data!['chat_id']?.toString()
+                                    : null;
                                 if (chatId != null && chatId.isNotEmpty) {
                                   try {
-                                    await ChatService.respondInvitation(chatId, true);
+                                    await ChatService.respondInvitation(
+                                      chatId,
+                                      true,
+                                    );
                                     if (context.mounted) {
-                                      AppSnackbar.success(context, 'Berhasil bergabung dengan grup!');
+                                      AppSnackbar.success(
+                                        context,
+                                        'Berhasil bergabung dengan grup!',
+                                      );
                                       _loadNotifications();
                                     }
                                   } catch (_) {}
@@ -422,22 +546,41 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.primaryPurple,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 6,
+                                ),
                                 minimumSize: Size.zero,
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
-                              child: const Text('Setujui', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                              child: const Text(
+                                'Setujui',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                             const SizedBox(width: 8),
                             OutlinedButton(
                               onPressed: () async {
-                                final chatId = notif.data != null ? notif.data!['chat_id']?.toString() : null;
+                                final chatId = notif.data != null
+                                    ? notif.data!['chat_id']?.toString()
+                                    : null;
                                 if (chatId != null && chatId.isNotEmpty) {
                                   try {
-                                    await ChatService.respondInvitation(chatId, false);
+                                    await ChatService.respondInvitation(
+                                      chatId,
+                                      false,
+                                    );
                                     if (context.mounted) {
-                                      AppSnackbar.info(context, 'Undangan grup ditolak');
+                                      AppSnackbar.info(
+                                        context,
+                                        'Undangan grup ditolak',
+                                      );
                                       _loadNotifications();
                                     }
                                   } catch (_) {}
@@ -446,12 +589,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.redAccent,
                                 side: const BorderSide(color: Colors.redAccent),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 6,
+                                ),
                                 minimumSize: Size.zero,
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
-                              child: const Text('Tolak', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                              child: const Text(
+                                'Tolak',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ],
                         ),

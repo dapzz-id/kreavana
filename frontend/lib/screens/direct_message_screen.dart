@@ -226,19 +226,13 @@ class ChatListSectionState extends State<ChatListSection> {
       if (mounted) loadChats();
     });
     // Ping presence setiap 5 detik untuk menandai user online
-    _pingTimer = Timer.periodic(
-      const Duration(seconds: 5),
-      (_) {
-        if (mounted) ChatService.pingPresence();
-      },
-    );
+    _pingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) ChatService.pingPresence();
+    });
     // Refresh daftar chat setiap 15 detik untuk update status online teman
-    _presenceTimer = Timer.periodic(
-      const Duration(seconds: 15),
-      (_) {
-        if (mounted && !_isRefreshingPresence) _refreshPresence();
-      },
-    );
+    _presenceTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted && !_isRefreshingPresence) _refreshPresence();
+    });
   }
 
   @override
@@ -275,9 +269,7 @@ class ChatListSectionState extends State<ChatListSection> {
       if (selectedId != null) {
         for (final chat in chats) {
           if (chat['id'].toString() == selectedId) {
-            widget.onPresenceUpdated?.call(
-              Map<String, dynamic>.from(chat),
-            );
+            widget.onPresenceUpdated?.call(Map<String, dynamic>.from(chat));
             break;
           }
         }
@@ -433,21 +425,18 @@ class ChatListSectionState extends State<ChatListSection> {
 
   void _createGroup(String name, String description) {
     setState(() => isLoading = true);
-    ChatService.createGroup(name, description).then((newGroup) {
-      setState(() {
-        isLoading = false;
-        _groupChats.insert(
-          0,
-          Map<String, dynamic>.from(newGroup),
-        );
-      });
-      widget.onChatSelected(
-        Map<String, dynamic>.from(newGroup),
-      );
-    }).catchError((e) {
-      setState(() => isLoading = false);
-      debugPrint('Error creating group: $e');
-    });
+    ChatService.createGroup(name, description)
+        .then((newGroup) {
+          setState(() {
+            isLoading = false;
+            _groupChats.insert(0, Map<String, dynamic>.from(newGroup));
+          });
+          widget.onChatSelected(Map<String, dynamic>.from(newGroup));
+        })
+        .catchError((e) {
+          setState(() => isLoading = false);
+          debugPrint('Error creating group: $e');
+        });
   }
 
   // ── Empty state chat list ──────────────────────────────────────────────────
@@ -468,7 +457,9 @@ class ChatListSectionState extends State<ChatListSection> {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                viewType == 'group' ? Icons.groups_rounded : Icons.forum_rounded,
+                viewType == 'group'
+                    ? Icons.groups_rounded
+                    : Icons.forum_rounded,
                 size: 44,
                 color: AppTheme.primaryPurple.withValues(alpha: 0.6),
               ),
@@ -478,8 +469,8 @@ class ChatListSectionState extends State<ChatListSection> {
               searchQuery.isNotEmpty
                   ? 'Obrolan tidak ditemukan'
                   : viewType == 'group'
-                      ? 'Belum ada grup'
-                      : 'Belum ada obrolan',
+                  ? 'Belum ada grup'
+                  : 'Belum ada obrolan',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -491,8 +482,8 @@ class ChatListSectionState extends State<ChatListSection> {
               searchQuery.isNotEmpty
                   ? 'Coba kata kunci lain'
                   : viewType == 'group'
-                      ? 'Buat grup baru untuk berkolaborasi'
-                      : 'Cari kontak untuk mulai mengobrol',
+                  ? 'Buat grup baru untuk berkolaborasi'
+                  : 'Cari kontak untuk mulai mengobrol',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
@@ -594,7 +585,9 @@ class ChatListSectionState extends State<ChatListSection> {
                   return;
                 }
 
-                final chat = Map<String, dynamic>.from(chatData is Map ? chatData : result);
+                final chat = Map<String, dynamic>.from(
+                  chatData is Map ? chatData : result,
+                );
                 setState(() {
                   _personalChats.insert(0, chat);
                   searchQuery = '';
@@ -616,7 +609,11 @@ class ChatListSectionState extends State<ChatListSection> {
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.chat_bubble_rounded, size: 15, color: Colors.white),
+                  Icon(
+                    Icons.chat_bubble_rounded,
+                    size: 15,
+                    color: Colors.white,
+                  ),
                   SizedBox(width: 6),
                   Text(
                     'Chat',
@@ -650,14 +647,21 @@ class ChatListSectionState extends State<ChatListSection> {
     final name = chat['name']?.toString() ?? 'Unknown';
     final lastMessage = chat['lastMessage']?.toString() ?? '';
     final time = chat['time']?.toString() ?? '';
-    final avatarUrl = ApiService.resolveAssetUrl(chat['avatar_url']?.toString() ?? '');
+    final avatarUrl = ApiService.resolveAssetUrl(
+      chat['avatar_url']?.toString() ?? '',
+    );
     final statusText = isTyping
         ? 'Sedang mengetik...'
         : isOnline
-            ? 'Online'
-            : _formatChatLastOnline(
-                (chat['last_online'] ?? chat['lastOnline'] ?? chat['last_seen'] ?? chat['lastSeen'])?.toString() ?? '',
-              );
+        ? 'Online'
+        : _formatChatLastOnline(
+            (chat['last_online'] ??
+                        chat['lastOnline'] ??
+                        chat['last_seen'] ??
+                        chat['lastSeen'])
+                    ?.toString() ??
+                '',
+          );
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -665,8 +669,8 @@ class ChatListSectionState extends State<ChatListSection> {
         borderRadius: BorderRadius.circular(AppTheme.radiusMD),
         color: isSelected
             ? (isDark
-                ? AppTheme.primaryPurple.withValues(alpha: 0.12)
-                : AppTheme.primaryPurple.withValues(alpha: 0.07))
+                  ? AppTheme.primaryPurple.withValues(alpha: 0.12)
+                  : AppTheme.primaryPurple.withValues(alpha: 0.07))
             : Colors.transparent,
         border: Border.all(
           color: isSelected
@@ -692,10 +696,10 @@ class ChatListSectionState extends State<ChatListSection> {
                     backgroundImage: !isGroup && avatarUrl.isNotEmpty
                         ? NetworkImage(avatarUrl)
                         : !isGroup
-                            ? NetworkImage(
-                                'https://ui-avatars.com/api/?name=${Uri.encodeComponent(name)}&background=7C3AED&color=fff&size=128',
-                              )
-                            : null,
+                        ? NetworkImage(
+                            'https://ui-avatars.com/api/?name=${Uri.encodeComponent(name)}&background=7C3AED&color=fff&size=128',
+                          )
+                        : null,
                     child: isGroup
                         ? Icon(
                             Icons.groups_rounded,
@@ -731,10 +735,14 @@ class ChatListSectionState extends State<ChatListSection> {
                         width: 12,
                         height: 12,
                         decoration: BoxDecoration(
-                          color: isTyping ? AppTheme.accentPink : AppTheme.success,
+                          color: isTyping
+                              ? AppTheme.accentPink
+                              : AppTheme.success,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: isDark ? AppTheme.cardDark : AppTheme.cardLight,
+                            color: isDark
+                                ? AppTheme.cardDark
+                                : AppTheme.cardLight,
                             width: 2,
                           ),
                         ),
@@ -756,8 +764,9 @@ class ChatListSectionState extends State<ChatListSection> {
                             name,
                             style: TextStyle(
                               fontSize: 14,
-                              fontWeight:
-                                  unread ? FontWeight.w700 : FontWeight.w600,
+                              fontWeight: unread
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
                               color: theme.colorScheme.onSurface,
                             ),
                             maxLines: 1,
@@ -769,13 +778,14 @@ class ChatListSectionState extends State<ChatListSection> {
                           time,
                           style: TextStyle(
                             fontSize: 11,
-                            fontWeight:
-                                unread ? FontWeight.w700 : FontWeight.w500,
+                            fontWeight: unread
+                                ? FontWeight.w700
+                                : FontWeight.w500,
                             color: unread
                                 ? AppTheme.primaryPurple
                                 : (isDark
-                                    ? Colors.white38
-                                    : Colors.grey.shade400),
+                                      ? Colors.white38
+                                      : Colors.grey.shade400),
                           ),
                         ),
                       ],
@@ -790,8 +800,10 @@ class ChatListSectionState extends State<ChatListSection> {
                         color: isOnline
                             ? AppTheme.success
                             : (isTyping
-                                ? AppTheme.accentPink
-                                : (isDark ? Colors.white38 : Colors.grey.shade500)),
+                                  ? AppTheme.accentPink
+                                  : (isDark
+                                        ? Colors.white38
+                                        : Colors.grey.shade500)),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -804,17 +816,18 @@ class ChatListSectionState extends State<ChatListSection> {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 13,
-                              fontWeight:
-                                  unread ? FontWeight.w600 : FontWeight.w400,
+                              fontWeight: unread
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
                               color: unread
                                   ? theme.colorScheme.onSurface
                                   : (isDark
-                                      ? Colors.white38
-                                      : Colors.grey.shade500),
+                                        ? Colors.white38
+                                        : Colors.grey.shade500),
                             ),
                           ),
                         ),
-                        if (unread) ... [
+                        if (unread) ...[
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -1033,39 +1046,40 @@ class ChatListSectionState extends State<ChatListSection> {
                     itemBuilder: (context, index) => const ChatListSkeleton(),
                   )
                 : chats.isEmpty && additionalResults.isEmpty
-                    ? _buildChatEmptyState(context)
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
-                        ),
-                        itemCount: chats.length + additionalResults.length,
-                        itemBuilder: (context, index) {
-                          if (index >= chats.length) {
-                            final user =
-                                additionalResults[index - chats.length];
-                            return _buildNewUserTile(context, user);
-                          }
+                ? _buildChatEmptyState(context)
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    itemCount: chats.length + additionalResults.length,
+                    itemBuilder: (context, index) {
+                      if (index >= chats.length) {
+                        final user = additionalResults[index - chats.length];
+                        return _buildNewUserTile(context, user);
+                      }
 
-                          final chat = chats[index];
-                          final isSelected =
-                              widget.selectedChat?['id'] == chat['id'];
-                          return AnimatedEntrance(
-                            delay: Duration(milliseconds: 40 * index.clamp(0, 6)),
-                            child: _buildChatTile(context, chat, isSelected),
-                          );
-                        },
-                      ),
+                      final chat = chats[index];
+                      final isSelected =
+                          widget.selectedChat?['id'] == chat['id'];
+                      return AnimatedEntrance(
+                        delay: Duration(milliseconds: 40 * index.clamp(0, 6)),
+                        child: _buildChatTile(context, chat, isSelected),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
       floatingActionButton: Padding(
         // Angkat FAB hanya di layar mobile agar tidak tertutup bottom navbar
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).size.width < 800 ? 95 : 0),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).size.width < 800 ? 95 : 0,
+        ),
         child: FloatingActionButton(
           heroTag: null,
-          onPressed: viewType == 'group' 
-              ? _showCreateGroupDialog 
+          onPressed: viewType == 'group'
+              ? _showCreateGroupDialog
               : () {
                   _searchFocusNode.requestFocus();
                 },
@@ -1114,8 +1128,7 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
 
   Map<String, dynamic>? _chatPresence;
 
-  Map<String, dynamic> get _chat =>
-      _chatPresence ?? widget.chat;
+  Map<String, dynamic> get _chat => _chatPresence ?? widget.chat;
 
   StreamSubscription? _messageSubscription;
   StreamSubscription? _deletedMessageSubscription;
@@ -1127,7 +1140,8 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     final rawText = msg['text'] ?? msg['message'] ?? msg['body'] ?? '';
     msg['text'] = rawText;
 
-    if (msg['encryption_version'] == 1 && (msg['ciphertext'] as String?)?.isNotEmpty == true) {
+    if (msg['encryption_version'] == 1 &&
+        (msg['ciphertext'] as String?)?.isNotEmpty == true) {
       if (EncryptionService().isInitialized) {
         final messageKeys = msg['message_keys'] as List<dynamic>? ?? [];
         final deviceId = EncryptionService().deviceId;
@@ -1152,7 +1166,8 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         }
       }
       final isMediaOrAudio = msg['type'] == 'audio' || msg['media_url'] != null;
-      msg['_decrypt_failed'] = !isMediaOrAudio && ((msg['text'] as String?)?.isEmpty ?? true);
+      msg['_decrypt_failed'] =
+          !isMediaOrAudio && ((msg['text'] as String?)?.isEmpty ?? true);
     } else {
       msg['_decrypt_failed'] = false;
     }
@@ -1170,7 +1185,9 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         if (mounted) {
           ChatService.markAsRead(widget.chat['id'].toString());
           setState(() {
-            if (!_messages.any((m) => m['id'].toString() == msg['id'].toString())) {
+            if (!_messages.any(
+              (m) => m['id'].toString() == msg['id'].toString(),
+            )) {
               final processed = _processMessage(Map<String, dynamic>.from(msg));
               _messages.insert(0, processed);
             }
@@ -1179,30 +1196,28 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
       }
     });
 
-    _deletedMessageSubscription = ChatService.deletedMessageStream.listen((data) {
+    _deletedMessageSubscription = ChatService.deletedMessageStream.listen((
+      data,
+    ) {
       if (data['chat_id'] == widget.chat['id'].toString()) {
         if (mounted) {
           setState(() {
-            _messages.removeWhere((m) => m['id'].toString() == data['id'].toString());
+            _messages.removeWhere(
+              (m) => m['id'].toString() == data['id'].toString(),
+            );
           });
         }
       }
     });
 
     // Ping presence setiap 5 detik
-    _pingTimer = Timer.periodic(
-      const Duration(seconds: 5),
-      (_) {
-        if (mounted) ChatService.pingPresence();
-      },
-    );
+    _pingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) ChatService.pingPresence();
+    });
     // Refresh header presence setiap 10 detik
-    _presenceTimer = Timer.periodic(
-      const Duration(seconds: 10),
-      (_) {
-        if (mounted && !_isRefreshingPresence) _refreshPresence();
-      },
-    );
+    _presenceTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (mounted && !_isRefreshingPresence) _refreshPresence();
+    });
   }
 
   @override
@@ -1287,8 +1302,12 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         final msgData = result['data'];
         if (msgData != null) {
           setState(() {
-            if (!_messages.any((m) => m['id'].toString() == msgData['id'].toString())) {
-              final processed = _processMessage(Map<String, dynamic>.from(msgData));
+            if (!_messages.any(
+              (m) => m['id'].toString() == msgData['id'].toString(),
+            )) {
+              final processed = _processMessage(
+                Map<String, dynamic>.from(msgData),
+              );
               _messages.insert(0, processed);
             }
           });
@@ -1337,14 +1356,21 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: accent,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Text(
                       'PRO / SUPER',
-                      style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -1353,18 +1379,28 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
               ListTile(
                 leading: const Icon(Icons.psychology_rounded, color: accent),
                 title: const Text('Generasi Balasan Otomatis AI'),
-                subtitle: const Text('Buat opsi respons cepat sesuai pesan terakhir'),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                subtitle: const Text(
+                  'Buat opsi respons cepat sesuai pesan terakhir',
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  final res = await AiService.messageAssistant(mode: 'smart_reply');
-                  if (res != null && AiService.isProSubscriptionRequiredError(res)) {
+                  final res = await AiService.messageAssistant(
+                    mode: 'smart_reply',
+                  );
+                  if (res != null &&
+                      AiService.isProSubscriptionRequiredError(res)) {
                     if (mounted) AiService.promptProUpgrade(context);
                     return;
                   }
-                  if (res != null && res['data'] != null && res['data']['replies'] != null) {
-                    final replies = (res['data']['replies'] as List).cast<String>();
-                    if (replies.isNotEmpty && mounted) {
+                  if (res != null &&
+                      res['data'] != null &&
+                      res['data']['replies'] != null) {
+                    final replies = (res['data']['replies'] as List)
+                        .cast<String>();
+                    if (mounted) {
                       setState(() {
                         _messageController.text = replies.first;
                       });
@@ -1375,20 +1411,31 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
               ListTile(
                 leading: const Icon(Icons.auto_fix_high_rounded, color: accent),
                 title: const Text('Polishing & Rapikan Pesan'),
-                subtitle: const Text('Ubah teks yang diketik menjadi pesan sangat profesional'),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                subtitle: const Text(
+                  'Ubah teks yang diketik menjadi pesan sangat profesional',
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 onTap: () async {
                   Navigator.pop(ctx);
                   final text = _messageController.text;
-                  final res = await AiService.messageAssistant(mode: 'polish', message: text);
-                  if (res != null && AiService.isProSubscriptionRequiredError(res)) {
+                  final res = await AiService.messageAssistant(
+                    mode: 'polish',
+                    message: text,
+                  );
+                  if (res != null &&
+                      AiService.isProSubscriptionRequiredError(res)) {
                     if (mounted) AiService.promptProUpgrade(context);
                     return;
                   }
-                  if (res != null && res['data'] != null && res['data']['polished_message'] != null) {
+                  if (res != null &&
+                      res['data'] != null &&
+                      res['data']['polished_message'] != null) {
                     if (mounted) {
                       setState(() {
-                        _messageController.text = res['data']['polished_message'];
+                        _messageController.text =
+                            res['data']['polished_message'];
                       });
                     }
                   }
@@ -1412,7 +1459,10 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
       final recorder = _record!;
       final hasPermission = await recorder.hasPermission();
       if (!hasPermission) {
-        AppSnackbar.error(context, 'Izin mikrofon diperlukan untuk voice note.');
+        AppSnackbar.error(
+          context,
+          'Izin mikrofon diperlukan untuk voice note.',
+        );
         return;
       }
 
@@ -1422,14 +1472,13 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
 
       if (kIsWeb) {
         await recorder.start(
-          const record.RecordConfig(
-            encoder: record.AudioEncoder.opus,
-          ),
+          const record.RecordConfig(encoder: record.AudioEncoder.opus),
           path: '',
         );
       } else {
         final tempDir = await getTemporaryDirectory();
-        final fileName = 'kreavana_voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        final fileName =
+            'kreavana_voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
         final filePath = '${tempDir.path}/$fileName';
 
         await recorder.start(
@@ -1499,7 +1548,9 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         final msgData = result['data'];
         if (msgData != null) {
           setState(() {
-            if (!_messages.any((m) => m['id'].toString() == msgData['id'].toString())) {
+            if (!_messages.any(
+              (m) => m['id'].toString() == msgData['id'].toString(),
+            )) {
               _messages.insert(0, Map<String, dynamic>.from(msgData));
             }
           });
@@ -1532,7 +1583,8 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
   }
 
   Future<void> _toggleAudioPlayback(Map<String, dynamic> message) async {
-    if (message['media_url'] == null || message['media_url'].toString().isEmpty) {
+    if (message['media_url'] == null ||
+        message['media_url'].toString().isEmpty) {
       return;
     }
 
@@ -1575,7 +1627,9 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
           if (mounted) {
             setState(() => _playingMessageId = null);
             final errorStr = err.toString();
-            if (errorStr.contains('410') || errorStr.contains('Media telah dihapus') || errorStr.contains('404')) {
+            if (errorStr.contains('410') ||
+                errorStr.contains('Media telah dihapus') ||
+                errorStr.contains('404')) {
               setState(() {
                 message['is_media_deleted'] = true;
               });
@@ -1589,7 +1643,9 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     } catch (e) {
       if (mounted) {
         final errorStr = e.toString();
-        if (errorStr.contains('410') || errorStr.contains('Media telah dihapus') || errorStr.contains('404')) {
+        if (errorStr.contains('410') ||
+            errorStr.contains('Media telah dihapus') ||
+            errorStr.contains('404')) {
           setState(() {
             message['is_media_deleted'] = true;
           });
@@ -1607,7 +1663,10 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     }
   }
 
-  Future<void> _deleteMessage(Map<String, dynamic> message, String scope) async {
+  Future<void> _deleteMessage(
+    Map<String, dynamic> message,
+    String scope,
+  ) async {
     try {
       final result = await ChatService.deleteMessage(
         widget.chat['id'].toString(),
@@ -1629,7 +1688,8 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
 
   Widget _buildAudioMessageBubble(Map<String, dynamic> message, bool isMe) {
     final messageId = message['id']?.toString() ?? '';
-    final isPlaying = _playingMessageId == messageId && _appAudioPlayer.isPlaying;
+    final isPlaying =
+        _playingMessageId == messageId && _appAudioPlayer.isPlaying;
     final progress = _audioDuration.inMilliseconds > 0
         ? _audioPosition.inMilliseconds / _audioDuration.inMilliseconds
         : 0.0;
@@ -1638,8 +1698,9 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     final isDeleted = message['is_media_deleted'] == true;
 
     return Column(
-      crossAxisAlignment:
-          isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: isMe
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: [
         if (isDeleted)
           Padding(
@@ -1647,78 +1708,102 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.broken_image, size: 24, color: isMe ? theme.colorScheme.onPrimary : theme.colorScheme.primary),
+                Icon(
+                  Icons.broken_image,
+                  size: 24,
+                  color: isMe
+                      ? theme.colorScheme.onPrimary
+                      : theme.colorScheme.primary,
+                ),
                 const SizedBox(width: 8),
-                Text('Media telah dihapus', style: TextStyle(color: isMe ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface, fontStyle: FontStyle.italic)),
+                Text(
+                  'Media telah dihapus',
+                  style: TextStyle(
+                    color: isMe
+                        ? theme.colorScheme.onPrimary
+                        : theme.colorScheme.onSurface,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
               ],
             ),
           )
         else
           InkWell(
-          onTap: () => _toggleAudioPlayback(message),
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4.0),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
-                  size: 28,
-                  color: isMe ? theme.colorScheme.onPrimary : theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Voice note',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: isMe
-                              ? theme.colorScheme.onPrimary
-                              : theme.colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _audioDuration > Duration.zero
-                            ? '${_audioDuration.inSeconds}s'
-                            : 'Sentuh untuk memutar',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isMe
-                              ? theme.colorScheme.onPrimary.withValues(alpha: 0.75)
-                              : theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+            onTap: () => _toggleAudioPlayback(message),
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4.0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isPlaying
+                        ? Icons.pause_circle_filled
+                        : Icons.play_circle_fill,
+                    size: 28,
+                    color: isMe
+                        ? theme.colorScheme.onPrimary
+                        : theme.colorScheme.primary,
                   ),
-                ),
-                if (_isAudioLoading && _playingMessageId == messageId)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
-                    child: SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: isMe ? theme.colorScheme.onPrimary : theme.colorScheme.primary,
-                      ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Voice note',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: isMe
+                                ? theme.colorScheme.onPrimary
+                                : theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _audioDuration > Duration.zero
+                              ? '${_audioDuration.inSeconds}s'
+                              : 'Sentuh untuk memutar',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isMe
+                                ? theme.colorScheme.onPrimary.withValues(
+                                    alpha: 0.75,
+                                  )
+                                : theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-              ],
+                  if (_isAudioLoading && _playingMessageId == messageId)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: isMe
+                              ? theme.colorScheme.onPrimary
+                              : theme.colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
-        ),
         if (_audioDuration > Duration.zero)
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
             child: LinearProgressIndicator(
               value: progress.clamp(0.0, 1.0),
               backgroundColor:
-                  (isMe ? theme.colorScheme.onPrimary : theme.colorScheme.surfaceContainerHighest)
+                  (isMe
+                          ? theme.colorScheme.onPrimary
+                          : theme.colorScheme.surfaceContainerHighest)
                       .withValues(alpha: 0.2),
               valueColor: AlwaysStoppedAnimation<Color>(
                 isMe ? theme.colorScheme.onPrimary : theme.colorScheme.primary,
@@ -1789,7 +1874,10 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.reply_rounded, color: AppTheme.primaryPurple),
+                leading: const Icon(
+                  Icons.reply_rounded,
+                  color: AppTheme.primaryPurple,
+                ),
                 title: const Text('Balas Pesan'),
                 subtitle: const Text('Kutip pesan ini untuk membalas'),
                 onTap: () {
@@ -1810,9 +1898,14 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
               ),
               if (isMe)
                 ListTile(
-                  leading: const Icon(Icons.delete_forever_rounded, color: Colors.red),
+                  leading: const Icon(
+                    Icons.delete_forever_rounded,
+                    color: Colors.red,
+                  ),
                   title: const Text('Hapus untuk semua orang'),
-                  subtitle: const Text('Hapus pesan untuk semua orang dalam obrolan'),
+                  subtitle: const Text(
+                    'Hapus pesan untuk semua orang dalam obrolan',
+                  ),
                   onTap: () {
                     Navigator.pop(context);
                     _confirmDeleteForEveryone(message);
@@ -1835,7 +1928,9 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Hapus untuk semua orang?'),
-        content: const Text('Pesan ini akan dihapus permanen untuk Anda dan lawan bicara.'),
+        content: const Text(
+          'Pesan ini akan dihapus permanen untuk Anda dan lawan bicara.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1890,7 +1985,12 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     }
 
     final lastOnline = _formatLastOnline(
-      (_chat['last_online'] ?? _chat['lastOnline'] ?? _chat['last_seen'] ?? _chat['lastSeen'])?.toString() ?? '',
+      (_chat['last_online'] ??
+                  _chat['lastOnline'] ??
+                  _chat['last_seen'] ??
+                  _chat['lastSeen'])
+              ?.toString() ??
+          '',
     );
     if (lastOnline.isNotEmpty) {
       return 'Offline • terakhir online $lastOnline';
@@ -1924,7 +2024,9 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
   Widget _buildHeaderAvatar(ThemeData theme) {
     final isGroup = _chat['isGroup'] == true;
     final name = _chat['name']?.toString() ?? 'U';
-    final avatarUrl = ApiService.resolveAssetUrl(_chat['avatar_url']?.toString() ?? '');
+    final avatarUrl = ApiService.resolveAssetUrl(
+      _chat['avatar_url']?.toString() ?? '',
+    );
 
     return CircleAvatar(
       radius: 20,
@@ -1949,10 +2051,14 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
   }
 
   Future<void> _startCall(bool video) async {
-    final userIdStr = _chat['user_id']?.toString() ?? _chat['userId']?.toString() ?? '';
+    final userIdStr =
+        _chat['user_id']?.toString() ?? _chat['userId']?.toString() ?? '';
     if (userIdStr.isEmpty) {
       if (mounted) {
-        AppSnackbar.error(context, 'Tidak dapat melakukan panggilan: ID pengguna tidak tersedia.');
+        AppSnackbar.error(
+          context,
+          'Tidak dapat melakukan panggilan: ID pengguna tidak tersedia.',
+        );
       }
       return;
     }
@@ -1973,7 +2079,9 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
           builder: (context) => CallScreen(
             callService: callService,
             remoteUserName: _chat['name'] ?? 'User',
-            remoteAvatarUrl: ApiService.resolveAssetUrl(_chat['avatar_url'] ?? ''),
+            remoteAvatarUrl: ApiService.resolveAssetUrl(
+              _chat['avatar_url'] ?? '',
+            ),
           ),
         ),
       );
@@ -1996,8 +2104,16 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     final username = chat['username']?.toString();
     final phone = chat['phone']?.toString() ?? '';
     final email = chat['email']?.toString();
-    final avatarUrl = ApiService.resolveAssetUrl(chat['avatar_url']?.toString() ?? '');
-    final lastOnline = (chat['last_online'] ?? chat['lastOnline'] ?? chat['last_seen'] ?? chat['lastSeen'])?.toString() ?? '';
+    final avatarUrl = ApiService.resolveAssetUrl(
+      chat['avatar_url']?.toString() ?? '',
+    );
+    final lastOnline =
+        (chat['last_online'] ??
+                chat['lastOnline'] ??
+                chat['last_seen'] ??
+                chat['lastSeen'])
+            ?.toString() ??
+        '';
 
     showModalBottomSheet(
       context: context,
@@ -2023,7 +2139,9 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                 const SizedBox(height: 20),
                 CircleAvatar(
                   radius: 36,
-                  backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.12),
+                  backgroundColor: AppTheme.primaryPurple.withValues(
+                    alpha: 0.12,
+                  ),
                   backgroundImage: isGroup
                       ? null
                       : NetworkImage(
@@ -2065,10 +2183,7 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                     label: 'Sedang mengetik...',
                   )
                 else if (isOnline)
-                  _InfoRow(
-                    icon: Icons.circle,
-                    label: 'Online',
-                  )
+                  _InfoRow(icon: Icons.circle, label: 'Online')
                 else if (lastOnline.isNotEmpty)
                   _InfoRow(
                     icon: Icons.access_time,
@@ -2085,15 +2200,9 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                     },
                   ),
                 if (!isGroup && email != null && email.isNotEmpty)
-                  _InfoRow(
-                    icon: Icons.email_rounded,
-                    label: email,
-                  ),
+                  _InfoRow(icon: Icons.email_rounded, label: email),
                 if (isGroup)
-                  _InfoRow(
-                    icon: Icons.groups_rounded,
-                    label: 'Grup',
-                  ),
+                  _InfoRow(icon: Icons.groups_rounded, label: 'Grup'),
                 const SizedBox(height: 20),
 
                 if (!isGroup)
@@ -2299,7 +2408,7 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
           ),
         ),
         actions: [
-          if (widget.chat['isGroup'] != true) ... [
+          if (widget.chat['isGroup'] != true) ...[
             _CallActionButton(
               icon: Icons.call_rounded,
               tooltip: 'Telepon',
@@ -2325,7 +2434,9 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         children: [
           Expanded(
             child: Container(
-              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.3,
+              ),
               child: isLoading
                   ? ListView.builder(
                       reverse: true,
@@ -2341,7 +2452,8 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                           child: Container(
                             margin: const EdgeInsets.only(bottom: 10),
                             constraints: BoxConstraints(
-                              maxWidth: MediaQuery.of(context).size.width * 0.65,
+                              maxWidth:
+                                  MediaQuery.of(context).size.width * 0.65,
                             ),
                             child: SkeletonBox(
                               width: isRight ? 180 : 220,
@@ -2353,43 +2465,47 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                       },
                     )
                   : _messages.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.chat_bubble_outline_rounded,
-                                size: 48,
-                                color: theme.colorScheme.primary.withValues(alpha: 0.5),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Belum ada pesan di obrolan ini',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Ketik pesan di bawah untuk memulai percakapan.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                                ),
-                              ),
-                            ],
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            size: 48,
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.5,
+                            ),
                           ),
-                        )
-                      : ListView.builder(
-                          reverse: true,
-                          padding: const EdgeInsets.all(16.0),
-                          itemCount: _messages.length,
-                          itemBuilder: (context, index) {
+                          const SizedBox(height: 12),
+                          Text(
+                            'Belum ada pesan di obrolan ini',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Ketik pesan di bawah untuk memulai percakapan.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      reverse: true,
+                      padding: const EdgeInsets.all(16.0),
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
                         final message = _messages[index];
 
-                        if (message['_decrypt_failed'] == true && (message['text']?.toString().isEmpty ?? true)) {
+                        if (message['_decrypt_failed'] == true &&
+                            (message['text']?.toString().isEmpty ?? true)) {
                           return const SizedBox.shrink();
                         }
 
@@ -2412,7 +2528,11 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                             background: Container(
                               alignment: Alignment.centerLeft,
                               padding: const EdgeInsets.only(left: 16),
-                              child: const Icon(Icons.reply_rounded, color: AppTheme.primaryPurple, size: 24),
+                              child: const Icon(
+                                Icons.reply_rounded,
+                                color: AppTheme.primaryPurple,
+                                size: 24,
+                              ),
                             ),
                             child: Align(
                               alignment: isMe
@@ -2421,97 +2541,102 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                               child: GestureDetector(
                                 onLongPress: () => _showMessageActions(message),
                                 child: Container(
-                                margin: const EdgeInsets.only(bottom: 12.0),
-                                constraints: BoxConstraints(
-                                  maxWidth:
-                                      MediaQuery.of(context).size.width * 0.75,
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16.0,
-                                  vertical: 12.0,
-                                ),
-                                decoration: BoxDecoration(
-                                  gradient: isMe
-                                      ? AppTheme.primaryGradient
-                                      : null,
-                                  color: isMe
-                                      ? null
-                                      : theme.colorScheme.surface,
-                                  borderRadius:
-                                      BorderRadius.circular(20).copyWith(
-                                    bottomRight: isMe
-                                        ? const Radius.circular(4)
-                                        : const Radius.circular(20),
-                                    bottomLeft: !isMe
-                                        ? const Radius.circular(4)
-                                        : const Radius.circular(20),
+                                  margin: const EdgeInsets.only(bottom: 12.0),
+                                  constraints: BoxConstraints(
+                                    maxWidth:
+                                        MediaQuery.of(context).size.width *
+                                        0.75,
                                   ),
-                                  boxShadow: [
-                                    if (!isMe)
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.05,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16.0,
+                                    vertical: 12.0,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: isMe
+                                        ? AppTheme.primaryGradient
+                                        : null,
+                                    color: isMe
+                                        ? null
+                                        : theme.colorScheme.surface,
+                                    borderRadius: BorderRadius.circular(20)
+                                        .copyWith(
+                                          bottomRight: isMe
+                                              ? const Radius.circular(4)
+                                              : const Radius.circular(20),
+                                          bottomLeft: !isMe
+                                              ? const Radius.circular(4)
+                                              : const Radius.circular(20),
                                         ),
-                                        blurRadius: 5,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                  ],
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    if (message['reply_to'] != null)
-                                      _buildReplyQuote(
-                                        Map<String, dynamic>.from(message['reply_to']),
-                                        isMe,
-                                      ),
-                                    if (isAudio)
-                                      _buildAudioMessageBubble(message, isMe)
-                                    else
-                                      Text(
-                                        message['text'],
-                                        style: TextStyle(
-                                          color: isMe
-                                              ? theme.colorScheme.onPrimary
-                                              : theme.colorScheme.onSurface,
+                                    boxShadow: [
+                                      if (!isMe)
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.05,
+                                          ),
+                                          blurRadius: 5,
+                                          offset: const Offset(0, 2),
                                         ),
-                                      ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      if (message['reply_to'] != null)
+                                        _buildReplyQuote(
+                                          Map<String, dynamic>.from(
+                                            message['reply_to'],
+                                          ),
+                                          isMe,
+                                        ),
+                                      if (isAudio)
+                                        _buildAudioMessageBubble(message, isMe)
+                                      else
                                         Text(
-                                          message['time'],
+                                          message['text'],
                                           style: TextStyle(
-                                            fontSize: 10,
                                             color: isMe
                                                 ? theme.colorScheme.onPrimary
-                                                      .withValues(alpha: 0.7)
-                                                : theme.colorScheme.onSurfaceVariant,
+                                                : theme.colorScheme.onSurface,
                                           ),
                                         ),
-                                        if (isMe) ... [
-                                          const SizedBox(width: 4),
-                                          Icon(
-                                            message['isRead'] == true
-                                                ? Icons.done_all_rounded
-                                                : Icons.done_rounded,
-                                            size: 14,
-                                            color: message['isRead'] == true
-                                                ? Colors.lightBlueAccent
-                                                : theme.colorScheme.onPrimary
-                                                      .withValues(alpha: 0.7),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            message['time'],
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: isMe
+                                                  ? theme.colorScheme.onPrimary
+                                                        .withValues(alpha: 0.7)
+                                                  : theme
+                                                        .colorScheme
+                                                        .onSurfaceVariant,
+                                            ),
                                           ),
+                                          if (isMe) ...[
+                                            const SizedBox(width: 4),
+                                            Icon(
+                                              message['isRead'] == true
+                                                  ? Icons.done_all_rounded
+                                                  : Icons.done_rounded,
+                                              size: 14,
+                                              color: message['isRead'] == true
+                                                  ? Colors.lightBlueAccent
+                                                  : theme.colorScheme.onPrimary
+                                                        .withValues(alpha: 0.7),
+                                            ),
+                                          ],
                                         ],
-                                      ],
-                                    ),
-                                  ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      );
+                        );
                       },
                     ),
             ),
@@ -2627,9 +2752,10 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                                   borderSide: BorderSide.none,
                                 ),
                                 filled: true,
-                                fillColor: theme.colorScheme.surfaceContainerHighest.withValues(
-                                  alpha: 0.5,
-                                ),
+                                fillColor: theme
+                                    .colorScheme
+                                    .surfaceContainerHighest
+                                    .withValues(alpha: 0.5),
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 20.0,
                                   vertical: 10.0,
@@ -2671,20 +2797,129 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
       ),
     );
   }
+
   Widget _buildEmojiPicker() {
     final emojis = [
-      '😀', '😂', '🤣', '😃', '😄', '😅', '😆', '😉', '😊', '😋',
-      '😎', '😍', '😘', '🥰', '😗', '😙', '😚', '☺️', '🙂', '🤗',
-      '🤩', '🤔', '🤨', '😐', '😑', '😶', '🙄', '😏', '😣', '😥',
-      '😮', '🤐', '😯', '😪', '😫', '😴', '😌', '😛', '😜', '😝',
-      '🤤', '😒', '😓', '😔', '😕', '🙃', '🤑', '😲', '☹️', '🙁',
-      '😖', '😞', '😟', '😤', '😢', '😭', '😦', '😧', '😬', '🤯',
-      '😳', '🤪', '😵', '😡', '😠', '🤬', '😷', '🤒', '🤕', '🤢',
-      '👍', '👎', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✌️', '🤞',
-      '🤟', '🤘', '🤙', '👈', '👉', '👆', '👇', '☝️', '👋', '🤚',
-      '💓', '💔', '💕', '💖', '💗', '💘', '💙', '💚', '💛', '🧡',
-      '💜', '🖤', '🤍', '🤎', '💯', '🔥', '✨', '🌟', '🎉', '🎈',
-      '💡', '💬', '📱', '💻', '📷', '🎁', '🏆', '🎯', '🎨', '🎵',
+      '😀',
+      '😂',
+      '🤣',
+      '😃',
+      '😄',
+      '😅',
+      '😆',
+      '😉',
+      '😊',
+      '😋',
+      '😎',
+      '😍',
+      '😘',
+      '🥰',
+      '😗',
+      '😙',
+      '😚',
+      '☺️',
+      '🙂',
+      '🤗',
+      '🤩',
+      '🤔',
+      '🤨',
+      '😐',
+      '😑',
+      '😶',
+      '🙄',
+      '😏',
+      '😣',
+      '😥',
+      '😮',
+      '🤐',
+      '😯',
+      '😪',
+      '😫',
+      '😴',
+      '😌',
+      '😛',
+      '😜',
+      '😝',
+      '🤤',
+      '😒',
+      '😓',
+      '😔',
+      '😕',
+      '🙃',
+      '🤑',
+      '😲',
+      '☹️',
+      '🙁',
+      '😖',
+      '😞',
+      '😟',
+      '😤',
+      '😢',
+      '😭',
+      '😦',
+      '😧',
+      '😬',
+      '🤯',
+      '😳',
+      '🤪',
+      '😵',
+      '😡',
+      '😠',
+      '🤬',
+      '😷',
+      '🤒',
+      '🤕',
+      '🤢',
+      '👍',
+      '👎',
+      '👏',
+      '🙌',
+      '👐',
+      '🤲',
+      '🤝',
+      '🙏',
+      '✌️',
+      '🤞',
+      '🤟',
+      '🤘',
+      '🤙',
+      '👈',
+      '👉',
+      '👆',
+      '👇',
+      '☝️',
+      '👋',
+      '🤚',
+      '💓',
+      '💔',
+      '💕',
+      '💖',
+      '💗',
+      '💘',
+      '💙',
+      '💚',
+      '💛',
+      '🧡',
+      '💜',
+      '🖤',
+      '🤍',
+      '🤎',
+      '💯',
+      '🔥',
+      '✨',
+      '🌟',
+      '🎉',
+      '🎈',
+      '💡',
+      '💬',
+      '📱',
+      '💻',
+      '📷',
+      '🎁',
+      '🏆',
+      '🎯',
+      '🎨',
+      '🎵',
     ];
 
     return Container(
@@ -2716,10 +2951,7 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
               );
             },
             child: Center(
-              child: Text(
-                emoji,
-                style: const TextStyle(fontSize: 22),
-              ),
+              child: Text(emoji, style: const TextStyle(fontSize: 22)),
             ),
           );
         },
@@ -2840,9 +3072,7 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text(
-                          'Gagal menemukan username lawan bicara.',
-                        ),
+                        content: Text('Gagal menemukan username lawan bicara.'),
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
@@ -2860,15 +3090,22 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                     ),
                   );
 
-                  if (transferResult is Map && transferResult['success'] == true) {
+                  if (transferResult is Map &&
+                      transferResult['success'] == true) {
                     final double amt = transferResult['amount'];
                     final double fee = transferResult['fee'];
-                    final amtStr = amt.toStringAsFixed(0).replaceAllMapped(
-                        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                        (Match m) => '${m[1]}.');
-                    final feeStr = fee.toStringAsFixed(0).replaceAllMapped(
-                        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                        (Match m) => '${m[1]}.');
+                    final amtStr = amt
+                        .toStringAsFixed(0)
+                        .replaceAllMapped(
+                          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+                          (Match m) => '${m[1]}.',
+                        );
+                    final feeStr = fee
+                        .toStringAsFixed(0)
+                        .replaceAllMapped(
+                          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+                          (Match m) => '${m[1]}.',
+                        );
 
                     _sendSystemMessage(
                       '💸 Pembayaran Berhasil sebesar Rp $amtStr. (Pajak Platform 5%: Rp $feeStr)',
@@ -2889,7 +3126,12 @@ class GroupInfoScreen extends StatefulWidget {
   final VoidCallback? onGroupLeft;
   final dynamic currentUser;
 
-  const GroupInfoScreen({super.key, required this.chat, this.onGroupLeft, this.currentUser});
+  const GroupInfoScreen({
+    super.key,
+    required this.chat,
+    this.onGroupLeft,
+    this.currentUser,
+  });
 
   @override
   State<GroupInfoScreen> createState() => _GroupInfoScreenState();
@@ -2950,7 +3192,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             avatarUrl: dataUrl,
           );
 
-          if (res['status'] == true && res['data'] != null && res['data']['avatar_url'] != null) {
+          if (res['status'] == true &&
+              res['data'] != null &&
+              res['data']['avatar_url'] != null) {
             setState(() {
               groupAvatarUrl = res['data']['avatar_url'];
               widget.chat['avatar_url'] = res['data']['avatar_url'];
@@ -2968,7 +3212,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(res['message'] ?? 'Gagal memperbarui foto profil grup.'),
+                  content: Text(
+                    res['message'] ?? 'Gagal memperbarui foto profil grup.',
+                  ),
                   behavior: SnackBarBehavior.floating,
                   backgroundColor: Colors.red,
                 ),
@@ -3013,7 +3259,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
       builder: (context) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
           backgroundColor: isDark ? const Color(0xFF1B182E) : Colors.white,
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -3029,7 +3277,11 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                         color: AppTheme.primaryPurple.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const Icon(Icons.edit_note_rounded, color: AppTheme.primaryPurple, size: 24),
+                      child: const Icon(
+                        Icons.edit_note_rounded,
+                        color: AppTheme.primaryPurple,
+                        size: 24,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -3038,12 +3290,20 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                         children: [
                           const Text(
                             'Edit Informasi Grup',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'Ubah nama dan deskripsi grup',
-                            style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppTheme.textMuted
+                                  : Colors.grey.shade600,
+                            ),
                           ),
                         ],
                       ),
@@ -3057,7 +3317,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                     labelText: 'Nama Grup',
                     hintText: 'Masukkan nama grup...',
                     filled: true,
-                    fillColor: isDark ? const Color(0xFF25223A) : Colors.grey.shade100,
+                    fillColor: isDark
+                        ? const Color(0xFF25223A)
+                        : Colors.grey.shade100,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
@@ -3070,9 +3332,12 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                   maxLines: 3,
                   decoration: InputDecoration(
                     labelText: 'Deskripsi Grup',
-                    hintText: 'Tuliskan deskripsi atau petunjuk aktivitas grup...',
+                    hintText:
+                        'Tuliskan deskripsi atau petunjuk aktivitas grup...',
                     filled: true,
-                    fillColor: isDark ? const Color(0xFF25223A) : Colors.grey.shade100,
+                    fillColor: isDark
+                        ? const Color(0xFF25223A)
+                        : Colors.grey.shade100,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
@@ -3103,17 +3368,22 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                             groupName = name;
                             groupDescription = descController.text.trim();
                             widget.chat['name'] = name;
-                            widget.chat['description'] = descController.text.trim();
+                            widget.chat['description'] = descController.text
+                                .trim();
                           });
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Info grup berhasil diperbarui!')),
+                              const SnackBar(
+                                content: Text('Info grup berhasil diperbarui!'),
+                              ),
                             );
                           }
                         } catch (e) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Gagal memperbarui info grup.')),
+                              const SnackBar(
+                                content: Text('Gagal memperbarui info grup.'),
+                              ),
                             );
                           }
                         }
@@ -3121,10 +3391,18 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryPurple,
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
                       ),
-                      child: const Text('Simpan Perubahan', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'Simpan Perubahan',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ],
                 ),
@@ -3152,21 +3430,23 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             final isDark = Theme.of(context).brightness == Brightness.dark;
 
             if (isLoadingInitial && allContacts.isEmpty) {
-              ChatService.fetchContacts().then((contacts) {
-                if (context.mounted) {
-                  setStateDialog(() {
-                    allContacts = contacts;
-                    searchResults = contacts;
-                    isLoadingInitial = false;
+              ChatService.fetchContacts()
+                  .then((contacts) {
+                    if (context.mounted) {
+                      setStateDialog(() {
+                        allContacts = contacts;
+                        searchResults = contacts;
+                        isLoadingInitial = false;
+                      });
+                    }
+                  })
+                  .catchError((_) {
+                    if (context.mounted) {
+                      setStateDialog(() {
+                        isLoadingInitial = false;
+                      });
+                    }
                   });
-                }
-              }).catchError((_) {
-                if (context.mounted) {
-                  setStateDialog(() {
-                    isLoadingInitial = false;
-                  });
-                }
-              });
             }
 
             final queryText = controller.text.trim();
@@ -3174,18 +3454,28 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
 
             if (queryText.isNotEmpty) {
               final isEmail = queryText.contains('@');
-              final virtualId = isEmail ? 'email:${queryText.toLowerCase()}' : 'email:$queryText';
+              final virtualId = isEmail
+                  ? 'email:${queryText.toLowerCase()}'
+                  : 'email:$queryText';
               final virtualUser = {
                 'id': virtualId,
                 'name': isEmail ? queryText : 'Undang "$queryText"',
-                'email': isEmail ? queryText : '$queryText (Undangan via Email)',
+                'email': isEmail
+                    ? queryText
+                    : '$queryText (Undangan via Email)',
                 'username': queryText.split('@').first,
                 'avatar_url': null,
                 'isInviteAction': true,
               };
 
-              final existsInDb = searchResults.any((u) => u['email']?.toString().toLowerCase() == queryText.toLowerCase() || u['id']?.toString() == virtualId);
-              if (!existsInDb && !displayList.any((u) => u['id'] == virtualId)) {
+              final existsInDb = searchResults.any(
+                (u) =>
+                    u['email']?.toString().toLowerCase() ==
+                        queryText.toLowerCase() ||
+                    u['id']?.toString() == virtualId,
+              );
+              if (!existsInDb &&
+                  !displayList.any((u) => u['id'] == virtualId)) {
                 displayList.insert(0, virtualUser);
               }
             }
@@ -3198,9 +3488,14 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             }
 
             return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
               backgroundColor: isDark ? const Color(0xFF17152B) : Colors.white,
-              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 24,
+              ),
               child: Container(
                 width: 480,
                 constraints: const BoxConstraints(maxHeight: 620),
@@ -3218,13 +3513,19 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.primaryPurple.withValues(alpha: 0.3),
+                                color: AppTheme.primaryPurple.withValues(
+                                  alpha: 0.3,
+                                ),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),
                             ],
                           ),
-                          child: const Icon(Icons.person_add_alt_1_rounded, color: Colors.white, size: 24),
+                          child: const Icon(
+                            Icons.person_add_alt_1_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -3233,14 +3534,19 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                             children: [
                               const Text(
                                 'Tambah Anggota Grup',
-                                style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 'Cari nama, email, atau username pengguna',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                                  color: isDark
+                                      ? AppTheme.textMuted
+                                      : Colors.grey.shade600,
                                 ),
                               ),
                             ],
@@ -3251,7 +3557,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                     const SizedBox(height: 20),
                     Container(
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF221F3A) : Colors.grey.shade100,
+                        color: isDark
+                            ? const Color(0xFF221F3A)
+                            : Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: isDark ? Colors.white10 : Colors.grey.shade200,
@@ -3264,12 +3572,20 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                           hintText: 'Cari Nama, Email, atau Username...',
                           hintStyle: TextStyle(
                             fontSize: 13,
-                            color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                            color: isDark
+                                ? AppTheme.textMuted
+                                : Colors.grey.shade500,
                           ),
-                          prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primaryPurple),
+                          prefixIcon: const Icon(
+                            Icons.search_rounded,
+                            color: AppTheme.primaryPurple,
+                          ),
                           suffixIcon: controller.text.isNotEmpty
                               ? IconButton(
-                                  icon: const Icon(Icons.cancel_rounded, size: 20),
+                                  icon: const Icon(
+                                    Icons.cancel_rounded,
+                                    size: 20,
+                                  ),
                                   color: Colors.grey,
                                   onPressed: () {
                                     controller.clear();
@@ -3281,7 +3597,10 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                                 )
                               : null,
                           border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
                         ),
                         onChanged: (value) async {
                           final q = value.trim().toLowerCase();
@@ -3314,7 +3633,8 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: selectedUsers.length,
-                          separatorBuilder: (context, index) => const SizedBox(width: 8),
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(width: 8),
                           itemBuilder: (context, index) {
                             final u = selectedUsers[index];
                             return Chip(
@@ -3322,22 +3642,37 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                                 backgroundColor: AppTheme.primaryPurple,
                                 child: Text(
                                   (u['name'] ?? 'U')[0].toUpperCase(),
-                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               label: Text(
                                 u['name'] ?? '',
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                              deleteIcon: const Icon(Icons.close_rounded, size: 16),
+                              deleteIcon: const Icon(
+                                Icons.close_rounded,
+                                size: 16,
+                              ),
                               onDeleted: () {
                                 setStateDialog(() {
-                                  selectedUsers.removeWhere((item) => item['id'] == u['id']);
+                                  selectedUsers.removeWhere(
+                                    (item) => item['id'] == u['id'],
+                                  );
                                 });
                               },
-                              backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.15),
+                              backgroundColor: AppTheme.primaryPurple
+                                  .withValues(alpha: 0.15),
                               side: BorderSide.none,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
                             );
                           },
                         ),
@@ -3347,139 +3682,200 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                     Expanded(
                       child: isSearching || isLoadingInitial
                           ? const Center(
-                              child: CircularProgressIndicator(color: AppTheme.primaryPurple),
+                              child: CircularProgressIndicator(
+                                color: AppTheme.primaryPurple,
+                              ),
                             )
                           : displayList.isEmpty
-                              ? Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.person_off_rounded, size: 48, color: Colors.grey.shade400),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Pengguna tidak ditemukan',
-                                        style: TextStyle(
-                                          color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
+                          ? Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.person_off_rounded,
+                                    size: 48,
+                                    color: Colors.grey.shade400,
                                   ),
-                                )
-                              : ListView.separated(
-                                      itemCount: displayList.length,
-                                      separatorBuilder: (context, index) => const SizedBox(height: 6),
-                                      itemBuilder: (context, index) {
-                                        final user = displayList[index];
-                                        final isAlreadyMember = members.any(
-                                          (m) => m['id'] == user['id'],
-                                        );
-                                        final isSelected = selectedUsers.any(
-                                          (u) => u['id'] == user['id'],
-                                        );
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Pengguna tidak ditemukan',
+                                    style: TextStyle(
+                                      color: isDark
+                                          ? AppTheme.textMuted
+                                          : Colors.grey.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.separated(
+                              itemCount: displayList.length,
+                              separatorBuilder: (context, index) =>
+                                  const SizedBox(height: 6),
+                              itemBuilder: (context, index) {
+                                final user = displayList[index];
+                                final isAlreadyMember = members.any(
+                                  (m) => m['id'] == user['id'],
+                                );
+                                final isSelected = selectedUsers.any(
+                                  (u) => u['id'] == user['id'],
+                                );
 
-                                        final avatarUrl = ApiService.resolveAssetUrl(user['avatar_url']?.toString() ?? '');
-                                        final isInvite = user['isInviteAction'] == true;
+                                final avatarUrl = ApiService.resolveAssetUrl(
+                                  user['avatar_url']?.toString() ?? '',
+                                );
+                                final isInvite = user['isInviteAction'] == true;
 
-                                        return Container(
-                                          decoration: BoxDecoration(
-                                            color: isSelected
-                                                ? AppTheme.primaryPurple.withValues(alpha: 0.12)
-                                                : (isDark ? const Color(0xFF211E38) : Colors.grey.shade50),
-                                            borderRadius: BorderRadius.circular(14),
-                                            border: Border.all(
-                                              color: isSelected
-                                                  ? AppTheme.primaryPurple
-                                                  : (isDark ? Colors.white10 : Colors.grey.shade200),
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? AppTheme.primaryPurple.withValues(
+                                            alpha: 0.12,
+                                          )
+                                        : (isDark
+                                              ? const Color(0xFF211E38)
+                                              : Colors.grey.shade50),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? AppTheme.primaryPurple
+                                          : (isDark
+                                                ? Colors.white10
+                                                : Colors.grey.shade200),
+                                    ),
+                                  ),
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 4,
+                                    ),
+                                    leading: isInvite
+                                        ? Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: const BoxDecoration(
+                                              color: AppTheme.primaryPurple,
+                                              shape: BoxShape.circle,
                                             ),
-                                          ),
-                                          child: ListTile(
-                                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                                            leading: isInvite
-                                                ? Container(
-                                                    padding: const EdgeInsets.all(8),
-                                                    decoration: const BoxDecoration(
-                                                      color: AppTheme.primaryPurple,
-                                                      shape: BoxShape.circle,
+                                            child: const Icon(
+                                              Icons.mark_email_unread_rounded,
+                                              size: 18,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : CircleAvatar(
+                                            radius: 20,
+                                            backgroundColor: AppTheme
+                                                .primaryPurple
+                                                .withValues(alpha: 0.2),
+                                            backgroundImage:
+                                                avatarUrl.isNotEmpty
+                                                ? NetworkImage(avatarUrl)
+                                                : null,
+                                            child: avatarUrl.isEmpty
+                                                ? Text(
+                                                    (user['name'] ?? 'U')[0]
+                                                        .toUpperCase(),
+                                                    style: const TextStyle(
+                                                      color: AppTheme
+                                                          .primaryPurple,
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                     ),
-                                                    child: const Icon(Icons.mark_email_unread_rounded, size: 18, color: Colors.white),
                                                   )
-                                                : CircleAvatar(
-                                                    radius: 20,
-                                                    backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.2),
-                                                    backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
-                                                    child: avatarUrl.isEmpty
-                                                        ? Text(
-                                                            (user['name'] ?? 'U')[0].toUpperCase(),
-                                                            style: const TextStyle(
-                                                              color: AppTheme.primaryPurple,
-                                                              fontWeight: FontWeight.bold,
-                                                            ),
-                                                          )
-                                                        : null,
-                                                  ),
-                                            title: Text(
-                                              user['name'] ?? '',
-                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                                                : null,
+                                          ),
+                                    title: Text(
+                                      user['name'] ?? '',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13.5,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      isAlreadyMember
+                                          ? 'Sudah berada di grup'
+                                          : (isInvite
+                                                ? 'Undang pengguna ini via email ke grup'
+                                                : (user['email'] ??
+                                                      user['username'] ??
+                                                      '')),
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: isAlreadyMember
+                                            ? Colors.orange.shade700
+                                            : (isInvite
+                                                  ? AppTheme.primaryPurple
+                                                  : (isDark
+                                                        ? AppTheme.textMuted
+                                                        : Colors
+                                                              .grey
+                                                              .shade600)),
+                                        fontWeight: isInvite
+                                            ? FontWeight.w600
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                    enabled: !isAlreadyMember,
+                                    trailing: isAlreadyMember
+                                        ? Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
                                             ),
-                                            subtitle: Text(
-                                              isAlreadyMember
-                                                  ? 'Sudah berada di grup'
-                                                  : (isInvite
-                                                      ? 'Undang pengguna ini via email ke grup'
-                                                      : (user['email'] ?? user['username'] ?? '')),
+                                            decoration: BoxDecoration(
+                                              color: Colors.orange.withValues(
+                                                alpha: 0.15,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: const Text(
+                                              'Anggota',
                                               style: TextStyle(
-                                                fontSize: 11.5,
-                                                color: isAlreadyMember
-                                                    ? Colors.orange.shade700
-                                                    : (isInvite
-                                                        ? AppTheme.primaryPurple
-                                                        : (isDark ? AppTheme.textMuted : Colors.grey.shade600)),
-                                                fontWeight: isInvite ? FontWeight.w600 : FontWeight.normal,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.orange,
                                               ),
                                             ),
-                                            enabled: !isAlreadyMember,
-                                            trailing: isAlreadyMember
-                                                ? Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.orange.withValues(alpha: 0.15),
-                                                      borderRadius: BorderRadius.circular(8),
-                                                    ),
-                                                    child: const Text(
-                                                      'Anggota',
-                                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.orange),
-                                                    ),
-                                                  )
-                                                : Checkbox(
-                                                    value: isSelected,
-                                                    activeColor: AppTheme.primaryPurple,
-                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-                                                    onChanged: (val) {
-                                                      setStateDialog(() {
-                                                        if (val == true) {
-                                                          selectedUsers.add(user);
-                                                        } else {
-                                                          selectedUsers.removeWhere((u) => u['id'] == user['id']);
-                                                        }
-                                                      });
-                                                    },
-                                                  ),
-                                            onTap: isAlreadyMember
-                                                ? null
-                                                : () {
-                                                    setStateDialog(() {
-                                                      if (isSelected) {
-                                                        selectedUsers.removeWhere((u) => u['id'] == user['id']);
-                                                      } else {
-                                                        selectedUsers.add(user);
-                                                      }
-                                                    });
-                                                  },
+                                          )
+                                        : Checkbox(
+                                            value: isSelected,
+                                            activeColor: AppTheme.primaryPurple,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(5),
+                                            ),
+                                            onChanged: (val) {
+                                              setStateDialog(() {
+                                                if (val == true) {
+                                                  selectedUsers.add(user);
+                                                } else {
+                                                  selectedUsers.removeWhere(
+                                                    (u) =>
+                                                        u['id'] == user['id'],
+                                                  );
+                                                }
+                                              });
+                                            },
                                           ),
-                                        );
-                                      },
-                                    ),
+                                    onTap: isAlreadyMember
+                                        ? null
+                                        : () {
+                                            setStateDialog(() {
+                                              if (isSelected) {
+                                                selectedUsers.removeWhere(
+                                                  (u) => u['id'] == user['id'],
+                                                );
+                                              } else {
+                                                selectedUsers.add(user);
+                                              }
+                                            });
+                                          },
+                                  ),
+                                );
+                              },
+                            ),
                     ),
                     const SizedBox(height: 20),
                     Row(
@@ -3488,7 +3884,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                         TextButton(
                           onPressed: () => Navigator.pop(context),
                           style: TextButton.styleFrom(
-                            foregroundColor: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+                            foregroundColor: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade700,
                           ),
                           child: const Text('Batal'),
                         ),
@@ -3511,7 +3909,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                                     Navigator.pop(context);
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text('Undangan dikirim ke $count pengguna. Menunggu persetujuan di akun mereka.'),
+                                        content: Text(
+                                          'Undangan dikirim ke $count pengguna. Menunggu persetujuan di akun mereka.',
+                                        ),
                                         behavior: SnackBarBehavior.floating,
                                         backgroundColor: AppTheme.primaryPurple,
                                       ),
@@ -3521,15 +3921,25 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.primaryPurple,
                             foregroundColor: Colors.white,
-                            disabledBackgroundColor: isDark ? const Color(0xFF2C2847) : Colors.grey.shade300,
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            disabledBackgroundColor: isDark
+                                ? const Color(0xFF2C2847)
+                                : Colors.grey.shade300,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                           ),
                           child: Text(
                             selectedUsers.isEmpty
                                 ? 'Pilih Anggota'
                                 : 'Tambah ${selectedUsers.length} Anggota',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                       ],
@@ -3556,13 +3966,15 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
           final cId = widget.currentUser?.id?.toString();
           final cEmail = widget.currentUser?.email?.toString().toLowerCase();
           if (cId != null && m['id']?.toString() == cId) return true;
-          if (cEmail != null && m['email']?.toString().toLowerCase() == cEmail) return true;
+          if (cEmail != null && m['email']?.toString().toLowerCase() == cEmail)
+            return true;
         }
         if (_currentUser != null) {
           final cId = _currentUser?.id?.toString();
-          final cEmail = _currentUser?.email?.toString().toLowerCase();
+          final cEmail = _currentUser?.email.toString().toLowerCase();
           if (cId != null && m['id']?.toString() == cId) return true;
-          if (cEmail != null && m['email']?.toString().toLowerCase() == cEmail) return true;
+          if (cEmail != null && m['email']?.toString().toLowerCase() == cEmail)
+            return true;
         }
         return false;
       },
@@ -3576,16 +3988,24 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
     final isMeAdmin = myMember['isAdmin'] == true;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0E0C1A) : const Color(0xFFF8F9FE),
+      backgroundColor: isDark
+          ? const Color(0xFF0E0C1A)
+          : const Color(0xFFF8F9FE),
       appBar: AppBar(
-        title: const Text('Info Grup', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+        title: const Text(
+          'Info Grup',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+        ),
         centerTitle: true,
         backgroundColor: isDark ? const Color(0xFF141224) : Colors.white,
         elevation: 0,
         actions: [
           if (isMeAdmin)
             IconButton(
-              icon: const Icon(Icons.edit_outlined, color: AppTheme.primaryPurple),
+              icon: const Icon(
+                Icons.edit_outlined,
+                color: AppTheme.primaryPurple,
+              ),
               tooltip: 'Edit Nama & Deskripsi Grup',
               onPressed: _showEditGroupDialog,
             ),
@@ -3599,7 +4019,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF161428) : Colors.white,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
+              border: Border.all(
+                color: isDark ? Colors.white10 : Colors.grey.shade200,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
@@ -3619,22 +4041,31 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                       decoration: BoxDecoration(
                         gradient: AppTheme.primaryGradient,
                         shape: BoxShape.circle,
-                        image: groupAvatarUrl != null && groupAvatarUrl!.isNotEmpty
+                        image:
+                            groupAvatarUrl != null && groupAvatarUrl!.isNotEmpty
                             ? DecorationImage(
-                                image: NetworkImage(ApiService.resolveAssetUrl(groupAvatarUrl!)),
+                                image: NetworkImage(
+                                  ApiService.resolveAssetUrl(groupAvatarUrl!),
+                                ),
                                 fit: BoxFit.cover,
                               )
                             : null,
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.primaryPurple.withValues(alpha: 0.4),
+                            color: AppTheme.primaryPurple.withValues(
+                              alpha: 0.4,
+                            ),
                             blurRadius: 16,
                             offset: const Offset(0, 6),
                           ),
                         ],
                       ),
                       child: (groupAvatarUrl == null || groupAvatarUrl!.isEmpty)
-                          ? const Icon(Icons.groups_rounded, size: 48, color: Colors.white)
+                          ? const Icon(
+                              Icons.groups_rounded,
+                              size: 48,
+                              color: Colors.white,
+                            )
                           : null,
                     ),
                     if (isMeAdmin)
@@ -3652,9 +4083,16 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 2),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
                               ),
-                              child: const Icon(Icons.camera_alt_rounded, size: 16, color: Colors.white),
+                              child: const Icon(
+                                Icons.camera_alt_rounded,
+                                size: 16,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
@@ -3664,12 +4102,19 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                 const SizedBox(height: 16),
                 Text(
                   groupName,
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.3),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.3,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryPurple.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
@@ -3688,7 +4133,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF211E38) : const Color(0xFFF7F5FF),
+                    color: isDark
+                        ? const Color(0xFF211E38)
+                        : const Color(0xFFF7F5FF),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: AppTheme.primaryPurple.withValues(alpha: 0.2),
@@ -3702,14 +4149,20 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.description_outlined, size: 16, color: AppTheme.primaryPurple),
+                              const Icon(
+                                Icons.description_outlined,
+                                size: 16,
+                                color: AppTheme.primaryPurple,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 'Deskripsi Grup',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white70 : Colors.grey.shade800,
+                                  color: isDark
+                                      ? Colors.white70
+                                      : Colors.grey.shade800,
                                 ),
                               ),
                             ],
@@ -3721,7 +4174,11 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                                 padding: EdgeInsets.all(2),
                                 child: Text(
                                   'Edit',
-                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryPurple),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.primaryPurple,
+                                  ),
                                 ),
                               ),
                             ),
@@ -3737,7 +4194,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                           height: 1.4,
                           color: groupDescription.isNotEmpty
                               ? (isDark ? Colors.white : Colors.black87)
-                              : (isDark ? AppTheme.textMuted : Colors.grey.shade500),
+                              : (isDark
+                                    ? AppTheme.textMuted
+                                    : Colors.grey.shade500),
                         ),
                       ),
                     ],
@@ -3752,7 +4211,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF161428) : Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
+              border: Border.all(
+                color: isDark ? Colors.white10 : Colors.grey.shade200,
+              ),
             ),
             child: Row(
               children: [
@@ -3762,7 +4223,11 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                     color: Colors.blueAccent.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.blueAccent, size: 22),
+                  child: const Icon(
+                    Icons.admin_panel_settings_rounded,
+                    color: Colors.blueAccent,
+                    size: 22,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -3771,14 +4236,19 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                     children: [
                       const Text(
                         'Akses Penambahan Anggota',
-                        style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Hanya Admin yang dapat menambahkan anggota baru',
                         style: TextStyle(
                           fontSize: 11.5,
-                          color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                          color: isDark
+                              ? AppTheme.textMuted
+                              : Colors.grey.shade600,
                         ),
                       ),
                     ],
@@ -3807,14 +4277,19 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             children: [
               Text(
                 'Daftar Anggota (${members.length})',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               ElevatedButton.icon(
                 onPressed: () {
                   if (onlyAdminCanAdd && !isMeAdmin) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Hanya Admin yang dapat menambahkan anggota!'),
+                        content: Text(
+                          'Hanya Admin yang dapat menambahkan anggota!',
+                        ),
                       ),
                     );
                     return;
@@ -3822,14 +4297,22 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                   _addMember();
                 },
                 icon: const Icon(Icons.person_add_rounded, size: 16),
-                label: const Text('Tambah Anggota', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'Tambah Anggota',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryPurple,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
                   minimumSize: const Size(0, 44),
                   elevation: 4,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(22),
+                  ),
                 ),
               ),
             ],
@@ -3845,36 +4328,56 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             )
           else
             ...members.map((m) {
-              final isMe = m['name'] == 'Anda' ||
+              final isMe =
+                  m['name'] == 'Anda' ||
                   (widget.currentUser != null &&
-                      (m['id']?.toString() == widget.currentUser?.id?.toString() ||
-                       (m['email'] != null && widget.currentUser?.email != null &&
-                        m['email'].toString().toLowerCase() == widget.currentUser!.email.toLowerCase()))) ||
+                      (m['id']?.toString() ==
+                              widget.currentUser?.id?.toString() ||
+                          (m['email'] != null &&
+                              widget.currentUser?.email != null &&
+                              m['email'].toString().toLowerCase() ==
+                                  widget.currentUser!.email.toLowerCase()))) ||
                   (_currentUser != null &&
                       (m['id']?.toString() == _currentUser?.id?.toString() ||
-                       (m['email'] != null && _currentUser?.email != null &&
-                        m['email'].toString().toLowerCase() == _currentUser!.email.toLowerCase()))) ||
+                          (m['email'] != null &&
+                              _currentUser?.email != null &&
+                              m['email'].toString().toLowerCase() ==
+                                  _currentUser!.email.toLowerCase()))) ||
                   (members.length == 1);
               final isAdmin = m['isAdmin'] == true;
-              final avatarUrl = ApiService.resolveAssetUrl(m['avatarUrl']?.toString() ?? '');
+              final avatarUrl = ApiService.resolveAssetUrl(
+                m['avatarUrl']?.toString() ?? '',
+              );
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF161428) : Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
+                  border: Border.all(
+                    color: isDark ? Colors.white10 : Colors.grey.shade200,
+                  ),
                 ),
                 child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 4,
+                  ),
                   leading: CircleAvatar(
                     radius: 20,
-                    backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.15),
-                    backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+                    backgroundColor: AppTheme.primaryPurple.withValues(
+                      alpha: 0.15,
+                    ),
+                    backgroundImage: avatarUrl.isNotEmpty
+                        ? NetworkImage(avatarUrl)
+                        : null,
                     child: avatarUrl.isEmpty
                         ? Text(
                             (m['name'] ?? 'A')[0].toUpperCase(),
-                            style: const TextStyle(color: AppTheme.primaryPurple, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              color: AppTheme.primaryPurple,
+                              fontWeight: FontWeight.bold,
+                            ),
                           )
                         : null,
                   ),
@@ -3882,35 +4385,57 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                     children: [
                       Text(
                         m['name'] ?? '',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13.5,
+                        ),
                       ),
                       if (isMe) ...[
                         const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.grey.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Text('Anda', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                          child: const Text(
+                            'Anda',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ],
                     ],
                   ),
                   subtitle: Text(
                     m['email'] ?? m['username'] ?? '',
-                    style: TextStyle(fontSize: 11.5, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                    ),
                   ),
                   trailing: isAdmin
                       ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             gradient: AppTheme.primaryGradient,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Text(
                             'Admin',
-                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         )
                       : null,
@@ -3919,16 +4444,23 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                       : () {
                           showModalBottomSheet(
                             context: context,
-                            backgroundColor: isDark ? const Color(0xFF19172B) : Colors.white,
+                            backgroundColor: isDark
+                                ? const Color(0xFF19172B)
+                                : Colors.white,
                             shape: const RoundedRectangleBorder(
-                              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(20),
+                              ),
                             ),
                             builder: (context) => SafeArea(
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   ListTile(
-                                    leading: const Icon(Icons.admin_panel_settings_rounded, color: AppTheme.primaryPurple),
+                                    leading: const Icon(
+                                      Icons.admin_panel_settings_rounded,
+                                      color: AppTheme.primaryPurple,
+                                    ),
                                     title: const Text('Jadikan Admin Grup'),
                                     onTap: () {
                                       Navigator.pop(context);
@@ -3939,8 +4471,14 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                                     },
                                   ),
                                   ListTile(
-                                    leading: const Icon(Icons.person_remove_rounded, color: Colors.redAccent),
-                                    title: const Text('Keluarkan dari Grup', style: TextStyle(color: Colors.redAccent)),
+                                    leading: const Icon(
+                                      Icons.person_remove_rounded,
+                                      color: Colors.redAccent,
+                                    ),
+                                    title: const Text(
+                                      'Keluarkan dari Grup',
+                                      style: TextStyle(color: Colors.redAccent),
+                                    ),
                                     onTap: () {
                                       Navigator.pop(context);
                                       ChatService.kickMember(
@@ -3965,7 +4503,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                 context: context,
                 builder: (context) => AlertDialog(
                   title: const Text('Keluar dari Grup'),
-                  content: const Text('Apakah Anda yakin ingin keluar dari grup ini?'),
+                  content: const Text(
+                    'Apakah Anda yakin ingin keluar dari grup ini?',
+                  ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context, false),
@@ -3973,8 +4513,13 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                     ),
                     ElevatedButton(
                       onPressed: () => Navigator.pop(context, true),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      child: const Text('Keluar', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                      child: const Text(
+                        'Keluar',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ],
                 ),
@@ -3987,15 +4532,24 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                 }
               }
             },
-            icon: const Icon(Icons.logout_rounded, color: Colors.redAccent, size: 18),
+            icon: const Icon(
+              Icons.logout_rounded,
+              color: Colors.redAccent,
+              size: 18,
+            ),
             label: const Text(
               'Keluar dari Grup',
-              style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
               side: const BorderSide(color: Colors.redAccent),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
           ),
           const SizedBox(height: 32),

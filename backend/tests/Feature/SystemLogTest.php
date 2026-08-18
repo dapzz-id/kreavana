@@ -14,8 +14,12 @@ class SystemLogTest extends TestCase
 
     public function test_admin_can_get_system_logs()
     {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $token = auth()->login($admin);
+        $admin = User::factory()->create(['role' => \App\Enums\RoleType::Admin]);
+        $loginResponse = $this->postJson('/api/auth/admin/login', [
+            'email' => $admin->email,
+            'password' => 'password'
+        ]);
+        $token = $loginResponse->json('data.access_token');
         
         SystemLog::create([
             'action' => 'test_action',
@@ -28,7 +32,7 @@ class SystemLogTest extends TestCase
 
         $response->assertStatus(200)
                  ->assertJsonStructure([
-                     'logs' => [
+                     'data' => [
                          '*' => ['id', 'action', 'title', 'type', 'created_at']
                      ]
                  ]);
@@ -36,8 +40,12 @@ class SystemLogTest extends TestCase
 
     public function test_non_admin_cannot_get_system_logs()
     {
-        $user = User::factory()->create(['role' => 'user']);
-        $token = auth()->login($user);
+        $user = User::factory()->create(['role' => \App\Enums\RoleType::User]);
+        $loginResponse = $this->postJson('/api/auth/user/login', [
+            'email' => $user->email,
+            'password' => 'password'
+        ]);
+        $token = $loginResponse->json('data.access_token');
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)->getJson('/api/admin/system-logs');
 

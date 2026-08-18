@@ -80,7 +80,10 @@ class _CreatorFotograferDashboardScreenState
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, nameController.text.trim()),
             child: const Text('Simpan'),
@@ -192,12 +195,20 @@ class _CreatorFotograferDashboardScreenState
           const SizedBox(width: 20),
           ListenableBuilder(
             listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(Icons.notifications_none_outlined, BadgeService().unreadNotificationsText, isDark),
+            builder: (_, _) => _buildAppBarBadge(
+              Icons.notifications_none_outlined,
+              BadgeService().unreadNotificationsText,
+              isDark,
+            ),
           ),
           const SizedBox(width: 4),
           ListenableBuilder(
             listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(Icons.chat_bubble_outline, BadgeService().unreadMessagesText, isDark),
+            builder: (_, _) => _buildAppBarBadge(
+              Icons.chat_bubble_outline,
+              BadgeService().unreadMessagesText,
+              isDark,
+            ),
           ),
           const SizedBox(width: 12),
           IconButton(
@@ -226,7 +237,8 @@ class _CreatorFotograferDashboardScreenState
                 builder: (_) => ProfileScreen(
                   user: widget.user,
                   onUserUpdated: widget.onUserUpdated,
-                  onLogout: () => Navigator.of(context).popUntil((r) => r.isFirst),
+                  onLogout: () =>
+                      Navigator.of(context).popUntil((r) => r.isFirst),
                 ),
               ),
             ),
@@ -263,7 +275,9 @@ class _CreatorFotograferDashboardScreenState
                       'Fotografer',
                       style: TextStyle(
                         fontSize: 11,
-                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                        color: isDark
+                            ? AppTheme.textMuted
+                            : Colors.grey.shade600,
                       ),
                     ),
                   ],
@@ -287,7 +301,9 @@ class _CreatorFotograferDashboardScreenState
     return ListenableBuilder(
       listenable: BadgeService(),
       builder: (context, _) {
-        final badgeCount = isNotification ? BadgeService().unreadNotificationsText : BadgeService().unreadMessagesText;
+        final badgeCount = isNotification
+            ? BadgeService().unreadNotificationsText
+            : BadgeService().unreadMessagesText;
         return GestureDetector(
           onTap: () {
             Navigator.push(
@@ -308,7 +324,11 @@ class _CreatorFotograferDashboardScreenState
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(icon, size: 20, color: isDark ? Colors.white : Colors.black87),
+                Icon(
+                  icon,
+                  size: 20,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
                 if (badgeCount.isNotEmpty && badgeCount != '0')
                   Positioned(
                     right: -4,
@@ -321,7 +341,11 @@ class _CreatorFotograferDashboardScreenState
                       ),
                       child: Text(
                         badgeCount,
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -376,7 +400,9 @@ class _CreatorFotograferDashboardScreenState
                           builder: (_) => ProfileScreen(
                             user: widget.user,
                             onUserUpdated: widget.onUserUpdated,
-                            onLogout: () => Navigator.of(context).popUntil((r) => r.isFirst),
+                            onLogout: () => Navigator.of(
+                              context,
+                            ).popUntil((r) => r.isFirst),
                           ),
                         ),
                       ),
@@ -465,38 +491,92 @@ class _CreatorFotograferDashboardScreenState
             decoration: BoxDecoration(
               color: isDark ? AppTheme.cardBg : Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Expanded(child: Text(m['label'] as String, style: const TextStyle(fontSize: 11, color: Colors.grey), maxLines: 2, overflow: TextOverflow.ellipsis)),
-                  const SizedBox(width: 6),
-                  Container(width: 36, height: 36, decoration: BoxDecoration(color: (m['color'] as Color).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)), child: Icon((m['icon'] as IconData?) ?? Icons.image_outlined, color: m['color'] as Color, size: 18)),
-                ]),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        m['label'] as String,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: (m['color'] as Color).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        (m['icon'] as IconData?) ?? Icons.image_outlined,
+                        color: m['color'] as Color,
+                        size: 18,
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 10),
-                FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(m['value'] as String, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    m['value'] as String,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(m['sub'] as String, style: const TextStyle(fontSize: 10, color: Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(
+                  m['sub'] as String,
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           );
         }
+
         if (isMobile) {
           final rows = <Widget>[];
           for (var i = 0; i < metrics.length; i += 2) {
             final rc = <Widget>[Expanded(child: buildCard(metrics[i]))];
-            if (i + 1 < metrics.length) { rc.add(const SizedBox(width: 10)); rc.add(Expanded(child: buildCard(metrics[i + 1]))); }
+            if (i + 1 < metrics.length) {
+              rc.add(const SizedBox(width: 10));
+              rc.add(Expanded(child: buildCard(metrics[i + 1])));
+            }
             if (i > 0) rows.add(const SizedBox(height: 10));
             rows.add(Row(children: rc));
           }
           return Column(children: rows);
         }
-        return Row(crossAxisAlignment: CrossAxisAlignment.start, children: metrics.map((m) {
-          return Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: buildCard(m)));
-        }).toList());
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: metrics.map((m) {
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: buildCard(m),
+              ),
+            );
+          }).toList(),
+        );
       },
     );
   }
@@ -590,9 +670,21 @@ class _CreatorFotograferDashboardScreenState
                     OutlinedButton(
                       onPressed: () {
                         if (r['type'] == 'KOMUNITAS') {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => MitraKomunitasScreen(user: widget.user)));
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  MitraKomunitasScreen(user: widget.user),
+                            ),
+                          );
                         } else {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => PeluangProyekScreen(user: widget.user)));
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  PeluangProyekScreen(user: widget.user),
+                            ),
+                          );
                         }
                       },
                       style: OutlinedButton.styleFrom(
@@ -819,7 +911,11 @@ class _CreatorFotograferDashboardScreenState
               ),
               GestureDetector(
                 onTap: _addPortfolioItem,
-                child: Icon(Icons.add_circle_outline, color: accentColor, size: 22),
+                child: Icon(
+                  Icons.add_circle_outline,
+                  color: accentColor,
+                  size: 22,
+                ),
               ),
             ],
           ),
@@ -842,7 +938,11 @@ class _CreatorFotograferDashboardScreenState
                       color: accentColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(Icons.add_photo_alternate_outlined, color: accentColor, size: 20),
+                    child: Icon(
+                      Icons.add_photo_alternate_outlined,
+                      color: accentColor,
+                      size: 20,
+                    ),
                   ),
                 ),
               ),
@@ -866,7 +966,11 @@ class _CreatorFotograferDashboardScreenState
                         color: accentColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(Icons.add_photo_alternate_outlined, color: accentColor, size: 20),
+                      child: Icon(
+                        Icons.add_photo_alternate_outlined,
+                        color: accentColor,
+                        size: 20,
+                      ),
                     ),
                   );
                 }
@@ -882,12 +986,20 @@ class _CreatorFotograferDashboardScreenState
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => Container(
                                 color: accentColor.withValues(alpha: 0.1),
-                                child: Icon(Icons.broken_image, color: accentColor, size: 20),
+                                child: Icon(
+                                  Icons.broken_image,
+                                  color: accentColor,
+                                  size: 20,
+                                ),
                               ),
                             )
                           : Container(
                               color: accentColor.withValues(alpha: 0.1),
-                              child: Icon(Icons.image, color: accentColor, size: 20),
+                              child: Icon(
+                                Icons.image,
+                                color: accentColor,
+                                size: 20,
+                              ),
                             ),
                       Positioned(
                         top: 4,
@@ -895,7 +1007,8 @@ class _CreatorFotograferDashboardScreenState
                         child: GestureDetector(
                           onTap: () async {
                             await PortfolioService.deletePortfolio(item.id);
-                            if (mounted) setState(() => _portfolioItems.removeAt(index));
+                            if (mounted)
+                              setState(() => _portfolioItems.removeAt(index));
                           },
                           child: Container(
                             padding: const EdgeInsets.all(2),
@@ -903,7 +1016,11 @@ class _CreatorFotograferDashboardScreenState
                               color: Colors.black.withValues(alpha: 0.5),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.close, color: Colors.white, size: 14),
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 14,
+                            ),
                           ),
                         ),
                       ),
@@ -962,5 +1079,5 @@ class _CreatorFotograferDashboardScreenState
         ],
       ),
     );
-  } 
+  }
 }

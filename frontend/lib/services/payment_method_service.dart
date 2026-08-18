@@ -35,7 +35,9 @@ class PaymentMethodService {
     if (result['status'] == true && result['data'] != null) {
       final data = result['data'];
       if (data is List) {
-        return data.map((e) => PaymentMethod.fromJson(e as Map<String, dynamic>)).toList();
+        return data
+            .map((e) => PaymentMethod.fromJson(e as Map<String, dynamic>))
+            .toList();
       }
     }
     return [];

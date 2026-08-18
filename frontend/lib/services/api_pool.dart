@@ -15,10 +15,12 @@ class ApiPool {
     }
 
     final workerCount = concurrency.clamp(1, 5);
-    await Future.wait(List.generate(
-      queue.length < workerCount ? queue.length : workerCount,
-      (_) => worker(),
-    ));
+    await Future.wait(
+      List.generate(
+        queue.length < workerCount ? queue.length : workerCount,
+        (_) => worker(),
+      ),
+    );
 
     return results.cast<T>();
   }

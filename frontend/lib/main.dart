@@ -36,23 +36,28 @@ void main() async {
   // No-op di platform native (Windows/Android/iOS) via conditional import.
   configureUrlStrategy();
 
-  const String env = String.fromEnvironment('ENV', defaultValue: kReleaseMode ? 'production' : 'development');
+  const String env = String.fromEnvironment(
+    'ENV',
+    defaultValue: kReleaseMode ? 'production' : 'development',
+  );
   await dotenv.load(fileName: ".env.$env");
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Aktivasi Firebase App Check
   await FirebaseAppCheck.instance.activate(
     providerWeb: ReCaptchaV3Provider(dotenv.env['RECAPTCHA_SITE_KEY'] ?? ''),
-    providerAndroid: env == 'development' ? AndroidDebugProvider() : AndroidPlayIntegrityProvider(),
+    providerAndroid: env == 'development'
+        ? AndroidDebugProvider()
+        : AndroidPlayIntegrityProvider(),
     providerApple: AppleAppAttestProvider(),
   );
 
   // Aktivasi Crashlytics hanya untuk Mobile (Android & iOS)
-  final isCrashlyticsSupported = !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+  final isCrashlyticsSupported =
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
 
   if (isCrashlyticsSupported) {
     PlatformDispatcher.instance.onError = (error, stack) {
@@ -94,14 +99,14 @@ void main() async {
         (msg.contains('context') && msg.contains('surface'))) {
       return;
     }
-    
+
     // Laporkan ke Crashlytics jika di mobile (Android/iOS)
     if (isCrashlyticsSupported) {
       try {
         FirebaseCrashlytics.instance.recordFlutterFatalError(details);
       } catch (_) {}
     }
-    
+
     FlutterError.presentError(details);
   };
 
@@ -114,16 +119,15 @@ void main() async {
         currentUserNotifier.value = user;
         authSignedOutNotifier.value = false;
         CallService().initPusher();
-        
+
         final token = await SecureStorageService().getToken();
         if (token != null) {
           RealtimeService().init(user.id ?? '', token);
         }
-        
-        
+
         FCMService().init();
         BadgeService().startPolling();
-        
+
         // Initialize E2EE Keys
         EncryptionService().initializeKeys();
       }

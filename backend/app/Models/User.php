@@ -13,7 +13,7 @@ use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-#[Fillable(['name', 'username', 'email', 'password', 'avatar_url', 'phone', 'role', 'sub_role', 'is_creator_approved', 'balance', 'last_online', 'used_storage_bytes', 'public_key', 'performance_boost', 'email_verification_code_hash', 'email_verification_expires_at', 'email_verification_attempts'])]
+#[Fillable(['name', 'username', 'email', 'password', 'avatar_url', 'phone', 'role', 'sub_role', 'is_creator_approved', 'max_work_capacity', 'balance', 'last_online', 'used_storage_bytes', 'public_key', 'performance_boost', 'email_verification_code_hash', 'email_verification_expires_at', 'email_verification_attempts'])]
 #[Hidden(['password', 'remember_token', 'wallet_pin'])]
 class User extends Authenticatable implements JWTSubject
 {
@@ -32,6 +32,8 @@ class User extends Authenticatable implements JWTSubject
             'email_verification_expires_at' => 'datetime',
             'last_online' => 'datetime',
             'password' => 'hashed',
+            'max_work_capacity' => 'integer',
+            'role' => \App\Enums\RoleType::class,
         ];
     }
 
@@ -74,8 +76,8 @@ class User extends Authenticatable implements JWTSubject
     public function getJWTCustomClaims()
     {
         return [
-            'role' => $this->role,
-            'permissions' => config('permissions.' . $this->role, []),
+            'role' => $this->role->value,
+            'permissions' => config('permissions.' . $this->role->value, []),
         ];
     }
 
@@ -119,19 +121,24 @@ class User extends Authenticatable implements JWTSubject
 
     public function updatePerformanceBoost()
     {
-        $tier = $this->subscription_tier;
-        $base = 1.0;
-        if ($tier === 'super') $base = 5.0;
-        elseif ($tier === 'pro') $base = 2.0;
-        elseif ($tier === 'plus') $base = 1.5;
+        \Illuminate\Support\Facades\DB::transaction(function () {
+            // Lock the user row for update to prevent concurrent lost updates
+            $user = User::where('id', $this->id)->lockForUpdate()->first();
 
-        $totalBonusPercentage = \App\Models\CreatorPerformanceEvent::where('user_id', $this->id)
-                                ->where('is_active', true)
-                                ->sum('bonus_percentage');
+            $tier = $user->subscription_tier;
+            $base = 1.0;
+            if ($tier === 'super') $base = 5.0;
+            elseif ($tier === 'pro') $base = 2.0;
+            elseif ($tier === 'plus') $base = 1.5;
 
-        $finalBoost = $totalBonusPercentage * $base;
+            $totalBonusPercentage = \App\Models\CreatorPerformanceEvent::where('user_id', $user->id)
+                                    ->where('is_active', true)
+                                    ->sum('bonus_percentage');
 
-        $this->update(['performance_boost' => $finalBoost]);
+            $finalBoost = $totalBonusPercentage * $base;
+
+            $user->update(['performance_boost' => $finalBoost]);
+        });
     }
 
     public function subscriptions()
@@ -149,5 +156,25 @@ class User extends Authenticatable implements JWTSubject
     public function userFiles()
     {
         return $this->hasMany(UserFile::class);
+    }
+
+    public function addresses()
+    {
+        return $this->hasMany(UserAddress::class);
+    }
+
+    public function marketplaceItems()
+    {
+        return $this->hasMany(MarketplaceItem::class);
+    }
+
+    public function jobContractsAsCreator()
+    {
+        return $this->hasMany(JobContract::class, 'creator_id');
+    }
+
+    public function marketplaceReviews()
+    {
+        return $this->hasManyThrough(MarketplaceReview::class, MarketplaceItem::class);
     }
 }

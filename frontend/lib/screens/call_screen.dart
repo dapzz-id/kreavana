@@ -19,7 +19,8 @@ class CallScreen extends StatefulWidget {
   State<CallScreen> createState() => _CallScreenState();
 }
 
-class _CallScreenState extends State<CallScreen> with SingleTickerProviderStateMixin {
+class _CallScreenState extends State<CallScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
@@ -46,7 +47,7 @@ class _CallScreenState extends State<CallScreen> with SingleTickerProviderStateM
     final isAvailable = await pip.isPipAvailable;
     if (isAvailable) {
       await pip.setAutoPipMode(
-        aspectRatio: widget.callService.isVideoCall 
+        aspectRatio: widget.callService.isVideoCall
             ? (9, 16) // portrait video
             : (16, 9), // landscape for audio
       );
@@ -94,9 +95,7 @@ class _CallScreenState extends State<CallScreen> with SingleTickerProviderStateM
     final isAvailable = await pip.isPipAvailable;
     if (isAvailable) {
       await pip.enterPipMode(
-        aspectRatio: widget.callService.isVideoCall 
-            ? (9, 16)
-            : (16, 9),
+        aspectRatio: widget.callService.isVideoCall ? (9, 16) : (16, 9),
       );
       return; // Don't pop — Android PiP keeps the Activity alive
     }
@@ -158,7 +157,8 @@ class _CallScreenState extends State<CallScreen> with SingleTickerProviderStateM
                     ? Positioned.fill(
                         child: RTCVideoView(
                           cs.remoteRenderer,
-                          objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
+                          objectFit: RTCVideoViewObjectFit
+                              .RTCVideoViewObjectFitContain,
                         ),
                       )
                     // Voice call: hidden offscreen renderer so audio plays via HTML audio element
@@ -195,7 +195,8 @@ class _CallScreenState extends State<CallScreen> with SingleTickerProviderStateM
                       child: RTCVideoView(
                         cs.localRenderer,
                         mirror: true,
-                        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                        objectFit:
+                            RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
                       ),
                     ),
                   ),
@@ -233,7 +234,9 @@ class _CallScreenState extends State<CallScreen> with SingleTickerProviderStateM
                       AnimatedBuilder(
                         animation: _pulseAnimation,
                         builder: (context, child) {
-                          final scale = cs.isConnected ? 1.0 : _pulseAnimation.value;
+                          final scale = cs.isConnected
+                              ? 1.0
+                              : _pulseAnimation.value;
                           return Transform.scale(
                             scale: scale,
                             child: Container(
@@ -243,7 +246,9 @@ class _CallScreenState extends State<CallScreen> with SingleTickerProviderStateM
                                     ? []
                                     : [
                                         BoxShadow(
-                                          color: Colors.green.withValues(alpha: 0.3),
+                                          color: Colors.green.withValues(
+                                            alpha: 0.3,
+                                          ),
                                           blurRadius: 30,
                                           spreadRadius: 10,
                                         ),
@@ -252,11 +257,16 @@ class _CallScreenState extends State<CallScreen> with SingleTickerProviderStateM
                               child: CircleAvatar(
                                 radius: 55,
                                 backgroundColor: const Color(0xFF6c63ff),
-                                backgroundImage: widget.remoteAvatarUrl.isNotEmpty
+                                backgroundImage:
+                                    widget.remoteAvatarUrl.isNotEmpty
                                     ? NetworkImage(widget.remoteAvatarUrl)
                                     : null,
                                 child: widget.remoteAvatarUrl.isEmpty
-                                    ? const Icon(Icons.person, size: 55, color: Colors.white)
+                                    ? const Icon(
+                                        Icons.person,
+                                        size: 55,
+                                        color: Colors.white,
+                                      )
                                     : null,
                               ),
                             ),
@@ -276,7 +286,10 @@ class _CallScreenState extends State<CallScreen> with SingleTickerProviderStateM
                       const SizedBox(height: 8),
                       // Status / Duration
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: cs.isConnected
                               ? Colors.green.withValues(alpha: 0.2)
@@ -299,9 +312,13 @@ class _CallScreenState extends State<CallScreen> with SingleTickerProviderStateM
                             Text(
                               _getStatusText(),
                               style: TextStyle(
-                                color: cs.isConnected ? Colors.greenAccent : Colors.white70,
+                                color: cs.isConnected
+                                    ? Colors.greenAccent
+                                    : Colors.white70,
                                 fontSize: 16,
-                                fontWeight: cs.isConnected ? FontWeight.w600 : FontWeight.normal,
+                                fontWeight: cs.isConnected
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
                                 fontFeatures: cs.isConnected
                                     ? const [FontFeature.tabularFigures()]
                                     : null,
@@ -335,11 +352,13 @@ class _CallScreenState extends State<CallScreen> with SingleTickerProviderStateM
                     _buildControlButton(
                       icon: cs.isMuted ? Icons.mic_off : Icons.mic,
                       label: cs.isMuted ? 'Unmute' : 'Mute',
-                      backgroundColor: cs.isMuted ? Colors.red.shade700 : Colors.white24,
+                      backgroundColor: cs.isMuted
+                          ? Colors.red.shade700
+                          : Colors.white24,
                       onPressed: () => cs.toggleMic(),
                     ),
                     const SizedBox(width: 24),
-                    
+
                     // End / Reject Call (bigger red button)
                     Column(
                       mainAxisSize: MainAxisSize.min,
@@ -352,19 +371,30 @@ class _CallScreenState extends State<CallScreen> with SingleTickerProviderStateM
                             backgroundColor: Colors.red,
                             onPressed: () {
                               _disableAutoPip();
-                              cs.endCall(rejected: !cs.isCaller && !cs.isConnected);
+                              cs.endCall(
+                                rejected: !cs.isCaller && !cs.isConnected,
+                              );
                             },
-                            child: const Icon(Icons.call_end, color: Colors.white, size: 30),
+                            child: const Icon(
+                              Icons.call_end,
+                              color: Colors.white,
+                              size: 30,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          cs.isConnected ? 'Tutup' : (cs.isCaller ? 'Batal' : 'Tolak'),
-                          style: const TextStyle(color: Colors.white70, fontSize: 12),
+                          cs.isConnected
+                              ? 'Tutup'
+                              : (cs.isCaller ? 'Batal' : 'Tolak'),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
-                    
+
                     // Accept Call (if ringing and receiver)
                     if (!cs.isCaller && !cs.isConnected && cs.isRinging) ...[
                       const SizedBox(width: 24),

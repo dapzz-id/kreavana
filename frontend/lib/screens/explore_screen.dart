@@ -9,6 +9,7 @@ import 'peluang_lokasi_screen.dart';
 import 'peluang_proyek_screen.dart';
 import '../widgets/skeleton_box.dart';
 import '../utils/debouncer.dart';
+import '../widgets/recommended_creators_section.dart';
 
 class ExploreScreen extends StatefulWidget {
   final UserModel user;
@@ -47,7 +48,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadOpportunities();
     _searchController.addListener(_onSearchChanged);
   }
@@ -166,25 +167,29 @@ class _ExploreScreenState extends State<ExploreScreen>
         ),
         bottom: TabBar(
           controller: _tabController,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
           tabs: const [
-            Tab(icon: Icon(Icons.map_outlined, size: 18), text: 'Peluang Lokasi'),
-            Tab(icon: Icon(Icons.work_outline, size: 18), text: 'Peluang Proyek'),
+            Tab(
+              icon: Icon(Icons.map_outlined, size: 18),
+              text: 'Peluang Lokasi',
+            ),
+            Tab(
+              icon: Icon(Icons.work_outline, size: 18),
+              text: 'Peluang Proyek',
+            ),
             Tab(icon: Icon(Icons.grid_view, size: 18), text: 'Semua'),
+            Tab(icon: Icon(Icons.person_search, size: 18), text: 'Kreator'),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          PeluangLokasiScreen(
-            user: widget.user,
-            subRoleSlug: _selectedSubRole,
-          ),
-          PeluangProyekScreen(
-            user: widget.user,
-            subRoleSlug: _selectedSubRole,
-          ),
+          PeluangLokasiScreen(user: widget.user, subRoleSlug: _selectedSubRole),
+          PeluangProyekScreen(user: widget.user, subRoleSlug: _selectedSubRole),
           Column(
             children: [
               Padding(
@@ -241,86 +246,97 @@ class _ExploreScreenState extends State<ExploreScreen>
                   onRefresh: _loadOpportunities,
                   child: _isLoading
                       ? isDesktop
-                          ? GridView.builder(
-                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                            ? GridView.builder(
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  16,
+                                  16,
+                                  110,
+                                ),
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 16,
+                                      mainAxisSpacing: 16,
+                                      childAspectRatio: 2.5,
+                                    ),
+                                itemCount: 6,
+                                itemBuilder: (context, index) =>
+                                    const FeatureCardSkeleton(),
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  16,
+                                  16,
+                                  110,
+                                ),
+                                itemCount: 4,
+                                itemBuilder: (context, index) =>
+                                    const FeatureCardSkeleton(),
+                              )
+                      : _filteredOpportunities.isEmpty
+                      ? ListView(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(48),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.search_off_outlined,
+                                    size: 60,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'Peluang tidak ditemukan',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      : isDesktop
+                      ? GridView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 2,
                                 crossAxisSpacing: 16,
                                 mainAxisSpacing: 16,
                                 childAspectRatio: 2.5,
                               ),
-                              itemCount: 6,
-                              itemBuilder: (context, index) =>
-                                  const FeatureCardSkeleton(),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-                              itemCount: 4,
-                              itemBuilder: (context, index) =>
-                                  const FeatureCardSkeleton(),
-                            )
-                      : _filteredOpportunities.isEmpty
-                          ? ListView(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(48),
-                                  child: Column(
-                                    children: [
-                                      Icon(Icons.search_off_outlined,
-                                          size: 60,
-                                          color: Colors.grey.shade400),
-                                      const SizedBox(height: 16),
-                                      const Text(
-                                        'Peluang tidak ditemukan',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            )
-                          : isDesktop
-                              ? GridView.builder(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(16, 16, 16, 110),
-                                  gridDelegate:
-                                      const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 2,
-                                    crossAxisSpacing: 16,
-                                    mainAxisSpacing: 16,
-                                    childAspectRatio: 2.5,
-                                  ),
-                                  itemCount: _filteredOpportunities.length,
-                                  itemBuilder: (context, index) {
-                                    final op = _filteredOpportunities[index];
-                                    return FeatureCard(
-                                      opportunity: op,
-                                      accentColor: _getSubRoleColor(op.subRoleSlug),
-                                      onTap: () => _openDetail(op),
-                                    );
-                                  },
-                                )
-                              : ListView.builder(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(16, 16, 16, 110),
-                                  itemCount: _filteredOpportunities.length,
-                                  itemBuilder: (context, index) {
-                                    final op = _filteredOpportunities[index];
-                                    return FeatureCard(
-                                      opportunity: op,
-                                      accentColor: _getSubRoleColor(op.subRoleSlug),
-                                      onTap: () => _openDetail(op),
-                                    );
-                                  },
-                                ),
+                          itemCount: _filteredOpportunities.length,
+                          itemBuilder: (context, index) {
+                            final op = _filteredOpportunities[index];
+                            return FeatureCard(
+                              opportunity: op,
+                              accentColor: _getSubRoleColor(op.subRoleSlug),
+                              onTap: () => _openDetail(op),
+                            );
+                          },
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                          itemCount: _filteredOpportunities.length,
+                          itemBuilder: (context, index) {
+                            final op = _filteredOpportunities[index];
+                            return FeatureCard(
+                              opportunity: op,
+                              accentColor: _getSubRoleColor(op.subRoleSlug),
+                              onTap: () => _openDetail(op),
+                            );
+                          },
+                        ),
                 ),
               ),
             ],
           ),
+          const RecommendedCreatorsSection(),
         ],
       ),
     );

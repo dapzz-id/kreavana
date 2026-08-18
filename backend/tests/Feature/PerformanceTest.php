@@ -15,12 +15,12 @@ class PerformanceTest extends TestCase
     {
         parent::setUp();
 
-        User::create([
+        User::factory()->create([
             'name' => 'Test User',
             'username' => 'testuser',
             'email' => 'user@test.com',
             'password' => Hash::make('password123'),
-            'role' => 'user'
+            'role' => \App\Enums\RoleType::User
         ]);
     }
 

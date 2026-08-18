@@ -9,9 +9,12 @@
 ## Panduan Menjalankan Frontend
 1. Untuk menjalankan frontend jalankan `flutter run`
 2. Ganti IP pada file `lib/services/dio_client.dart` dengan IP Local kamu.
+3. Jika ingin menjalankan web menggunakan hasil build. Ubah path terminal agar masuk ke folder `frontend/build/web`, dan gunakan kode berikut: `npx serve -s -l tcp://127.0.0.1:5001`. Pastikan kamu sudah menginstall NodeJS di perangkatmu.
 
-## Panduan Build APK/AAB
+## Panduan Build APK/AAB/WEB
 1. Menggunakan kode `flutter build apk --obfuscate --split-debug-info=./debug_info --release --android-skip-build-dependency-validation` untuk build apk rilis.
 2. Menggunakan kode `flutter build apk --debug` untuk build apk debug.
 3. Menggunakan kode `flutter build appbundle --obfuscate --split-debug-info=./debug_info --release --android-skip-build-dependency-validation` untuk build appbundle rilis.
 4. Menggunakan kode `flutter build appbundle --debug` untuk build appbundle debug.
+5. Menggunakan kode `flutter build web` untuk build web for production.
+6. Menggunakan kode `flutter build web --dart-define=ENV=development` untuk build web for debug.

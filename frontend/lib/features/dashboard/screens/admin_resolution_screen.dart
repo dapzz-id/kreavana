@@ -62,60 +62,79 @@ class _AdminResolutionScreenState extends State<AdminResolutionScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _disputes.isEmpty
-              ? const Center(child: Text('Tidak ada dispute yang ditugaskan kepada Anda saat ini.'))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _disputes.length,
-                  itemBuilder: (context, index) {
-                    final dispute = _disputes[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                      color: isDark ? AppTheme.cardBg : Colors.white,
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(16),
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.red.withValues(alpha: 0.1),
-                          child: const Icon(Icons.warning_amber_rounded, color: Colors.red),
-                        ),
-                        title: Text(
-                          'Dispute #${dispute['id'].toString().substring(0, 8).toUpperCase()}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 4),
-                            Text('Tipe: ${dispute['case_type'] == 'marketplace_refund' ? 'Marketplace Refund' : 'Opportunity Cancellation'}'),
-                            Text('Requester: ${dispute['requester']?['name'] ?? 'Unknown'}'),
-                            Text('Status: ${dispute['status']?.toString().toUpperCase()}'),
-                          ],
-                        ),
-                        trailing: ElevatedButton(
-                          onPressed: () {
-                            if (dispute['chat_id'] != null) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => DirectMessageScreen(
-                                    currentUser: widget.user,
-                                    chatId: dispute['chat_id'],
-                                  ),
-                                ),
-                              );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Chat belum dibuat untuk dispute ini.')),
-                              );
-                            }
-                          },
-                          child: const Text('Buka Chat Resolusi'),
-                        ),
+          ? const Center(
+              child: Text(
+                'Tidak ada dispute yang ditugaskan kepada Anda saat ini.',
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _disputes.length,
+              itemBuilder: (context, index) {
+                final dispute = _disputes[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                  color: isDark ? AppTheme.cardBg : Colors.white,
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.red.withValues(alpha: 0.1),
+                      child: const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.red,
                       ),
-                    );
-                  },
-                ),
+                    ),
+                    title: Text(
+                      'Dispute #${dispute['id'].toString().substring(0, 8).toUpperCase()}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tipe: ${dispute['case_type'] == 'marketplace_refund' ? 'Marketplace Refund' : 'Opportunity Cancellation'}',
+                        ),
+                        Text(
+                          'Requester: ${dispute['requester']?['name'] ?? 'Unknown'}',
+                        ),
+                        Text(
+                          'Status: ${dispute['status']?.toString().toUpperCase()}',
+                        ),
+                      ],
+                    ),
+                    trailing: ElevatedButton(
+                      onPressed: () {
+                        if (dispute['chat_id'] != null) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DirectMessageScreen(
+                                currentUser: widget.user,
+                                chatId: dispute['chat_id'],
+                              ),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Chat belum dibuat untuk dispute ini.',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text('Buka Chat Resolusi'),
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }

@@ -4,16 +4,15 @@ import '../app/theme.dart';
 class AuthDivider extends StatelessWidget {
   final String text;
 
-  const AuthDivider({
-    super.key,
-    required this.text,
-  });
+  const AuthDivider({super.key, required this.text});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final borderColor = isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight;
+    final borderColor = isDark
+        ? AppTheme.inputBorder
+        : AppTheme.inputBorderLight;
     final textColor = isDark ? AppTheme.textMuted : AppTheme.textMutedLight;
 
     return Row(
@@ -23,10 +22,7 @@ class AuthDivider extends StatelessWidget {
             height: 1,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  Colors.transparent,
-                  borderColor,
-                ],
+                colors: [Colors.transparent, borderColor],
               ),
             ),
           ),
@@ -47,10 +43,7 @@ class AuthDivider extends StatelessWidget {
             height: 1,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  borderColor,
-                  Colors.transparent,
-                ],
+                colors: [borderColor, Colors.transparent],
               ),
             ),
           ),
@@ -59,4 +52,3 @@ class AuthDivider extends StatelessWidget {
     );
   }
 }
-

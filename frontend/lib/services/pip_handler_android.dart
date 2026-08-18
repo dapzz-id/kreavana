@@ -23,11 +23,17 @@ class PipHandlerImpl implements PipHandler {
   }
 
   @override
-  Future<void> setAutoPipMode({(int, int) aspectRatio = (16, 9), bool autoEnter = true}) async {
+  Future<void> setAutoPipMode({
+    (int, int) aspectRatio = (16, 9),
+    bool autoEnter = true,
+  }) async {
     try {
       final available = await isPipAvailable;
       if (available) {
-        await SimplePip().setAutoPipMode(aspectRatio: aspectRatio, autoEnter: autoEnter);
+        await SimplePip().setAutoPipMode(
+          aspectRatio: aspectRatio,
+          autoEnter: autoEnter,
+        );
       }
     } catch (_) {}
   }

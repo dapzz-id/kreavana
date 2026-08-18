@@ -28,7 +28,10 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
     _fetchHistory();
 
     _scrollController.addListener(() {
-      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 && !_isLoading && _hasMore) {
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 200 &&
+          !_isLoading &&
+          _hasMore) {
         _fetchHistory();
       }
     });
@@ -50,11 +53,16 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
     });
 
     try {
-      final response = await ApiService.get('profile/history?page=$_currentPage&year=$_selectedYear');
-      if ((response['success'] == true || response['status'] == true) && response['data'] != null) {
+      final response = await ApiService.get(
+        'profile/history?page=$_currentPage&year=$_selectedYear',
+      );
+      if ((response['success'] == true || response['status'] == true) &&
+          response['data'] != null) {
         final data = response['data']['data'] as List;
-        final currentTransactions = data.map((tx) => WalletTransactionModel.fromJson(tx)).toList();
-        
+        final currentTransactions = data
+            .map((tx) => WalletTransactionModel.fromJson(tx))
+            .toList();
+
         setState(() {
           _transactions.addAll(currentTransactions);
           _currentPage++;
@@ -71,7 +79,11 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
   }
 
   String _formatRupiah(double amount) {
-    final formatCurrency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final formatCurrency = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
     return formatCurrency.format(amount);
   }
 
@@ -96,10 +108,7 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
               final currentYear = DateTime.now().year;
               return List.generate(5, (index) {
                 final year = currentYear - index;
-                return PopupMenuItem(
-                  value: year,
-                  child: Text(year.toString()),
-                );
+                return PopupMenuItem(value: year, child: Text(year.toString()));
               });
             },
           ),
@@ -109,7 +118,9 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
           ? Center(
               child: Text(
                 'Tidak ada transaksi di tahun $_selectedYear',
-                style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
               ),
             )
           : ListView.builder(
@@ -127,7 +138,9 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
                 final tx = _transactions[index];
                 final isCredit = tx.isCredit;
                 final amountSign = isCredit ? '+' : '-';
-                final amountColor = isCredit ? Colors.green.shade600 : Colors.red.shade600;
+                final amountColor = isCredit
+                    ? Colors.green.shade600
+                    : Colors.red.shade600;
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
@@ -136,7 +149,9 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
                     color: isDark ? AppTheme.cardBg : Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isDark ? AppTheme.inputBorder : Colors.grey.shade100,
+                      color: isDark
+                          ? AppTheme.inputBorder
+                          : Colors.grey.shade100,
                       width: 1,
                     ),
                   ),
@@ -152,7 +167,9 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
                         ),
                         child: Icon(
                           isCredit
-                              ? (tx.type == 'topup' ? Icons.add_rounded : Icons.call_received_rounded)
+                              ? (tx.type == 'topup'
+                                    ? Icons.add_rounded
+                                    : Icons.call_received_rounded)
                               : Icons.call_made_rounded,
                           color: amountColor,
                           size: 20,
@@ -165,19 +182,32 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
                           children: [
                             Text(
                               tx.typeLabel,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               tx.description ?? '',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.6,
+                                ),
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               tx.createdAt.split('T').first,
-                              style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.4,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -188,17 +218,24 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
                         children: [
                           Text(
                             '$amountSign ${_formatRupiah(tx.amount)}',
-                            style: TextStyle(color: amountColor, fontWeight: FontWeight.bold, fontSize: 14),
+                            style: TextStyle(
+                              color: amountColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: tx.status == 'success'
                                   ? Colors.green.withValues(alpha: 0.1)
                                   : tx.status == 'pending'
-                                      ? Colors.orange.withValues(alpha: 0.1)
-                                      : Colors.red.withValues(alpha: 0.1),
+                                  ? Colors.orange.withValues(alpha: 0.1)
+                                  : Colors.red.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -209,8 +246,8 @@ class _WalletHistoryScreenState extends State<WalletHistoryScreen> {
                                 color: tx.status == 'success'
                                     ? Colors.green.shade700
                                     : tx.status == 'pending'
-                                        ? Colors.orange.shade700
-                                        : Colors.red.shade700,
+                                    ? Colors.orange.shade700
+                                    : Colors.red.shade700,
                               ),
                             ),
                           ),

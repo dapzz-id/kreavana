@@ -5,4 +5,3 @@ import 'audio_player_stub.dart'
 export 'audio_player_stub.dart';
 
 BaseAudioPlayer getAudioPlayer() => createAudioPlayer();
-

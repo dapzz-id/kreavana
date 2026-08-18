@@ -431,7 +431,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     backgroundImage:
                         widget.user.avatarUrl != null &&
                             widget.user.avatarUrl!.isNotEmpty
-                        ? NetworkImage(ApiService.resolveAssetUrl(widget.user.avatarUrl!))
+                        ? NetworkImage(
+                            ApiService.resolveAssetUrl(widget.user.avatarUrl!),
+                          )
                         : null,
                     child:
                         widget.user.avatarUrl == null ||

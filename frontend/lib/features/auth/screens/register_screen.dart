@@ -54,13 +54,11 @@ class _RegisterScreenState extends State<RegisterScreen>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-    _fadeAnim =
-        CurvedAnimation(parent: _animController, curve: Curves.easeOut);
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.04),
-      end: Offset.zero,
-    ).animate(
-        CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic));
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
+    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+        );
     _animController.forward();
 
     _passwordController.addListener(_checkPasswordStrength);
@@ -92,8 +90,10 @@ class _RegisterScreenState extends State<RegisterScreen>
   void _handleRegister() async {
     setState(() => _errorMessage = null);
     if (!_agreedToTerms) {
-      setState(() =>
-          _errorMessage = 'Anda harus menyetujui syarat & ketentuan terlebih dahulu.');
+      setState(
+        () => _errorMessage =
+            'Anda harus menyetujui syarat & ketentuan terlebih dahulu.',
+      );
       return;
     }
     if (_formKey.currentState!.validate()) {
@@ -115,20 +115,28 @@ class _RegisterScreenState extends State<RegisterScreen>
                 children: [
                   Icon(Icons.check_circle, color: Colors.white, size: 18),
                   SizedBox(width: 8),
-                  Expanded(child: Text('Pendaftaran berhasil! Silakan verifikasi email Anda.')),
+                  Expanded(
+                    child: Text(
+                      'Pendaftaran berhasil! Silakan verifikasi email Anda.',
+                    ),
+                  ),
                 ],
               ),
               backgroundColor: AppTheme.success,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           );
-          final email = result['data']?['email']?.toString() ?? _emailController.text.trim();
+          final email =
+              result['data']?['email']?.toString() ??
+              _emailController.text.trim();
           context.go(AppRoutes.verifyEmail, extra: email);
         } else {
           setState(() {
-            _errorMessage = result['message']?.toString() ??
+            _errorMessage =
+                result['message']?.toString() ??
                 'Pendaftaran gagal. Coba lagi.';
           });
         }
@@ -138,8 +146,10 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   void _handleGoogleSignIn() async {
     if (!_agreedToTerms) {
-      setState(() => _errorMessage =
-          'Anda harus menyetujui syarat & ketentuan terlebih dahulu.');
+      setState(
+        () => _errorMessage =
+            'Anda harus menyetujui syarat & ketentuan terlebih dahulu.',
+      );
       return;
     }
 
@@ -158,7 +168,9 @@ class _RegisterScreenState extends State<RegisterScreen>
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Akun berhasil dibuat. Password sementara telah dikirim ke email Anda.'),
+                content: Text(
+                  'Akun berhasil dibuat. Password sementara telah dikirim ke email Anda.',
+                ),
                 backgroundColor: AppTheme.success,
               ),
             );
@@ -169,7 +181,8 @@ class _RegisterScreenState extends State<RegisterScreen>
         }
       } else {
         setState(() {
-          _errorMessage = result['message']?.toString() ??
+          _errorMessage =
+              result['message']?.toString() ??
               'Pendaftaran dengan Google gagal. Coba lagi.';
         });
       }
@@ -245,7 +258,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   //                         });
   //                         return;
   //                       }
-                        
+
   //                       setStateDialog(() {
   //                         isLoading = true;
   //                         localError = null;
@@ -292,31 +305,46 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   Color get _strengthColor {
     switch (_passwordStrength) {
-      case 1: return AppTheme.error;
-      case 2: return AppTheme.warning;
-      case 3: return Colors.blue;
-      case 4: return AppTheme.success;
-      default: return Colors.grey.shade300;
+      case 1:
+        return AppTheme.error;
+      case 2:
+        return AppTheme.warning;
+      case 3:
+        return Colors.blue;
+      case 4:
+        return AppTheme.success;
+      default:
+        return Colors.grey.shade300;
     }
   }
 
   String get _strengthLabel {
     switch (_passwordStrength) {
-      case 1: return 'Lemah';
-      case 2: return 'Sedang';
-      case 3: return 'Kuat';
-      case 4: return 'Sangat Kuat';
-      default: return '';
+      case 1:
+        return 'Lemah';
+      case 2:
+        return 'Sedang';
+      case 3:
+        return 'Kuat';
+      case 4:
+        return 'Sangat Kuat';
+      default:
+        return '';
     }
   }
 
   IconData get _strengthIcon {
     switch (_passwordStrength) {
-      case 1: return Icons.report_gmailerrorred_rounded;
-      case 2: return Icons.help_outline_rounded;
-      case 3: return Icons.check_circle_outline_rounded;
-      case 4: return Icons.verified_rounded;
-      default: return Icons.lock_open_rounded;
+      case 1:
+        return Icons.report_gmailerrorred_rounded;
+      case 2:
+        return Icons.help_outline_rounded;
+      case 3:
+        return Icons.check_circle_outline_rounded;
+      case 4:
+        return Icons.verified_rounded;
+      default:
+        return Icons.lock_open_rounded;
     }
   }
 
@@ -340,8 +368,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           // ── Content ──────────────────────────────────────────────────────
           SafeArea(
             child: SingleChildScrollView(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
               child: Center(
                 child: FadeTransition(
                   opacity: _fadeAnim,
@@ -465,8 +492,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                                   if (v.trim().length < 3) {
                                     return 'Username minimal 3 karakter';
                                   }
-                                  if (!RegExp(r'^[a-zA-Z0-9_\.]+$')
-                                      .hasMatch(v.trim())) {
+                                  if (!RegExp(
+                                    r'^[a-zA-Z0-9_\.]+$',
+                                  ).hasMatch(v.trim())) {
                                     return 'Hanya huruf, angka, titik, underscore';
                                   }
                                   return null;
@@ -490,8 +518,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                                     return 'Masukkan alamat email';
                                   }
                                   if (!RegExp(
-                                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                                      .hasMatch(v)) {
+                                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                  ).hasMatch(v)) {
                                     return 'Format email tidak valid';
                                   }
                                   return null;
@@ -522,7 +550,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                                         : AppTheme.textMutedLight,
                                   ),
                                   onPressed: () => setState(
-                                      () => _obscurePassword = !_obscurePassword),
+                                    () => _obscurePassword = !_obscurePassword,
+                                  ),
                                 ),
                                 validator: (v) {
                                   if (v == null || v.isEmpty) {
@@ -570,9 +599,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                                         ? AppTheme.textMuted
                                         : AppTheme.textMutedLight,
                                   ),
-                                  onPressed: () => setState(() =>
-                                      _obscureConfirmPassword =
-                                          !_obscureConfirmPassword),
+                                  onPressed: () => setState(
+                                    () => _obscureConfirmPassword =
+                                        !_obscureConfirmPassword,
+                                  ),
                                 ),
                                 validator: (v) {
                                   if (v == null || v.isEmpty) {
@@ -591,48 +621,50 @@ class _RegisterScreenState extends State<RegisterScreen>
                             // ── Terms & conditions ──────────────────────────
                             _staggered(
                               Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _AnimatedCheckbox(
-                                  value: _agreedToTerms,
-                                  onChanged: (v) => setState(
-                                      () => _agreedToTerms = v ?? false),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: RichText(
-                                    text: TextSpan(
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                        color: isDark
-                                            ? AppTheme.textMuted
-                                            : AppTheme.textMutedLight,
-                                        height: 1.5,
-                                      ),
-                                      children: [
-                                        const TextSpan(
-                                            text: 'Saya menyetujui '),
-                                        TextSpan(
-                                          text: 'Syarat & Ketentuan',
-                                          style: TextStyle(
-                                            color: colorScheme.primary,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const TextSpan(text: ' dan '),
-                                        TextSpan(
-                                          text: 'Kebijakan Privasi',
-                                          style: TextStyle(
-                                            color: colorScheme.primary,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const TextSpan(text: ' Kreavana.'),
-                                      ],
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _AnimatedCheckbox(
+                                    value: _agreedToTerms,
+                                    onChanged: (v) => setState(
+                                      () => _agreedToTerms = v ?? false,
                                     ),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: RichText(
+                                      text: TextSpan(
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: isDark
+                                                  ? AppTheme.textMuted
+                                                  : AppTheme.textMutedLight,
+                                              height: 1.5,
+                                            ),
+                                        children: [
+                                          const TextSpan(
+                                            text: 'Saya menyetujui ',
+                                          ),
+                                          TextSpan(
+                                            text: 'Syarat & Ketentuan',
+                                            style: TextStyle(
+                                              color: colorScheme.primary,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const TextSpan(text: ' dan '),
+                                          TextSpan(
+                                            text: 'Kebijakan Privasi',
+                                            style: TextStyle(
+                                              color: colorScheme.primary,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const TextSpan(text: ' Kreavana.'),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               10,
                             ),
@@ -670,38 +702,43 @@ class _RegisterScreenState extends State<RegisterScreen>
                             // ── Login link ──────────────────────────────────
                             _staggered(
                               Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Sudah punya akun? ',
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: isDark
-                                        ? AppTheme.textMuted
-                                        : AppTheme.textMutedLight,
-                                  ),
-                                ),
-                                GestureDetector(
-                                  onTap: () =>
-                                      Navigator.of(context).pushReplacement(
-                                    PageRouteBuilder(
-                                      pageBuilder: (_, a, _) =>
-                                          const LoginScreen(),
-                                      transitionsBuilder: (_, a, _, child) =>
-                                          FadeTransition(
-                                              opacity: a, child: child),
-                                      transitionDuration:
-                                          const Duration(milliseconds: 300),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'Masuk di sini',
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Sudah punya akun? ',
                                     style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: colorScheme.primary,
-                                      fontWeight: FontWeight.w700,
+                                      color: isDark
+                                          ? AppTheme.textMuted
+                                          : AppTheme.textMutedLight,
                                     ),
                                   ),
-                                ),
-                              ],
+                                  GestureDetector(
+                                    onTap: () =>
+                                        Navigator.of(context).pushReplacement(
+                                          PageRouteBuilder(
+                                            pageBuilder: (_, a, _) =>
+                                                const LoginScreen(),
+                                            transitionsBuilder:
+                                                (_, a, _, child) =>
+                                                    FadeTransition(
+                                                      opacity: a,
+                                                      child: child,
+                                                    ),
+                                            transitionDuration: const Duration(
+                                              milliseconds: 300,
+                                            ),
+                                          ),
+                                        ),
+                                    child: Text(
+                                      'Masuk di sini',
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: colorScheme.primary,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               14,
                             ),
@@ -757,10 +794,9 @@ class _RegisterScreenState extends State<RegisterScreen>
           ),
         ),
         style: IconButton.styleFrom(
-          backgroundColor: Theme.of(context)
-              .colorScheme
-              .surfaceContainerHighest
-              .withValues(alpha: 0.6),
+          backgroundColor: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
         ),
         onPressed: () {
           final box =
@@ -768,10 +804,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           final origin = box != null
               ? box.localToGlobal(box.size.center(Offset.zero))
               : Offset.zero;
-          ThemeTransitionService.animateToggle(
-            origin: origin,
-            toDark: !isDark,
-          );
+          ThemeTransitionService.animateToggle(origin: origin, toDark: !isDark);
         },
       ),
     );
@@ -819,7 +852,12 @@ class _PasswordStrengthBar extends StatelessWidget {
                       : (isDark ? AppTheme.inputBorder : Colors.grey.shade200),
                   borderRadius: BorderRadius.circular(4),
                   boxShadow: active
-                      ? [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 6)]
+                      ? [
+                          BoxShadow(
+                            color: color.withValues(alpha: 0.4),
+                            blurRadius: 6,
+                          ),
+                        ]
                       : null,
                 ),
               ),
@@ -903,9 +941,7 @@ class _ErrorBannerState extends State<_ErrorBanner>
         decoration: BoxDecoration(
           color: AppTheme.error.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: AppTheme.error.withValues(alpha: 0.3),
-          ),
+          border: Border.all(color: AppTheme.error.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -952,8 +988,8 @@ class _AnimatedCheckbox extends StatelessWidget {
             color: value
                 ? theme.colorScheme.primary
                 : (theme.brightness == Brightness.dark
-                    ? AppTheme.inputBorder
-                    : AppTheme.inputBorderLight),
+                      ? AppTheme.inputBorder
+                      : AppTheme.inputBorderLight),
             width: 1.5,
           ),
         ),

@@ -8,7 +8,8 @@ class AdminVerificationScreen extends StatefulWidget {
   const AdminVerificationScreen({super.key});
 
   @override
-  State<AdminVerificationScreen> createState() => _AdminVerificationScreenState();
+  State<AdminVerificationScreen> createState() =>
+      _AdminVerificationScreenState();
 }
 
 class _AdminVerificationScreenState extends State<AdminVerificationScreen>
@@ -98,7 +99,8 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
               controller: _rejectNoteController,
               maxLines: 3,
               decoration: InputDecoration(
-                hintText: 'Misal: Link portofolio tidak aktif atau data tidak valid...',
+                hintText:
+                    'Misal: Link portofolio tidak aktif atau data tidak valid...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -158,7 +160,10 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
     );
   }
 
-  Widget _buildApplicationCard(CreatorApplication app, {bool showActions = false}) {
+  Widget _buildApplicationCard(
+    CreatorApplication app, {
+    bool showActions = false,
+  }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -178,7 +183,9 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.08),
+                backgroundColor: theme.colorScheme.primary.withValues(
+                  alpha: 0.08,
+                ),
                 child: const Icon(Icons.person, color: Colors.blue),
               ),
               const SizedBox(width: 12),
@@ -198,7 +205,10 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
                     const SizedBox(height: 2),
                     Text(
                       'Nama Pemohon: (ID ${app.userId})',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -208,7 +218,9 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
                 decoration: BoxDecoration(
                   color: app.status == 'approved'
                       ? Colors.green.shade100.withValues(alpha: 0.8)
-                      : (app.status == 'rejected' ? Colors.red.shade100.withValues(alpha: 0.8) : Colors.orange.shade100.withValues(alpha: 0.8)),
+                      : (app.status == 'rejected'
+                            ? Colors.red.shade100.withValues(alpha: 0.8)
+                            : Colors.orange.shade100.withValues(alpha: 0.8)),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -218,7 +230,9 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
                     fontWeight: FontWeight.bold,
                     color: app.status == 'approved'
                         ? Colors.green.shade800
-                        : (app.status == 'rejected' ? Colors.red.shade800 : Colors.orange.shade800),
+                        : (app.status == 'rejected'
+                              ? Colors.red.shade800
+                              : Colors.orange.shade800),
                   ),
                 ),
               ),
@@ -227,7 +241,11 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
           const Divider(height: 24),
           Text(
             'Keahlian & Deskripsi:',
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade600,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -237,22 +255,34 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
           const SizedBox(height: 12),
           Text(
             'Link Portofolio:',
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade600,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             app.portfolioLink ?? 'Tidak dicantumkan',
             style: TextStyle(
               fontSize: 12,
-              color: app.portfolioLink != null ? Colors.blue.shade600 : Colors.grey,
-              decoration: app.portfolioLink != null ? TextDecoration.underline : null,
+              color: app.portfolioLink != null
+                  ? Colors.blue.shade600
+                  : Colors.grey,
+              decoration: app.portfolioLink != null
+                  ? TextDecoration.underline
+                  : null,
             ),
           ),
           if (app.experience != null && app.experience!.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(
               'Pengalaman Kerja:',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade600,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -274,7 +304,10 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
             ),
             const SizedBox(height: 8),
             if (app.fullNameKtp != null)
-              Text('Nama: ${app.fullNameKtp}', style: const TextStyle(fontSize: 12)),
+              Text(
+                'Nama: ${app.fullNameKtp}',
+                style: const TextStyle(fontSize: 12),
+              ),
             if (app.nik != null)
               Text('NIK: ${app.nik}', style: const TextStyle(fontSize: 12)),
             if (app.birthPlace != null || app.birthDate != null)
@@ -283,12 +316,19 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
                 style: const TextStyle(fontSize: 12),
               ),
             if (app.addressKtp != null)
-              Text('Alamat: ${app.addressKtp}', style: const TextStyle(fontSize: 12)),
+              Text(
+                'Alamat: ${app.addressKtp}',
+                style: const TextStyle(fontSize: 12),
+              ),
             if (app.ktpPhotoUrl != null && app.ktpPhotoUrl!.isNotEmpty) ...[
               const SizedBox(height: 12),
               const Text(
                 'Foto KTP:',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
               ),
               const SizedBox(height: 4),
               ClipRRect(
@@ -301,16 +341,23 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
                   errorBuilder: (context, error, stackTrace) => Container(
                     height: 80,
                     color: Colors.grey.shade200,
-                    child: const Center(child: Text('Foto KTP tidak dapat dimuat')),
+                    child: const Center(
+                      child: Text('Foto KTP tidak dapat dimuat'),
+                    ),
                   ),
                 ),
               ),
             ],
-            if (app.selfiePhotoUrl != null && app.selfiePhotoUrl!.isNotEmpty) ...[
+            if (app.selfiePhotoUrl != null &&
+                app.selfiePhotoUrl!.isNotEmpty) ...[
               const SizedBox(height: 12),
               const Text(
                 'Foto Selfie + KTP:',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
               ),
               const SizedBox(height: 4),
               ClipRRect(
@@ -323,7 +370,9 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
                   errorBuilder: (context, error, stackTrace) => Container(
                     height: 80,
                     color: Colors.grey.shade200,
-                    child: const Center(child: Text('Foto Selfie tidak dapat dimuat')),
+                    child: const Center(
+                      child: Text('Foto Selfie tidak dapat dimuat'),
+                    ),
                   ),
                 ),
               ),
@@ -340,7 +389,10 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
               ),
               child: Text(
                 'Catatan Admin: ${app.adminNote}',
-                style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
             ),
           ],
@@ -381,7 +433,10 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
     );
   }
 
-  Widget _buildAppList(List<CreatorApplication> apps, {bool showActions = false}) {
+  Widget _buildAppList(
+    List<CreatorApplication> apps, {
+    bool showActions = false,
+  }) {
     if (apps.isEmpty) {
       return Center(
         child: SingleChildScrollView(
@@ -407,7 +462,8 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       itemCount: apps.length,
       separatorBuilder: (context, index) => const SizedBox(height: 16),
-      itemBuilder: (context, index) => _buildApplicationCard(apps[index], showActions: showActions),
+      itemBuilder: (context, index) =>
+          _buildApplicationCard(apps[index], showActions: showActions),
     );
   }
 
@@ -422,7 +478,10 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
         ),
         bottom: TabBar(
           controller: _tabController,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
           tabs: [
             Tab(
               child: Row(
@@ -432,7 +491,7 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
                   if (_pendingApps.isNotEmpty) ...[
                     const SizedBox(width: 6),
                     Badge.count(count: _pendingApps.length),
-                  ]
+                  ],
                 ],
               ),
             ),

@@ -54,7 +54,8 @@ class FormValidators {
     if (value == null || value.trim().isEmpty) return 'Bulan wajib diisi';
     if (!RegExp(r'^\d{1,2}$').hasMatch(value)) return 'Bulan hanya angka';
     final month = int.tryParse(value);
-    if (month == null || month < 1 || month > 12) return 'Bulan tidak valid (1–12)';
+    if (month == null || month < 1 || month > 12)
+      return 'Bulan tidak valid (1–12)';
     return null;
   }
 

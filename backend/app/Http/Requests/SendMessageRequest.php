@@ -27,7 +27,7 @@ class SendMessageRequest extends FormRequest
             
             // Message keys must be provided if version 1
             'message_keys' => 'required_if:encryption_version,1|array',
-            'message_keys.*.device_id' => 'required_with:message_keys|uuid',
+            'message_keys.*.device_id' => 'required_with:message_keys|string',
             'message_keys.*.encrypted_key' => 'required_with:message_keys|string',
 
             // Plaintext message must NOT be present if version 1

@@ -32,7 +32,8 @@ class MockSecureStorage implements SecureStorageService {
   Future<String?> getSessionToken() async => _sessionToken;
 
   @override
-  Future<void> saveRefreshCookie(String cookie) async => _refreshCookie = cookie;
+  Future<void> saveRefreshCookie(String cookie) async =>
+      _refreshCookie = cookie;
 
   @override
   Future<String?> getRefreshCookie() async => _refreshCookie;
@@ -104,24 +105,30 @@ void main() {
         return ResponseBody.fromString(
           jsonEncode({'message': 'Unauthorized'}),
           401,
-          headers: {Headers.contentTypeHeader: ['application/json']},
+          headers: {
+            Headers.contentTypeHeader: ['application/json'],
+          },
         );
       }
-      
+
       // If retried with new token, succeed
       if (options.headers['Authorization'] == 'Bearer new_access_token') {
         return ResponseBody.fromString(
           jsonEncode({'status': true, 'data': 'success_data'}),
           200,
-          headers: {Headers.contentTypeHeader: ['application/json']},
+          headers: {
+            Headers.contentTypeHeader: ['application/json'],
+          },
         );
       }
-      
+
       // If retried with invalid token, fail
       return ResponseBody.fromString(
         jsonEncode({'message': 'Unauthorized'}),
         401,
-        headers: {Headers.contentTypeHeader: ['application/json']},
+        headers: {
+          Headers.contentTypeHeader: ['application/json'],
+        },
       );
     });
 
@@ -130,61 +137,65 @@ void main() {
       refreshCallCount++;
       // Simulate network delay to ensure single-flight blocks work
       await Future.delayed(const Duration(milliseconds: 50));
-      
+
       if (shouldRefreshSucceed) {
         return ResponseBody.fromString(
           jsonEncode({
-            'status': true, 
+            'status': true,
             'data': {
               'access_token': 'new_access_token',
-              'refresh_token': 'new_refresh_token'
-            }
+              'refresh_token': 'new_refresh_token',
+            },
           }),
           200,
-          headers: {Headers.contentTypeHeader: ['application/json']},
+          headers: {
+            Headers.contentTypeHeader: ['application/json'],
+          },
         );
       } else {
         return ResponseBody.fromString(
           jsonEncode({'status': false, 'message': 'Refresh Failed'}),
           401,
-          headers: {Headers.contentTypeHeader: ['application/json']},
+          headers: {
+            Headers.contentTypeHeader: ['application/json'],
+          },
         );
       }
     });
   });
 
-  test('Concurrent 401s produce exactly ONE refresh request and retry all', () async {
-    // Send 3 concurrent requests
-    final futures = <Future<Response>>[
-      dio.get('/api/test1'),
-      dio.get('/api/test2'),
-      dio.get('/api/test3'),
-    ];
+  test(
+    'Concurrent 401s produce exactly ONE refresh request and retry all',
+    () async {
+      // Send 3 concurrent requests
+      final futures = <Future<Response>>[
+        dio.get('/api/test1'),
+        dio.get('/api/test2'),
+        dio.get('/api/test3'),
+      ];
 
-    final responses = await Future.wait(futures);
+      final responses = await Future.wait(futures);
 
-    // Verify all 3 requests eventually succeeded
-    for (final res in responses) {
-      expect(res.statusCode, 200);
-      expect(res.data['data'], 'success_data');
-    }
+      // Verify all 3 requests eventually succeeded
+      for (final res in responses) {
+        expect(res.statusCode, 200);
+        expect(res.data['data'], 'success_data');
+      }
 
-    // Verify refresh was only called ONCE
-    expect(refreshCallCount, 1);
+      // Verify refresh was only called ONCE
+      expect(refreshCallCount, 1);
 
-    // Verify secure storage was updated
-    expect(await mockStorage.getToken(), 'new_access_token');
-    expect(await mockStorage.getRefreshToken(), 'new_refresh_token');
-  });
+      // Verify secure storage was updated
+      expect(await mockStorage.getToken(), 'new_access_token');
+      expect(await mockStorage.getRefreshToken(), 'new_refresh_token');
+    },
+  );
 
   test('Failed refresh releases waiting requests and forces logout', () async {
     shouldRefreshSucceed = false; // Force refresh to fail
-    
+
     // Send 2 concurrent requests
-    final futures = <Future>[
-      dio.get('/api/test1'),
-      dio.get('/api/test2'),
-    ];
+    final futures = <Future>[dio.get('/api/test1'), dio.get('/api/test2')];
 
     try {
       await Future.wait(futures);
@@ -199,7 +210,7 @@ void main() {
     // Verify secure storage was cleared
     expect(await mockStorage.getToken(), null);
     expect(await mockStorage.getRefreshToken(), null);
-    
+
     // Verify authSignedOutNotifier was triggered
     expect(wasLoggedOut, true);
   });

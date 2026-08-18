@@ -66,13 +66,13 @@ class AuthService {
       if (userDataToSave != null) {
         await saveUserData(userDataToSave);
         final user = UserModel.fromJson(userDataToSave);
-        
+
         RealtimeService().init(user.id ?? '', accessToken);
         FCMService().init();
-        
+
         // Initialize E2EE Keys
         EncryptionService().initializeKeys();
-        
+
         return {
           'success': true,
           'message': result['message'] ?? 'Login berhasil.',
@@ -99,7 +99,10 @@ class AuthService {
     }
   }
 
-  static Future<void> saveTokens({required String access, String? refresh}) async {
+  static Future<void> saveTokens({
+    required String access,
+    String? refresh,
+  }) async {
     final secureStorage = SecureStorageService();
     await secureStorage.saveToken(access);
     if (refresh != null && refresh.isNotEmpty) {
@@ -195,9 +198,10 @@ class AuthService {
     if (result['status'] == true && result['data'] != null) {
       final data = result['data'];
       final token = data['access_token'];
-      final refreshToken = data['refresh_token']; // Extract refresh token for social login
+      final refreshToken =
+          data['refresh_token']; // Extract refresh token for social login
       final bool isNewUser = data['is_new_user'] == true;
-      
+
       if (token is! String || token.isEmpty) {
         return {'success': false, 'message': 'Login gagal.'};
       }
@@ -228,10 +232,10 @@ class AuthService {
       if (userDataToSave != null) {
         await saveUserData(userDataToSave);
         final user = UserModel.fromJson(userDataToSave);
-        
+
         // Initialize E2EE Keys
         EncryptionService().initializeKeys();
-        
+
         return {
           'success': true,
           'message': 'Login berhasil dengan $provider.',
@@ -257,19 +261,13 @@ class AuthService {
     required String email,
     required String code,
   }) async {
-    return ApiService.post('auth/verify-email', {
-      'email': email,
-      'code': code,
-    });
+    return ApiService.post('auth/verify-email', {'email': email, 'code': code});
   }
 
   /// Kirim ulang kode verifikasi email
   static Future<Map<String, dynamic>> resendVerificationCode({
     required String email,
   }) async {
-    return ApiService.post('auth/resend-verification', {
-      'email': email,
-    });
+    return ApiService.post('auth/resend-verification', {'email': email});
   }
 }
-

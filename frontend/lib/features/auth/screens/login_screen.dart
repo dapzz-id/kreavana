@@ -49,17 +49,11 @@ class _LoginScreenState extends State<LoginScreen>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-    _fadeAnim = CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOut,
-    );
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.04),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOutCubic,
-    ));
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
+    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+        );
     _animController.forward();
   }
 
@@ -92,11 +86,16 @@ class _LoginScreenState extends State<LoginScreen>
           // Check for email_not_verified from API error response
           final errorCode = result['error_code']?.toString() ?? '';
           if (errorCode == 'email_not_verified') {
-            final email = result['data']?['email']?.toString() ?? _usernameOrEmailController.text.trim();
+            final email =
+                result['data']?['email']?.toString() ??
+                _usernameOrEmailController.text.trim();
             if (mounted) {
               // Auto-send new OTP and redirect to verification screen
               AuthService.resendVerificationCode(email: email);
-              context.go(AppRoutes.verifyEmail, extra: {'email': email, 'autoResend': true});
+              context.go(
+                AppRoutes.verifyEmail,
+                extra: {'email': email, 'autoResend': true},
+              );
             }
           } else {
             setState(() {
@@ -124,7 +123,9 @@ class _LoginScreenState extends State<LoginScreen>
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Akun berhasil dibuat. Password sementara telah dikirim ke email Anda.'),
+                content: Text(
+                  'Akun berhasil dibuat. Password sementara telah dikirim ke email Anda.',
+                ),
                 backgroundColor: AppTheme.success,
               ),
             );
@@ -135,7 +136,8 @@ class _LoginScreenState extends State<LoginScreen>
         }
       } else {
         setState(() {
-          _errorMessage = result['message']?.toString() ??
+          _errorMessage =
+              result['message']?.toString() ??
               'Login dengan Google gagal. Coba lagi.';
         });
       }
@@ -211,7 +213,7 @@ class _LoginScreenState extends State<LoginScreen>
   //                         });
   //                         return;
   //                       }
-                        
+
   //                       setStateDialog(() {
   //                         isLoading = true;
   //                         localError = null;
@@ -300,7 +302,8 @@ class _LoginScreenState extends State<LoginScreen>
                   backgroundColor: AppTheme.success,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               );
             },
@@ -368,13 +371,13 @@ class _LoginScreenState extends State<LoginScreen>
                                         'assets/brandlogo.png',
                                         width: 80,
                                         height: 80,
-                                          fit: BoxFit.contain,
-                                          errorBuilder: (_, _, _) => const Center(
-                                            child: Icon(
-                                              Icons.auto_awesome,
-                                              color: Colors.white,
-                                              size: 40,
-                                            ),
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (_, _, _) => const Center(
+                                          child: Icon(
+                                            Icons.auto_awesome,
+                                            color: Colors.white,
+                                            size: 40,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -468,7 +471,8 @@ class _LoginScreenState extends State<LoginScreen>
                                         : AppTheme.textMutedLight,
                                   ),
                                   onPressed: () => setState(
-                                      () => _obscurePassword = !_obscurePassword),
+                                    () => _obscurePassword = !_obscurePassword,
+                                  ),
                                 ),
                                 validator: (v) {
                                   if (v == null || v.isEmpty) {
@@ -484,35 +488,37 @@ class _LoginScreenState extends State<LoginScreen>
                             // ── Remember me + Forgot password ──────────────
                             _staggered(
                               Row(
-                              children: [
-                                _AnimatedCheckbox(
-                                  value: _rememberMe,
-                                  onChanged: (v) => setState(
-                                      () => _rememberMe = v ?? false),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Ingat saya',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurface,
-                                  ),
-                                ),
-                                const Spacer(),
-                                TextButton(
-                                  onPressed: _showForgotPasswordDialog,
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 4),
-                                  ),
-                                  child: const Text(
-                                    'Lupa kata sandi?',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
+                                children: [
+                                  _AnimatedCheckbox(
+                                    value: _rememberMe,
+                                    onChanged: (v) => setState(
+                                      () => _rememberMe = v ?? false,
                                     ),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Ingat saya',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.onSurface,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  TextButton(
+                                    onPressed: _showForgotPasswordDialog,
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Lupa kata sandi?',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               6,
                             ),
@@ -530,7 +536,10 @@ class _LoginScreenState extends State<LoginScreen>
                             const SizedBox(height: 28),
 
                             // ── Divider ────────────────────────────────────
-                            _staggered(const AuthDivider(text: 'atau masuk dengan'), 8),
+                            _staggered(
+                              const AuthDivider(text: 'atau masuk dengan'),
+                              8,
+                            ),
                             const SizedBox(height: 20),
 
                             // ── Google ─────────────────────────────────────
@@ -547,38 +556,43 @@ class _LoginScreenState extends State<LoginScreen>
                             // ── Register link ──────────────────────────────
                             _staggered(
                               Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Belum punya akun? ',
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: isDark
-                                        ? AppTheme.textMuted
-                                        : AppTheme.textMutedLight,
-                                  ),
-                                ),
-                                GestureDetector(
-                                  onTap: () => Navigator.of(context)
-                                      .pushReplacement(
-                                    PageRouteBuilder(
-                                      pageBuilder: (_, a, _) =>
-                                          const RegisterScreen(),
-                                      transitionsBuilder: (_, a, _, child) =>
-                                          FadeTransition(
-                                              opacity: a, child: child),
-                                      transitionDuration:
-                                          const Duration(milliseconds: 300),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'Daftar sekarang',
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Belum punya akun? ',
                                     style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: colorScheme.primary,
-                                      fontWeight: FontWeight.w700,
+                                      color: isDark
+                                          ? AppTheme.textMuted
+                                          : AppTheme.textMutedLight,
                                     ),
                                   ),
-                                ),
-                              ],
+                                  GestureDetector(
+                                    onTap: () =>
+                                        Navigator.of(context).pushReplacement(
+                                          PageRouteBuilder(
+                                            pageBuilder: (_, a, _) =>
+                                                const RegisterScreen(),
+                                            transitionsBuilder:
+                                                (_, a, _, child) =>
+                                                    FadeTransition(
+                                                      opacity: a,
+                                                      child: child,
+                                                    ),
+                                            transitionDuration: const Duration(
+                                              milliseconds: 300,
+                                            ),
+                                          ),
+                                        ),
+                                    child: Text(
+                                      'Daftar sekarang',
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: colorScheme.primary,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               10,
                             ),
@@ -672,9 +686,7 @@ class _ErrorBannerState extends State<_ErrorBanner>
         decoration: BoxDecoration(
           color: AppTheme.error.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: AppTheme.error.withValues(alpha: 0.3),
-          ),
+          border: Border.all(color: AppTheme.error.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -721,8 +733,8 @@ class _AnimatedCheckbox extends StatelessWidget {
             color: value
                 ? theme.colorScheme.primary
                 : (theme.brightness == Brightness.dark
-                    ? AppTheme.inputBorder
-                    : AppTheme.inputBorderLight),
+                      ? AppTheme.inputBorder
+                      : AppTheme.inputBorderLight),
             width: 1.5,
           ),
         ),
@@ -764,8 +776,9 @@ class _ThemeToggleButton extends StatelessWidget {
           ),
         ),
         style: IconButton.styleFrom(
-          backgroundColor:
-              colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+          backgroundColor: colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.6,
+          ),
         ),
         onPressed: () {
           final box =
@@ -773,10 +786,7 @@ class _ThemeToggleButton extends StatelessWidget {
           final origin = box != null
               ? box.localToGlobal(box.size.center(Offset.zero))
               : Offset.zero;
-          ThemeTransitionService.animateToggle(
-            origin: origin,
-            toDark: !isDark,
-          );
+          ThemeTransitionService.animateToggle(origin: origin, toDark: !isDark);
         },
       ),
     );

@@ -50,7 +50,9 @@ class _DashboardStatsChartsState extends State<DashboardStatsCharts> {
     for (final item in widget.subRoleList) {
       if (item['slug'] == slug) return item;
     }
-    return widget.subRoleList.isNotEmpty ? widget.subRoleList.first : <String, dynamic>{};
+    return widget.subRoleList.isNotEmpty
+        ? widget.subRoleList.first
+        : <String, dynamic>{};
   }
 
   Color _colorFor(String slug) {
@@ -127,7 +129,9 @@ class _DashboardStatsChartsState extends State<DashboardStatsCharts> {
             name: _nameFor(_detailSelectedSlug),
             slug: _detailSelectedSlug,
             color: _colorFor(_detailSelectedSlug),
-            icon: (_findSubRole(_detailSelectedSlug)['icon'] as IconData?) ?? Icons.analytics,
+            icon:
+                (_findSubRole(_detailSelectedSlug)['icon'] as IconData?) ??
+                Icons.analytics,
             stats: detailStats,
             isDark: widget.isDark,
           ),

@@ -36,10 +36,26 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   String _selectedDeadline = '1 Minggu';
 
   static const List<Map<String, dynamic>> _kategoriItems = [
-    {'value': 'fotografi', 'label': 'Fotografi', 'icon': Icons.camera_alt_rounded},
-    {'value': 'videografi', 'label': 'Videografi', 'icon': Icons.videocam_rounded},
-    {'value': 'desain-grafis', 'label': 'Desain Grafis', 'icon': Icons.palette_rounded},
-    {'value': 'konten-kreator', 'label': 'Konten Kreator', 'icon': Icons.forum_rounded},
+    {
+      'value': 'fotografi',
+      'label': 'Fotografi',
+      'icon': Icons.camera_alt_rounded,
+    },
+    {
+      'value': 'videografi',
+      'label': 'Videografi',
+      'icon': Icons.videocam_rounded,
+    },
+    {
+      'value': 'desain-grafis',
+      'label': 'Desain Grafis',
+      'icon': Icons.palette_rounded,
+    },
+    {
+      'value': 'konten-kreator',
+      'label': 'Konten Kreator',
+      'icon': Icons.forum_rounded,
+    },
     {'value': 'lainnya', 'label': 'Lainnya', 'icon': Icons.more_horiz_rounded},
   ];
 
@@ -61,8 +77,15 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   String get subRoleSlug => _selectedKategori;
 
   String get deadlineDate {
-    final days = _deadlineItems.firstWhere((d) => d['value'] == _selectedDeadline)['days'] as int;
-    return DateTime.now().add(Duration(days: days)).toIso8601String().substring(0, 10);
+    final days =
+        _deadlineItems.firstWhere(
+              (d) => d['value'] == _selectedDeadline,
+            )['days']
+            as int;
+    return DateTime.now()
+        .add(Duration(days: days))
+        .toIso8601String()
+        .substring(0, 10);
   }
 
   @override
@@ -75,9 +98,12 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialTitle != null) _judulController.text = widget.initialTitle!;
-    if (widget.initialDescription != null) _deskripsiController.text = widget.initialDescription!;
-    if (widget.initialKategori != null) _selectedKategori = widget.initialKategori!;
+    if (widget.initialTitle != null)
+      _judulController.text = widget.initialTitle!;
+    if (widget.initialDescription != null)
+      _deskripsiController.text = widget.initialDescription!;
+    if (widget.initialKategori != null)
+      _selectedKategori = widget.initialKategori!;
     if (widget.initialBudget != null) _selectedBudget = widget.initialBudget!;
   }
 
@@ -200,7 +226,12 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                 icon: Icons.event_rounded,
                 value: _selectedDeadline,
                 items: _deadlineItems
-                    .map((e) => <String, dynamic>{'value': e['value'] as String, 'label': e['value'] as String})
+                    .map(
+                      (e) => <String, dynamic>{
+                        'value': e['value'] as String,
+                        'label': e['value'] as String,
+                      },
+                    )
                     .toList(),
                 onChanged: (v) => setState(() => _selectedDeadline = v!),
               ),
@@ -322,13 +353,13 @@ class _AnimatedDropdownState extends State<_AnimatedDropdown> {
         ? primary
         : (isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight);
 
-    final selectedLabel = (widget.items
-        .cast<Map<String, dynamic>>()
-        .firstWhere(
-          (e) => e['value'] == widget.value,
-          orElse: () => widget.items.cast<Map<String, dynamic>>().first,
-        )['label'] ??
-        '') as String;
+    final selectedLabel =
+        (widget.items.cast<Map<String, dynamic>>().firstWhere(
+                  (e) => e['value'] == widget.value,
+                  orElse: () => widget.items.cast<Map<String, dynamic>>().first,
+                )['label'] ??
+                '')
+            as String;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -352,10 +383,7 @@ class _AnimatedDropdownState extends State<_AnimatedDropdown> {
             decoration: BoxDecoration(
               color: fill,
               borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-              border: Border.all(
-                color: borderColor,
-                width: _focused ? 1.8 : 1,
-              ),
+              border: Border.all(color: borderColor, width: _focused ? 1.8 : 1),
             ),
             child: Row(
               children: [
@@ -431,21 +459,29 @@ class _AnimatedDropdownState extends State<_AnimatedDropdown> {
                           (item['icon'] as IconData?) ?? Icons.image_outlined,
                           color: isSelected
                               ? AppTheme.primaryPurple
-                              : (isDark ? Colors.white54 : Colors.grey.shade500),
+                              : (isDark
+                                    ? Colors.white54
+                                    : Colors.grey.shade500),
                           size: 22,
                         )
                       : null,
                   title: Text(
                     item['label'] ?? item['value']!,
                     style: TextStyle(
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
                       color: isSelected
                           ? AppTheme.primaryPurple
                           : theme.colorScheme.onSurface,
                     ),
                   ),
                   trailing: isSelected
-                      ? const Icon(Icons.check_rounded, color: AppTheme.primaryPurple, size: 20)
+                      ? const Icon(
+                          Icons.check_rounded,
+                          color: AppTheme.primaryPurple,
+                          size: 20,
+                        )
                       : null,
                   onTap: () {
                     widget.onChanged(item['value']);
@@ -460,7 +496,6 @@ class _AnimatedDropdownState extends State<_AnimatedDropdown> {
       },
     );
   }
-
 }
 
 // ─── Animated Text Area ───────────────────────────────────────────────────────
@@ -543,18 +578,25 @@ class _AnimatedTextAreaState extends State<_AnimatedTextArea> {
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppTheme.radiusMD),
               borderSide: BorderSide(
-                color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
+                color: isDark
+                    ? AppTheme.inputBorder
+                    : AppTheme.inputBorderLight,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppTheme.radiusMD),
               borderSide: BorderSide(
-                color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
+                color: isDark
+                    ? AppTheme.inputBorder
+                    : AppTheme.inputBorderLight,
               ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-              borderSide: const BorderSide(color: AppTheme.primaryPurple, width: 1.8),
+              borderSide: const BorderSide(
+                color: AppTheme.primaryPurple,
+                width: 1.8,
+              ),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppTheme.radiusMD),
@@ -564,7 +606,11 @@ class _AnimatedTextAreaState extends State<_AnimatedTextArea> {
               borderRadius: BorderRadius.circular(AppTheme.radiusMD),
               borderSide: const BorderSide(color: AppTheme.error, width: 1.8),
             ),
-            errorStyle: const TextStyle(color: AppTheme.error, fontSize: 12, fontWeight: FontWeight.w500),
+            errorStyle: const TextStyle(
+              color: AppTheme.error,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
             contentPadding: const EdgeInsets.all(16),
           ),
         ),

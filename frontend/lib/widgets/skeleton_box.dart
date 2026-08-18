@@ -44,7 +44,7 @@ class _SkeletonBoxState extends State<SkeletonBox>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     final baseColor = isDark ? Colors.grey[800]! : Colors.grey[300]!;
     final highlightColor = isDark ? Colors.grey[700]! : Colors.grey[100]!;
 
@@ -64,7 +64,9 @@ class _SkeletonBoxState extends State<SkeletonBox>
               stops: const [0.1, 0.5, 0.9],
               begin: const Alignment(-1.0, -0.3),
               end: const Alignment(1.0, 0.3),
-              transform: _SlidingGradientTransform(slidePercent: _animation.value),
+              transform: _SlidingGradientTransform(
+                slidePercent: _animation.value,
+              ),
             ),
           ),
         );
@@ -115,7 +117,11 @@ class FeatureCardSkeleton extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            const SkeletonBox(width: double.infinity, height: 20, borderRadius: 4),
+            const SkeletonBox(
+              width: double.infinity,
+              height: 20,
+              borderRadius: 4,
+            ),
             const SizedBox(height: 6),
             const SkeletonBox(width: 200, height: 16, borderRadius: 4),
             const SizedBox(height: 14),
@@ -145,7 +151,7 @@ class StatCardSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     final screenWidth = MediaQuery.of(context).size.width;
     final isCompact = screenWidth < 360;
 
@@ -166,7 +172,11 @@ class StatCardSkeleton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               SkeletonBox(width: 60, height: 12, borderRadius: 4),
-              SkeletonBox(width: isCompact ? 22 : 28, height: isCompact ? 22 : 28, shape: BoxShape.circle),
+              SkeletonBox(
+                width: isCompact ? 22 : 28,
+                height: isCompact ? 22 : 28,
+                shape: BoxShape.circle,
+              ),
             ],
           ),
           SizedBox(height: isCompact ? 6 : 12),
@@ -194,7 +204,11 @@ class ChatListSkeleton extends StatelessWidget {
               children: [
                 const SkeletonBox(width: 120, height: 16, borderRadius: 4),
                 const SizedBox(height: 8),
-                const SkeletonBox(width: double.infinity, height: 14, borderRadius: 4),
+                const SkeletonBox(
+                  width: double.infinity,
+                  height: 14,
+                  borderRadius: 4,
+                ),
               ],
             ),
           ),
@@ -233,7 +247,11 @@ class NotificationSkeleton extends StatelessWidget {
               children: const [
                 SkeletonBox(width: 140, height: 16, borderRadius: 4),
                 SizedBox(height: 8),
-                SkeletonBox(width: double.infinity, height: 14, borderRadius: 4),
+                SkeletonBox(
+                  width: double.infinity,
+                  height: 14,
+                  borderRadius: 4,
+                ),
                 SizedBox(height: 4),
                 SkeletonBox(width: 200, height: 14, borderRadius: 4),
                 SizedBox(height: 8),
@@ -278,11 +296,7 @@ class ProfileSkeleton extends StatelessWidget {
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _statBlock(),
-                    _statBlock(),
-                    _statBlock(),
-                  ],
+                  children: [_statBlock(), _statBlock(), _statBlock()],
                 ),
               ),
               const SizedBox(height: 16),
@@ -299,7 +313,11 @@ class ProfileSkeleton extends StatelessWidget {
                   children: [
                     SkeletonBox(width: 80, height: 16, borderRadius: 4),
                     SizedBox(height: 12),
-                    SkeletonBox(width: double.infinity, height: 14, borderRadius: 4),
+                    SkeletonBox(
+                      width: double.infinity,
+                      height: 14,
+                      borderRadius: 4,
+                    ),
                     SizedBox(height: 6),
                     SkeletonBox(width: 240, height: 14, borderRadius: 4),
                   ],
@@ -362,7 +380,11 @@ class AdminAppSkeleton extends StatelessWidget {
           const SizedBox(height: 16),
           const SkeletonBox(width: 100, height: 12, borderRadius: 4),
           const SizedBox(height: 8),
-          const SkeletonBox(width: double.infinity, height: 12, borderRadius: 4),
+          const SkeletonBox(
+            width: double.infinity,
+            height: 12,
+            borderRadius: 4,
+          ),
           const SizedBox(height: 4),
           const SkeletonBox(width: 200, height: 12, borderRadius: 4),
           const SizedBox(height: 16),

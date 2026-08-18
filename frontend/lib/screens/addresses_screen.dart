@@ -60,13 +60,24 @@ class _AddressesScreenState extends State<AddressesScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Alamat?', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('Alamat "${address.label}" (${address.city}) akan dihapus dari daftar Anda.'),
+        title: const Text(
+          'Hapus Alamat?',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Alamat "${address.label}" (${address.city}) akan dihapus dari daftar Anda.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.error,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Hapus'),
           ),
         ],
@@ -93,7 +104,10 @@ class _AddressesScreenState extends State<AddressesScreen> {
       final result = await AddressService.setDefault(address.id);
       if (!mounted) return;
       if (result['status'] == true) {
-        AppSnackbar.success(context, 'Alamat ${address.label} kini menjadi alamat utama');
+        AppSnackbar.success(
+          context,
+          'Alamat ${address.label} kini menjadi alamat utama',
+        );
         await _load();
       } else {
         AppSnackbar.error(context, AppErrors.messageFromResult(result));
@@ -116,44 +130,51 @@ class _AddressesScreenState extends State<AddressesScreen> {
         backgroundColor: AppTheme.primaryPurple,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Tambah', style: TextStyle(fontWeight: FontWeight.w700)),
+        label: const Text(
+          'Tambah',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
       ),
       appBar: AppBar(
         toolbarHeight: 70,
-        title: const Text('Alamat Saya', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Alamat Saya',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: _isLoading
           ? const SkeletonList()
           : _addresses.isEmpty
-              ? RefreshIndicator(
-                  onRefresh: _load,
-                  color: AppTheme.primaryPurple,
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: const [
-                      SizedBox(height: 120),
-                      AppEmptyState(
-                        icon: Icons.location_on_outlined,
-                        title: 'Belum Ada Alamat',
-                        subtitle: 'Tambahkan alamat pengiriman untuk memudahkan transaksi di Kreavana.',
-                      ),
-                    ],
+          ? RefreshIndicator(
+              onRefresh: _load,
+              color: AppTheme.primaryPurple,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 120),
+                  AppEmptyState(
+                    icon: Icons.location_on_outlined,
+                    title: 'Belum Ada Alamat',
+                    subtitle:
+                        'Tambahkan alamat pengiriman untuk memudahkan transaksi di Kreavana.',
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  color: AppTheme.primaryPurple,
-                  child: ListView.separated(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-                    itemCount: _addresses.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (ctx, i) => AnimatedEntrance(
-                      delay: Duration(milliseconds: 80 + i * 70),
-                      child: _buildCard(_addresses[i], isDark),
-                    ),
-                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              color: AppTheme.primaryPurple,
+              child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                itemCount: _addresses.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemBuilder: (ctx, i) => AnimatedEntrance(
+                  delay: Duration(milliseconds: 80 + i * 70),
+                  child: _buildCard(_addresses[i], isDark),
                 ),
+              ),
+            ),
     );
   }
 
@@ -177,29 +198,48 @@ class _AddressesScreenState extends State<AddressesScreen> {
           Row(
             children: [
               Container(
-                width: 42, height: 42,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
                   color: AppTheme.primaryPurple.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.location_on_outlined, color: AppTheme.primaryPurple, size: 22),
+                child: const Icon(
+                  Icons.location_on_outlined,
+                  color: AppTheme.primaryPurple,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Row(
                   children: [
-                    Text(a.label,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                    Text(
+                      a.label,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     if (a.isDefault) ...[
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryPurple.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Text('UTAMA',
-                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.primaryPurple)),
+                        child: const Text(
+                          'UTAMA',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryPurple,
+                          ),
+                        ),
                       ),
                     ],
                   ],
@@ -213,30 +253,65 @@ class _AddressesScreenState extends State<AddressesScreen> {
                   if (v == 'delete') _confirmDelete(a);
                 },
                 itemBuilder: (_) => [
-                  PopupMenuItem(value: 'edit', child: const Row(children: [
-                    Icon(Icons.edit_outlined, size: 18), SizedBox(width: 10), Text('Ubah')
-                  ])),
-                  PopupMenuItem(value: 'default', child: const Row(children: [
-                    Icon(Icons.star_outline_rounded, size: 18), SizedBox(width: 10), Text('Jadikan Utama')
-                  ])),
-                  PopupMenuItem(value: 'delete', child: Row(children: [
-                    const Icon(Icons.delete_outline, size: 18), const SizedBox(width: 10),
-                    Text('Hapus', style: TextStyle(color: AppTheme.error))
-                  ])),
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: const Row(
+                      children: [
+                        Icon(Icons.edit_outlined, size: 18),
+                        SizedBox(width: 10),
+                        Text('Ubah'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'default',
+                    child: const Row(
+                      children: [
+                        Icon(Icons.star_outline_rounded, size: 18),
+                        SizedBox(width: 10),
+                        Text('Jadikan Utama'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.delete_outline, size: 18),
+                        const SizedBox(width: 10),
+                        Text('Hapus', style: TextStyle(color: AppTheme.error)),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Text('${a.recipientName} • ${a.phone}',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-                  color: isDark ? AppTheme.textWhite : AppTheme.textDark)),
+          Text(
+            '${a.recipientName} • ${a.phone}',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppTheme.textWhite : AppTheme.textDark,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(a.address,
-              style: TextStyle(fontSize: 12.5, color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight)),
+          Text(
+            a.address,
+            style: TextStyle(
+              fontSize: 12.5,
+              color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text('${a.city}, ${a.province} ${a.postalCode}',
-              style: TextStyle(fontSize: 12.5, color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight)),
+          Text(
+            '${a.city}, ${a.province} ${a.postalCode}',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+            ),
+          ),
         ],
       ),
     );
@@ -300,8 +375,12 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
     final province = _provinceCtrl.text.trim();
     final postal = _postalCtrl.text.trim();
 
-    if (name.isEmpty || phone.isEmpty || address.isEmpty ||
-        city.isEmpty || province.isEmpty || postal.isEmpty) {
+    if (name.isEmpty ||
+        phone.isEmpty ||
+        address.isEmpty ||
+        city.isEmpty ||
+        province.isEmpty ||
+        postal.isEmpty) {
       AppSnackbar.error(context, 'Lengkapi semua kolom terlebih dahulu.');
       return;
     }
@@ -310,14 +389,26 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
     try {
       final result = widget.address == null
           ? await AddressService.addAddress(
-              label: label, recipientName: name, phone: phone,
-              address: address, city: city, province: province,
-              postalCode: postal, isDefault: _isDefault)
+              label: label,
+              recipientName: name,
+              phone: phone,
+              address: address,
+              city: city,
+              province: province,
+              postalCode: postal,
+              isDefault: _isDefault,
+            )
           : await AddressService.updateAddress(
               id: widget.address!.id,
-              label: label, recipientName: name, phone: phone,
-              address: address, city: city, province: province,
-              postalCode: postal, isDefault: _isDefault);
+              label: label,
+              recipientName: name,
+              phone: phone,
+              address: address,
+              city: city,
+              province: province,
+              postalCode: postal,
+              isDefault: _isDefault,
+            );
       if (!mounted) return;
       if (result['status'] == true) {
         Navigator.pop(context, true);
@@ -341,7 +432,9 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
 
     return Container(
       padding: EdgeInsets.only(
-        left: 20, right: 20, top: 12,
+        left: 20,
+        right: 20,
+        top: 12,
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       decoration: BoxDecoration(
@@ -355,7 +448,8 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
           children: [
             Center(
               child: Container(
-                width: 42, height: 4,
+                width: 42,
+                height: 4,
                 decoration: BoxDecoration(
                   color: isDark ? AppTheme.inputBorder : Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(4),
@@ -363,8 +457,10 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
               ),
             ),
             const SizedBox(height: 16),
-            Text(isEdit ? 'Ubah Alamat' : 'Tambah Alamat',
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            Text(
+              isEdit ? 'Ubah Alamat' : 'Tambah Alamat',
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
             SizedBox(
               height: 40,
@@ -383,27 +479,59 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         gradient: selected
-                            ? const LinearGradient(colors: [AppTheme.primaryPurple, AppTheme.lightPurple])
+                            ? const LinearGradient(
+                                colors: [
+                                  AppTheme.primaryPurple,
+                                  AppTheme.lightPurple,
+                                ],
+                              )
                             : null,
-                        color: selected ? null : (isDark ? AppTheme.inputDark : AppTheme.inputLight),
+                        color: selected
+                            ? null
+                            : (isDark
+                                  ? AppTheme.inputDark
+                                  : AppTheme.inputLight),
                         borderRadius: BorderRadius.circular(12),
-                        border: selected ? null : Border.all(color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight),
+                        border: selected
+                            ? null
+                            : Border.all(
+                                color: isDark
+                                    ? AppTheme.inputBorder
+                                    : AppTheme.inputBorderLight,
+                              ),
                       ),
-                      child: Text(l,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: selected ? Colors.white : (isDark ? AppTheme.textWhite : AppTheme.textDark),
-                          )),
+                      child: Text(
+                        l,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: selected
+                              ? Colors.white
+                              : (isDark
+                                    ? AppTheme.textWhite
+                                    : AppTheme.textDark),
+                        ),
+                      ),
                     ),
                   );
                 },
               ),
             ),
             const SizedBox(height: 14),
-            AnimatedInputField(controller: _nameCtrl, label: 'Nama Penerima', hint: 'Nama penerima paket / tagihan', icon: Icons.person_outline),
+            AnimatedInputField(
+              controller: _nameCtrl,
+              label: 'Nama Penerima',
+              hint: 'Nama penerima paket / tagihan',
+              icon: Icons.person_outline,
+            ),
             const SizedBox(height: 12),
-            AnimatedInputField(controller: _phoneCtrl, label: 'No. Telepon', hint: 'Contoh: 0812-3456-7890', icon: Icons.phone_outlined, keyboardType: TextInputType.phone),
+            AnimatedInputField(
+              controller: _phoneCtrl,
+              label: 'No. Telepon',
+              hint: 'Contoh: 0812-3456-7890',
+              icon: Icons.phone_outlined,
+              keyboardType: TextInputType.phone,
+            ),
             const SizedBox(height: 12),
             AnimatedInputField(
               controller: _addressCtrl,
@@ -412,22 +540,48 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
               icon: Icons.home_outlined,
             ),
             const SizedBox(height: 12),
-            AnimatedInputField(controller: _cityCtrl, label: 'Kota / Kabupaten', hint: 'Contoh: Bandung', icon: Icons.location_city_outlined),
+            AnimatedInputField(
+              controller: _cityCtrl,
+              label: 'Kota / Kabupaten',
+              hint: 'Contoh: Bandung',
+              icon: Icons.location_city_outlined,
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
-                Expanded(child: AnimatedInputField(controller: _provinceCtrl, label: 'Provinsi', hint: 'Jawa Barat', icon: Icons.map_outlined)),
+                Expanded(
+                  child: AnimatedInputField(
+                    controller: _provinceCtrl,
+                    label: 'Provinsi',
+                    hint: 'Jawa Barat',
+                    icon: Icons.map_outlined,
+                  ),
+                ),
                 const SizedBox(width: 12),
-                Expanded(child: AnimatedInputField(controller: _postalCtrl, label: 'Kode Pos', hint: '40123', icon: Icons.markunread_mailbox_outlined, keyboardType: TextInputType.number)),
+                Expanded(
+                  child: AnimatedInputField(
+                    controller: _postalCtrl,
+                    label: 'Kode Pos',
+                    hint: '40123',
+                    icon: Icons.markunread_mailbox_outlined,
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 6),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Jadikan alamat utama', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+              title: const Text(
+                'Jadikan alamat utama',
+                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+              ),
               subtitle: Text(
                 'Digunakan sebagai default alamat pengiriman',
-                style: TextStyle(fontSize: 11, color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                ),
               ),
               value: _isDefault,
               activeThumbColor: AppTheme.primaryPurple,

@@ -21,7 +21,7 @@ class TokenCleanupTest extends TestCase
             'username' => 'cleanuptest',
             'email' => 'cleanup@test.com',
             'password' => Hash::make('password123'),
-            'role' => 'user',
+            'role' => \App\Enums\RoleType::User,
         ]);
     }
 

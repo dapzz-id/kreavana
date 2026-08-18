@@ -90,7 +90,8 @@ class S3UploadService {
 
         if (response.statusCode == 200) return true;
       } on DioException catch (e) {
-        final isTimeout = e.type == DioExceptionType.connectionTimeout ||
+        final isTimeout =
+            e.type == DioExceptionType.connectionTimeout ||
             e.type == DioExceptionType.sendTimeout ||
             e.type == DioExceptionType.receiveTimeout;
         final isServerError =
@@ -157,25 +158,23 @@ class S3UploadService {
 
         results = await Future.wait([
           if (!results[0])
-            uploadToS3(
-              refreshedUrls['ktp_upload_url']!,
-              ktpFile,
-              (sent, total) {
-                ktpSent = sent;
-                updateProgress();
-              },
-            )
+            uploadToS3(refreshedUrls['ktp_upload_url']!, ktpFile, (
+              sent,
+              total,
+            ) {
+              ktpSent = sent;
+              updateProgress();
+            })
           else
             Future.value(true),
           if (!results[1])
-            uploadToS3(
-              refreshedUrls['selfie_upload_url']!,
-              selfieFile,
-              (sent, total) {
-                selfieSent = sent;
-                updateProgress();
-              },
-            )
+            uploadToS3(refreshedUrls['selfie_upload_url']!, selfieFile, (
+              sent,
+              total,
+            ) {
+              selfieSent = sent;
+              updateProgress();
+            })
           else
             Future.value(true),
         ]);

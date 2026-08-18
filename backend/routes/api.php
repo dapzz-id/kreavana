@@ -11,7 +11,7 @@ use App\Http\Controllers\{
     PaymentMethodController, UserAddressController, AvatarController,
     PortfolioController, SubscriptionController,
     StorageController, DisputeController, OpportunityReviewController,
-    AiController
+    AiController, JobContractController, JobContractTransitionController
 };
 
 // Public: serve avatar images with CORS headers (for Flutter Web)
@@ -126,6 +126,15 @@ Route::middleware('auth:api')->group(function () {
         Route::post('report', [OpportunityController::class, 'submitReport'])->middleware('permission:submit_report');
         Route::get('{id}', [OpportunityController::class, 'show'])->middleware('permission:view_opportunities');
         Route::get('{id}/poster', [OpportunityController::class, 'getPoster'])->middleware('permission:view_opportunities');
+        Route::post('{id}/reviews', [OpportunityReviewController::class, 'store']);
+    });
+
+    // Job Contracts
+    Route::prefix('contracts')->group(function () {
+        Route::get('/', [JobContractController::class, 'index']);
+        Route::post('/', [JobContractController::class, 'store']);
+        Route::get('{id}', [JobContractController::class, 'show']);
+        Route::post('{contract}/transitions', [JobContractTransitionController::class, 'store']);
     });
 
     // Notifications
@@ -217,6 +226,33 @@ Route::middleware('auth:api')->group(function () {
         Route::post('applications/{id}/reject', [AdminController::class, 'rejectApplication']);
         Route::get('system-logs', [AdminController::class, 'getSystemLogs']);
         Route::get('assigned-disputes', [DisputeController::class, 'assignedDisputes']);
+        Route::post('disputes/{id}/decision-refund', [DisputeController::class, 'adminDecideRefund']);
+        Route::post('disputes/{id}/settle-refund', [DisputeController::class, 'adminSettleRefund']);
+        Route::post('disputes/{id}/decision-cancellation', [DisputeController::class, 'adminDecideCancellation']);
+    });
+
+    // Disputes
+    Route::prefix('disputes')->group(function () {
+        Route::post('marketplace-refund', [DisputeController::class, 'storeRefund']);
+        Route::post('opportunity-cancellation', [DisputeController::class, 'storeCancellation']);
+        Route::get('{id}', [DisputeController::class, 'show']);
+    });
+
+    Route::get('/creators/{creatorId}/availability', [App\Http\Controllers\CreatorAvailabilityController::class, 'getAvailability']);
+    
+    // Protected creator profile endpoints
+    Route::middleware('auth:api')->group(function () {
+        Route::get('/profile', [App\Http\Controllers\ProfileController::class, 'getProfile']);
+        Route::put('/profile', [App\Http\Controllers\ProfileController::class, 'updateProfile']);
+        Route::get('/profile/identity', [App\Http\Controllers\ProfileController::class, 'identity']);
+        Route::get('/profile/permissions', [App\Http\Controllers\ProfileController::class, 'permissions']);
+        Route::get('/profile/history', [App\Http\Controllers\ProfileController::class, 'history']);
+        
+        // Creator Calendar
+        Route::get('/profile/calendar', [App\Http\Controllers\CreatorCalendarController::class, 'index']);
+        Route::post('/profile/calendar', [App\Http\Controllers\CreatorCalendarController::class, 'storeOrUpdate']);
+        Route::delete('/profile/calendar/{date}', [App\Http\Controllers\CreatorCalendarController::class, 'destroy']);
+
     });
 
     // Marketplace (write operations)
@@ -224,6 +260,8 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/', [MarketplaceController::class, 'store']);
         Route::put('{id}', [MarketplaceController::class, 'update']);
         Route::delete('{id}', [MarketplaceController::class, 'destroy']);
+        Route::post('{id}/publish', [MarketplaceController::class, 'publish']);
+        Route::post('{id}/archive', [MarketplaceController::class, 'archive']);
         Route::post('{id}/review', [MarketplaceController::class, 'review']);
         Route::get('{id}/purchases', [MarketplaceController::class, 'purchases']);
         Route::post('{id}/purchase', [MarketplaceController::class, 'purchase']);
@@ -261,6 +299,10 @@ Route::prefix('marketplace')->group(function () {
     Route::get('categories', [MarketplaceController::class, 'categories']);
     Route::get('{id}', [MarketplaceController::class, 'show']);
 });
+
+// Recommendations (Public Read)
+Route::get('creators/recommendations', [\App\Http\Controllers\RecommendationController::class, 'getCreatorRecommendations']);
+Route::get('creators/recommendations/categories', [\App\Http\Controllers\RecommendationController::class, 'getServiceCategories']);
 
 // Subscription plans (public — prices are defined server-side, never trust the client)
 Route::prefix('subscription')->group(function () {

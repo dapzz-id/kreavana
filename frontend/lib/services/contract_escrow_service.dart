@@ -14,8 +14,9 @@ class JobContract {
   final String clientId;
   final String clientName;
 
-  // Status: DRAFT | APPROVED | ESCROW_PAID | WORK_SUBMITTED | COMPLETED | CANCEL_REQUESTED | CANCELLED | DISPUTED
-  String status;
+  // Backend fields
+  String contractStatus; // draft, proposed, active, completed, cancelled, disputed
+  String workStatus; // pending, scheduled, in_progress, submitted, revision, done
   bool creatorApproved;
   bool clientApproved;
   bool escrowPaid;
@@ -36,7 +37,8 @@ class JobContract {
     required this.creatorName,
     required this.clientId,
     required this.clientName,
-    this.status = 'DRAFT',
+    this.contractStatus = 'draft',
+    this.workStatus = 'pending',
     this.creatorApproved = false,
     this.clientApproved = false,
     this.escrowPaid = false,
@@ -66,64 +68,69 @@ class JobContract {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'description': description,
-        'amount': amount,
-        'deadline': deadline,
-        'terms': terms,
-        'creatorId': creatorId,
-        'creatorName': creatorName,
-        'clientId': clientId,
-        'clientName': clientName,
-        'status': status,
-        'creatorApproved': creatorApproved,
-        'clientApproved': clientApproved,
-        'escrowPaid': escrowPaid,
-        'workSubmitted': workSubmitted,
-        'disputeOpened': disputeOpened,
-        'cancelReason': cancelReason,
-        'disputeGroupId': disputeGroupId,
-        'createdAt': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'title': title,
+    'description': description,
+    'amount': amount,
+    'deadline': deadline,
+    'terms': terms,
+    'creatorId': creatorId,
+    'creatorName': creatorName,
+    'clientId': clientId,
+    'clientName': clientName,
+    'contractStatus': contractStatus,
+    'workStatus': workStatus,
+    'creatorApproved': creatorApproved,
+    'clientApproved': clientApproved,
+    'escrowPaid': escrowPaid,
+    'workSubmitted': workSubmitted,
+    'disputeOpened': disputeOpened,
+    'cancelReason': cancelReason,
+    'disputeGroupId': disputeGroupId,
+    'createdAt': createdAt.toIso8601String(),
+  };
 
   factory JobContract.fromJson(Map<String, dynamic> json) => JobContract(
-        id: json['id'] ?? '',
-        title: json['title'] ?? 'Kontrak Job',
-        description: json['description'] ?? '',
-        amount: (json['amount'] is num) ? (json['amount'] as num).toDouble() : 0.0,
-        deadline: json['deadline'] ?? '',
-        terms: json['terms'] ?? '',
-        creatorId: json['creatorId']?.toString() ?? '',
-        creatorName: json['creatorName'] ?? '',
-        clientId: json['clientId']?.toString() ?? '',
-        clientName: json['clientName'] ?? '',
-        status: json['status'] ?? 'DRAFT',
-        creatorApproved: json['creatorApproved'] ?? false,
-        clientApproved: json['clientApproved'] ?? false,
-        escrowPaid: json['escrowPaid'] ?? false,
-        workSubmitted: json['workSubmitted'] ?? false,
-        disputeOpened: json['disputeOpened'] ?? false,
-        cancelReason: json['cancelReason'],
-        disputeGroupId: json['disputeGroupId'],
-        createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : DateTime.now(),
-      );
+    id: json['id'] ?? '',
+    title: json['title'] ?? 'Kontrak Job',
+    description: json['description'] ?? '',
+    amount: (json['amount'] is num) ? (json['amount'] as num).toDouble() : 0.0,
+    deadline: json['deadline'] ?? '',
+    terms: json['terms'] ?? '',
+    creatorId: json['creatorId']?.toString() ?? '',
+    creatorName: json['creatorName'] ?? '',
+    clientId: json['clientId']?.toString() ?? '',
+    clientName: json['clientName'] ?? '',
+    contractStatus: json['contract_status'] ?? json['contractStatus'] ?? 'draft',
+    workStatus: json['work_status'] ?? json['workStatus'] ?? 'pending',
+    creatorApproved: json['creatorApproved'] ?? false,
+    clientApproved: json['clientApproved'] ?? false,
+    escrowPaid: json['escrowPaid'] ?? false,
+    workSubmitted: json['workSubmitted'] ?? false,
+    disputeOpened: json['disputeOpened'] ?? false,
+    cancelReason: json['cancelReason'],
+    disputeGroupId: json['disputeGroupId'],
+    createdAt: json['createdAt'] != null
+        ? DateTime.tryParse(json['createdAt'])
+        : DateTime.now(),
+  );
 }
 
 class ContractEscrowService {
   /// Generate payload JSON string for contract message
   static String createContractMessagePayload(JobContract contract) {
-    final map = {
-      'type': 'contract',
-      'contract': contract.toJson(),
-    };
+    final map = {'type': 'contract', 'contract': contract.toJson()};
     return jsonEncode(map);
   }
 
   /// Parse contract from message payload
   static JobContract? parseContractFromPayload(dynamic payload) {
-    if (payload is Map && payload['type'] == 'contract' && payload['contract'] is Map) {
-      return JobContract.fromJson(Map<String, dynamic>.from(payload['contract']));
+    if (payload is Map &&
+        payload['type'] == 'contract' &&
+        payload['contract'] is Map) {
+      return JobContract.fromJson(
+        Map<String, dynamic>.from(payload['contract']),
+      );
     }
     return null;
   }
@@ -140,7 +147,7 @@ class ContractEscrowService {
     }
 
     if (contract.creatorApproved && contract.clientApproved) {
-      contract.status = 'APPROVED';
+      contract.contractStatus = 'active';
     }
     return contract;
   }
@@ -160,36 +167,40 @@ class ContractEscrowService {
 
     if (transferResult['success'] == true) {
       contract.escrowPaid = true;
-      contract.status = 'ESCROW_PAID';
+      contract.workStatus = 'in_progress';
       return contract;
     } else {
-      throw Exception(transferResult['message'] ?? 'Gagal memproses pembayaran Escrow.');
+      throw Exception(
+        transferResult['message'] ?? 'Gagal memproses pembayaran Escrow.',
+      );
     }
   }
 
   /// Creator submits completed work
   static JobContract submitWork(JobContract contract) {
     contract.workSubmitted = true;
-    contract.status = 'WORK_SUBMITTED';
+    contract.workStatus = 'submitted';
     return contract;
   }
 
   /// Client approves work -> releases Escrow funds to Creator
   static JobContract releaseEscrowToCreator(JobContract contract) {
-    contract.status = 'COMPLETED';
+    contract.contractStatus = 'completed';
+    contract.workStatus = 'done';
     return contract;
   }
 
   /// Request cancellation of contract
   static JobContract requestCancellation(JobContract contract, String reason) {
-    contract.status = 'CANCEL_REQUESTED';
+    contract.contractStatus = 'proposed';
     contract.cancelReason = reason;
     return contract;
   }
 
   /// Approve cancellation & refund
   static JobContract approveCancellation(JobContract contract) {
-    contract.status = 'CANCELLED';
+    contract.contractStatus = 'cancelled';
+    contract.workStatus = 'cancelled'; // If work was started
     return contract;
   }
 
@@ -202,7 +213,8 @@ class ContractEscrowService {
     required String creatorName,
   }) async {
     final groupName = '[Bantuan Admin] Kendala Kontrak #${contract.id}';
-    final groupDesc = 'Grup Pendampingan 3 Arah (Klien, Kreator, & Admin) untuk Kontrak #${contract.id}: ${contract.title}';
+    final groupDesc =
+        'Grup Pendampingan 3 Arah (Klien, Kreator, & Admin) untuk Kontrak #${contract.id}: ${contract.title}';
 
     // 1. Create group via ChatService
     final groupRes = await ChatService.createGroup(groupName, groupDesc);
@@ -210,18 +222,15 @@ class ContractEscrowService {
 
     // 2. Post automated system invitation message inside group
     if (groupId.isNotEmpty) {
-      final prompt = '🛡️ Halo $clientName dan $creatorName! Admin Kreavana telah bergabung secara otomatis dalam grup 3 arah ini untuk membantu pendampingan penyelesaian kendala pada kontrak #${contract.id} ("${contract.title}"). Mohon sampaikan kendala atau pertanyaan yang Anda hadapi.';
+      final prompt =
+          '🛡️ Halo $clientName dan $creatorName! Admin Kreavana telah bergabung secara otomatis dalam grup 3 arah ini untuk membantu pendampingan penyelesaian kendala pada kontrak #${contract.id} ("${contract.title}"). Mohon sampaikan kendala atau pertanyaan yang Anda hadapi.';
       await ChatService.sendMessage(groupId, prompt);
     }
 
     contract.disputeOpened = true;
     contract.disputeGroupId = groupId;
-    contract.status = 'DISPUTED';
+    contract.contractStatus = 'disputed';
 
-    return {
-      'success': true,
-      'group': groupRes,
-      'contract': contract,
-    };
+    return {'success': true, 'group': groupRes, 'contract': contract};
   }
 }

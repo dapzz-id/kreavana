@@ -65,11 +65,18 @@ class _KreavanaImageState extends State<KreavanaImage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(widget.isAvatar ? Icons.person_off : Icons.broken_image, color: Colors.grey.shade400, size: widget.isAvatar ? 24 : 32),
+            Icon(
+              widget.isAvatar ? Icons.person_off : Icons.broken_image,
+              color: Colors.grey.shade400,
+              size: widget.isAvatar ? 24 : 32,
+            ),
             if (!widget.isAvatar)
               const Padding(
                 padding: EdgeInsets.only(top: 4.0),
-                child: Text('Media telah dihapus', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                child: Text(
+                  'Media telah dihapus',
+                  style: TextStyle(fontSize: 10, color: Colors.grey),
+                ),
               ),
           ],
         ),
@@ -94,12 +101,13 @@ class _KreavanaImageState extends State<KreavanaImage> {
       width: widget.width,
       height: widget.height,
       fit: widget.fit,
-      placeholder: (context, url) => widget.placeholder ?? Container(color: Colors.grey.shade100),
+      placeholder: (context, url) =>
+          widget.placeholder ?? Container(color: Colors.grey.shade100),
       errorWidget: (context, url, error) {
         // If HTTP fails (e.g. 404 because file was physically deleted), check the API status
         // to confirm if it was intentionally deleted from Storage Manager
         _checkStatus();
-        
+
         return widget.errorWidget ?? _buildDeletedPlaceholder();
       },
     );

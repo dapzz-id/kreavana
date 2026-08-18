@@ -8,11 +8,16 @@ class StorageService {
     String sort = 'Terbaru',
     String category = 'Semua',
   }) async {
-    return ApiService.get('storage/history?page=$page&type=$type&sort=$sort&category=$category');
+    return ApiService.get(
+      'storage/history?page=$page&type=$type&sort=$sort&category=$category',
+    );
   }
 
   /// Menghapus file dari storage dengan memberikan alasan opsional
-  static Future<Map<String, dynamic>> deleteFile(String id, {String? reason}) async {
+  static Future<Map<String, dynamic>> deleteFile(
+    String id, {
+    String? reason,
+  }) async {
     final payload = reason != null ? {'reason': reason} : null;
     return ApiService.delete('storage/$id', data: payload);
   }
