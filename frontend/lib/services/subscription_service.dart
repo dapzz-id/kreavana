@@ -4,8 +4,8 @@ import '../services/api_service.dart';
 class SubscriptionPlan {
   final String tier;
   final String name;
-  final int price;        // in IDR cents (e.g. 69999)
-  final String label;     // display string e.g. "Rp 69.999 / bln"
+  final int price; // in IDR cents (e.g. 69999)
+  final String label; // display string e.g. "Rp 69.999 / bln"
   final List<String> features;
   final bool isPopular;
   final bool isFree;
@@ -22,13 +22,13 @@ class SubscriptionPlan {
 
   factory SubscriptionPlan.fromJson(Map<String, dynamic> json) {
     return SubscriptionPlan(
-      tier:       json['tier'] as String,
-      name:       json['name'] as String,
-      price:      (json['price'] as num).toInt(),
-      label:      json['label'] as String,
-      features:   List<String>.from(json['features'] ?? []),
-      isPopular:  json['is_popular'] == true,
-      isFree:     (json['price'] as num).toInt() == 0,
+      tier: json['tier'] as String,
+      name: json['name'] as String,
+      price: (json['price'] as num).toInt(),
+      label: json['label'] as String,
+      features: List<String>.from(json['features'] ?? []),
+      isPopular: json['is_popular'] == true,
+      isFree: (json['price'] as num).toInt() == 0,
     );
   }
 }

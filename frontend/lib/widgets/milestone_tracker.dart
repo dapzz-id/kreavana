@@ -75,7 +75,9 @@ class MilestoneTracker extends StatelessWidget {
             builder: (context, value, _) => LinearProgressIndicator(
               value: value,
               minHeight: 6,
-              backgroundColor: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
+              backgroundColor: isDark
+                  ? const Color(0xFF2D2A3E)
+                  : Colors.grey.shade200,
               color: AppTheme.primaryPurple,
             ),
           ),
@@ -83,8 +85,7 @@ class MilestoneTracker extends StatelessWidget {
         const SizedBox(height: 14),
         for (var i = 0; i < milestones.length; i++) ...[
           _buildMilestoneRow(i, context),
-          if (i < milestones.length - 1)
-            _buildConnector(i, context),
+          if (i < milestones.length - 1) _buildConnector(i, context),
         ],
       ],
     );
@@ -121,11 +122,7 @@ class MilestoneTracker extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _MilestoneDot(
-            size: dotSize,
-            status: m.status,
-            isDark: isDark,
-          ),
+          _MilestoneDot(size: dotSize, status: m.status, isDark: isDark),
           const SizedBox(width: 14),
           Expanded(
             child: Padding(
@@ -145,8 +142,8 @@ class MilestoneTracker extends StatelessWidget {
                                 : FontWeight.w600,
                             color: m.isDone
                                 ? (isDark
-                                    ? Colors.white70
-                                    : Colors.grey.shade600)
+                                      ? Colors.white70
+                                      : Colors.grey.shade600)
                                 : Theme.of(context).colorScheme.onSurface,
                             decoration: m.isDone
                                 ? TextDecoration.lineThrough
@@ -177,8 +174,9 @@ class MilestoneTracker extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         height: 1.4,
-                        color:
-                            isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                        color: isDark
+                            ? AppTheme.textMuted
+                            : AppTheme.textMutedLight,
                       ),
                     ),
                   ],
@@ -193,8 +191,18 @@ class MilestoneTracker extends StatelessWidget {
 
   String _formatDate(DateTime d) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
     ];
     return '${d.day} ${months[d.month - 1]}';
   }
@@ -218,7 +226,11 @@ class _MilestoneDot extends StatelessWidget {
     switch (status) {
       case MilestoneStatus.completed:
         color = AppTheme.success;
-        icon = Icon(Icons.check_rounded, color: Colors.white, size: size * 0.55);
+        icon = Icon(
+          Icons.check_rounded,
+          color: Colors.white,
+          size: size * 0.55,
+        );
         break;
       case MilestoneStatus.active:
         color = AppTheme.primaryPurple;
@@ -226,9 +238,11 @@ class _MilestoneDot extends StatelessWidget {
         break;
       case MilestoneStatus.pending:
         color = isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade300;
-        icon = Icon(Icons.circle,
-            color: isDark ? const Color(0xFF3D3A52) : Colors.white,
-            size: size * 0.32);
+        icon = Icon(
+          Icons.circle,
+          color: isDark ? const Color(0xFF3D3A52) : Colors.white,
+          size: size * 0.32,
+        );
         break;
     }
 

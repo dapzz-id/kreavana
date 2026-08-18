@@ -118,9 +118,11 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
     if (decoded == null) return file;
 
     // Resize to max 1024px on the longest side
-    final resized = img.copyResize(decoded,
-        width: decoded.width > decoded.height ? 1024 : null,
-        height: decoded.height >= decoded.width ? 1024 : null);
+    final resized = img.copyResize(
+      decoded,
+      width: decoded.width > decoded.height ? 1024 : null,
+      height: decoded.height >= decoded.width ? 1024 : null,
+    );
 
     final compressed = img.encodeJpg(resized, quality: 80);
     final compressedFile = File('${file.path}_compressed.jpg');
@@ -156,10 +158,7 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Verifikasi KYC'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Verifikasi KYC'), centerTitle: true),
       body: ValueListenableBuilder<KycFlowState>(
         valueListenable: _kycService.stateNotifier,
         builder: (context, flowState, _) {
@@ -235,14 +234,16 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
         children: [
           Text(
             'Ambil Foto',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
             'Ambil foto KTP dan selfie Anda untuk verifikasi.',
-            style: TextStyle(color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight),
+            style: TextStyle(
+              color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+            ),
           ),
           const SizedBox(height: 32),
 
@@ -304,7 +305,11 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
         ),
         child: Row(
           children: [
-            Icon(icon, size: 32, color: file != null ? Colors.green : AppTheme.primaryPurple),
+            Icon(
+              icon,
+              size: 32,
+              color: file != null ? Colors.green : AppTheme.primaryPurple,
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
@@ -345,7 +350,10 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          Text('Mengunggah gambar… $pct%', style: const TextStyle(fontSize: 16)),
+          Text(
+            'Mengunggah gambar… $pct%',
+            style: const TextStyle(fontSize: 16),
+          ),
         ],
       ),
     );
@@ -369,9 +377,9 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
           Text(
             isApproved ? 'Verifikasi Berhasil' : 'Verifikasi Gagal',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: isApproved ? Colors.green : Colors.red,
-                ),
+              fontWeight: FontWeight.bold,
+              color: isApproved ? Colors.green : Colors.red,
+            ),
           ),
           if (flowState.similarityScore != null) ...[
             const SizedBox(height: 12),
@@ -409,9 +417,9 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
           const SizedBox(height: 16),
           Text(
             'Terjadi Kesalahan',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
@@ -485,14 +493,19 @@ class _CaptureImageScreenState extends State<_CaptureImageScreen> {
 
   Future<void> _initCamera() async {
     final camera = widget.cameras.firstWhere(
-      (c) => c.lensDirection ==
+      (c) =>
+          c.lensDirection ==
           (widget.useFrontCamera
               ? CameraLensDirection.front
               : CameraLensDirection.back),
       orElse: () => widget.cameras.first,
     );
 
-    _controller = CameraController(camera, ResolutionPreset.high, enableAudio: false);
+    _controller = CameraController(
+      camera,
+      ResolutionPreset.high,
+      enableAudio: false,
+    );
     await _controller!.initialize();
     if (mounted) setState(() {});
   }
@@ -504,7 +517,8 @@ class _CaptureImageScreenState extends State<_CaptureImageScreen> {
   }
 
   Future<void> _takePicture() async {
-    if (_isTaking || _controller == null || !_controller!.value.isInitialized) return;
+    if (_isTaking || _controller == null || !_controller!.value.isInitialized)
+      return;
     _isTaking = true;
 
     final xFile = await _controller!.takePicture();

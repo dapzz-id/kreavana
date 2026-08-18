@@ -14,9 +14,7 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const KreavanaApp());
 
-    // Verify that login screen has the title 'Masuk Kreavana'.
-    expect(find.text('Masuk Kreavana'), findsOneWidget);
+    // Verify that login screen has the title 'Masuk ke Kreavana'.
+    expect(find.text('Masuk ke Kreavana'), findsOneWidget);
   });
 }
-
-

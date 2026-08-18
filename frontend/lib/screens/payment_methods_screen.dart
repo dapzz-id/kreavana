@@ -61,13 +61,24 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Metode?', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('${method.provider} •••• ${method.accountNumber.length > 4 ? method.accountNumber.substring(method.accountNumber.length - 4) : method.accountNumber} akan dihapus dari metode pembayaran Anda.'),
+        title: const Text(
+          'Hapus Metode?',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          '${method.provider} •••• ${method.accountNumber.length > 4 ? method.accountNumber.substring(method.accountNumber.length - 4) : method.accountNumber} akan dihapus dari metode pembayaran Anda.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.error,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Hapus'),
           ),
         ],
@@ -94,7 +105,10 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
       final result = await PaymentMethodService.setDefault(method.id);
       if (!mounted) return;
       if (result['status'] == true) {
-        AppSnackbar.success(context, '${method.provider} kini menjadi metode utama');
+        AppSnackbar.success(
+          context,
+          '${method.provider} kini menjadi metode utama',
+        );
         await _load();
       } else {
         AppSnackbar.error(context, AppErrors.messageFromResult(result));
@@ -117,44 +131,51 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
         backgroundColor: AppTheme.primaryPurple,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Tambah', style: TextStyle(fontWeight: FontWeight.w700)),
+        label: const Text(
+          'Tambah',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
       ),
       appBar: AppBar(
         toolbarHeight: 70,
-        title: const Text('Metode Pembayaran', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Metode Pembayaran',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: _isLoading
           ? const SkeletonList()
           : _methods.isEmpty
-              ? RefreshIndicator(
-                  onRefresh: _load,
-                  color: AppTheme.primaryPurple,
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: const [
-                      SizedBox(height: 120),
-                      AppEmptyState(
-                        icon: Icons.account_balance_wallet_outlined,
-                        title: 'Belum Ada Metode Pembayaran',
-                        subtitle: 'Tambahkan rekening bank atau e-wallet untuk transaksi di Kreavana.',
-                      ),
-                    ],
+          ? RefreshIndicator(
+              onRefresh: _load,
+              color: AppTheme.primaryPurple,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 120),
+                  AppEmptyState(
+                    icon: Icons.account_balance_wallet_outlined,
+                    title: 'Belum Ada Metode Pembayaran',
+                    subtitle:
+                        'Tambahkan rekening bank atau e-wallet untuk transaksi di Kreavana.',
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  color: AppTheme.primaryPurple,
-                  child: ListView.separated(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-                    itemCount: _methods.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (ctx, i) => AnimatedEntrance(
-                      delay: Duration(milliseconds: 80 + i * 70),
-                      child: _buildCard(_methods[i], isDark),
-                    ),
-                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              color: AppTheme.primaryPurple,
+              child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                itemCount: _methods.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemBuilder: (ctx, i) => AnimatedEntrance(
+                  delay: Duration(milliseconds: 80 + i * 70),
+                  child: _buildCard(_methods[i], isDark),
                 ),
+              ),
+            ),
     );
   }
 
@@ -183,13 +204,19 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
           Row(
             children: [
               Container(
-                width: 46, height: 46,
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(isBank ? Icons.account_balance_rounded : Icons.phone_iphone_rounded,
-                    color: color, size: 24),
+                child: Icon(
+                  isBank
+                      ? Icons.account_balance_rounded
+                      : Icons.phone_iphone_rounded,
+                  color: color,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -198,38 +225,77 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                   children: [
                     Row(
                       children: [
-                        Text(method.provider,
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                        Text(
+                          method.provider,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                         if (method.isDefault) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryPurple.withValues(alpha: 0.12),
+                              color: AppTheme.primaryPurple.withValues(
+                                alpha: 0.12,
+                              ),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: const Text('UTAMA',
-                                style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.primaryPurple)),
+                            child: const Text(
+                              'UTAMA',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryPurple,
+                              ),
+                            ),
                           ),
                         ],
                       ],
                     ),
                     const SizedBox(height: 3),
-                    Text(method.accountName,
-                        style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight)),
+                    Text(
+                      method.accountName,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark
+                            ? AppTheme.textMuted
+                            : AppTheme.textMutedLight,
+                      ),
+                    ),
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        Text('•••• $last4',
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+                        Text(
+                          '•••• $last4',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                         const SizedBox(width: 8),
                         InkWell(
                           onTap: () async {
-                            await Clipboard.setData(ClipboardData(text: method.accountNumber));
-                            if (mounted) AppSnackbar.success(context, 'Nomor rekening disalin');
+                            await Clipboard.setData(
+                              ClipboardData(text: method.accountNumber),
+                            );
+                            if (mounted)
+                              AppSnackbar.success(
+                                context,
+                                'Nomor rekening disalin',
+                              );
                           },
                           borderRadius: BorderRadius.circular(6),
-                          child: const Icon(Icons.copy_rounded, size: 14, color: AppTheme.textMuted),
+                          child: const Icon(
+                            Icons.copy_rounded,
+                            size: 14,
+                            color: AppTheme.textMuted,
+                          ),
                         ),
                       ],
                     ),
@@ -244,16 +310,36 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                   if (v == 'delete') _confirmDelete(method);
                 },
                 itemBuilder: (_) => [
-                  PopupMenuItem(value: 'edit', child: const Row(children: [
-                    Icon(Icons.edit_outlined, size: 18), SizedBox(width: 10), Text('Ubah')
-                  ])),
-                  PopupMenuItem(value: 'default', child: const Row(children: [
-                    Icon(Icons.star_outline_rounded, size: 18), SizedBox(width: 10), Text('Jadikan Utama')
-                  ])),
-                  PopupMenuItem(value: 'delete', child: Row(children: [
-                    const Icon(Icons.delete_outline, size: 18), const SizedBox(width: 10),
-                    Text('Hapus', style: TextStyle(color: AppTheme.error))
-                  ])),
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: const Row(
+                      children: [
+                        Icon(Icons.edit_outlined, size: 18),
+                        SizedBox(width: 10),
+                        Text('Ubah'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'default',
+                    child: const Row(
+                      children: [
+                        Icon(Icons.star_outline_rounded, size: 18),
+                        SizedBox(width: 10),
+                        Text('Jadikan Utama'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.delete_outline, size: 18),
+                        const SizedBox(width: 10),
+                        Text('Hapus', style: TextStyle(color: AppTheme.error)),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -270,7 +356,8 @@ class _PaymentMethodFormSheet extends StatefulWidget {
   const _PaymentMethodFormSheet({this.method});
 
   @override
-  State<_PaymentMethodFormSheet> createState() => _PaymentMethodFormSheetState();
+  State<_PaymentMethodFormSheet> createState() =>
+      _PaymentMethodFormSheetState();
 }
 
 class _PaymentMethodFormSheetState extends State<_PaymentMethodFormSheet> {
@@ -288,7 +375,9 @@ class _PaymentMethodFormSheetState extends State<_PaymentMethodFormSheet> {
     _isDefault = widget.method?.isDefault ?? false;
     _providerCtrl = TextEditingController(text: widget.method?.provider ?? '');
     _nameCtrl = TextEditingController(text: widget.method?.accountName ?? '');
-    _numberCtrl = TextEditingController(text: widget.method?.accountNumber ?? '');
+    _numberCtrl = TextEditingController(
+      text: widget.method?.accountNumber ?? '',
+    );
   }
 
   @override
@@ -317,10 +406,20 @@ class _PaymentMethodFormSheetState extends State<_PaymentMethodFormSheet> {
     try {
       final result = widget.method == null
           ? await PaymentMethodService.addMethod(
-              type: _type, provider: provider, accountName: name, accountNumber: number, isDefault: _isDefault)
+              type: _type,
+              provider: provider,
+              accountName: name,
+              accountNumber: number,
+              isDefault: _isDefault,
+            )
           : await PaymentMethodService.updateMethod(
               id: widget.method!.id,
-              type: _type, provider: provider, accountName: name, accountNumber: number, isDefault: _isDefault);
+              type: _type,
+              provider: provider,
+              accountName: name,
+              accountNumber: number,
+              isDefault: _isDefault,
+            );
       if (!mounted) return;
       if (result['status'] == true) {
         Navigator.pop(context, true);
@@ -344,7 +443,9 @@ class _PaymentMethodFormSheetState extends State<_PaymentMethodFormSheet> {
 
     return Container(
       padding: EdgeInsets.only(
-        left: 20, right: 20, top: 12,
+        left: 20,
+        right: 20,
+        top: 12,
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       decoration: BoxDecoration(
@@ -358,7 +459,8 @@ class _PaymentMethodFormSheetState extends State<_PaymentMethodFormSheet> {
           children: [
             Center(
               child: Container(
-                width: 42, height: 4,
+                width: 42,
+                height: 4,
                 decoration: BoxDecoration(
                   color: isDark ? AppTheme.inputBorder : Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(4),
@@ -366,17 +468,29 @@ class _PaymentMethodFormSheetState extends State<_PaymentMethodFormSheet> {
               ),
             ),
             const SizedBox(height: 16),
-            Text(isEdit ? 'Ubah Metode Pembayaran' : 'Tambah Metode Pembayaran',
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            Text(
+              isEdit ? 'Ubah Metode Pembayaran' : 'Tambah Metode Pembayaran',
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
-                  child: _typeChip('bank', 'Bank', Icons.account_balance_rounded, isDark),
+                  child: _typeChip(
+                    'bank',
+                    'Bank',
+                    Icons.account_balance_rounded,
+                    isDark,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: _typeChip('ewallet', 'E-Wallet', Icons.phone_iphone_rounded, isDark),
+                  child: _typeChip(
+                    'ewallet',
+                    'E-Wallet',
+                    Icons.phone_iphone_rounded,
+                    isDark,
+                  ),
                 ),
               ],
             ),
@@ -405,10 +519,16 @@ class _PaymentMethodFormSheetState extends State<_PaymentMethodFormSheet> {
             const SizedBox(height: 6),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Jadikan metode utama', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+              title: const Text(
+                'Jadikan metode utama',
+                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+              ),
               subtitle: Text(
                 'Diprioritaskan untuk pembayaran & penarikan dana',
-                style: TextStyle(fontSize: 11, color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                ),
               ),
               value: _isDefault,
               activeThumbColor: AppTheme.primaryPurple,
@@ -435,23 +555,41 @@ class _PaymentMethodFormSheetState extends State<_PaymentMethodFormSheet> {
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           gradient: selected
-              ? const LinearGradient(colors: [AppTheme.primaryPurple, AppTheme.lightPurple])
+              ? const LinearGradient(
+                  colors: [AppTheme.primaryPurple, AppTheme.lightPurple],
+                )
               : null,
-          color: selected ? null : (isDark ? AppTheme.inputDark : AppTheme.inputLight),
+          color: selected
+              ? null
+              : (isDark ? AppTheme.inputDark : AppTheme.inputLight),
           borderRadius: BorderRadius.circular(14),
-          border: selected ? null : Border.all(color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight),
+          border: selected
+              ? null
+              : Border.all(
+                  color: isDark
+                      ? AppTheme.inputBorder
+                      : AppTheme.inputBorderLight,
+                ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 18, color: selected ? Colors.white : AppTheme.textMuted),
+            Icon(
+              icon,
+              size: 18,
+              color: selected ? Colors.white : AppTheme.textMuted,
+            ),
             const SizedBox(width: 8),
-            Text(label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: selected ? Colors.white : (isDark ? AppTheme.textWhite : AppTheme.textDark),
-                )),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: selected
+                    ? Colors.white
+                    : (isDark ? AppTheme.textWhite : AppTheme.textDark),
+              ),
+            ),
           ],
         ),
       ),

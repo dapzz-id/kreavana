@@ -16,28 +16,28 @@ class RoleAuthTest extends TestCase
         parent::setUp();
 
         // Create test users
-        User::create([
+        User::factory()->create([
             'name' => 'Test User',
             'username' => 'testuser',
             'email' => 'user@test.com',
             'password' => Hash::make('password123'),
-            'role' => 'user'
+            'role' => \App\Enums\RoleType::User
         ]);
 
-        User::create([
+        User::factory()->create([
             'name' => 'Test Creator',
             'username' => 'testcreator',
             'email' => 'creator@test.com',
             'password' => Hash::make('password123'),
-            'role' => 'creator'
+            'role' => \App\Enums\RoleType::Creator
         ]);
 
-        User::create([
+        User::factory()->create([
             'name' => 'Test Admin',
             'username' => 'testadmin',
             'email' => 'admin@test.com',
             'password' => Hash::make('password123'),
-            'role' => 'admin'
+            'role' => \App\Enums\RoleType::Admin
         ]);
     }
 

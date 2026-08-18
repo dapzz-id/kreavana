@@ -8,7 +8,8 @@ class KreavanaAiFloatingWidget extends StatefulWidget {
   const KreavanaAiFloatingWidget({super.key});
 
   @override
-  State<KreavanaAiFloatingWidget> createState() => _KreavanaAiFloatingWidgetState();
+  State<KreavanaAiFloatingWidget> createState() =>
+      _KreavanaAiFloatingWidgetState();
 }
 
 class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
@@ -27,14 +28,31 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
     final mediaQuery = MediaQuery.of(context);
     final isDesktop = mediaQuery.size.width >= 768;
 
+    final safeBottom = mediaQuery.padding.bottom;
+    // Assume BottomNavigationBar is present on mobile (height ~56)
+    final navBarHeight = isDesktop ? 0.0 : kBottomNavigationBarHeight;
+    final baseBottomOffset = safeBottom + navBarHeight;
+
     final defaultLeft = mediaQuery.size.width - (isDesktop ? 180.0 : 150.0);
-    final defaultTop = mediaQuery.size.height - (isDesktop ? 80.0 : 70.0);
+    final defaultTop = mediaQuery.size.height - baseBottomOffset - (isDesktop ? 80.0 : 70.0);
 
-    final currentLeft = (_left ?? defaultLeft).clamp(10.0, mediaQuery.size.width - 140.0);
-    final currentTop = (_top ?? defaultTop).clamp(10.0, mediaQuery.size.height - 60.0);
+    final currentLeft = (_left ?? defaultLeft).clamp(
+      10.0,
+      mediaQuery.size.width - 140.0,
+    );
+    final currentTop = (_top ?? defaultTop).clamp(
+      10.0,
+      mediaQuery.size.height - 60.0 - baseBottomOffset,
+    );
 
-    final panelLeft = (currentLeft - (isDesktop ? 260.0 : 180.0)).clamp(10.0, mediaQuery.size.width - (isDesktop ? 440.0 : mediaQuery.size.width * 0.9));
-    final panelTop = (currentTop - (isDesktop ? 580.0 : 500.0)).clamp(10.0, mediaQuery.size.height - (isDesktop ? 620.0 : 540.0));
+    final panelLeft = (currentLeft - (isDesktop ? 260.0 : 180.0)).clamp(
+      10.0,
+      mediaQuery.size.width - (isDesktop ? 440.0 : mediaQuery.size.width * 0.9),
+    );
+    final panelTop = (currentTop - (isDesktop ? 580.0 : 500.0)).clamp(
+      10.0,
+      mediaQuery.size.height - (isDesktop ? 620.0 : 540.0),
+    );
 
     return Stack(
       children: [
@@ -64,8 +82,14 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
             },
             onPanUpdate: (details) {
               setState(() {
-                _left = (_left! + details.delta.dx).clamp(10.0, mediaQuery.size.width - 140.0);
-                _top = (_top! + details.delta.dy).clamp(10.0, mediaQuery.size.height - 60.0);
+                _left = (_left! + details.delta.dx).clamp(
+                  10.0,
+                  mediaQuery.size.width - 140.0,
+                );
+                _top = (_top! + details.delta.dy).clamp(
+                  10.0,
+                  mediaQuery.size.height - 60.0,
+                );
               });
             },
             child: Material(
@@ -76,54 +100,57 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
                 borderRadius: BorderRadius.circular(30),
                 onTap: _toggleWidget,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(30),
                     gradient: AppTheme.primaryGradient,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryPurple.withValues(alpha: 0.4),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_isOpen)
-                      const Icon(
-                        Icons.close_rounded,
-                        color: Colors.white,
-                        size: 22,
-                      )
-                    else
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: Image.asset(
-                          'assets/brandlogo.png',
-                          width: 22,
-                          height: 22,
-                          fit: BoxFit.contain,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryPurple.withValues(alpha: 0.4),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_isOpen)
+                        const Icon(
+                          Icons.close_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        )
+                      else
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.asset(
+                            'assets/brandlogo.png',
+                            width: 22,
+                            height: 22,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _isOpen ? 'Tutup' : 'Kreavana AI',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          letterSpacing: -0.2,
                         ),
                       ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _isOpen ? 'Tutup' : 'Kreavana AI',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
-      ),
       ],
     );
   }
@@ -133,10 +160,7 @@ class _BlackboxAiPanel extends StatefulWidget {
   final bool isDesktop;
   final VoidCallback onClose;
 
-  const _BlackboxAiPanel({
-    required this.isDesktop,
-    required this.onClose,
-  });
+  const _BlackboxAiPanel({required this.isDesktop, required this.onClose});
 
   @override
   State<_BlackboxAiPanel> createState() => _BlackboxAiPanelState();
@@ -195,7 +219,10 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
             const SizedBox(height: 12),
             ..._chatHistoryLogs.map(
               (item) => ListTile(
-                leading: const Icon(Icons.chat_bubble_outline_rounded, size: 20),
+                leading: const Icon(
+                  Icons.chat_bubble_outline_rounded,
+                  size: 20,
+                ),
                 title: Text(item, style: const TextStyle(fontSize: 13)),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -229,7 +256,9 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          _isSearchMode ? 'Mode Web Search AI Diaktifkan.' : 'Mode Web Search AI Dinonaktifkan.',
+          _isSearchMode
+              ? 'Mode Web Search AI Diaktifkan.'
+              : 'Mode Web Search AI Dinonaktifkan.',
         ),
         duration: const Duration(seconds: 2),
       ),
@@ -283,14 +312,16 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
       return;
     }
 
-    String aiResponse = "Halo! Saya Kreavana AI. Saya siap membantu mengoptimalkan proyek, konten, dan riset Anda.";
+    String aiResponse =
+        "Halo! Saya Kreavana AI. Saya siap membantu mengoptimalkan proyek, konten, dan riset Anda.";
     if (res != null && res['data'] != null) {
       if (_isSearchMode) {
         final recs = res['data']['recommendations'] as List?;
         if (recs != null && recs.isNotEmpty) {
           aiResponse = "Rekomendasi Web Search AI:\n• ${recs.join('\n• ')}";
         } else {
-          aiResponse = "Hasil pencarian AI: ${res['data']['analysis'] ?? aiResponse}";
+          aiResponse =
+              "Hasil pencarian AI: ${res['data']['analysis'] ?? aiResponse}";
         }
       } else {
         aiResponse = res['data']['polished_message'] ?? aiResponse;
@@ -307,13 +338,19 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final width = widget.isDesktop ? 420.0 : MediaQuery.of(context).size.width - 24;
-    final height = widget.isDesktop ? 580.0 : MediaQuery.of(context).size.height * 0.72;
+    final width = widget.isDesktop
+        ? 420.0
+        : MediaQuery.of(context).size.width - 24;
+    final height = widget.isDesktop
+        ? 580.0
+        : MediaQuery.of(context).size.height * 0.72;
 
     const accentColor = AppTheme.primaryPurple;
     final cardBg = isDark ? const Color(0xFF13111F) : Colors.white;
     final inputBg = isDark ? const Color(0xFF1A172A) : const Color(0xFFF5F3FF);
-    final borderColor = isDark ? const Color(0xFF2D264A) : const Color(0xFFE4DEF6);
+    final borderColor = isDark
+        ? const Color(0xFF2D264A)
+        : const Color(0xFFE4DEF6);
 
     return Container(
       width: width,
@@ -337,7 +374,9 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             decoration: BoxDecoration(
               color: cardBg,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
               border: Border(bottom: BorderSide(color: borderColor, width: 1)),
             ),
             child: Row(
@@ -418,16 +457,23 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
                                   'Include Context',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: isDark ? Colors.white70 : Colors.black87,
+                                    color: isDark
+                                        ? Colors.white70
+                                        : Colors.black87,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 Switch(
                                   value: _includeContext,
-                                  activeTrackColor: accentColor.withValues(alpha: 0.4),
-                                  thumbColor: WidgetStateProperty.resolveWith((states) {
-                                    if (states.contains(WidgetState.selected)) return accentColor;
+                                  activeTrackColor: accentColor.withValues(
+                                    alpha: 0.4,
+                                  ),
+                                  thumbColor: WidgetStateProperty.resolveWith((
+                                    states,
+                                  ) {
+                                    if (states.contains(WidgetState.selected))
+                                      return accentColor;
                                     return null;
                                   }),
                                   onChanged: (val) {
@@ -440,7 +486,9 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
                               onPressed: () {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Membuka portal resmi Kreavana.com...'),
+                                    content: Text(
+                                      'Membuka portal resmi Kreavana.com...',
+                                    ),
                                     duration: Duration(seconds: 2),
                                   ),
                                 );
@@ -466,22 +514,31 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
                         final msg = _messages[index];
                         final isUser = msg['sender'] == 'user';
                         return Align(
-                          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                          alignment: isUser
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
                           child: Container(
                             margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                             constraints: BoxConstraints(maxWidth: width * 0.82),
                             decoration: BoxDecoration(
                               color: isUser
                                   ? accentColor
-                                  : (isDark ? const Color(0xFF1E1B32) : const Color(0xFFF1EEFF)),
+                                  : (isDark
+                                        ? const Color(0xFF1E1B32)
+                                        : const Color(0xFFF1EEFF)),
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Text(
                               msg['text'] ?? '',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: isUser ? Colors.white : (isDark ? Colors.white : Colors.black87),
+                                color: isUser
+                                    ? Colors.white
+                                    : (isDark ? Colors.white : Colors.black87),
                                 height: 1.4,
                               ),
                             ),
@@ -497,7 +554,9 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: cardBg,
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(24),
+              ),
             ),
             child: Container(
               padding: const EdgeInsets.all(12),
@@ -512,7 +571,10 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
                   if (_attachedFileName != null)
                     Container(
                       margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: accentColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
@@ -520,18 +582,31 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.attach_file_rounded, size: 14, color: accentColor),
+                          const Icon(
+                            Icons.attach_file_rounded,
+                            size: 14,
+                            color: accentColor,
+                          ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               _attachedFileName!,
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: accentColor),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: accentColor,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           GestureDetector(
-                            onTap: () => setState(() => _attachedFileName = null),
-                            child: const Icon(Icons.close_rounded, size: 14, color: accentColor),
+                            onTap: () =>
+                                setState(() => _attachedFileName = null),
+                            child: const Icon(
+                              Icons.close_rounded,
+                              size: 14,
+                              color: accentColor,
+                            ),
                           ),
                         ],
                       ),
@@ -546,7 +621,10 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 4,
+                      ),
                       hintStyle: TextStyle(
                         color: isDark ? Colors.white38 : Colors.grey.shade500,
                         fontSize: 13.5,
@@ -562,9 +640,14 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
                         onTap: _handleUpload,
                         borderRadius: BorderRadius.circular(20),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                            color: _attachedFileName != null ? accentColor : (isDark ? Colors.white10 : Colors.white),
+                            color: _attachedFileName != null
+                                ? accentColor
+                                : (isDark ? Colors.white10 : Colors.white),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
@@ -572,7 +655,9 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
                               Icon(
                                 Icons.attach_file_rounded,
                                 size: 16,
-                                color: _attachedFileName != null ? Colors.white : accentColor,
+                                color: _attachedFileName != null
+                                    ? Colors.white
+                                    : accentColor,
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -580,7 +665,11 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: _attachedFileName != null ? Colors.white : (isDark ? Colors.white : Colors.black87),
+                                  color: _attachedFileName != null
+                                      ? Colors.white
+                                      : (isDark
+                                            ? Colors.white
+                                            : Colors.black87),
                                 ),
                               ),
                             ],
@@ -593,9 +682,14 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
                         onTap: _toggleSearchMode,
                         borderRadius: BorderRadius.circular(20),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                            color: _isSearchMode ? accentColor : (isDark ? Colors.white10 : Colors.white),
+                            color: _isSearchMode
+                                ? accentColor
+                                : (isDark ? Colors.white10 : Colors.white),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
@@ -603,7 +697,9 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
                               Icon(
                                 Icons.public_rounded,
                                 size: 16,
-                                color: _isSearchMode ? Colors.white : accentColor,
+                                color: _isSearchMode
+                                    ? Colors.white
+                                    : accentColor,
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -611,7 +707,11 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: _isSearchMode ? Colors.white : (isDark ? Colors.white : Colors.black87),
+                                  color: _isSearchMode
+                                      ? Colors.white
+                                      : (isDark
+                                            ? Colors.white
+                                            : Colors.black87),
                                 ),
                               ),
                             ],
@@ -624,7 +724,10 @@ class _BlackboxAiPanelState extends State<_BlackboxAiPanel> {
                         icon: const Icon(Icons.videocam_outlined, size: 20),
                         onPressed: _handleVideoMode,
                         padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
                       ),
                       const SizedBox(width: 6),
                       // Circular Send Button

@@ -21,28 +21,18 @@ class OpportunityReviewTest extends TestCase
         // Since we are using UUIDs and JWT Auth, setting up basic things.
     }
 
-    private function getAuthHeaders(User $user)
-    {
-        $token = JWTAuth::fromUser($user);
-        $payload = JWTAuth::setToken($token)->getPayload();
-        $jti = $payload->get('jti');
-        if ($jti) {
-            \App\Services\JtiService::store($jti, 3600);
-        }
-        return ['Authorization' => "Bearer $token"];
-    }
-
+    
     public function test_valid_completed_opportunity_review_with_rating_ge_4_awards_bonus()
     {
         $poster = User::factory()->create();
-        $creator = User::factory()->create(['role' => 'creator']);
+        $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator]);
 
         $opportunity = Opportunity::factory()->create([
             'posted_by' => $poster->id,
             'status' => 'closed',
         ]);
 
-        $response = $this->withHeaders($this->getAuthHeaders($poster))->postJson("/api/opportunities/{$opportunity->id}/review", [
+        $response = $this->withHeaders($this->getAuthHeaders($poster))->postJson("/api/opportunities/{$opportunity->id}/reviews", [
             'creator_id' => $creator->id,
             'rating' => 4.5,
             'comment' => 'Great job!',
@@ -70,14 +60,14 @@ class OpportunityReviewTest extends TestCase
     public function test_valid_completed_opportunity_review_with_rating_lt_4_awards_no_bonus()
     {
         $poster = User::factory()->create();
-        $creator = User::factory()->create(['role' => 'creator']);
+        $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator]);
 
         $opportunity = Opportunity::factory()->create([
             'posted_by' => $poster->id,
             'status' => 'closed',
         ]);
 
-        $response = $this->withHeaders($this->getAuthHeaders($poster))->postJson("/api/opportunities/{$opportunity->id}/review", [
+        $response = $this->withHeaders($this->getAuthHeaders($poster))->postJson("/api/opportunities/{$opportunity->id}/reviews", [
             'creator_id' => $creator->id,
             'rating' => 3.5,
         ]);
@@ -95,14 +85,14 @@ class OpportunityReviewTest extends TestCase
     public function test_incomplete_opportunity_cannot_be_reviewed()
     {
         $poster = User::factory()->create();
-        $creator = User::factory()->create(['role' => 'creator']);
+        $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator]);
 
         $opportunity = Opportunity::factory()->create([
             'posted_by' => $poster->id,
             'status' => 'open',
         ]);
 
-        $response = $this->withHeaders($this->getAuthHeaders($poster))->postJson("/api/opportunities/{$opportunity->id}/review", [
+        $response = $this->withHeaders($this->getAuthHeaders($poster))->postJson("/api/opportunities/{$opportunity->id}/reviews", [
             'creator_id' => $creator->id,
             'rating' => 5.0,
         ]);
@@ -115,14 +105,14 @@ class OpportunityReviewTest extends TestCase
     {
         $poster = User::factory()->create();
         $otherUser = User::factory()->create();
-        $creator = User::factory()->create(['role' => 'creator']);
+        $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator]);
 
         $opportunity = Opportunity::factory()->create([
             'posted_by' => $poster->id,
             'status' => 'closed',
         ]);
 
-        $response = $this->withHeaders($this->getAuthHeaders($otherUser))->postJson("/api/opportunities/{$opportunity->id}/review", [
+        $response = $this->withHeaders($this->getAuthHeaders($otherUser))->postJson("/api/opportunities/{$opportunity->id}/reviews", [
             'creator_id' => $creator->id,
             'rating' => 5.0,
         ]);
@@ -133,7 +123,7 @@ class OpportunityReviewTest extends TestCase
     public function test_duplicate_review_is_rejected()
     {
         $poster = User::factory()->create();
-        $creator = User::factory()->create(['role' => 'creator']);
+        $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator]);
 
         $opportunity = Opportunity::factory()->create([
             'posted_by' => $poster->id,
@@ -141,13 +131,13 @@ class OpportunityReviewTest extends TestCase
         ]);
 
         // First review
-        $this->withHeaders($this->getAuthHeaders($poster))->postJson("/api/opportunities/{$opportunity->id}/review", [
+        $this->withHeaders($this->getAuthHeaders($poster))->postJson("/api/opportunities/{$opportunity->id}/reviews", [
             'creator_id' => $creator->id,
             'rating' => 5.0,
         ]);
 
         // Second review
-        $response = $this->withHeaders($this->getAuthHeaders($poster))->postJson("/api/opportunities/{$opportunity->id}/review", [
+        $response = $this->withHeaders($this->getAuthHeaders($poster))->postJson("/api/opportunities/{$opportunity->id}/reviews", [
             'creator_id' => $creator->id,
             'rating' => 4.0,
         ]);

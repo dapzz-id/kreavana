@@ -67,13 +67,20 @@ class _KycLivenessScreenState extends State<KycLivenessScreen> {
         }
         final bytes = allBytes.done().buffer.asUint8List();
 
-        final Size imageSize = Size(image.width.toDouble(), image.height.toDouble());
-        
+        final Size imageSize = Size(
+          image.width.toDouble(),
+          image.height.toDouble(),
+        );
+
         final camera = _cameraController!.description;
-        final imageRotation = InputImageRotationValue.fromRawValue(camera.sensorOrientation) ?? InputImageRotation.rotation0deg;
-        
-        final inputImageFormat = InputImageFormatValue.fromRawValue(image.format.raw) ?? InputImageFormat.nv21;
-        
+        final imageRotation =
+            InputImageRotationValue.fromRawValue(camera.sensorOrientation) ??
+            InputImageRotation.rotation0deg;
+
+        final inputImageFormat =
+            InputImageFormatValue.fromRawValue(image.format.raw) ??
+            InputImageFormat.nv21;
+
         final inputImageData = InputImageMetadata(
           size: imageSize,
           rotation: imageRotation,
@@ -87,13 +94,13 @@ class _KycLivenessScreenState extends State<KycLivenessScreen> {
         );
 
         final result = await _livenessService.processCameraImage(inputImage);
-        
+
         if (result != null) {
           if (mounted) {
             setState(() {
               _instructionMessage = result.message ?? "";
             });
-            
+
             if (result.isLive) {
               _cameraController?.stopImageStream();
               widget.onVerificationComplete(true);

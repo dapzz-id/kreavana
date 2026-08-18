@@ -21,7 +21,7 @@ class RealtimeService {
         debugPrint('Realtime Init Error: PUSHER_KEY is missing from .env');
         return;
       }
-      
+
       final options = PusherChannelsOptions.fromHost(
         scheme: 'ws',
         host: '127.0.0.1',
@@ -29,7 +29,12 @@ class RealtimeService {
         key: pusherKey,
       );
 
-      final authEndpoint = dotenv.env['API_BASE_URL']?.replaceAll('/api', '/api/broadcasting/auth') ?? 'http://127.0.0.1:8000/api/broadcasting/auth';
+      final authEndpoint =
+          dotenv.env['API_BASE_URL']?.replaceAll(
+            '/api',
+            '/api/broadcasting/auth',
+          ) ??
+          'http://127.0.0.1:8000/api/broadcasting/auth';
 
       _pusher = PusherChannelsClient.websocket(
         options: options,
@@ -57,14 +62,15 @@ class RealtimeService {
     try {
       final channel = _pusher!.privateChannel(
         'user.$userId',
-        authorizationDelegate: EndpointAuthorizableChannelTokenAuthorizationDelegate.forPrivateChannel(
-          authorizationEndpoint: Uri.parse(authEndpoint),
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        authorizationDelegate:
+            EndpointAuthorizableChannelTokenAuthorizationDelegate.forPrivateChannel(
+              authorizationEndpoint: Uri.parse(authEndpoint),
+              headers: {'Authorization': 'Bearer $token'},
+            ),
       );
 
       channel.subscribe();
-      
+
       channel.bind('App\\Events\\MessageSent').listen((event) {
         debugPrint('📩 New Message Event via Realtime!');
         BadgeService().incrementUnreadMessages();

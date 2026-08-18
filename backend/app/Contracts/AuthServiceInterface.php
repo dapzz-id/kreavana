@@ -23,7 +23,7 @@ interface AuthServiceInterface
      * @param string|null $requiredRole
      * @return string|null (Token or null if failed, 'forbidden' if wrong role)
      */
-    public function attemptLogin(array $credentials, string $ip, string $userAgent, ?string $requiredRole = null): ?string;
+    public function attemptLogin(array $credentials, string $ip, string $userAgent, ?\App\Enums\RoleType $requiredRole = null): ?string;
 
     /**
      * Verify email using OTP code.

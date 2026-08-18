@@ -89,9 +89,11 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     if (accountText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_selectedMethod == 'bank_transfer'
-              ? 'Nomor rekening bank wajib diisi.'
-              : 'Nomor HP e-wallet wajib diisi.'),
+          content: Text(
+            _selectedMethod == 'bank_transfer'
+                ? 'Nomor rekening bank wajib diisi.'
+                : 'Nomor HP e-wallet wajib diisi.',
+          ),
         ),
       );
       return;
@@ -128,7 +130,9 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Gagal memproses penarikan saldo.'),
+            content: Text(
+              result['message'] ?? 'Gagal memproses penarikan saldo.',
+            ),
             backgroundColor: Colors.red.shade700,
           ),
         );
@@ -171,10 +175,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                 const SizedBox(height: 20),
                 const Text(
                   'Pencairan Berhasil!',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -192,18 +193,27 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                     color: isDark ? AppTheme.cardBg : Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                      color: isDark
+                          ? AppTheme.inputBorder
+                          : Colors.grey.shade200,
                     ),
                   ),
                   child: Column(
                     children: [
-                      _buildDetailRow('Tujuan', '$_selectedProvider ($_selectedMethod)'),
+                      _buildDetailRow(
+                        'Tujuan',
+                        '$_selectedProvider ($_selectedMethod)',
+                      ),
                       const SizedBox(height: 10),
                       _buildDetailRow('Nomor Tujuan', _accountController.text),
                       const SizedBox(height: 10),
                       _buildDetailRow('Jumlah Cair', _formatRupiah(_amount)),
                       const SizedBox(height: 10),
-                      _buildDetailRow('Pajak Platform (5%)', _formatRupiah(_tax), isRed: true),
+                      _buildDetailRow(
+                        'Pajak Platform (5%)',
+                        _formatRupiah(_tax),
+                        isRed: true,
+                      ),
                       const Divider(height: 20),
                       _buildDetailRow(
                         'Total Diterima',
@@ -221,7 +231,10 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.pop(context); // Close bottom sheet
-                      Navigator.pop(this.context, true); // Return success to wallet screen
+                      Navigator.pop(
+                        this.context,
+                        true,
+                      ); // Return success to wallet screen
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.colorScheme.primary,
@@ -242,8 +255,13 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String val,
-      {bool isBold = false, bool isRed = false, Color? customColor}) {
+  Widget _buildDetailRow(
+    String label,
+    String val, {
+    bool isBold = false,
+    bool isRed = false,
+    Color? customColor,
+  }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     return Row(
@@ -261,7 +279,8 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
           style: TextStyle(
             fontSize: 13,
             fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-            color: customColor ??
+            color:
+                customColor ??
                 (isRed
                     ? Colors.red.shade600
                     : (isDark ? Colors.white : Colors.black87)),
@@ -385,7 +404,9 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                         side: BorderSide(
-                          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                          color: isDark
+                              ? AppTheme.inputBorder
+                              : Colors.grey.shade200,
                         ),
                       ),
                     ),
@@ -398,10 +419,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             // Destination Number/Account Input
             const Text(
               'Detail Rekening / E-Wallet Tujuan',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             TextFormField(
@@ -429,17 +447,18 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             // Payment Method Section
             const Text(
               'Pilih Metode Pencairan',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
 
             // Bank Transfer Options
             const Text(
               'Transfer Bank',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
             ),
             const SizedBox(height: 8),
             ..._banks.map((bank) {
@@ -460,7 +479,11 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             // E-Wallet Options
             const Text(
               'E-Wallet',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
             ),
             const SizedBox(height: 8),
             ..._ewallets.map((wallet) {
@@ -499,7 +522,11 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                   const SizedBox(height: 14),
                   _buildDetailRow('Nominal Penarikan', _formatRupiah(_amount)),
                   const SizedBox(height: 8),
-                  _buildDetailRow('Pajak Platform (5%)', _formatRupiah(_tax), isRed: true),
+                  _buildDetailRow(
+                    'Pajak Platform (5%)',
+                    _formatRupiah(_tax),
+                    isRed: true,
+                  ),
                   const Divider(height: 24),
                   _buildDetailRow(
                     'Total Bersih Diterima',
@@ -531,7 +558,10 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text(
                         'Cairkan Sekarang',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
               ),
             ),
@@ -617,10 +647,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             gradient: const LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFF15A22),
-                Color(0xFF005F3B),
-              ],
+              colors: [Color(0xFFF15A22), Color(0xFF005F3B)],
               stops: [0.5, 0.5],
             ),
           ),
@@ -671,8 +698,11 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.account_balance_wallet_rounded,
-                    color: Color(0xFF00AED6), size: 18),
+                Icon(
+                  Icons.account_balance_wallet_rounded,
+                  color: Color(0xFF00AED6),
+                  size: 18,
+                ),
                 Text(
                   'GoPay',
                   style: TextStyle(
@@ -694,10 +724,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF4C2A86),
-                Color(0xFF6B3FA0),
-              ],
+              colors: [Color(0xFF4C2A86), Color(0xFF6B3FA0)],
             ),
             borderRadius: BorderRadius.circular(10),
           ),

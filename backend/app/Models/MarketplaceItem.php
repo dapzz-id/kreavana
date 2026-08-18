@@ -13,9 +13,9 @@ class MarketplaceItem extends Model
     use HasFactory, HasUuids;
 
     protected $fillable = [
-        'user_id', 'title', 'description', 'category', 'type', 'price',
+        'user_id', 'title', 'description', 'category', 'type', 'delivery_type', 'price', 'duration_info',
         'rating', 'review_count', 'order_count', 'image_url',
-        'is_featured', 'is_active',
+        'is_featured', 'is_active', 'status',
     ];
 
     protected function casts(): array
@@ -61,7 +61,7 @@ class MarketplaceItem extends Model
 
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        return $query->where('status', 'published');
     }
 
     public function scopeFeatured($query)

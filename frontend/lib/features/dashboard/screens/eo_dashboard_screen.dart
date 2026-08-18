@@ -83,7 +83,9 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
               child: Container(
                 height: 44,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1A1830) : Colors.grey.shade100,
+                  color: isDark
+                      ? const Color(0xFF1A1830)
+                      : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
@@ -103,7 +105,9 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
                         'Cari event, vendor, atau talent...',
                         style: TextStyle(
                           fontSize: 13,
-                          color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                          color: isDark
+                              ? AppTheme.textMuted
+                              : Colors.grey.shade500,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -115,21 +119,38 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
           ),
           ListenableBuilder(
             listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(Icons.notifications_none_outlined, BadgeService().unreadNotificationsText, isDark),
+            builder: (_, _) => _buildAppBarBadge(
+              Icons.notifications_none_outlined,
+              BadgeService().unreadNotificationsText,
+              isDark,
+            ),
           ),
           const SizedBox(width: 4),
           ListenableBuilder(
             listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(Icons.chat_bubble_outline, BadgeService().unreadMessagesText, isDark),
+            builder: (_, _) => _buildAppBarBadge(
+              Icons.chat_bubble_outline,
+              BadgeService().unreadMessagesText,
+              isDark,
+            ),
           ),
           const SizedBox(width: 20),
           IconButton(
             key: _themeBtnKey,
-            icon: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined, size: 20),
+            icon: Icon(
+              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+              size: 20,
+            ),
             onPressed: () {
-              final box = _themeBtnKey.currentContext?.findRenderObject() as RenderBox?;
-              final origin = box != null ? box.localToGlobal(box.size.center(Offset.zero)) : const Offset(0, 0);
-              ThemeTransitionService.animateToggle(origin: origin, toDark: !isDark);
+              final box =
+                  _themeBtnKey.currentContext?.findRenderObject() as RenderBox?;
+              final origin = box != null
+                  ? box.localToGlobal(box.size.center(Offset.zero))
+                  : const Offset(0, 0);
+              ThemeTransitionService.animateToggle(
+                origin: origin,
+                toDark: !isDark,
+              );
             },
           ),
           const SizedBox(width: 8),
@@ -146,7 +167,10 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
                 children: [
                   Text(
                     widget.user.name,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Text(
                     'Event Organizer',
@@ -174,7 +198,10 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
             children: [
               Text(
                 'Selamat datang, ${widget.user.name}! 👋',
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -199,7 +226,9 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
             backgroundColor: _eoPurple,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],
@@ -208,11 +237,41 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
 
   Widget _buildMetricCards(bool isDark) {
     final metrics = [
-      {'label': 'Total Event', 'value': '24', 'sub': '12 akan datang', 'icon': Icons.event, 'color': _eoLight},
-      {'label': 'Event Aktif', 'value': '5', 'sub': 'Sedang berjalan', 'icon': Icons.play_circle_fill, 'color': const Color(0xFF10B981)},
-      {'label': 'Total Nilai Proyek', 'value': 'Rp 285.750.000', 'sub': 'Semua waktu', 'icon': Icons.monetization_on, 'color': const Color(0xFF3B82F6)},
-      {'label': 'Pending Pembayaran', 'value': 'Rp 38.500.000', 'sub': '4 invoice', 'icon': Icons.receipt, 'color': const Color(0xFFF59E0B)},
-      {'label': 'Vendor Favorit', 'value': '18', 'sub': 'Vendor tersimpan', 'icon': Icons.star, 'color': const Color(0xFFEC4899)},
+      {
+        'label': 'Total Event',
+        'value': '24',
+        'sub': '12 akan datang',
+        'icon': Icons.event,
+        'color': _eoLight,
+      },
+      {
+        'label': 'Event Aktif',
+        'value': '5',
+        'sub': 'Sedang berjalan',
+        'icon': Icons.play_circle_fill,
+        'color': const Color(0xFF10B981),
+      },
+      {
+        'label': 'Total Nilai Proyek',
+        'value': 'Rp 285.750.000',
+        'sub': 'Semua waktu',
+        'icon': Icons.monetization_on,
+        'color': const Color(0xFF3B82F6),
+      },
+      {
+        'label': 'Pending Pembayaran',
+        'value': 'Rp 38.500.000',
+        'sub': '4 invoice',
+        'icon': Icons.receipt,
+        'color': const Color(0xFFF59E0B),
+      },
+      {
+        'label': 'Vendor Favorit',
+        'value': '18',
+        'sub': 'Vendor tersimpan',
+        'icon': Icons.star,
+        'color': const Color(0xFFEC4899),
+      },
     ];
 
     return Row(
@@ -225,7 +284,9 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
             decoration: BoxDecoration(
               color: isDark ? AppTheme.cardBg : Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,14 +298,30 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
                     color: (m['color'] as Color).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon((m['icon'] as IconData?) ?? Icons.image_outlined, color: m['color'] as Color, size: 20),
+                  child: Icon(
+                    (m['icon'] as IconData?) ?? Icons.image_outlined,
+                    color: m['color'] as Color,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(height: 12),
-                Text(m['label'] as String, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                Text(
+                  m['label'] as String,
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
                 const SizedBox(height: 6),
-                Text(m['value'] as String, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  m['value'] as String,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(m['sub'] as String, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                Text(
+                  m['sub'] as String,
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                ),
               ],
             ),
           ),
@@ -284,12 +361,17 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Ringkasan Event', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          const Text(
+            'Ringkasan Event',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 20),
           SizedBox(
             height: 200,
@@ -326,12 +408,17 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Event Berdasarkan Status', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          const Text(
+            'Event Berdasarkan Status',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 20),
           SizedBox(
             height: 140,
@@ -340,10 +427,30 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
                 sectionsSpace: 2,
                 centerSpaceRadius: 35,
                 sections: [
-                  PieChartSectionData(value: 50, color: _eoPurple, radius: 18, showTitle: false),
-                  PieChartSectionData(value: 21, color: const Color(0xFF10B981), radius: 18, showTitle: false),
-                  PieChartSectionData(value: 17, color: const Color(0xFFF59E0B), radius: 18, showTitle: false),
-                  PieChartSectionData(value: 12, color: Colors.grey, radius: 18, showTitle: false),
+                  PieChartSectionData(
+                    value: 50,
+                    color: _eoPurple,
+                    radius: 18,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: 21,
+                    color: const Color(0xFF10B981),
+                    radius: 18,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: 17,
+                    color: const Color(0xFFF59E0B),
+                    radius: 18,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: 12,
+                    color: Colors.grey,
+                    radius: 18,
+                    showTitle: false,
+                  ),
                 ],
               ),
             ),
@@ -363,10 +470,17 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
           const SizedBox(width: 8),
           Expanded(child: Text(name, style: const TextStyle(fontSize: 11))),
-          Text(val, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+          Text(
+            val,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );
@@ -374,9 +488,24 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
 
   Widget _buildActiveEventsCard(bool isDark) {
     final events = [
-      {'title': 'Tech Conference 2025', 'type': 'Konferensi', 'progress': 0.75, 'status': 'Sedang Berjalan'},
-      {'title': 'Product Launch XYZ', 'type': 'Launching', 'progress': 0.45, 'status': 'Dalam Persiapan'},
-      {'title': 'Corporate Gathering 2025', 'type': 'Gathering', 'progress': 0.30, 'status': 'Dalam Persiapan'},
+      {
+        'title': 'Tech Conference 2025',
+        'type': 'Konferensi',
+        'progress': 0.75,
+        'status': 'Sedang Berjalan',
+      },
+      {
+        'title': 'Product Launch XYZ',
+        'type': 'Launching',
+        'progress': 0.45,
+        'status': 'Dalam Persiapan',
+      },
+      {
+        'title': 'Corporate Gathering 2025',
+        'type': 'Gathering',
+        'progress': 0.30,
+        'status': 'Dalam Persiapan',
+      },
     ];
 
     return Container(
@@ -384,7 +513,9 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -392,34 +523,73 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Event Aktif', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-              TextButton(onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => PeluangProyekScreen(user: widget.user))); }, child: const Text('Lihat Semua', style: TextStyle(fontSize: 12))),
+              const Text(
+                'Event Aktif',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PeluangProyekScreen(user: widget.user),
+                    ),
+                  );
+                },
+                child: const Text(
+                  'Lihat Semua',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          ...events.map((e) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: _eoPurple.withValues(alpha: 0.1),
-                      child: const Icon(Icons.confirmation_number_outlined, color: _eoPurple, size: 18),
+          ...events.map(
+            (e) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: _eoPurple.withValues(alpha: 0.1),
+                    child: const Icon(
+                      Icons.confirmation_number_outlined,
+                      color: _eoPurple,
+                      size: 18,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(e['title'] as String, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                          Text(e['type'] as String, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                        ],
-                      ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          e['title'] as String,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          e['type'] as String,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
                     ),
-                    Text('${((e['progress'] as double) * 100).round()}%',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              )),
+                  ),
+                  Text(
+                    '${((e['progress'] as double) * 100).round()}%',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -456,16 +626,30 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Aktivitas Terbaru', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          const Text(
+            'Aktivitas Terbaru',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
-          _buildActItem('Pembayaran invoice #INV-2025-067 sebesar Rp 12.500.000', '2 jam lalu'),
-          _buildActItem('Penawaran baru dari Kreasi Studio untuk event Anda', '4 jam lalu'),
-          _buildActItem('Vendor Lighting Pro menerima pesanan Anda', '6 jam lalu'),
+          _buildActItem(
+            'Pembayaran invoice #INV-2025-067 sebesar Rp 12.500.000',
+            '2 jam lalu',
+          ),
+          _buildActItem(
+            'Penawaran baru dari Kreasi Studio untuk event Anda',
+            '4 jam lalu',
+          ),
+          _buildActItem(
+            'Vendor Lighting Pro menerima pesanan Anda',
+            '6 jam lalu',
+          ),
           _buildActItem('Task "Final Briefing" telah selesai', '1 hari lalu'),
         ],
       ),
@@ -495,7 +679,11 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
       {'name': 'Kreasi Studio', 'cat': 'Dekorasi & Stage', 'rating': '4.9'},
       {'name': 'Lighting Pro', 'cat': 'Lighting & Sound', 'rating': '4.8'},
       {'name': 'Grand Catering', 'cat': 'Catering', 'rating': '4.7'},
-      {'name': 'MediaFrame', 'cat': 'Dokumentasi Foto & Video', 'rating': '4.9'},
+      {
+        'name': 'MediaFrame',
+        'cat': 'Dokumentasi Foto & Video',
+        'rating': '4.9',
+      },
       {'name': 'MC Professional', 'cat': 'MC & Entertainment', 'rating': '4.8'},
     ];
 
@@ -504,37 +692,68 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Top Vendor Favorit', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          const Text(
+            'Top Vendor Favorit',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
-          ...vendors.map((v) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundColor: _eoPurple.withValues(alpha: 0.1),
-                      child: Text(v['name']![0], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(v['name']!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          Text(v['cat']!, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                        ],
+          ...vendors.map(
+            (v) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundColor: _eoPurple.withValues(alpha: 0.1),
+                    child: Text(
+                      v['name']![0],
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
                       ),
                     ),
-                    Icon(Icons.star, size: 14, color: Colors.amber.shade600),
-                    Text(v['rating']!, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              )),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          v['name']!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          v['cat']!,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.star, size: 14, color: Colors.amber.shade600),
+                  Text(
+                    v['rating']!,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -549,18 +768,34 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
           decoration: BoxDecoration(
             color: isDark ? AppTheme.cardBg : Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+            border: Border.all(
+              color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Pengeluaran Berdasarkan Kategori',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const Text(
+                'Pengeluaran Berdasarkan Kategori',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
               const SizedBox(height: 8),
               _buildCatRow('Venue', '40% (Rp 98.900.000)', _eoPurple),
-              _buildCatRow('Catering', '25% (Rp 61.800.000)', const Color(0xFF10B981)),
-              _buildCatRow('Dekorasi', '15% (Rp 37.100.000)', const Color(0xFFF59E0B)),
-              _buildCatRow('Dokumentasi', '10% (Rp 24.750.000)', const Color(0xFFEC4899)),
+              _buildCatRow(
+                'Catering',
+                '25% (Rp 61.800.000)',
+                const Color(0xFF10B981),
+              ),
+              _buildCatRow(
+                'Dekorasi',
+                '15% (Rp 37.100.000)',
+                const Color(0xFFF59E0B),
+              ),
+              _buildCatRow(
+                'Dokumentasi',
+                '10% (Rp 24.750.000)',
+                const Color(0xFFEC4899),
+              ),
             ],
           ),
         ),
@@ -575,8 +810,10 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Simpan lebih banyak vendor favorit',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const Text(
+                'Simpan lebih banyak vendor favorit',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
               const SizedBox(height: 4),
               const Text(
                 'Simpan vendor favorit untuk mempermudah pemilihan penawaran terbaik.',
@@ -590,7 +827,10 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
                     builder: (_) => ExploreScreen(user: widget.user),
                   ),
                 ),
-                child: const Text('Cari Vendor', style: TextStyle(fontSize: 11)),
+                child: const Text(
+                  'Cari Vendor',
+                  style: TextStyle(fontSize: 11),
+                ),
               ),
             ],
           ),
@@ -604,7 +844,9 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
     return ListenableBuilder(
       listenable: BadgeService(),
       builder: (context, _) {
-        final badgeCount = isNotification ? BadgeService().unreadNotificationsText : BadgeService().unreadMessagesText;
+        final badgeCount = isNotification
+            ? BadgeService().unreadNotificationsText
+            : BadgeService().unreadMessagesText;
         return GestureDetector(
           onTap: () {
             Navigator.push(
@@ -625,7 +867,11 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(icon, size: 20, color: isDark ? Colors.white : Colors.black87),
+                Icon(
+                  icon,
+                  size: 20,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
                 if (badgeCount.isNotEmpty && badgeCount != '0')
                   Positioned(
                     right: -4,
@@ -638,7 +884,11 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
                       ),
                       child: Text(
                         badgeCount,
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),

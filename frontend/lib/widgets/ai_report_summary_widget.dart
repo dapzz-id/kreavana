@@ -66,7 +66,9 @@ class _AiReportSummaryWidgetState extends State<AiReportSummaryWidget> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const accent = AppTheme.primaryPurple;
     final cardBg = isDark ? const Color(0xFF13111F) : const Color(0xFFFAF9FE);
-    final borderColor = isDark ? const Color(0xFF2D264A) : const Color(0xFFE4DEF6);
+    final borderColor = isDark
+        ? const Color(0xFF2D264A)
+        : const Color(0xFFE4DEF6);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 12),
@@ -90,7 +92,9 @@ class _AiReportSummaryWidgetState extends State<AiReportSummaryWidget> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: accent.withValues(alpha: isDark ? 0.18 : 0.08),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(14),
+              ),
             ),
             child: Row(
               children: [
@@ -100,7 +104,11 @@ class _AiReportSummaryWidgetState extends State<AiReportSummaryWidget> {
                     color: accent.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.auto_awesome_rounded, color: accent, size: 18),
+                  child: const Icon(
+                    Icons.auto_awesome_rounded,
+                    color: accent,
+                    size: 18,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 const Expanded(
@@ -114,7 +122,10 @@ class _AiReportSummaryWidgetState extends State<AiReportSummaryWidget> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: accent,
                     borderRadius: BorderRadius.circular(20),
@@ -141,7 +152,10 @@ class _AiReportSummaryWidgetState extends State<AiReportSummaryWidget> {
                       if (_error != null) ...[
                         Text(
                           _error!,
-                          style: const TextStyle(fontSize: 12, color: Colors.redAccent),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.redAccent,
+                          ),
                         ),
                         const SizedBox(height: 8),
                       ],
@@ -163,10 +177,19 @@ class _AiReportSummaryWidgetState extends State<AiReportSummaryWidget> {
                                   width: 16,
                                   height: 16,
                                   child: CircularProgressIndicator(
-                                      strokeWidth: 2, color: Colors.white),
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
                                 )
-                              : const Icon(Icons.auto_awesome_rounded, size: 16),
-                          label: Text(_isLoading ? 'Memproses AI...' : 'Buat Ringkasan AI'),
+                              : const Icon(
+                                  Icons.auto_awesome_rounded,
+                                  size: 16,
+                                ),
+                          label: Text(
+                            _isLoading
+                                ? 'Memproses AI...'
+                                : 'Buat Ringkasan AI',
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: accent,
                             foregroundColor: Colors.white,
@@ -211,13 +234,21 @@ class _AiReportSummaryWidgetState extends State<AiReportSummaryWidget> {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('• ', style: TextStyle(color: accent, fontWeight: FontWeight.bold)),
+                                const Text(
+                                  '• ',
+                                  style: TextStyle(
+                                    color: accent,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 Expanded(
                                   child: Text(
                                     point.toString(),
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: isDark ? Colors.white70 : Colors.black87,
+                                      color: isDark
+                                          ? Colors.white70
+                                          : Colors.black87,
                                     ),
                                   ),
                                 ),
@@ -234,16 +265,26 @@ class _AiReportSummaryWidgetState extends State<AiReportSummaryWidget> {
                         decoration: BoxDecoration(
                           color: accent.withValues(alpha: isDark ? 0.12 : 0.05),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: accent.withValues(alpha: 0.2)),
+                          border: Border.all(
+                            color: accent.withValues(alpha: 0.2),
+                          ),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.check_circle_outline_rounded, color: accent, size: 18),
+                            const Icon(
+                              Icons.check_circle_outline_rounded,
+                              color: accent,
+                              size: 18,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                _aiData!['recommended_action'] ?? 'Rekomendasi disetujui.',
-                                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+                                _aiData!['recommended_action'] ??
+                                    'Rekomendasi disetujui.',
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ],

@@ -9,7 +9,10 @@ class AppErrors {
   AppErrors._();
 
   /// Masking logic to prevent raw backend errors from leaking
-  static String _sanitizeMessage(String rawMsg, {String fallback = 'Terjadi kesalahan internal pada server.'}) {
+  static String _sanitizeMessage(
+    String rawMsg, {
+    String fallback = 'Terjadi kesalahan internal pada server.',
+  }) {
     final lowerMsg = rawMsg.toLowerCase();
     if (lowerMsg.contains('sqlstate') ||
         lowerMsg.contains('exception') ||
@@ -23,15 +26,21 @@ class AppErrors {
   }
 
   /// Extracts a user-friendly message from a result map (service pattern).
-  static String messageFromResult(Map<String, dynamic> result,
-      {String fallback = 'Terjadi kesalahan. Silakan coba lagi.', int? statusCode}) {
-    
+  static String messageFromResult(
+    Map<String, dynamic> result, {
+    String fallback = 'Terjadi kesalahan. Silakan coba lagi.',
+    int? statusCode,
+  }) {
     // HTTP Status overrides
-    if (statusCode == 401) return 'Email atau kata sandi yang Anda masukkan salah.';
-    if (statusCode == 403) return 'Anda tidak memiliki izin untuk mengakses sumber ini.';
+    if (statusCode == 401)
+      return 'Email atau kata sandi yang Anda masukkan salah.';
+    if (statusCode == 403)
+      return 'Anda tidak memiliki izin untuk mengakses sumber ini.';
     if (statusCode == 404) return 'Sumber data tidak ditemukan.';
-    if (statusCode == 422) return 'Data yang dikirimkan tidak valid. Periksa kembali form Anda.';
-    if (statusCode != null && statusCode >= 500) return 'Terjadi kesalahan internal pada server. Coba lagi nanti.';
+    if (statusCode == 422)
+      return 'Data yang dikirimkan tidak valid. Periksa kembali form Anda.';
+    if (statusCode != null && statusCode >= 500)
+      return 'Terjadi kesalahan internal pada server. Coba lagi nanti.';
 
     final raw = result['message'] ?? result['error'] ?? result['msg'];
     if (raw is String && raw.trim().isNotEmpty) {
@@ -41,26 +50,35 @@ class AppErrors {
   }
 
   /// Extracts a friendly message from any caught [error] object.
-  static String friendly(Object? error,
-      {String fallback = 'Terjadi kesalahan. Silakan coba lagi.'}) {
+  static String friendly(
+    Object? error, {
+    String fallback = 'Terjadi kesalahan. Silakan coba lagi.',
+  }) {
     if (error == null) return fallback;
 
     if (error is DioException) {
       final statusCode = error.response?.statusCode;
       if (statusCode == 401) return 'Autentikasi gagal. Silakan masuk kembali.';
-      if (statusCode == 403) return 'Anda tidak memiliki izin untuk mengakses sumber ini.';
+      if (statusCode == 403)
+        return 'Anda tidak memiliki izin untuk mengakses sumber ini.';
       if (statusCode == 404) return 'Sumber data tidak ditemukan.';
-      if (statusCode == 422) return 'Validasi data gagal. Periksa masukan Anda.';
-      if (statusCode != null && statusCode >= 500) return 'Terjadi kesalahan internal pada server.';
-      
-      if (error.type == DioExceptionType.connectionTimeout || 
-          error.type == DioExceptionType.receiveTimeout || 
+      if (statusCode == 422)
+        return 'Validasi data gagal. Periksa masukan Anda.';
+      if (statusCode != null && statusCode >= 500)
+        return 'Terjadi kesalahan internal pada server.';
+
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
           error.type == DioExceptionType.sendTimeout) {
         return 'Koneksi terputus (Timeout). Periksa internet Anda.';
       }
 
       if (error.response?.data is Map<String, dynamic>) {
-        return messageFromResult(error.response!.data as Map<String, dynamic>, fallback: fallback, statusCode: statusCode);
+        return messageFromResult(
+          error.response!.data as Map<String, dynamic>,
+          fallback: fallback,
+          statusCode: statusCode,
+        );
       }
     }
 
@@ -71,16 +89,24 @@ class AppErrors {
       return 'Data yang diterima tidak valid dari server.';
     }
     if (error is String) {
-      return error.isNotEmpty ? _sanitizeMessage(error, fallback: fallback) : fallback;
+      return error.isNotEmpty
+          ? _sanitizeMessage(error, fallback: fallback)
+          : fallback;
     }
     if (error is Map) {
-      return messageFromResult(Map<String, dynamic>.from(error), fallback: fallback);
+      return messageFromResult(
+        Map<String, dynamic>.from(error),
+        fallback: fallback,
+      );
     }
 
-    final msg = error.toString().replaceAll('Exception: ', '').replaceAll('DioException:', '');
+    final msg = error
+        .toString()
+        .replaceAll('Exception: ', '')
+        .replaceAll('DioException:', '');
     if (msg.isEmpty) return fallback;
     if (msg.length > 200) return fallback;
-    
+
     return _sanitizeMessage(msg, fallback: fallback);
   }
 }
@@ -112,8 +138,8 @@ class AppSnackbar {
                 color == AppTheme.success
                     ? Icons.check_circle_rounded
                     : color == AppTheme.error
-                        ? Icons.error_rounded
-                        : Icons.info_rounded,
+                    ? Icons.error_rounded
+                    : Icons.info_rounded,
                 color: Colors.white,
                 size: 20,
               ),
@@ -121,7 +147,10 @@ class AppSnackbar {
               Expanded(
                 child: Text(
                   message,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -129,7 +158,9 @@ class AppSnackbar {
           backgroundColor: color,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 3),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         ),
       );

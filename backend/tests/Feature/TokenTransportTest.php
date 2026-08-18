@@ -14,12 +14,12 @@ class TokenTransportTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        User::create([
+        User::factory()->create([
             'name' => 'Test',
             'username' => 'test',
             'email' => 'test@test.com',
             'password' => Hash::make('password123'),
-            'role' => 'user',
+            'role' => \App\Enums\RoleType::User,
         ]);
     }
 

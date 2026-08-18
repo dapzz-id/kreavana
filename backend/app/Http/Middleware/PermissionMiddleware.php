@@ -40,9 +40,8 @@ class PermissionMiddleware
         }
 
         // Use the current user role permissions from config rather than relying on
-        // permissions stored in the JWT payload. This avoids stale permission claims
         // when role/permission mappings are updated while the user still has a valid token.
-        $tokenPermissions = config('permissions.' . $user->role, []);
+        $tokenPermissions = config('permissions.' . $user->role->value, []);
 
         if (!is_array($tokenPermissions)) {
             $tokenPermissions = [];

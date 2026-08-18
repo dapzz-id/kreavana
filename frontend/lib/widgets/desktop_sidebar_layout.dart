@@ -67,7 +67,10 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   bool get _isGovernment {
     final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
     return (widget.user.role == 'user' || widget.user.role == 'creator') &&
-        (sub == 'government' || sub == 'institution' || sub == 'pemerintah' || sub == 'instansi');
+        (sub == 'government' ||
+            sub == 'institution' ||
+            sub == 'pemerintah' ||
+            sub == 'instansi');
   }
 
   void _pushNoAnimation(Widget destination) {
@@ -80,7 +83,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         pageBuilder: (context, animation, secondaryAnimation) => destination,
         transitionDuration: Duration.zero,
         reverseTransitionDuration: Duration.zero,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) => child,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+            child,
       ),
     );
   }
@@ -108,10 +112,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(
-        builder: (_) => MainNavigation(
-          initialUser: widget.user,
-          initialIndex: index,
-        ),
+        builder: (_) =>
+            MainNavigation(initialUser: widget.user, initialIndex: index),
       ),
       (route) => false,
     );
@@ -258,7 +260,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
               vertical: 12,
             ),
             decoration: BoxDecoration(
-              color: isSelected ? activeColor.withValues(alpha: 0.1) : Colors.transparent,
+              color: isSelected
+                  ? activeColor.withValues(alpha: 0.1)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -281,7 +285,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w500,
                         fontSize: 14,
                         color: isSelected
                             ? activeColor
@@ -330,18 +336,29 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
             ),
             child: Column(
               children: [
-                const Icon(Icons.workspace_premium_outlined, color: Colors.white, size: 28),
+                const Icon(
+                  Icons.workspace_premium_outlined,
+                  color: Colors.white,
+                  size: 28,
+                ),
                 const SizedBox(height: 8),
                 Text(
                   isCreator ? 'Upgrade Akun Kreator' : 'Upgrade Plan & Paket',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   isCreator
                       ? 'Tingkatkan peluang & fitur premium untuk kreator.'
                       : 'Nikmati kuota lebih tinggi, fitur AI, dan prioritas proyek.',
-                  style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.8)),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.white.withValues(alpha: 0.8),
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
@@ -353,9 +370,17 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                       backgroundColor: Colors.white,
                       foregroundColor: AppTheme.primaryPurple,
                       padding: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                    child: const Text('Upgrade Sekarang', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    child: const Text(
+                      'Upgrade Sekarang',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -381,12 +406,16 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     final sidebarWidth = _isSidebarCollapsed ? 78.0 : 260.0;
     final collapsed = _isSidebarCollapsed;
 
-    final showTopPortofolioAgenda = !_isCreatorUser || !_hasSpecificCreatorSubRole;
-    final layananTitle = CreatorSidebarMenus.layananSectionTitle(widget.user.subRole);
+    final showTopPortofolioAgenda =
+        !_isCreatorUser || !_hasSpecificCreatorSubRole;
+    final layananTitle = CreatorSidebarMenus.layananSectionTitle(
+      widget.user.subRole,
+    );
     final layananItems = CreatorSidebarMenus.layananItems(widget.user.subRole);
     final hasLayanan = layananTitle != null && layananItems.isNotEmpty;
-    final showKolaborasi =
-        CreatorSidebarMenus.showKolaborasiInLainnya(widget.user.subRole);
+    final showKolaborasi = CreatorSidebarMenus.showKolaborasiInLainnya(
+      widget.user.subRole,
+    );
 
     return Scaffold(
       body: Row(
@@ -402,7 +431,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
               color: isDark ? const Color(0xFF141221) : Colors.white,
               border: Border(
                 right: BorderSide(
-                  color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
+                  color: isDark
+                      ? const Color(0xFF2D2A3E)
+                      : Colors.grey.shade200,
                   width: 1,
                 ),
               ),
@@ -435,12 +466,16 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                                 child: IconButton(
                                   icon: Icon(
                                     Icons.chevron_right_rounded,
-                                    color: isDark ? Colors.white70 : Colors.grey.shade600,
+                                    color: isDark
+                                        ? Colors.white70
+                                        : Colors.grey.shade600,
                                     size: 18,
                                   ),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(),
-                                  onPressed: () => setState(() => _isSidebarCollapsed = false),
+                                  onPressed: () => setState(
+                                    () => _isSidebarCollapsed = false,
+                                  ),
                                 ),
                               ),
                             ],
@@ -463,18 +498,26 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                                 const SizedBox(width: 10),
                                 const Text(
                                   'Kreavana',
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: -0.5),
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -0.5,
+                                  ),
                                 ),
                                 const Spacer(),
                                 IconButton(
                                   icon: Icon(
                                     Icons.chevron_left_rounded,
-                                    color: isDark ? Colors.white70 : Colors.grey.shade700,
+                                    color: isDark
+                                        ? Colors.white70
+                                        : Colors.grey.shade700,
                                     size: 20,
                                   ),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(),
-                                  onPressed: () => setState(() => _isSidebarCollapsed = true),
+                                  onPressed: () => setState(
+                                    () => _isSidebarCollapsed = true,
+                                  ),
                                 ),
                               ],
                             ),
@@ -484,7 +527,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                   Divider(
                     height: 1,
                     thickness: 1,
-                    color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
+                    color: isDark
+                        ? const Color(0xFF2D2A3E)
+                        : Colors.grey.shade200,
                   ),
 
                   // ── Nav items ──────────────────────────────────────
@@ -562,7 +607,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             icon: Icons.handshake_outlined,
                             label: 'Tender & Kolaborasi',
                             onTap: () => _pushLink('tender_kolaborasi'),
-                            isSelected: widget.activeRoute == 'tender_kolaborasi',
+                            isSelected:
+                                widget.activeRoute == 'tender_kolaborasi',
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
@@ -608,7 +654,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             icon: Icons.account_balance_outlined,
                             label: 'Realisasi Anggaran',
                             onTap: () => _pushLink('realisasi_anggaran'),
-                            isSelected: widget.activeRoute == 'realisasi_anggaran',
+                            isSelected:
+                                widget.activeRoute == 'realisasi_anggaran',
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
@@ -616,7 +663,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             icon: Icons.monitor_outlined,
                             label: 'Monitoring & Evaluasi',
                             onTap: () => _pushLink('monitoring_evaluasi'),
-                            isSelected: widget.activeRoute == 'monitoring_evaluasi',
+                            isSelected:
+                                widget.activeRoute == 'monitoring_evaluasi',
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
@@ -638,7 +686,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             icon: Icons.folder_outlined,
                             label: 'Dokumen Instansi',
                             onTap: () => _pushLink('dokumen_instansi'),
-                            isSelected: widget.activeRoute == 'dokumen_instansi',
+                            isSelected:
+                                widget.activeRoute == 'dokumen_instansi',
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
@@ -646,7 +695,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             icon: Icons.campaign_outlined,
                             label: 'Pengumuman Publik',
                             onTap: () => _pushLink('pengumuman_publik'),
-                            isSelected: widget.activeRoute == 'pengumuman_publik',
+                            isSelected:
+                                widget.activeRoute == 'pengumuman_publik',
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
@@ -696,7 +746,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                                     _pushService(key);
                                   }
                                 },
-                                isSelected: widget.activeRoute == entry.serviceKey,
+                                isSelected:
+                                    widget.activeRoute == entry.serviceKey,
                                 isDark: isDark,
                                 isCollapsed: collapsed,
                               ),
@@ -760,7 +811,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                   Divider(
                     height: 1,
                     thickness: 1,
-                    color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
+                    color: isDark
+                        ? const Color(0xFF2D2A3E)
+                        : Colors.grey.shade200,
                   ),
                   Container(
                     padding: EdgeInsets.all(collapsed ? 10 : 16),
@@ -769,13 +822,23 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Tooltip(
-                                message: '${widget.user.name} (@${widget.user.username})',
+                                message:
+                                    '${widget.user.name} (@${widget.user.username})',
                                 child: CircleAvatar(
                                   radius: 16,
-                                  backgroundColor: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
-                                  backgroundImage: widget.user.avatarUrl != null && widget.user.avatarUrl!.isNotEmpty
-                                      ? NetworkImage(ApiService.resolveAssetUrl(widget.user.avatarUrl!))
-                                      : const AssetImage('assets/brandlogo.png') as ImageProvider,
+                                  backgroundColor: isDark
+                                      ? const Color(0xFF2D2A3E)
+                                      : Colors.grey.shade200,
+                                  backgroundImage:
+                                      widget.user.avatarUrl != null &&
+                                          widget.user.avatarUrl!.isNotEmpty
+                                      ? NetworkImage(
+                                          ApiService.resolveAssetUrl(
+                                            widget.user.avatarUrl!,
+                                          ),
+                                        )
+                                      : const AssetImage('assets/brandlogo.png')
+                                            as ImageProvider,
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -786,7 +849,11 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                                   borderRadius: BorderRadius.circular(8),
                                   child: const Padding(
                                     padding: EdgeInsets.all(4),
-                                    child: Icon(Icons.logout_rounded, color: Colors.redAccent, size: 18),
+                                    child: Icon(
+                                      Icons.logout_rounded,
+                                      color: Colors.redAccent,
+                                      size: 18,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -796,10 +863,19 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             children: [
                               CircleAvatar(
                                 radius: 18,
-                                backgroundColor: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
-                                backgroundImage: widget.user.avatarUrl != null && widget.user.avatarUrl!.isNotEmpty
-                                    ? NetworkImage(ApiService.resolveAssetUrl(widget.user.avatarUrl!))
-                                    : const AssetImage('assets/brandlogo.png') as ImageProvider,
+                                backgroundColor: isDark
+                                    ? const Color(0xFF2D2A3E)
+                                    : Colors.grey.shade200,
+                                backgroundImage:
+                                    widget.user.avatarUrl != null &&
+                                        widget.user.avatarUrl!.isNotEmpty
+                                    ? NetworkImage(
+                                        ApiService.resolveAssetUrl(
+                                          widget.user.avatarUrl!,
+                                        ),
+                                      )
+                                    : const AssetImage('assets/brandlogo.png')
+                                          as ImageProvider,
                               ),
                               const SizedBox(width: 10),
                               Expanded(
@@ -811,19 +887,31 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                                       widget.user.name,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
                                     ),
                                     Text(
                                       '@${widget.user.username}',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(fontSize: 11, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isDark
+                                            ? Colors.grey.shade400
+                                            : Colors.grey.shade600,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.logout_rounded, color: Colors.redAccent, size: 20),
+                                icon: const Icon(
+                                  Icons.logout_rounded,
+                                  color: Colors.redAccent,
+                                  size: 20,
+                                ),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
                                 onPressed: _showLogoutDialog,
@@ -837,9 +925,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
           ),
 
           // ─── Konten utama ─────────────────────────────────────────
-          Expanded(
-            child: widget.child,
-          ),
+          Expanded(child: widget.child),
         ],
       ),
     );

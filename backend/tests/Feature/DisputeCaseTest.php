@@ -22,30 +22,17 @@ class DisputeCaseTest extends TestCase
         parent::setUp();
         // Create an admin
         User::factory()->create([
-            'role' => 'admin',
+            'role' => \App\Enums\RoleType::Admin,
             'is_creator_approved' => true
         ]);
     }
 
-    protected function getAuthHeaders($user)
-    {
-        $token = \Tymon\JWTAuth\Facades\JWTAuth::fromUser($user);
-        $payload = \Tymon\JWTAuth\Facades\JWTAuth::setToken($token)->getPayload();
-        $jti = $payload->get('jti');
-        if ($jti) {
-            \App\Services\JtiService::store($jti, 3600);
-        }
-        return [
-            'Authorization' => "Bearer $token",
-            'Accept' => 'application/json'
-        ];
-    }
-
+    
     public function test_buyer_can_request_refund_and_case_is_created()
     {
         $seller = User::factory()->create(['balance' => 95000]);
         $buyer = User::factory()->create(['balance' => 0]);
-        $admin = User::where('role', 'admin')->first();
+        $admin = User::where('role', \App\Enums\RoleType::Admin)->first();
 
         $item = MarketplaceItem::create([
             'id' => Str::uuid(),
@@ -102,7 +89,7 @@ class DisputeCaseTest extends TestCase
     {
         $seller = User::factory()->create(['balance' => 95000]);
         $buyer = User::factory()->create(['balance' => 0]);
-        $admin = User::where('role', 'admin')->first();
+        $admin = User::where('role', \App\Enums\RoleType::Admin)->first();
 
         $item = MarketplaceItem::create([
             'id' => Str::uuid(),
@@ -192,7 +179,7 @@ class DisputeCaseTest extends TestCase
 
     public function test_admin_can_approve_opportunity_cancellation()
     {
-        $admin = User::factory()->create(['role' => 'admin']);
+        $admin = User::factory()->create(['role' => \App\Enums\RoleType::Admin]);
         $owner = User::factory()->create();
 
         $opportunity = Opportunity::create([

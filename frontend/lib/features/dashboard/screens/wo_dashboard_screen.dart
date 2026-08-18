@@ -83,7 +83,9 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
               child: Container(
                 height: 44,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1A1830) : Colors.grey.shade100,
+                  color: isDark
+                      ? const Color(0xFF1A1830)
+                      : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
@@ -103,7 +105,9 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
                         'Cari proyek pernikahan, vendor, atau paket...',
                         style: TextStyle(
                           fontSize: 13,
-                          color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                          color: isDark
+                              ? AppTheme.textMuted
+                              : Colors.grey.shade500,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -115,21 +119,38 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
           ),
           ListenableBuilder(
             listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(Icons.notifications_none_outlined, BadgeService().unreadNotificationsText, isDark),
+            builder: (_, _) => _buildAppBarBadge(
+              Icons.notifications_none_outlined,
+              BadgeService().unreadNotificationsText,
+              isDark,
+            ),
           ),
           const SizedBox(width: 4),
           ListenableBuilder(
             listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(Icons.chat_bubble_outline, BadgeService().unreadMessagesText, isDark),
+            builder: (_, _) => _buildAppBarBadge(
+              Icons.chat_bubble_outline,
+              BadgeService().unreadMessagesText,
+              isDark,
+            ),
           ),
           const SizedBox(width: 20),
           IconButton(
             key: _themeBtnKey,
-            icon: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined, size: 20),
+            icon: Icon(
+              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+              size: 20,
+            ),
             onPressed: () {
-              final box = _themeBtnKey.currentContext?.findRenderObject() as RenderBox?;
-              final origin = box != null ? box.localToGlobal(box.size.center(Offset.zero)) : const Offset(0, 0);
-              ThemeTransitionService.animateToggle(origin: origin, toDark: !isDark);
+              final box =
+                  _themeBtnKey.currentContext?.findRenderObject() as RenderBox?;
+              final origin = box != null
+                  ? box.localToGlobal(box.size.center(Offset.zero))
+                  : const Offset(0, 0);
+              ThemeTransitionService.animateToggle(
+                origin: origin,
+                toDark: !isDark,
+              );
             },
           ),
           const SizedBox(width: 8),
@@ -146,7 +167,10 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
                 children: [
                   Text(
                     widget.user.name,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Text(
                     'Wedding Organizer',
@@ -174,7 +198,10 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
             children: [
               Text(
                 'Selamat datang, ${widget.user.name}! 💜',
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -199,7 +226,9 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
             backgroundColor: _woPink,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],
@@ -208,11 +237,41 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
 
   Widget _buildMetricCards(bool isDark) {
     final metrics = [
-      {'label': 'Total Proyek', 'value': '18', 'sub': '12 akan datang', 'icon': Icons.calendar_today_outlined, 'color': _woLight},
-      {'label': 'Proyek Aktif', 'value': '6', 'sub': 'Sedang berjalan', 'icon': Icons.play_circle_fill, 'color': const Color(0xFF10B981)},
-      {'label': 'Total Nilai Proyek', 'value': 'Rp 256.750.000', 'sub': 'Semua waktu', 'icon': Icons.account_balance_wallet_outlined, 'color': const Color(0xFF3B82F6)},
-      {'label': 'Pending Pembayaran', 'value': 'Rp 42.300.000', 'sub': '5 invoice', 'icon': Icons.receipt, 'color': const Color(0xFFF59E0B)},
-      {'label': 'Vendor Favorit', 'value': '24', 'sub': 'Vendor tersimpan', 'icon': Icons.favorite, 'color': const Color(0xFFEC4899)},
+      {
+        'label': 'Total Proyek',
+        'value': '18',
+        'sub': '12 akan datang',
+        'icon': Icons.calendar_today_outlined,
+        'color': _woLight,
+      },
+      {
+        'label': 'Proyek Aktif',
+        'value': '6',
+        'sub': 'Sedang berjalan',
+        'icon': Icons.play_circle_fill,
+        'color': const Color(0xFF10B981),
+      },
+      {
+        'label': 'Total Nilai Proyek',
+        'value': 'Rp 256.750.000',
+        'sub': 'Semua waktu',
+        'icon': Icons.account_balance_wallet_outlined,
+        'color': const Color(0xFF3B82F6),
+      },
+      {
+        'label': 'Pending Pembayaran',
+        'value': 'Rp 42.300.000',
+        'sub': '5 invoice',
+        'icon': Icons.receipt,
+        'color': const Color(0xFFF59E0B),
+      },
+      {
+        'label': 'Vendor Favorit',
+        'value': '24',
+        'sub': 'Vendor tersimpan',
+        'icon': Icons.favorite,
+        'color': const Color(0xFFEC4899),
+      },
     ];
 
     return Row(
@@ -225,7 +284,9 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
             decoration: BoxDecoration(
               color: isDark ? AppTheme.cardBg : Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,14 +298,30 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
                     color: (m['color'] as Color).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon((m['icon'] as IconData?) ?? Icons.image_outlined, color: m['color'] as Color, size: 20),
+                  child: Icon(
+                    (m['icon'] as IconData?) ?? Icons.image_outlined,
+                    color: m['color'] as Color,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(height: 12),
-                Text(m['label'] as String, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                Text(
+                  m['label'] as String,
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
                 const SizedBox(height: 6),
-                Text(m['value'] as String, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  m['value'] as String,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(m['sub'] as String, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                Text(
+                  m['sub'] as String,
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                ),
               ],
             ),
           ),
@@ -284,12 +361,17 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Ringkasan Penjualan', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          const Text(
+            'Ringkasan Penjualan',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 20),
           SizedBox(
             height: 200,
@@ -326,12 +408,17 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Proyek Berdasarkan Status', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          const Text(
+            'Proyek Berdasarkan Status',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 20),
           SizedBox(
             height: 140,
@@ -340,10 +427,30 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
                 sectionsSpace: 2,
                 centerSpaceRadius: 35,
                 sections: [
-                  PieChartSectionData(value: 33.3, color: _woPink, radius: 18, showTitle: false),
-                  PieChartSectionData(value: 33.3, color: const Color(0xFF10B981), radius: 18, showTitle: false),
-                  PieChartSectionData(value: 22.2, color: const Color(0xFFF59E0B), radius: 18, showTitle: false),
-                  PieChartSectionData(value: 11.1, color: Colors.grey, radius: 18, showTitle: false),
+                  PieChartSectionData(
+                    value: 33.3,
+                    color: _woPink,
+                    radius: 18,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: 33.3,
+                    color: const Color(0xFF10B981),
+                    radius: 18,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: 22.2,
+                    color: const Color(0xFFF59E0B),
+                    radius: 18,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: 11.1,
+                    color: Colors.grey,
+                    radius: 18,
+                    showTitle: false,
+                  ),
                 ],
               ),
             ),
@@ -363,10 +470,17 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
           const SizedBox(width: 8),
           Expanded(child: Text(name, style: const TextStyle(fontSize: 11))),
-          Text(val, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+          Text(
+            val,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );
@@ -374,9 +488,24 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
 
   Widget _buildActiveProjectsCard(bool isDark) {
     final projects = [
-      {'title': 'Wedding Sarah & Dika', 'date': '20 Juli 2025', 'progress': 0.75, 'status': 'Persiapan Akhir'},
-      {'title': 'Wedding Aulia & Reza', 'date': '12 Juli 2025', 'progress': 0.60, 'status': 'Sedang Berjalan'},
-      {'title': 'Wedding Nadia & Faisal', 'date': '5 Agustus 2025', 'progress': 0.40, 'status': 'Persiapan'},
+      {
+        'title': 'Wedding Sarah & Dika',
+        'date': '20 Juli 2025',
+        'progress': 0.75,
+        'status': 'Persiapan Akhir',
+      },
+      {
+        'title': 'Wedding Aulia & Reza',
+        'date': '12 Juli 2025',
+        'progress': 0.60,
+        'status': 'Sedang Berjalan',
+      },
+      {
+        'title': 'Wedding Nadia & Faisal',
+        'date': '5 Agustus 2025',
+        'progress': 0.40,
+        'status': 'Persiapan',
+      },
     ];
 
     return Container(
@@ -384,7 +513,9 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -392,34 +523,76 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Proyek Aktif', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-              TextButton(onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => ProyekSayaScreen(user: widget.user, onUserUpdated: widget.onUserUpdated))); }, child: const Text('Lihat Semua', style: TextStyle(fontSize: 12))),
+              const Text(
+                'Proyek Aktif',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProyekSayaScreen(
+                        user: widget.user,
+                        onUserUpdated: widget.onUserUpdated,
+                      ),
+                    ),
+                  );
+                },
+                child: const Text(
+                  'Lihat Semua',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          ...projects.map((p) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: _woPink.withValues(alpha: 0.1),
-                      child: const Icon(Icons.favorite_border, color: _woPink, size: 18),
+          ...projects.map(
+            (p) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: _woPink.withValues(alpha: 0.1),
+                    child: const Icon(
+                      Icons.favorite_border,
+                      color: _woPink,
+                      size: 18,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(p['title'] as String, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                          Text(p['date'] as String, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                        ],
-                      ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          p['title'] as String,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          p['date'] as String,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
                     ),
-                    Text('${((p['progress'] as double) * 100).round()}%',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              )),
+                  ),
+                  Text(
+                    '${((p['progress'] as double) * 100).round()}%',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -456,18 +629,38 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Aktivitas Terbaru', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          const Text(
+            'Aktivitas Terbaru',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
-          _buildActItem('Pembayaran invoice #INV-2025-064 sebesar Rp 18.750.000', '1 jam lalu'),
-          _buildActItem('Vendor Decoration House menerima penawaran Anda', '3 jam lalu'),
-          _buildActItem('Proyek Wedding Nadia & Faisal diperbarui', '5 jam lalu'),
-          _buildActItem('Task "Final Meeting dengan Klien" selesai', '1 hari lalu'),
-          _buildActItem('Vendor Lighting Pro ditambahkan ke favorit', '1 hari lalu'),
+          _buildActItem(
+            'Pembayaran invoice #INV-2025-064 sebesar Rp 18.750.000',
+            '1 jam lalu',
+          ),
+          _buildActItem(
+            'Vendor Decoration House menerima penawaran Anda',
+            '3 jam lalu',
+          ),
+          _buildActItem(
+            'Proyek Wedding Nadia & Faisal diperbarui',
+            '5 jam lalu',
+          ),
+          _buildActItem(
+            'Task "Final Meeting dengan Klien" selesai',
+            '1 hari lalu',
+          ),
+          _buildActItem(
+            'Vendor Lighting Pro ditambahkan ke favorit',
+            '1 hari lalu',
+          ),
         ],
       ),
     );
@@ -505,37 +698,68 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Top Vendor Favorit', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          const Text(
+            'Top Vendor Favorit',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
-          ...vendors.map((v) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundColor: _woPink.withValues(alpha: 0.1),
-                      child: Text(v['name']![0], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(v['name']!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          Text(v['cat']!, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                        ],
+          ...vendors.map(
+            (v) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundColor: _woPink.withValues(alpha: 0.1),
+                    child: Text(
+                      v['name']![0],
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
                       ),
                     ),
-                    Icon(Icons.star, size: 14, color: Colors.amber.shade600),
-                    Text(v['rating']!, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              )),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          v['name']!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          v['cat']!,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.star, size: 14, color: Colors.amber.shade600),
+                  Text(
+                    v['rating']!,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -550,18 +774,34 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
           decoration: BoxDecoration(
             color: isDark ? AppTheme.cardBg : Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+            border: Border.all(
+              color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Penjualan Berdasarkan Paket',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const Text(
+                'Penjualan Berdasarkan Paket',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
               const SizedBox(height: 8),
               _buildCatRow('Paket Premium', '40% (Rp 102.700.000)', _woPink),
-              _buildCatRow('Paket Gold', '30% (Rp 77.025.000)', const Color(0xFF10B981)),
-              _buildCatRow('Paket Silver', '20% (Rp 51.350.000)', const Color(0xFFF59E0B)),
-              _buildCatRow('Paket Intimate', '10% (Rp 25.675.000)', Colors.grey),
+              _buildCatRow(
+                'Paket Gold',
+                '30% (Rp 77.025.000)',
+                const Color(0xFF10B981),
+              ),
+              _buildCatRow(
+                'Paket Silver',
+                '20% (Rp 51.350.000)',
+                const Color(0xFFF59E0B),
+              ),
+              _buildCatRow(
+                'Paket Intimate',
+                '10% (Rp 25.675.000)',
+                Colors.grey,
+              ),
             ],
           ),
         ),
@@ -576,8 +816,10 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Lengkapi Profil Perusahaan Anda',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const Text(
+                'Lengkapi Profil Perusahaan Anda',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
               const SizedBox(height: 4),
               const Text(
                 'Profil yang lengkap dapat meningkatkan kepercayaan klien dan peluang proyek.',
@@ -585,8 +827,22 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
               ),
               const SizedBox(height: 10),
               OutlinedButton(
-                onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen(user: widget.user, onUserUpdated: widget.onUserUpdated, onLogout: () {}))); },
-                child: const Text('Lengkapi Sekarang', style: TextStyle(fontSize: 11)),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProfileScreen(
+                        user: widget.user,
+                        onUserUpdated: widget.onUserUpdated,
+                        onLogout: () {},
+                      ),
+                    ),
+                  );
+                },
+                child: const Text(
+                  'Lengkapi Sekarang',
+                  style: TextStyle(fontSize: 11),
+                ),
               ),
             ],
           ),
@@ -600,7 +856,9 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
     return ListenableBuilder(
       listenable: BadgeService(),
       builder: (context, _) {
-        final badgeCount = isNotification ? BadgeService().unreadNotificationsText : BadgeService().unreadMessagesText;
+        final badgeCount = isNotification
+            ? BadgeService().unreadNotificationsText
+            : BadgeService().unreadMessagesText;
         return GestureDetector(
           onTap: () {
             Navigator.push(
@@ -621,7 +879,11 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(icon, size: 20, color: isDark ? Colors.white : Colors.black87),
+                Icon(
+                  icon,
+                  size: 20,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
                 if (badgeCount.isNotEmpty && badgeCount != '0')
                   Positioned(
                     right: -4,
@@ -634,7 +896,11 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
                       ),
                       child: Text(
                         badgeCount,
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),

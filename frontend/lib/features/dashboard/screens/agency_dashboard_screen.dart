@@ -26,7 +26,10 @@ class AgencyDashboardScreen extends StatefulWidget {
 }
 
 class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
-  final Color _accentColor = SubRoleThemeEngine.getAccentColor('user', 'brand_agency');
+  final Color _accentColor = SubRoleThemeEngine.getAccentColor(
+    'user',
+    'brand_agency',
+  );
   bool _isLoading = true;
   List<Map<String, String>> _realtimeStats = [];
   Map<String, List<Map<String, String>>> _allSubRoleStats = {};
@@ -39,9 +42,17 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
 
   Future<void> _fetchRealtimeData() async {
     try {
-      final stats = await DashboardService.getStats(subRole: 'editor', roleType: 'user');
+      final stats = await DashboardService.getStats(
+        subRole: 'editor',
+        roleType: 'user',
+      );
       final allStats = await DashboardService.getAllSubRoleStats(
-        subRoleSlugs: ['photographer', 'videographer', 'editor', 'event_organizer'],
+        subRoleSlugs: [
+          'photographer',
+          'videographer',
+          'editor',
+          'event_organizer',
+        ],
         roleType: 'user',
       );
       if (mounted) {
@@ -65,9 +76,11 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
 
     return Scaffold(
       appBar: _buildAppBar(isDark),
-      body: RefreshIndicator(
-        onRefresh: _fetchRealtimeData,
-        child: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _fetchRealtimeData,
+              child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
             isDesktop ? 24 : 16,
@@ -148,7 +161,9 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
               child: Container(
                 height: 44,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1A1830) : Colors.grey.shade100,
+                  color: isDark
+                      ? const Color(0xFF1A1830)
+                      : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
@@ -167,7 +182,9 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
                       'Cari talent influencer, fotografer komersial, sutradara...',
                       style: TextStyle(
                         fontSize: 13,
-                        color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                        color: isDark
+                            ? AppTheme.textMuted
+                            : Colors.grey.shade500,
                       ),
                     ),
                   ],
@@ -202,12 +219,20 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
           const SizedBox(width: 12),
           ListenableBuilder(
             listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(Icons.notifications_none_outlined, BadgeService().unreadNotificationsText, isDark),
+            builder: (_, _) => _buildAppBarBadge(
+              Icons.notifications_none_outlined,
+              BadgeService().unreadNotificationsText,
+              isDark,
+            ),
           ),
           const SizedBox(width: 4),
           ListenableBuilder(
             listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(Icons.chat_bubble_outline, BadgeService().unreadMessagesText, isDark),
+            builder: (_, _) => _buildAppBarBadge(
+              Icons.chat_bubble_outline,
+              BadgeService().unreadMessagesText,
+              isDark,
+            ),
           ),
         ],
       ),
@@ -247,7 +272,11 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
             ),
             child: const Text(
               'Campaign Management & Talent Sourcing',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -281,10 +310,15 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
               foregroundColor: _accentColor,
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             icon: const Icon(Icons.post_add_rounded, size: 18),
-            label: const Text('Rilis Brief Campaign Baru', style: TextStyle(fontWeight: FontWeight.bold)),
+            label: const Text(
+              'Rilis Brief Campaign Baru',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -301,10 +335,26 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
             };
           }).toList()
         : [
-            {'title': 'Active Campaigns', 'val': '5 Brand', 'icon': Icons.campaign},
-            {'title': 'Roster Talent Active', 'val': '28 Kreator', 'icon': Icons.groups},
-            {'title': 'Escrow Budget', 'val': 'Rp 85.000.000', 'icon': Icons.account_balance_wallet},
-            {'title': 'Media Deliverables', 'val': '94% On Time', 'icon': Icons.verified},
+            {
+              'title': 'Active Campaigns',
+              'val': '5 Brand',
+              'icon': Icons.campaign,
+            },
+            {
+              'title': 'Roster Talent Active',
+              'val': '28 Kreator',
+              'icon': Icons.groups,
+            },
+            {
+              'title': 'Escrow Budget',
+              'val': 'Rp 85.000.000',
+              'icon': Icons.account_balance_wallet,
+            },
+            {
+              'title': 'Media Deliverables',
+              'val': '94% On Time',
+              'icon': Icons.verified,
+            },
           ];
 
     return LayoutBuilder(
@@ -339,16 +389,39 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
                       Expanded(
                         child: Text(
                           m['title'] as String,
-                          style: TextStyle(fontSize: 11, color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark
+                                ? AppTheme.textMuted
+                                : AppTheme.textMutedLight,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      Icon((m['icon'] as IconData?) ?? Icons.image_outlined, color: _accentColor, size: 20),
+                      Icon(
+                        (m['icon'] as IconData?) ?? Icons.image_outlined,
+                        color: _accentColor,
+                        size: 20,
+                      ),
                     ],
                   ),
-                  Text(m['val'] as String, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: isDark ? Colors.white : AppTheme.textDark)),
-                  Text('Agency Verified', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _accentColor)),
+                  Text(
+                    m['val'] as String,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : AppTheme.textDark,
+                    ),
+                  ),
+                  Text(
+                    'Agency Verified',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: _accentColor,
+                    ),
+                  ),
                 ],
               ),
             );
@@ -385,8 +458,18 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
 
   Widget _buildActiveCampaigns(bool isDark) {
     final campaigns = [
-      {'brand': 'Skincare Campaign Q3', 'client': 'Aura Beauty Co.', 'budget': 'Rp 35.000.000', 'status': 'Production (6 Kreator)'},
-      {'brand': 'Summer Fashion Commercial', 'client': 'Urban Threads', 'budget': 'Rp 50.000.000', 'status': 'Post-Production'},
+      {
+        'brand': 'Skincare Campaign Q3',
+        'client': 'Aura Beauty Co.',
+        'budget': 'Rp 35.000.000',
+        'status': 'Production (6 Kreator)',
+      },
+      {
+        'brand': 'Summer Fashion Commercial',
+        'client': 'Urban Threads',
+        'budget': 'Rp 50.000.000',
+        'status': 'Post-Production',
+      },
     ];
 
     return Column(
@@ -409,32 +492,63 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
               decoration: BoxDecoration(
                 color: isDark ? AppTheme.cardBg : Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+                border: Border.all(
+                  color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                ),
               ),
               child: Row(
                 children: [
                   CircleAvatar(
                     backgroundColor: _accentColor.withValues(alpha: 0.12),
-                    child: Icon(Icons.movie_creation, color: _accentColor, size: 20),
+                    child: Icon(
+                      Icons.movie_creation,
+                      color: _accentColor,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(c['brand']!, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textDark)),
+                        Text(
+                          c['brand']!,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : AppTheme.textDark,
+                          ),
+                        ),
                         const SizedBox(height: 2),
-                        Text('Client: ${c['client']!} • Budget: ${c['budget']!}', style: TextStyle(fontSize: 11, color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight)),
+                        Text(
+                          'Client: ${c['client']!} • Budget: ${c['budget']!}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark
+                                ? AppTheme.textMuted
+                                : AppTheme.textMutedLight,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: _accentColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(c['status']!, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _accentColor)),
+                    child: Text(
+                      c['status']!,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: _accentColor,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -463,23 +577,41 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
               children: [
                 Text(
                   'Fitur Agency Direct Booking & Rate Card Roster',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textDark),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : AppTheme.textDark,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Akses langsung portofolio resolusi tinggi, rate card khusus agency, dan klausa NDA otomatis.',
-                  style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? AppTheme.textMuted
+                        : AppTheme.textMutedLight,
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 12),
           ElevatedButton(
-            onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => ExploreScreen(user: widget.user))); },
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ExploreScreen(user: widget.user),
+                ),
+              );
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: _accentColor,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             child: const Text('Buka Roster Kreator'),
           ),
@@ -493,7 +625,9 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
     return ListenableBuilder(
       listenable: BadgeService(),
       builder: (context, _) {
-        final badgeCount = isNotification ? BadgeService().unreadNotificationsText : BadgeService().unreadMessagesText;
+        final badgeCount = isNotification
+            ? BadgeService().unreadNotificationsText
+            : BadgeService().unreadMessagesText;
         return GestureDetector(
           onTap: () {
             Navigator.push(
@@ -514,7 +648,11 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(icon, size: 20, color: isDark ? Colors.white : Colors.black87),
+                Icon(
+                  icon,
+                  size: 20,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
                 if (badgeCount.isNotEmpty && badgeCount != '0')
                   Positioned(
                     right: -4,
@@ -527,7 +665,11 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
                       ),
                       child: Text(
                         badgeCount,
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),

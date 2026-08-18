@@ -233,12 +233,20 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
           const SizedBox(width: 20),
           ListenableBuilder(
             listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(Icons.notifications_none_outlined, BadgeService().unreadNotificationsText, isDark),
+            builder: (_, _) => _buildAppBarBadge(
+              Icons.notifications_none_outlined,
+              BadgeService().unreadNotificationsText,
+              isDark,
+            ),
           ),
           const SizedBox(width: 4),
           ListenableBuilder(
             listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(Icons.chat_bubble_outline, BadgeService().unreadMessagesText, isDark),
+            builder: (_, _) => _buildAppBarBadge(
+              Icons.chat_bubble_outline,
+              BadgeService().unreadMessagesText,
+              isDark,
+            ),
           ),
           const SizedBox(width: 12),
           Builder(
@@ -321,7 +329,9 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
     return ListenableBuilder(
       listenable: BadgeService(),
       builder: (context, _) {
-        final badgeCount = isNotification ? BadgeService().unreadNotificationsText : BadgeService().unreadMessagesText;
+        final badgeCount = isNotification
+            ? BadgeService().unreadNotificationsText
+            : BadgeService().unreadMessagesText;
         return GestureDetector(
           onTap: () {
             Navigator.push(
@@ -342,7 +352,11 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(icon, size: 20, color: isDark ? Colors.white : Colors.black87),
+                Icon(
+                  icon,
+                  size: 20,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
                 if (badgeCount.isNotEmpty && badgeCount != '0')
                   Positioned(
                     right: -4,
@@ -355,7 +369,11 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
                       ),
                       child: Text(
                         badgeCount,
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -1714,7 +1732,9 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
       case 'Rincian Anggaran':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => RealisasiAnggaranScreen(user: widget.user)),
+          MaterialPageRoute(
+            builder: (_) => RealisasiAnggaranScreen(user: widget.user),
+          ),
         );
         break;
       case 'Lihat Semua':
@@ -1722,7 +1742,9 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
       case 'Lihat Semua Aktivitas':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => ProyekSayaScreen(user: widget.user)),
+          MaterialPageRoute(
+            builder: (_) => ProyekSayaScreen(user: widget.user),
+          ),
         );
         break;
       case 'Lihat Semua Kegiatan':
@@ -1737,7 +1759,12 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
       case 'Buka Semua Aset':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => MarketplaceKaryaScreen(user: widget.user, onUserUpdated: widget.onUserUpdated)),
+          MaterialPageRoute(
+            builder: (_) => MarketplaceKaryaScreen(
+              user: widget.user,
+              onUserUpdated: widget.onUserUpdated,
+            ),
+          ),
         );
         break;
       case 'Lihat Detail':
@@ -1745,14 +1772,18 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
       case 'Realisasi Anggaran':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => RealisasiAnggaranScreen(user: widget.user)),
+          MaterialPageRoute(
+            builder: (_) => RealisasiAnggaranScreen(user: widget.user),
+          ),
         );
         break;
       case 'Lihat Pengumuman':
       case 'Pengumuman Publik':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => PengumumanPublikScreen(user: widget.user)),
+          MaterialPageRoute(
+            builder: (_) => PengumumanPublikScreen(user: widget.user),
+          ),
         );
         break;
       case 'Notifikasi':

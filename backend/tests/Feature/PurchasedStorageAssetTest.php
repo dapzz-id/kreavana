@@ -46,7 +46,7 @@ class PurchasedStorageAssetTest extends TestCase
             'description' => 'Test description',
             'price' => 10000,
             'category' => 'photo',
-            'status' => 'active',
+            'status' => 'published',
         ]);
         $order = MarketplacePurchase::create([
             'user_id' => $buyer->id,

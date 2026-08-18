@@ -5,4 +5,3 @@
 void configureUrlStrategy() {
   // Tidak perlu menerapkan URL strategy di platform non-web.
 }
-

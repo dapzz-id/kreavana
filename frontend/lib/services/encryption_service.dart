@@ -18,7 +18,7 @@ class EncryptionService {
   EncryptionService._internal();
 
   final _secureStorage = const FlutterSecureStorage();
-  
+
   // Storage Keys
   static const String _privateKeyStorageKey = 'e2ee_private_key';
   static const String _publicKeyStorageKey = 'e2ee_public_key';
@@ -28,8 +28,10 @@ class EncryptionService {
   RSAPublicKey? _publicKey;
   String? _deviceId;
 
-  bool get isInitialized => _privateKey != null && _publicKey != null && _deviceId != null;
-  String? get publicKeyPem => _publicKey != null ? _encodePublicKeyToPem(_publicKey!) : null;
+  bool get isInitialized =>
+      _privateKey != null && _publicKey != null && _deviceId != null;
+  String? get publicKeyPem =>
+      _publicKey != null ? _encodePublicKeyToPem(_publicKey!) : null;
   String? get deviceId => _deviceId;
 
   Future<void> initializeKeys() async {
@@ -48,7 +50,7 @@ class EncryptionService {
     } else {
       await generateNewKeyPair();
     }
-    
+
     // Always upload public key to ensure backend has it
     if (_publicKey != null) {
       await uploadPublicKey(publicKeyPem!);
@@ -83,7 +85,10 @@ class EncryptionService {
   }
 
   /// Encrypts a message using a one-time AES key, then encrypts the AES key with the receiver's RSA public keys.
-  Map<String, dynamic> encryptMessageForMultipleDevices(String plainText, List<Map<String, dynamic>> devices) {
+  Map<String, dynamic> encryptMessageForMultipleDevices(
+    String plainText,
+    List<Map<String, dynamic>> devices,
+  ) {
     if (!isInitialized) throw Exception('EncryptionService not initialized');
 
     // 1. Generate one-time AES key (32 bytes = 256 bits) and IV (16 bytes)
@@ -106,9 +111,11 @@ class EncryptionService {
         if (deviceId == null || pubKeyPem == null) continue;
 
         final receiverPubKey = _parsePublicKeyFromPem(pubKeyPem);
-        final rsaEncrypter = Encrypter(RSA(publicKey: receiverPubKey, encoding: RSAEncoding.OAEP));
+        final rsaEncrypter = Encrypter(
+          RSA(publicKey: receiverPubKey, encoding: RSAEncoding.OAEP),
+        );
         final encryptedKey = rsaEncrypter.encryptBytes(keyData);
-        
+
         messageKeys.add({
           'device_id': deviceId,
           'encrypted_key': encryptedKey.base64,
@@ -128,13 +135,21 @@ class EncryptionService {
   }
 
   /// Decrypts a message using our RSA private key to get the AES key, then decrypts the message.
-  String? decryptMessageMultiDevice(String ciphertextBase64, String ivBase64, String encryptedKeyBase64) {
+  String? decryptMessageMultiDevice(
+    String ciphertextBase64,
+    String ivBase64,
+    String encryptedKeyBase64,
+  ) {
     if (!isInitialized) return null;
 
     try {
       // 1. Decrypt the AES key + IV using our Private Key
-      final rsaEncrypter = Encrypter(RSA(privateKey: _privateKey, encoding: RSAEncoding.OAEP));
-      final keyData = rsaEncrypter.decryptBytes(Encrypted.fromBase64(encryptedKeyBase64));
+      final rsaEncrypter = Encrypter(
+        RSA(privateKey: _privateKey, encoding: RSAEncoding.OAEP),
+      );
+      final keyData = rsaEncrypter.decryptBytes(
+        Encrypted.fromBase64(encryptedKeyBase64),
+      );
 
       // KeyData is 16 bytes IV + 32 bytes Key = 48 bytes
       if (keyData.length != 48) return null; // Invalid key data length
@@ -154,7 +169,7 @@ class EncryptionService {
   }
 
   // --- Helper Methods ---
-  
+
   RSAPublicKey _parsePublicKeyFromPem(String pem) {
     return RSAKeyParser().parse(pem) as RSAPublicKey;
   }
@@ -171,17 +186,20 @@ class EncryptionService {
     return RsaKeyHelper().encodePrivateKeyToPemPKCS1(key);
   }
 
-  crypto.AsymmetricKeyPair<crypto.PublicKey, crypto.PrivateKey> _generateRSAKeyPair() {
+  crypto.AsymmetricKeyPair<crypto.PublicKey, crypto.PrivateKey>
+  _generateRSAKeyPair() {
     final secureRandom = FortunaRandom();
     final random = Random.secure();
     final seeds = List<int>.generate(32, (_) => random.nextInt(256));
     secureRandom.seed(crypto.KeyParameter(Uint8List.fromList(seeds)));
 
     final keyGen = RSAKeyGenerator()
-      ..init(crypto.ParametersWithRandom(
-        RSAKeyGeneratorParameters(BigInt.parse('65537'), 2048, 64),
-        secureRandom,
-      ));
+      ..init(
+        crypto.ParametersWithRandom(
+          RSAKeyGeneratorParameters(BigInt.parse('65537'), 2048, 64),
+          secureRandom,
+        ),
+      );
 
     return keyGen.generateKeyPair();
   }

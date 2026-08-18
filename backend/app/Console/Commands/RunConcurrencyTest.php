@@ -21,7 +21,7 @@ class RunConcurrencyTest extends Command
         // We simulate concurrency using PHP processes or we can just rely on 
         // the fact that we can fork using popen.
         
-        $admin = User::where('role', 'admin')->first();
+        $admin = User::where('role', \App\Enums\RoleType::Admin)->first();
         if (!$admin) {
             $admin = User::factory()->create(['role' => 'admin', 'balance' => 0]);
         }

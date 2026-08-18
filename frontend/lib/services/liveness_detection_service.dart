@@ -1,13 +1,7 @@
 import 'dart:math';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-import 'package:flutter/foundation.dart';
 
-enum LivenessChallenge {
-  smile,
-  blink,
-  turnHeadLeft,
-  turnHeadRight
-}
+enum LivenessChallenge { smile, blink, turnHeadLeft, turnHeadRight }
 
 class LivenessDetectionResult {
   final bool isLive;
@@ -26,14 +20,14 @@ class LivenessDetectionResult {
 class LivenessDetectionService {
   late final FaceDetector _faceDetector;
   bool _isProcessing = false;
-  
+
   // State for anti-spoofing
   bool _hasSmiled = false;
   bool _hasBlinked = false;
-  
+
   final _random = Random();
   LivenessChallenge? currentChallenge;
-  
+
   LivenessDetectionService() {
     // 12.2 Implement face detection using Google ML Kit
     final options = FaceDetectorOptions(
@@ -59,38 +53,41 @@ class LivenessDetectionService {
     await _faceDetector.close();
   }
 
-  Future<LivenessDetectionResult?> processCameraImage(InputImage inputImage) async {
+  Future<LivenessDetectionResult?> processCameraImage(
+    InputImage inputImage,
+  ) async {
     if (_isProcessing) return null;
     _isProcessing = true;
 
     try {
       final faces = await _faceDetector.processImage(inputImage);
-      
+
       if (faces.isEmpty) {
         return LivenessDetectionResult(
-          isLive: false, 
+          isLive: false,
           message: "No face detected",
           blinkDetected: _hasBlinked,
-          smileDetected: _hasSmiled
+          smileDetected: _hasSmiled,
         );
       }
-      
+
       if (faces.length > 1) {
         return LivenessDetectionResult(
-          isLive: false, 
+          isLive: false,
           message: "Multiple faces detected",
           blinkDetected: _hasBlinked,
-          smileDetected: _hasSmiled
+          smileDetected: _hasSmiled,
         );
       }
 
       final face = faces.first;
 
       // 12.3 Implement blink detection logic
-      if (face.leftEyeOpenProbability != null && face.rightEyeOpenProbability != null) {
+      if (face.leftEyeOpenProbability != null &&
+          face.rightEyeOpenProbability != null) {
         final leftEyeOpen = face.leftEyeOpenProbability!;
         final rightEyeOpen = face.rightEyeOpenProbability!;
-        
+
         // If both eyes are closed (probability < 0.2), consider it a blink
         if (leftEyeOpen < 0.2 && rightEyeOpen < 0.2) {
           _hasBlinked = true;
@@ -109,27 +106,26 @@ class LivenessDetectionService {
       // Check against current challenge
       if (currentChallenge == LivenessChallenge.smile && _hasSmiled) {
         return LivenessDetectionResult(
-          isLive: true, 
+          isLive: true,
           message: "Challenge passed",
           blinkDetected: _hasBlinked,
-          smileDetected: _hasSmiled
+          smileDetected: _hasSmiled,
         );
       } else if (currentChallenge == LivenessChallenge.blink && _hasBlinked) {
-         return LivenessDetectionResult(
-          isLive: true, 
+        return LivenessDetectionResult(
+          isLive: true,
           message: "Challenge passed",
           blinkDetected: _hasBlinked,
-          smileDetected: _hasSmiled
+          smileDetected: _hasSmiled,
         );
       }
-      
+
       return LivenessDetectionResult(
-        isLive: false, 
+        isLive: false,
         message: _getChallengeInstruction(),
         blinkDetected: _hasBlinked,
-        smileDetected: _hasSmiled
+        smileDetected: _hasSmiled,
       );
-
     } catch (e) {
       return null;
     } finally {

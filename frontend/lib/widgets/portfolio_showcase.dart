@@ -126,7 +126,9 @@ class PortfolioShowcaseCard extends StatelessWidget {
                           width: 46,
                           height: 46,
                           decoration: BoxDecoration(
-                            color: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                            color:
+                                item.imageUrl != null &&
+                                    item.imageUrl!.isNotEmpty
                                 ? Colors.black.withValues(alpha: 0.3)
                                 : Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(14),

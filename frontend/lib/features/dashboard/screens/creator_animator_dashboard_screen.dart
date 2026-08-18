@@ -29,8 +29,10 @@ class CreatorAnimatorDashboardScreen extends StatefulWidget {
 
 class _CreatorAnimatorDashboardScreenState
     extends State<CreatorAnimatorDashboardScreen> {
-  final Color _accentColor =
-      SubRoleThemeEngine.getAccentColor('creator', 'animator');
+  final Color _accentColor = SubRoleThemeEngine.getAccentColor(
+    'creator',
+    'animator',
+  );
   bool _isLoading = true;
   List<Map<String, String>> _realtimeStats = [];
 
@@ -42,7 +44,10 @@ class _CreatorAnimatorDashboardScreenState
 
   Future<void> _fetchRealtimeData() async {
     try {
-      final stats = await DashboardService.getStats(subRole: 'animator', roleType: 'creator');
+      final stats = await DashboardService.getStats(
+        subRole: 'animator',
+        roleType: 'creator',
+      );
       if (mounted) {
         setState(() {
           _realtimeStats = stats;
@@ -63,10 +68,12 @@ class _CreatorAnimatorDashboardScreenState
 
     return Scaffold(
       appBar: _buildAppBar(isDark),
-      body: RefreshIndicator(
-        onRefresh: _fetchRealtimeData,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _fetchRealtimeData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
             isDesktop ? 24 : 16,
             16,
@@ -142,7 +149,9 @@ class _CreatorAnimatorDashboardScreenState
               child: Container(
                 height: 44,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1A1830) : Colors.grey.shade100,
+                  color: isDark
+                      ? const Color(0xFF1A1830)
+                      : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
@@ -161,7 +170,9 @@ class _CreatorAnimatorDashboardScreenState
                       'Cari tender animasi 3D, proyek motion graphic...',
                       style: TextStyle(
                         fontSize: 13,
-                        color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                        color: isDark
+                            ? AppTheme.textMuted
+                            : Colors.grey.shade500,
                       ),
                     ),
                   ],
@@ -172,12 +183,20 @@ class _CreatorAnimatorDashboardScreenState
           const SizedBox(width: 12),
           ListenableBuilder(
             listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(Icons.notifications_none_outlined, BadgeService().unreadNotificationsText, isDark),
+            builder: (_, _) => _buildAppBarBadge(
+              Icons.notifications_none_outlined,
+              BadgeService().unreadNotificationsText,
+              isDark,
+            ),
           ),
           const SizedBox(width: 4),
           ListenableBuilder(
             listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(Icons.chat_bubble_outline, BadgeService().unreadMessagesText, isDark),
+            builder: (_, _) => _buildAppBarBadge(
+              Icons.chat_bubble_outline,
+              BadgeService().unreadMessagesText,
+              isDark,
+            ),
           ),
           const SizedBox(width: 8),
           GestureDetector(
@@ -187,7 +206,8 @@ class _CreatorAnimatorDashboardScreenState
                 builder: (_) => ProfileScreen(
                   user: widget.user,
                   onUserUpdated: widget.onUserUpdated,
-                  onLogout: () => Navigator.of(context).popUntil((r) => r.isFirst),
+                  onLogout: () =>
+                      Navigator.of(context).popUntil((r) => r.isFirst),
                 ),
               ),
             ),
@@ -214,7 +234,9 @@ class _CreatorAnimatorDashboardScreenState
     return ListenableBuilder(
       listenable: BadgeService(),
       builder: (context, _) {
-        final badgeCount = isNotification ? BadgeService().unreadNotificationsText : BadgeService().unreadMessagesText;
+        final badgeCount = isNotification
+            ? BadgeService().unreadNotificationsText
+            : BadgeService().unreadMessagesText;
         return GestureDetector(
           onTap: () {
             Navigator.push(
@@ -235,7 +257,11 @@ class _CreatorAnimatorDashboardScreenState
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(icon, size: 20, color: isDark ? Colors.white : Colors.black87),
+                Icon(
+                  icon,
+                  size: 20,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
                 if (badgeCount.isNotEmpty && badgeCount != '0')
                   Positioned(
                     right: -4,
@@ -248,7 +274,11 @@ class _CreatorAnimatorDashboardScreenState
                       ),
                       child: Text(
                         badgeCount,
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -293,7 +323,11 @@ class _CreatorAnimatorDashboardScreenState
             ),
             child: const Text(
               'Studio Animasi 3D & VFX',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -326,7 +360,8 @@ class _CreatorAnimatorDashboardScreenState
                     builder: (_) => ProfileScreen(
                       user: widget.user,
                       onUserUpdated: widget.onUserUpdated,
-                      onLogout: () => Navigator.of(context).popUntil((r) => r.isFirst),
+                      onLogout: () =>
+                          Navigator.of(context).popUntil((r) => r.isFirst),
                     ),
                   ),
                 ),
@@ -334,11 +369,19 @@ class _CreatorAnimatorDashboardScreenState
                   backgroundColor: Colors.white,
                   foregroundColor: _accentColor,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 icon: const Icon(Icons.person_outline, size: 18),
-                label: const Text('Lengkapi Profil', style: TextStyle(fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'Lengkapi Profil',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
               OutlinedButton.icon(
                 onPressed: () => Navigator.push(
@@ -350,8 +393,13 @@ class _CreatorAnimatorDashboardScreenState
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white,
                   side: const BorderSide(color: Colors.white70, width: 1.5),
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 icon: const Icon(Icons.add_task_rounded, size: 18),
                 label: const Text('Cari Proyek Animasi'),
@@ -373,10 +421,22 @@ class _CreatorAnimatorDashboardScreenState
             };
           }).toList()
         : [
-            {'title': 'Proyek 3D Aktif', 'val': '2 Proyek', 'icon': Icons.view_in_ar},
-            {'title': 'Status Render', 'val': '85% Frame Complete', 'icon': Icons.tune},
+            {
+              'title': 'Proyek 3D Aktif',
+              'val': '2 Proyek',
+              'icon': Icons.view_in_ar,
+            },
+            {
+              'title': 'Status Render',
+              'val': '85% Frame Complete',
+              'icon': Icons.tune,
+            },
             {'title': 'Rating Klien', 'val': '4.95 / 5.0', 'icon': Icons.star},
-            {'title': 'Pendapatan Escrow', 'val': 'Rp 18.500.000', 'icon': Icons.account_balance_wallet},
+            {
+              'title': 'Pendapatan Escrow',
+              'val': 'Rp 18.500.000',
+              'icon': Icons.account_balance_wallet,
+            },
           ];
 
     return LayoutBuilder(
@@ -411,16 +471,39 @@ class _CreatorAnimatorDashboardScreenState
                       Expanded(
                         child: Text(
                           m['title'] as String,
-                          style: TextStyle(fontSize: 11, color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark
+                                ? AppTheme.textMuted
+                                : AppTheme.textMutedLight,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      Icon((m['icon'] as IconData?) ?? Icons.image_outlined, color: _accentColor, size: 20),
+                      Icon(
+                        (m['icon'] as IconData?) ?? Icons.image_outlined,
+                        color: _accentColor,
+                        size: 20,
+                      ),
                     ],
                   ),
-                  Text(m['val'] as String, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: isDark ? Colors.white : AppTheme.textDark)),
-                  Text('3D Engine Active', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _accentColor)),
+                  Text(
+                    m['val'] as String,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : AppTheme.textDark,
+                    ),
+                  ),
+                  Text(
+                    '3D Engine Active',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: _accentColor,
+                    ),
+                  ),
                 ],
               ),
             );
@@ -432,8 +515,18 @@ class _CreatorAnimatorDashboardScreenState
 
   Widget _buildRenderQueueSection(bool isDark) {
     final jobs = [
-      {'title': 'Animasi Mascot 3D Iklan Minuman', 'client': 'PT Nusantara Beverage', 'milestone': 'Stage 2: Rigging & Lighting', 'progress': 0.75},
-      {'title': 'Motion Graphic Explainer App', 'client': 'Fintech Go', 'milestone': 'Stage 3: Render 4K Delivery', 'progress': 0.95},
+      {
+        'title': 'Animasi Mascot 3D Iklan Minuman',
+        'client': 'PT Nusantara Beverage',
+        'milestone': 'Stage 2: Rigging & Lighting',
+        'progress': 0.75,
+      },
+      {
+        'title': 'Motion Graphic Explainer App',
+        'client': 'Fintech Go',
+        'milestone': 'Stage 3: Render 4K Delivery',
+        'progress': 0.95,
+      },
     ];
 
     return Column(
@@ -457,7 +550,9 @@ class _CreatorAnimatorDashboardScreenState
               decoration: BoxDecoration(
                 color: isDark ? AppTheme.cardBg : Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+                border: Border.all(
+                  color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -465,12 +560,34 @@ class _CreatorAnimatorDashboardScreenState
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(j['title'] as String, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textDark)),
-                      Text('${(prog * 100).toInt()}%', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _accentColor)),
+                      Text(
+                        j['title'] as String,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : AppTheme.textDark,
+                        ),
+                      ),
+                      Text(
+                        '${(prog * 100).toInt()}%',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: _accentColor,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text('Klien: ${j['client']} • ${j['milestone']}', style: TextStyle(fontSize: 11, color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight)),
+                  Text(
+                    'Klien: ${j['client']} • ${j['milestone']}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark
+                          ? AppTheme.textMuted
+                          : AppTheme.textMutedLight,
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(6),
@@ -508,12 +625,21 @@ class _CreatorAnimatorDashboardScreenState
               children: [
                 Text(
                   'Galeri Showreel & File 3D (.FBX/.GLTF)',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppTheme.textDark),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : AppTheme.textDark,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Tampilkan aset 3D interaktif yang dapat diputar 360° langsung di browser klien Anda.',
-                  style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? AppTheme.textMuted
+                        : AppTheme.textMutedLight,
+                  ),
                 ),
               ],
             ),
@@ -524,7 +650,9 @@ class _CreatorAnimatorDashboardScreenState
             style: ElevatedButton.styleFrom(
               backgroundColor: _accentColor,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             child: const Text('Kelola Showreel'),
           ),

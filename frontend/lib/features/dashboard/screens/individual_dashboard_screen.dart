@@ -10,7 +10,6 @@ import '../../../screens/buat_kebutuhan_screen.dart';
 import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
 import '../../../screens/peluang_proyek_screen.dart';
-import '../../../screens/profile_screen.dart';
 
 class IndividualDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -23,7 +22,8 @@ class IndividualDashboardScreen extends StatefulWidget {
   });
 
   @override
-  State<IndividualDashboardScreen> createState() => _IndividualDashboardScreenState();
+  State<IndividualDashboardScreen> createState() =>
+      _IndividualDashboardScreenState();
 }
 
 class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
@@ -84,7 +84,9 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
               child: Container(
                 height: 44,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1A1830) : Colors.grey.shade100,
+                  color: isDark
+                      ? const Color(0xFF1A1830)
+                      : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
@@ -104,7 +106,9 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
                         'Cari kreator, layanan, atau event...',
                         style: TextStyle(
                           fontSize: 13,
-                          color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                          color: isDark
+                              ? AppTheme.textMuted
+                              : Colors.grey.shade500,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -116,12 +120,20 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
           ),
           ListenableBuilder(
             listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(Icons.notifications_none_outlined, BadgeService().unreadNotificationsText, isDark),
+            builder: (_, _) => _buildAppBarBadge(
+              Icons.notifications_none_outlined,
+              BadgeService().unreadNotificationsText,
+              isDark,
+            ),
           ),
           const SizedBox(width: 4),
           ListenableBuilder(
             listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(Icons.chat_bubble_outline, BadgeService().unreadMessagesText, isDark),
+            builder: (_, _) => _buildAppBarBadge(
+              Icons.chat_bubble_outline,
+              BadgeService().unreadMessagesText,
+              isDark,
+            ),
           ),
           const SizedBox(width: 20),
           IconButton(
@@ -131,8 +143,11 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
               size: 20,
             ),
             onPressed: () {
-              final box = _themeBtnKey.currentContext?.findRenderObject() as RenderBox?;
-              final origin = box != null ? box.localToGlobal(box.size.center(Offset.zero)) : const Offset(0, 0);
+              final box =
+                  _themeBtnKey.currentContext?.findRenderObject() as RenderBox?;
+              final origin = box != null
+                  ? box.localToGlobal(box.size.center(Offset.zero))
+                  : const Offset(0, 0);
               ThemeTransitionService.animateToggle(
                 origin: origin,
                 toDark: !isDark,
@@ -153,7 +168,10 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
                 children: [
                   Text(
                     widget.user.name,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Text(
                     'Individual',
@@ -181,7 +199,10 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
             children: [
               Text(
                 'Selamat datang, ${widget.user.name}! 👋',
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -206,7 +227,9 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
             backgroundColor: _indivPurple,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ],
@@ -215,12 +238,48 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
 
   Widget _buildMetricCards(bool isDark) {
     final metrics = [
-      {'label': 'Permintaan Aktif', 'value': '3', 'sub': 'Sedang diproses', 'icon': Icons.folder_open, 'color': _indivLight},
-      {'label': 'Proyek / Event', 'value': '5', 'sub': 'Berlangsung', 'icon': Icons.event, 'color': const Color(0xFF10B981)},
-      {'label': 'Selesai', 'value': '12', 'sub': 'Proyek selesai', 'icon': Icons.check_circle_outline, 'color': const Color(0xFF3B82F6)},
-      {'label': 'Total Pengeluaran', 'value': 'Rp 8.750.000', 'sub': 'Semua transaksi', 'icon': Icons.account_balance_wallet_outlined, 'color': const Color(0xFFF59E0B)},
-      {'label': 'Favorit', 'value': '18', 'sub': 'Kreator tersimpan', 'icon': Icons.favorite_border, 'color': const Color(0xFFEC4899)},
-      {'label': 'Poin Kreavana', 'value': '650', 'sub': 'Gold Member', 'icon': Icons.stars, 'color': Colors.amber.shade600},
+      {
+        'label': 'Permintaan Aktif',
+        'value': '3',
+        'sub': 'Sedang diproses',
+        'icon': Icons.folder_open,
+        'color': _indivLight,
+      },
+      {
+        'label': 'Proyek / Event',
+        'value': '5',
+        'sub': 'Berlangsung',
+        'icon': Icons.event,
+        'color': const Color(0xFF10B981),
+      },
+      {
+        'label': 'Selesai',
+        'value': '12',
+        'sub': 'Proyek selesai',
+        'icon': Icons.check_circle_outline,
+        'color': const Color(0xFF3B82F6),
+      },
+      {
+        'label': 'Total Pengeluaran',
+        'value': 'Rp 8.750.000',
+        'sub': 'Semua transaksi',
+        'icon': Icons.account_balance_wallet_outlined,
+        'color': const Color(0xFFF59E0B),
+      },
+      {
+        'label': 'Favorit',
+        'value': '18',
+        'sub': 'Kreator tersimpan',
+        'icon': Icons.favorite_border,
+        'color': const Color(0xFFEC4899),
+      },
+      {
+        'label': 'Poin Kreavana',
+        'value': '650',
+        'sub': 'Gold Member',
+        'icon': Icons.stars,
+        'color': Colors.amber.shade600,
+      },
     ];
 
     return Row(
@@ -233,7 +292,9 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
             decoration: BoxDecoration(
               color: isDark ? AppTheme.cardBg : Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -245,7 +306,11 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
                     color: (m['color'] as Color).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon((m['icon'] as IconData?) ?? Icons.image_outlined, color: m['color'] as Color, size: 18),
+                  child: Icon(
+                    (m['icon'] as IconData?) ?? Icons.image_outlined,
+                    color: m['color'] as Color,
+                    size: 18,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -256,7 +321,10 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
                 const SizedBox(height: 4),
                 Text(
                   m['value'] as String,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -302,12 +370,17 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Ringkasan Aktivitas', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          const Text(
+            'Ringkasan Aktivitas',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 20),
           SizedBox(
             height: 200,
@@ -357,12 +430,17 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Kategori Layanan Favorit', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          const Text(
+            'Kategori Layanan Favorit',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 20),
           SizedBox(
             height: 140,
@@ -371,11 +449,36 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
                 sectionsSpace: 2,
                 centerSpaceRadius: 35,
                 sections: [
-                  PieChartSectionData(value: 40, color: _indivPurple, radius: 18, showTitle: false),
-                  PieChartSectionData(value: 25, color: const Color(0xFF3B82F6), radius: 18, showTitle: false),
-                  PieChartSectionData(value: 15, color: const Color(0xFF10B981), radius: 18, showTitle: false),
-                  PieChartSectionData(value: 10, color: const Color(0xFFF59E0B), radius: 18, showTitle: false),
-                  PieChartSectionData(value: 10, color: Colors.grey, radius: 18, showTitle: false),
+                  PieChartSectionData(
+                    value: 40,
+                    color: _indivPurple,
+                    radius: 18,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: 25,
+                    color: const Color(0xFF3B82F6),
+                    radius: 18,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: 15,
+                    color: const Color(0xFF10B981),
+                    radius: 18,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: 10,
+                    color: const Color(0xFFF59E0B),
+                    radius: 18,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: 10,
+                    color: Colors.grey,
+                    radius: 18,
+                    showTitle: false,
+                  ),
                 ],
               ),
             ),
@@ -395,10 +498,17 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
           const SizedBox(width: 8),
           Expanded(child: Text(name, style: const TextStyle(fontSize: 11))),
-          Text(val, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+          Text(
+            val,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );
@@ -406,10 +516,30 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
 
   Widget _buildRecentRequestsCard(bool isDark) {
     final requests = [
-      {'title': 'Fotografi Pernikahan', 'date': '18 Mei 2025', 'price': 'Rp 3.500.000', 'status': 'Sedang Diproses'},
-      {'title': 'Dekorasi Ulang Tahun', 'date': '10 Mei 2025', 'price': 'Rp 1.250.000', 'status': 'Menunggu Penawaran'},
-      {'title': 'Foto Wisuda', 'date': '3 Mei 2025', 'price': 'Rp 800.000', 'status': 'Selesai'},
-      {'title': 'Desain Konten Instagram', 'date': '28 Apr 2025', 'price': 'Rp 450.000', 'status': 'Selesai'},
+      {
+        'title': 'Fotografi Pernikahan',
+        'date': '18 Mei 2025',
+        'price': 'Rp 3.500.000',
+        'status': 'Sedang Diproses',
+      },
+      {
+        'title': 'Dekorasi Ulang Tahun',
+        'date': '10 Mei 2025',
+        'price': 'Rp 1.250.000',
+        'status': 'Menunggu Penawaran',
+      },
+      {
+        'title': 'Foto Wisuda',
+        'date': '3 Mei 2025',
+        'price': 'Rp 800.000',
+        'status': 'Selesai',
+      },
+      {
+        'title': 'Desain Konten Instagram',
+        'date': '28 Apr 2025',
+        'price': 'Rp 450.000',
+        'status': 'Selesai',
+      },
     ];
 
     return Container(
@@ -417,7 +547,9 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -425,33 +557,73 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Permintaan Terbaru', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-              TextButton(onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => PeluangProyekScreen(user: widget.user))); }, child: const Text('Lihat Semua', style: TextStyle(fontSize: 12))),
+              const Text(
+                'Permintaan Terbaru',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PeluangProyekScreen(user: widget.user),
+                    ),
+                  );
+                },
+                child: const Text(
+                  'Lihat Semua',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          ...requests.map((r) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: _indivPurple.withValues(alpha: 0.1),
-                      child: const Icon(Icons.camera_alt_outlined, color: _indivPurple, size: 18),
+          ...requests.map(
+            (r) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: _indivPurple.withValues(alpha: 0.1),
+                    child: const Icon(
+                      Icons.camera_alt_outlined,
+                      color: _indivPurple,
+                      size: 18,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(r['title']!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          Text(r['date']!, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                        ],
-                      ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          r['title']!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          r['date']!,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(r['price']!, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              )),
+                  ),
+                  Text(
+                    r['price']!,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -488,17 +660,31 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Aktivitas Terbaru', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          const Text(
+            'Aktivitas Terbaru',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
-          _buildActItem('Permintaan "Fotografi Pernikahan" diperbarui', '2 jam lalu'),
+          _buildActItem(
+            'Permintaan "Fotografi Pernikahan" diperbarui',
+            '2 jam lalu',
+          ),
           _buildActItem('Pembayaran Rp 1.250.000 berhasil', '5 jam lalu'),
-          _buildActItem('Kreasi Studio menerima permintaan Anda', '1 hari lalu'),
-          _buildActItem('Proyek "Desain Konten Instagram" selesai', '2 hari lalu'),
+          _buildActItem(
+            'Kreasi Studio menerima permintaan Anda',
+            '1 hari lalu',
+          ),
+          _buildActItem(
+            'Proyek "Desain Konten Instagram" selesai',
+            '2 hari lalu',
+          ),
           _buildActItem('Dapatkan 50 poin dari ulasan kreator', '3 hari lalu'),
         ],
       ),
@@ -513,7 +699,11 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
           CircleAvatar(
             radius: 14,
             backgroundColor: _indivPurple.withValues(alpha: 0.1),
-            child: const Icon(Icons.notifications_active_outlined, color: _indivPurple, size: 14),
+            child: const Icon(
+              Icons.notifications_active_outlined,
+              color: _indivPurple,
+              size: 14,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(child: Text(title, style: const TextStyle(fontSize: 12))),
@@ -528,7 +718,11 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
       {'name': 'Kreasi Studio', 'cat': 'Foto & Video', 'rating': '4.9'},
       {'name': 'DesignLab', 'cat': 'Desain Grafis & Konten', 'rating': '4.8'},
       {'name': 'EventPro Organizer', 'cat': 'Event Organizer', 'rating': '4.8'},
-      {'name': 'DecorLine Studio', 'cat': 'Dekorasi & Stylist', 'rating': '4.7'},
+      {
+        'name': 'DecorLine Studio',
+        'cat': 'Dekorasi & Stylist',
+        'rating': '4.7',
+      },
       {'name': 'Makeup Artist Pro', 'cat': 'Make Up & Beauty', 'rating': '4.7'},
     ];
 
@@ -537,37 +731,68 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Kreator Favorit Saya', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          const Text(
+            'Kreator Favorit Saya',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
-          ...creators.map((c) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundColor: _indivPurple.withValues(alpha: 0.1),
-                      child: Text(c['name']![0], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(c['name']!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          Text(c['cat']!, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                        ],
+          ...creators.map(
+            (c) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundColor: _indivPurple.withValues(alpha: 0.1),
+                    child: Text(
+                      c['name']![0],
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
                       ),
                     ),
-                    Icon(Icons.star, size: 14, color: Colors.amber.shade600),
-                    Text(c['rating']!, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              )),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          c['name']!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          c['cat']!,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.star, size: 14, color: Colors.amber.shade600),
+                  Text(
+                    c['rating']!,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -587,7 +812,10 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Jadi Member Premium', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const Text(
+                'Jadi Member Premium',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
               const SizedBox(height: 4),
               const Text(
                 'Nikmati keuntungan eksklusif, diskon spesial, dan prioritas layanan.',
@@ -597,7 +825,10 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
               ElevatedButton(
                 onPressed: () => UpgradePlanModal.show(context),
                 style: ElevatedButton.styleFrom(backgroundColor: _indivPurple),
-                child: const Text('Upgrade Sekarang', style: TextStyle(color: Colors.white, fontSize: 11)),
+                child: const Text(
+                  'Upgrade Sekarang',
+                  style: TextStyle(color: Colors.white, fontSize: 11),
+                ),
               ),
             ],
           ),
@@ -611,7 +842,9 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
     return ListenableBuilder(
       listenable: BadgeService(),
       builder: (context, _) {
-        final badgeCount = isNotification ? BadgeService().unreadNotificationsText : BadgeService().unreadMessagesText;
+        final badgeCount = isNotification
+            ? BadgeService().unreadNotificationsText
+            : BadgeService().unreadMessagesText;
         return GestureDetector(
           onTap: () {
             Navigator.push(
@@ -632,7 +865,11 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(icon, size: 20, color: isDark ? Colors.white : Colors.black87),
+                Icon(
+                  icon,
+                  size: 20,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
                 if (badgeCount.isNotEmpty && badgeCount != '0')
                   Positioned(
                     right: -4,
@@ -645,7 +882,11 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
                       ),
                       child: Text(
                         badgeCount,
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),

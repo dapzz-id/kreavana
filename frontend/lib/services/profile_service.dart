@@ -23,11 +23,7 @@ class ActionCommandResult {
   final String? message;
   final UserModel? user;
 
-  const ActionCommandResult({
-    required this.success,
-    this.message,
-    this.user,
-  });
+  const ActionCommandResult({required this.success, this.message, this.user});
 }
 
 class ProfileService {
@@ -50,7 +46,8 @@ class ProfileService {
       await AuthService.saveUserData(userData);
 
       CreatorApplication? app;
-      if (applicationResponse['status'] == true && applicationResponse['data'] != null) {
+      if (applicationResponse['status'] == true &&
+          applicationResponse['data'] != null) {
         app = CreatorApplication.fromJson(applicationResponse['data']);
       }
 
@@ -87,7 +84,8 @@ class ProfileService {
     final response = await ApiService.put('profile', body);
 
     if (response['status'] == true && response['data'] != null) {
-      final userData = response['data'] is Map && response['data']['user'] != null
+      final userData =
+          response['data'] is Map && response['data']['user'] != null
           ? response['data']['user'] as Map<String, dynamic>
           : response['data'] as Map<String, dynamic>;
       final user = UserModel.fromJson(userData);

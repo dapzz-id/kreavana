@@ -40,7 +40,9 @@ class _TopUpDetailsScreenState extends State<TopUpDetailsScreen> {
 
   Future<void> _handleSimulatePay() async {
     setState(() => _isLoading = true);
-    final result = await WalletService.simulatePayment(widget.transaction.referenceNumber);
+    final result = await WalletService.simulatePayment(
+      widget.transaction.referenceNumber,
+    );
     if (mounted) {
       setState(() => _isLoading = false);
       if (result['success'] == true) {
@@ -87,7 +89,9 @@ class _TopUpDetailsScreenState extends State<TopUpDetailsScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Gagal memproses simulasi pembayaran.'),
+            content: Text(
+              result['message'] ?? 'Gagal memproses simulasi pembayaran.',
+            ),
             backgroundColor: Colors.red.shade700,
           ),
         );
@@ -146,7 +150,11 @@ class _TopUpDetailsScreenState extends State<TopUpDetailsScreen> {
                   const SizedBox(height: 12),
                   const Divider(),
                   const SizedBox(height: 12),
-                  _buildRowInfo('Metode Pembayaran', '${tx.typeLabel} (${tx.paymentProvider!})', theme),
+                  _buildRowInfo(
+                    'Metode Pembayaran',
+                    '${tx.typeLabel} (${tx.paymentProvider!})',
+                    theme,
+                  ),
                   const SizedBox(height: 8),
                   _buildRowInfo('Nomor Referensi', tx.referenceNumber, theme),
                 ],
@@ -183,9 +191,14 @@ class _TopUpDetailsScreenState extends State<TopUpDetailsScreen> {
                     ),
                     const SizedBox(height: 16),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: 0.05,
+                        ),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -210,7 +223,11 @@ class _TopUpDetailsScreenState extends State<TopUpDetailsScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    _buildRowInfo('Nama Rekening', details['account_name'] ?? '', theme),
+                    _buildRowInfo(
+                      'Nama Rekening',
+                      details['account_name'] ?? '',
+                      theme,
+                    ),
                   ]
                   // QRIS & E-WALLET FLOW
                   else ...[
@@ -230,11 +247,12 @@ class _TopUpDetailsScreenState extends State<TopUpDetailsScreen> {
                             details['qr_url'],
                             width: 180,
                             height: 180,
-                            errorBuilder: (context, error, stackTrace) => const Icon(
-                              Icons.qr_code_2_rounded,
-                              size: 150,
-                              color: Colors.black,
-                            ),
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(
+                                  Icons.qr_code_2_rounded,
+                                  size: 150,
+                                  color: Colors.black,
+                                ),
                           ),
                         ),
                       ),
@@ -258,9 +276,25 @@ class _TopUpDetailsScreenState extends State<TopUpDetailsScreen> {
             ),
             const SizedBox(height: 12),
             _buildStep('1', 'Buka aplikasi e-wallet / banking Anda.', theme),
-            _buildStep('2', tx.paymentMethod == 'bank_transfer' ? 'Pilih menu Transfer ke Virtual Account.' : 'Pilih menu Scan QRIS / Unggah Kode QR.', theme),
-            _buildStep('3', tx.paymentMethod == 'bank_transfer' ? 'Masukkan nomor VA di atas.' : 'Arahkan kamera ke QR Code.', theme),
-            _buildStep('4', 'Detail transaksi akan muncul, pastikan nominal sesuai.', theme),
+            _buildStep(
+              '2',
+              tx.paymentMethod == 'bank_transfer'
+                  ? 'Pilih menu Transfer ke Virtual Account.'
+                  : 'Pilih menu Scan QRIS / Unggah Kode QR.',
+              theme,
+            ),
+            _buildStep(
+              '3',
+              tx.paymentMethod == 'bank_transfer'
+                  ? 'Masukkan nomor VA di atas.'
+                  : 'Arahkan kamera ke QR Code.',
+              theme,
+            ),
+            _buildStep(
+              '4',
+              'Detail transaksi akan muncul, pastikan nominal sesuai.',
+              theme,
+            ),
             _buildStep('5', 'Konfirmasi dan masukkan PIN Anda.', theme),
 
             const SizedBox(height: 40),
@@ -339,10 +373,7 @@ class _TopUpDetailsScreenState extends State<TopUpDetailsScreen> {
         ),
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
         ),
       ],
     );
@@ -370,12 +401,7 @@ class _TopUpDetailsScreenState extends State<TopUpDetailsScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 13),
-            ),
-          ),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
         ],
       ),
     );

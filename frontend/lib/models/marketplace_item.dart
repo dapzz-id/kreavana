@@ -12,6 +12,7 @@ class MarketplaceItem {
   final String? imageUrl;
   final bool isFeatured;
   final bool isActive;
+  final String status;
   final bool isFollowing;
   final bool hasPurchased;
   final String? createdAt;
@@ -33,6 +34,7 @@ class MarketplaceItem {
     this.imageUrl,
     this.isFeatured = false,
     required this.isActive,
+    this.status = 'published',
     this.isFollowing = false,
     this.hasPurchased = false,
     this.createdAt,
@@ -49,22 +51,31 @@ class MarketplaceItem {
       description: json['description'],
       category: json['category'] ?? 'Lainnya',
       type: json['type'] ?? 'free',
-      price: (json['price'] != null) ? double.tryParse(json['price'].toString()) ?? 0 : 0,
+      price: (json['price'] != null)
+          ? double.tryParse(json['price'].toString()) ?? 0
+          : 0,
       rating: double.tryParse(json['rating'].toString()) ?? 0,
       reviewCount: json['review_count'] ?? 0,
       orderCount: json['order_count'] ?? 0,
       imageUrl: json['image_url'],
       isFeatured: json['is_featured'] ?? false,
       isActive: json['is_active'] ?? true,
+      status: json['status'] ?? 'published',
       isFollowing: json['is_following'] ?? false,
       hasPurchased: json['has_purchased'] ?? false,
       createdAt: json['created_at'],
-      creator: json['user'] != null ? MarketplaceCreator.fromJson(json['user']) : null,
+      creator: json['user'] != null
+          ? MarketplaceCreator.fromJson(json['user'])
+          : null,
       reviews: json['reviews'] != null
-          ? (json['reviews'] as List).map((r) => MarketplaceReview.fromJson(r)).toList()
+          ? (json['reviews'] as List)
+                .map((r) => MarketplaceReview.fromJson(r))
+                .toList()
           : null,
       media: json['media'] != null
-          ? (json['media'] as List).map((e) => MarketplaceMedia.fromJson(e)).toList()
+          ? (json['media'] as List)
+                .map((e) => MarketplaceMedia.fromJson(e))
+                .toList()
           : null,
     );
   }
@@ -132,7 +143,11 @@ class MarketplaceCreator {
       email: json['email'],
       isOnline: json['is_online'] == true || json['isOnline'] == true,
       isTyping: json['is_typing'] == true || json['isTyping'] == true,
-      lastOnline: json['last_online'] ?? json['lastOnline'] ?? json['last_seen'] ?? json['lastSeen'],
+      lastOnline:
+          json['last_online'] ??
+          json['lastOnline'] ??
+          json['last_seen'] ??
+          json['lastSeen'],
     );
   }
 }
@@ -157,7 +172,9 @@ class MarketplaceReview {
       id: json['id'].toString(),
       comment: json['comment'],
       rating: json['rating'] ?? 0,
-      user: json['user'] != null ? MarketplaceCreator.fromJson(json['user']) : null,
+      user: json['user'] != null
+          ? MarketplaceCreator.fromJson(json['user'])
+          : null,
       createdAt: json['created_at'],
     );
   }

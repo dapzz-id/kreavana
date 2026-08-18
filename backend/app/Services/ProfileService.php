@@ -60,6 +60,7 @@ class ProfileService extends BaseService
         if (isset($data['name'])) $user->name = $data['name'];
         if (isset($data['phone'])) $user->phone = $data['phone'];
         if (isset($data['sub_role'])) $user->sub_role = $data['sub_role'];
+        if (array_key_exists('max_work_capacity', $data)) $user->max_work_capacity = $data['max_work_capacity'];
 
         if (isset($data['avatar_url'])) {
             $avatarUrl = $data['avatar_url'];

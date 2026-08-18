@@ -44,10 +44,11 @@ class ProfileController extends Controller
                 'name' => $user->name,
                 'username' => $user->username,
                 'email' => $user->email,
-                'role' => $user->role,
+                'role' => $user->role->value,
                 'sub_role' => $user->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user->sub_role,
                 'avatar_url' => $user->avatar_url,
                 'is_creator_approved' => (bool) $user->is_creator_approved,
+                'max_work_capacity' => $user->max_work_capacity,
                 'balance' => $user->balance,
                 'followers_count' => $followRepo->getFollowersCount($user->id),
                 'following_count' => $followRepo->getFollowingCount($user->id),
@@ -62,8 +63,8 @@ class ProfileController extends Controller
         return response()->json([
             'status' => true,
             'data' => [
-                'role' => $user->role,
-                'permissions' => config('permissions.' . $user->role, []),
+                'role' => $user->role->value,
+                'permissions' => config('permissions.' . $user->role->value, []),
             ],
         ]);
     }

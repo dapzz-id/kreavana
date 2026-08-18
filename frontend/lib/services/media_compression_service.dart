@@ -20,19 +20,21 @@ class MediaAttachment {
 
   String get fileSizeFormatted {
     if (fileSizeBytes < 1024) return '$fileSizeBytes B';
-    if (fileSizeBytes < 1024 * 1024) return '${(fileSizeBytes / 1024).toStringAsFixed(1)} KB';
+    if (fileSizeBytes < 1024 * 1024)
+      return '${(fileSizeBytes / 1024).toStringAsFixed(1)} KB';
     return '${(fileSizeBytes / (1024 * 1024)).toStringAsFixed(2)} MB';
   }
 
   Map<String, dynamic> toJson() => {
-        'type': type,
-        'fileName': fileName,
-        'fileSizeBytes': fileSizeBytes,
-        'base64Data': base64Data,
-        'mimeType': mimeType,
-      };
+    'type': type,
+    'fileName': fileName,
+    'fileSizeBytes': fileSizeBytes,
+    'base64Data': base64Data,
+    'mimeType': mimeType,
+  };
 
-  factory MediaAttachment.fromJson(Map<String, dynamic> json) => MediaAttachment(
+  factory MediaAttachment.fromJson(Map<String, dynamic> json) =>
+      MediaAttachment(
         type: json['type'] ?? 'document',
         fileName: json['fileName'] ?? 'file',
         fileSizeBytes: json['fileSizeBytes'] ?? 0,
@@ -44,7 +46,9 @@ class MediaAttachment {
 class MediaCompressionService {
   /// Picks and compresses an image/media file on frontend before sending.
   /// Preserves high quality (target ~80-85% visual quality) while reducing size.
-  static Future<MediaAttachment?> pickAndCompressMedia(FileType fileType) async {
+  static Future<MediaAttachment?> pickAndCompressMedia(
+    FileType fileType,
+  ) async {
     try {
       final result = await FilePicker.pickFiles(
         type: fileType,

@@ -84,7 +84,9 @@ class CustomBottomNavBar extends StatelessWidget {
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? AppTheme.primaryPurple.withValues(alpha: isDark ? 0.2 : 0.15)
+                          ? AppTheme.primaryPurple.withValues(
+                              alpha: isDark ? 0.2 : 0.15,
+                            )
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -93,7 +95,9 @@ class CustomBottomNavBar extends StatelessWidget {
                       size: 22,
                       color: isSelected
                           ? AppTheme.primaryPurple
-                          : (isDark ? AppTheme.textMuted : Colors.grey.shade600),
+                          : (isDark
+                                ? AppTheme.textMuted
+                                : Colors.grey.shade600),
                     ),
                   ),
                   // Badge
@@ -102,12 +106,18 @@ class CustomBottomNavBar extends StatelessWidget {
                       top: -2,
                       right: -4,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
                         decoration: const BoxDecoration(
                           color: AppTheme.error,
                           shape: BoxShape.circle,
                         ),
-                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
                         child: Center(
                           child: Text(
                             item.badgeCount! > 9 ? '9+' : '${item.badgeCount}',

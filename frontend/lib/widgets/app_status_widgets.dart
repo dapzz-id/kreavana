@@ -39,10 +39,7 @@ class AppLoadingState extends StatelessWidget {
                 ),
               ),
             ],
-            if (child != null) ...[
-              const SizedBox(height: 24),
-              child!,
-            ],
+            if (child != null) ...[const SizedBox(height: 24), child!],
           ],
         ),
       ),
@@ -71,8 +68,7 @@ class SkeletonList extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardColor = isDark ? const Color(0xFF1E1E2C) : Colors.white;
-    final borderColor =
-        isDark ? const Color(0xFF2D2D3D) : Colors.grey.shade200;
+    final borderColor = isDark ? const Color(0xFF2D2D3D) : Colors.grey.shade200;
 
     return ListView.separated(
       physics: const NeverScrollableScrollPhysics(),
@@ -100,7 +96,11 @@ class SkeletonList extends StatelessWidget {
                 children: const [
                   SkeletonBox(width: 120, height: 14, borderRadius: 6),
                   SizedBox(height: 10),
-                  SkeletonBox(width: double.infinity, height: 12, borderRadius: 6),
+                  SkeletonBox(
+                    width: double.infinity,
+                    height: 12,
+                    borderRadius: 6,
+                  ),
                 ],
               ),
             ),
@@ -141,8 +141,11 @@ class AppErrorBanner extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.error_outline_rounded,
-                color: AppTheme.error, size: compact ? 18 : 22),
+            Icon(
+              Icons.error_outline_rounded,
+              color: AppTheme.error,
+              size: compact ? 18 : 22,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -161,7 +164,10 @@ class AppErrorBanner extends StatelessWidget {
                 onTap: onRetry,
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   child: Text(
                     'Coba Lagi',
                     style: TextStyle(
@@ -208,7 +214,9 @@ class LoadingOverlay extends StatelessWidget {
                 child: Center(
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 18),
+                      horizontal: 24,
+                      vertical: 18,
+                    ),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(16),

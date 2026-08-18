@@ -12,7 +12,11 @@ import 'package:go_router/go_router.dart';
 class EmailVerificationScreen extends StatefulWidget {
   final String email;
   final bool autoResend;
-  const EmailVerificationScreen({super.key, required this.email, this.autoResend = false});
+  const EmailVerificationScreen({
+    super.key,
+    required this.email,
+    this.autoResend = false,
+  });
 
   @override
   State<EmailVerificationScreen> createState() =>
@@ -21,8 +25,10 @@ class EmailVerificationScreen extends StatefulWidget {
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen>
     with SingleTickerProviderStateMixin {
-  final List<TextEditingController> _otpControllers =
-      List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _otpControllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _otpFocusNodes = List.generate(6, (_) => FocusNode());
 
   bool _isVerifying = false;
@@ -46,17 +52,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-    _fadeAnim = CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOut,
-    );
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.04),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOutCubic,
-    ));
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
+    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+        );
     _animController.forward();
 
     _startCountdown();
@@ -98,8 +98,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
     });
   }
 
-  String get _otpValue =>
-      _otpControllers.map((c) => c.text).join();
+  String get _otpValue => _otpControllers.map((c) => c.text).join();
 
   void _onOtpChanged(int index, String value) {
     if (_errorMessage != null) {
@@ -182,8 +181,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
             ),
             backgroundColor: AppTheme.success,
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
         context.go(AppRoutes.login);
@@ -237,19 +237,24 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
             content: const Text('Kode verifikasi baru telah dikirim.'),
             backgroundColor: AppTheme.success,
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
     } else {
       final errorCode = result['error_code']?.toString() ?? '';
       if (errorCode == 'verification_resend_rate_limited') {
-        setState(() =>
-            _errorMessage = 'Mohon tunggu sebelum meminta kode verifikasi baru.');
+        setState(
+          () => _errorMessage =
+              'Mohon tunggu sebelum meminta kode verifikasi baru.',
+        );
       } else {
-        setState(() => _errorMessage =
-            result['message']?.toString() ?? 'Gagal mengirim ulang kode.');
+        setState(
+          () => _errorMessage =
+              result['message']?.toString() ?? 'Gagal mengirim ulang kode.',
+        );
       }
     }
   }
@@ -293,8 +298,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
           // ── Main content ──────────────────────────────────────
           SafeArea(
             child: SingleChildScrollView(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
               child: Center(
                 child: FadeTransition(
                   opacity: _fadeAnim,
@@ -322,8 +326,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                                           gradient: LinearGradient(
                                             colors: [
                                               AppTheme.success,
-                                              AppTheme.success
-                                                  .withValues(alpha: 0.8),
+                                              AppTheme.success.withValues(
+                                                alpha: 0.8,
+                                              ),
                                             ],
                                           ),
                                           boxShadow: [
@@ -369,8 +374,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                                   ? 'Email Terverifikasi!'
                                   : 'Verifikasi Email',
                               textAlign: TextAlign.center,
-                              style:
-                                  theme.textTheme.headlineSmall?.copyWith(
+                              style: theme.textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.w800,
                                 color: colorScheme.onSurface,
                                 letterSpacing: -0.5,
@@ -400,8 +404,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                               Text(
                                 widget.email,
                                 textAlign: TextAlign.center,
-                                style:
-                                    theme.textTheme.bodyMedium?.copyWith(
+                                style: theme.textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.w700,
                                   color: colorScheme.primary,
                                 ),
@@ -413,8 +416,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                               Text(
                                 'Kode berlaku selama 15 menit.',
                                 textAlign: TextAlign.center,
-                                style:
-                                    theme.textTheme.bodySmall?.copyWith(
+                                style: theme.textTheme.bodySmall?.copyWith(
                                   color: isDark
                                       ? AppTheme.textMuted
                                       : AppTheme.textMutedLight,
@@ -434,15 +436,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                             ),
                             3,
                           ),
-                          if (_errorMessage != null)
-                            const SizedBox(height: 16),
+                          if (_errorMessage != null) const SizedBox(height: 16),
 
                           // ── OTP Input ──────────────────────────────
                           if (!_isSuccess)
                             _staggered(
                               Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.center,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: List.generate(6, (index) {
                                   return Expanded(
                                     child: Padding(
@@ -455,14 +455,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                                         onKeyEvent: (event) =>
                                             _onOtpKeyDown(index, event),
                                         child: _OtpBox(
-                                          controller:
-                                              _otpControllers[index],
-                                          focusNode:
-                                              _otpFocusNodes[index],
+                                          controller: _otpControllers[index],
+                                          focusNode: _otpFocusNodes[index],
                                           onChanged: (value) =>
                                               _onOtpChanged(index, value),
-                                          hasError:
-                                              _errorMessage != null,
+                                          hasError: _errorMessage != null,
                                         ),
                                       ),
                                     ),
@@ -494,37 +491,31 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                                     ? const SizedBox(
                                         width: 20,
                                         height: 20,
-                                        child:
-                                            CircularProgressIndicator(
+                                        child: CircularProgressIndicator(
                                           strokeWidth: 2,
                                         ),
                                       )
                                     : _resendCountdown > 0
-                                        ? Text(
-                                            'Kirim ulang dalam ${_resendCountdown ~/ 60}:${(_resendCountdown % 60).toString().padLeft(2, '0')}',
-                                            style: theme
-                                                .textTheme.bodySmall
-                                                ?.copyWith(
+                                    ? Text(
+                                        'Kirim ulang dalam ${_resendCountdown ~/ 60}:${(_resendCountdown % 60).toString().padLeft(2, '0')}',
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
                                               color: isDark
                                                   ? AppTheme.textMuted
-                                                  : AppTheme
-                                                      .textMutedLight,
+                                                  : AppTheme.textMutedLight,
                                             ),
-                                          )
-                                        : GestureDetector(
-                                            onTap: _handleResend,
-                                            child: Text(
-                                              'Kirim Ulang Kode',
-                                              style: theme
-                                                  .textTheme.bodyMedium
-                                                  ?.copyWith(
-                                                color:
-                                                    colorScheme.primary,
-                                                fontWeight:
-                                                    FontWeight.w700,
+                                      )
+                                    : GestureDetector(
+                                        onTap: _handleResend,
+                                        child: Text(
+                                          'Kirim Ulang Kode',
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                color: colorScheme.primary,
+                                                fontWeight: FontWeight.w700,
                                               ),
-                                            ),
-                                          ),
+                                        ),
+                                      ),
                               ),
                               6,
                             ),
@@ -537,8 +528,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                                 onTap: () => context.go(AppRoutes.login),
                                 child: Text(
                                   'Kembali ke Halaman Login',
-                                  style:
-                                      theme.textTheme.bodyMedium?.copyWith(
+                                  style: theme.textTheme.bodyMedium?.copyWith(
                                     color: isDark
                                         ? AppTheme.textMuted
                                         : AppTheme.textMutedLight,
@@ -618,8 +608,9 @@ class _OtpBox extends StatelessWidget {
         } else if (hasTxt) {
           borderColor = colorScheme.primary.withValues(alpha: 0.4);
         } else {
-          borderColor =
-              isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight;
+          borderColor = isDark
+              ? AppTheme.inputBorder
+              : AppTheme.inputBorderLight;
         }
 
         return AnimatedContainer(
@@ -628,17 +619,14 @@ class _OtpBox extends StatelessWidget {
           decoration: BoxDecoration(
             color: isDark ? AppTheme.inputDark : AppTheme.inputLight,
             borderRadius: BorderRadius.circular(AppTheme.radiusSM),
-            border: Border.all(
-              color: borderColor,
-              width: focused ? 2 : 1.5,
-            ),
+            border: Border.all(color: borderColor, width: focused ? 2 : 1.5),
             boxShadow: focused
                 ? [
                     BoxShadow(
                       color: colorScheme.primary.withValues(alpha: 0.15),
                       blurRadius: 8,
                       spreadRadius: 1,
-                    )
+                    ),
                   ]
                 : null,
           ),
@@ -745,8 +733,11 @@ class _VerifyButtonState extends State<_VerifyButton>
                           key: ValueKey('content'),
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.verified_rounded,
-                                color: Colors.white, size: 20),
+                            Icon(
+                              Icons.verified_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                             SizedBox(width: 8),
                             Text(
                               'Verifikasi',
@@ -824,9 +815,7 @@ class _ErrorBannerState extends State<_ErrorBanner>
         decoration: BoxDecoration(
           color: AppTheme.error.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: AppTheme.error.withValues(alpha: 0.3),
-          ),
+          border: Border.all(color: AppTheme.error.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -879,8 +868,9 @@ class _ThemeToggleButton extends StatelessWidget {
           ),
         ),
         style: IconButton.styleFrom(
-          backgroundColor:
-              colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+          backgroundColor: colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.6,
+          ),
         ),
         onPressed: () {
           final box =
@@ -888,10 +878,7 @@ class _ThemeToggleButton extends StatelessWidget {
           final origin = box != null
               ? box.localToGlobal(box.size.center(Offset.zero))
               : Offset.zero;
-          ThemeTransitionService.animateToggle(
-            origin: origin,
-            toDark: !isDark,
-          );
+          ThemeTransitionService.animateToggle(origin: origin, toDark: !isDark);
         },
       ),
     );

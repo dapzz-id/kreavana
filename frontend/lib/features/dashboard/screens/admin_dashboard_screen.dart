@@ -32,7 +32,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     setState(() => _isLoading = true);
     try {
       final pendingApps = await AdminService.getApplications(status: 'pending');
-      final approvedApps = await AdminService.getApplications(status: 'approved');
+      final approvedApps = await AdminService.getApplications(
+        status: 'approved',
+      );
       final logs = await AdminService.getSystemLogs();
       if (mounted) {
         setState(() {
@@ -136,7 +138,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   gradient: LinearGradient(
                     colors: isDark
                         ? [const Color(0xFF312E81), const Color(0xFF1E1B4B)]
-                        : [theme.colorScheme.primary.withValues(alpha: 0.15), theme.colorScheme.primary.withValues(alpha: 0.05)],
+                        : [
+                            theme.colorScheme.primary.withValues(alpha: 0.15),
+                            theme.colorScheme.primary.withValues(alpha: 0.05),
+                          ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -153,7 +158,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : theme.colorScheme.primary,
+                        color: isDark
+                            ? Colors.white
+                            : theme.colorScheme.primary,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -183,10 +190,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: MediaQuery.of(context).size.width > 900 ? 4 : 2,
+                        crossAxisCount: MediaQuery.of(context).size.width > 900
+                            ? 4
+                            : 2,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
-                        childAspectRatio: MediaQuery.of(context).size.width > 900 ? 2.2 : 1.5,
+                        childAspectRatio:
+                            MediaQuery.of(context).size.width > 900 ? 2.2 : 1.5,
                       ),
                       itemCount: 4,
                       itemBuilder: (context, index) => const StatCardSkeleton(),
@@ -194,10 +204,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   : GridView.count(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: MediaQuery.of(context).size.width > 900 ? 4 : 2,
+                      crossAxisCount: MediaQuery.of(context).size.width > 900
+                          ? 4
+                          : 2,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
-                      childAspectRatio: MediaQuery.of(context).size.width > 900 ? 2.2 : 1.5,
+                      childAspectRatio: MediaQuery.of(context).size.width > 900
+                          ? 2.2
+                          : 1.5,
                       children: [
                         StatCard(
                           label: 'Pengguna Terdaftar',
@@ -255,14 +269,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 child: _systemLogs.isEmpty && !_isLoading
                     ? const Padding(
                         padding: EdgeInsets.all(24.0),
-                        child: Center(child: Text('Belum ada log aktivitas sistem')),
+                        child: Center(
+                          child: Text('Belum ada log aktivitas sistem'),
+                        ),
                       )
                     : ListView.separated(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: _systemLogs.length,
                         separatorBuilder: (context, index) => Divider(
-                          color: isDark ? AppTheme.inputBorder : Colors.grey.shade100,
+                          color: isDark
+                              ? AppTheme.inputBorder
+                              : Colors.grey.shade100,
                           height: 1,
                         ),
                         itemBuilder: (context, index) {
@@ -270,7 +288,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           final type = log['type'] ?? 'info';
                           final icon = _getIconForType(type);
                           final color = _getColorForType(type);
-                          
+
                           return ListTile(
                             leading: Container(
                               padding: const EdgeInsets.all(8),
@@ -282,20 +300,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ),
                             title: Text(
                               log['title'] ?? '',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
                             ),
                             subtitle: Text(
                               log['description'] ?? '',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                color: isDark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
                               ),
                             ),
                             trailing: Text(
                               _formatTime(log['created_at']),
                               style: TextStyle(
                                 fontSize: 10,
-                                color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
+                                color: isDark
+                                    ? Colors.grey.shade500
+                                    : Colors.grey.shade500,
                               ),
                             ),
                           );

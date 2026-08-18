@@ -174,7 +174,7 @@ class DisputeController extends Controller
         $user = Auth::user();
 
         // Authorization: must be requester, other_party, or assigned admin (or just any admin)
-        if ($dispute->requester_id !== $user->id && $dispute->other_party_id !== $user->id && $user->role !== 'admin') {
+        if ($dispute->requester_id !== $user->id && $dispute->other_party_id !== $user->id && $user->role !== \App\Enums\RoleType::Admin) {
             return response()->json(['status' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -192,7 +192,7 @@ class DisputeController extends Controller
         ]);
 
         $admin = Auth::user();
-        if ($admin->role !== 'admin') {
+        if ($admin->role !== \App\Enums\RoleType::Admin) {
             return response()->json(['status' => false, 'message' => 'Forbidden.'], 403);
         }
 
@@ -320,7 +320,7 @@ class DisputeController extends Controller
     public function adminSettleRefund(Request $request, $id)
     {
         $admin = Auth::user();
-        if ($admin->role !== 'admin') {
+        if ($admin->role !== \App\Enums\RoleType::Admin) {
             return response()->json(['status' => false, 'message' => 'Forbidden.'], 403);
         }
 
@@ -436,7 +436,7 @@ class DisputeController extends Controller
         ]);
 
         $admin = Auth::user();
-        if ($admin->role !== 'admin') {
+        if ($admin->role !== \App\Enums\RoleType::Admin) {
             return response()->json(['status' => false, 'message' => 'Forbidden.'], 403);
         }
 

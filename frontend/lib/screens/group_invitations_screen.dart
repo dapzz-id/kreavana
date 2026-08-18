@@ -38,7 +38,9 @@ class _GroupInvitationsScreenState extends State<GroupInvitationsScreen> {
       _loadInvitations();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(accept ? 'Undangan diterima' : 'Undangan ditolak')),
+          SnackBar(
+            content: Text(accept ? 'Undangan diterima' : 'Undangan ditolak'),
+          ),
         );
       }
     } catch (e) {
@@ -53,9 +55,7 @@ class _GroupInvitationsScreenState extends State<GroupInvitationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Undangan Grup'),
-      ),
+      appBar: AppBar(title: const Text('Undangan Grup')),
       body: _isLoading
           ? ListView.builder(
               padding: const EdgeInsets.all(16),
@@ -63,56 +63,71 @@ class _GroupInvitationsScreenState extends State<GroupInvitationsScreen> {
               itemBuilder: (context, index) => const ChatListSkeleton(),
             )
           : _invitations.isEmpty
-              ? const Center(child: Text('Tidak ada undangan pending.'))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _invitations.length,
-                  itemBuilder: (context, index) {
-                    final inv = _invitations[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              backgroundColor: Colors.purple.shade100,
-                              child: const Icon(Icons.group, color: Colors.purple),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    inv['group_name'] ?? 'Grup Tidak Dikenal',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  const Text('Mengundang Anda untuk bergabung'),
-                                ],
+          ? const Center(child: Text('Tidak ada undangan pending.'))
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _invitations.length,
+              itemBuilder: (context, index) {
+                final inv = _invitations[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: Colors.purple.shade100,
+                          child: const Icon(Icons.group, color: Colors.purple),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                inv['group_name'] ?? 'Grup Tidak Dikenal',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
                               ),
+                              const SizedBox(height: 4),
+                              const Text('Mengundang Anda untuk bergabung'),
+                            ],
+                          ),
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.check_circle,
+                                color: Colors.green,
+                                size: 32,
+                              ),
+                              onPressed: () =>
+                                  _respond(inv['chat_id'].toString(), true),
                             ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.check_circle, color: Colors.green, size: 32),
-                                  onPressed: () => _respond(inv['chat_id'].toString(), true),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.cancel, color: Colors.red, size: 32),
-                                  onPressed: () => _respond(inv['chat_id'].toString(), false),
-                                ),
-                              ],
+                            IconButton(
+                              icon: const Icon(
+                                Icons.cancel,
+                                color: Colors.red,
+                                size: 32,
+                              ),
+                              onPressed: () =>
+                                  _respond(inv['chat_id'].toString(), false),
                             ),
                           ],
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }

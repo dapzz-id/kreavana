@@ -22,12 +22,12 @@ class ClientDashboardOverviewTest extends TestCase
     {
         parent::setUp();
 
-        $this->user = User::create([
+        $this->user = User::factory()->create([
             'name' => 'Test Client',
             'username' => 'testclient',
             'email' => 'client@test.com',
             'password' => Hash::make('password'),
-            'role' => 'user',
+            'role' => \App\Enums\RoleType::User,
             'is_creator_approved' => false,
             'balance' => 1500000,
         ]);
@@ -123,7 +123,7 @@ class ClientDashboardOverviewTest extends TestCase
             'username' => 'creator1',
             'email' => 'creator1@test.com',
             'password' => Hash::make('password'),
-            'role' => 'creator',
+            'role' => \App\Enums\RoleType::Creator,
             'is_creator_approved' => true,
         ]);
 
@@ -132,7 +132,7 @@ class ClientDashboardOverviewTest extends TestCase
             'username' => 'creator2',
             'email' => 'creator2@test.com',
             'password' => Hash::make('password'),
-            'role' => 'creator',
+            'role' => \App\Enums\RoleType::Creator,
             'is_creator_approved' => true,
         ]);
 
@@ -214,7 +214,7 @@ class ClientDashboardOverviewTest extends TestCase
             'username' => 'approvedcreator',
             'email' => 'approved@test.com',
             'password' => Hash::make('password'),
-            'role' => 'creator',
+            'role' => \App\Enums\RoleType::Creator,
             'is_creator_approved' => true,
         ]);
 

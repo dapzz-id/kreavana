@@ -22,7 +22,8 @@ class FCMService {
   FCMService._internal();
 
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
 
   bool _initialized = false;
 
@@ -31,16 +32,17 @@ class FCMService {
 
     try {
       // 1. Request permission
-      NotificationSettings settings = await _firebaseMessaging.requestPermission(
-        alert: true,
-        announcement: false,
-        badge: true,
-        carPlay: false,
-        criticalAlert: false,
-        provisional: false,
-        sound: true,
-      );
-      
+      NotificationSettings settings = await _firebaseMessaging
+          .requestPermission(
+            alert: true,
+            announcement: false,
+            badge: true,
+            carPlay: false,
+            criticalAlert: false,
+            provisional: false,
+            sound: true,
+          );
+
       debugPrint('User granted permission: ${settings.authorizationStatus}');
 
       // 2. Configure local notifications for foreground display
@@ -49,40 +51,47 @@ class FCMService {
             AndroidInitializationSettings('@mipmap/ic_launcher');
         const DarwinInitializationSettings initializationSettingsIOS =
             DarwinInitializationSettings();
-        const InitializationSettings initializationSettings = InitializationSettings(
-          android: initializationSettingsAndroid,
-          iOS: initializationSettingsIOS,
-        );
-        
+        const InitializationSettings initializationSettings =
+            InitializationSettings(
+              android: initializationSettingsAndroid,
+              iOS: initializationSettingsIOS,
+            );
+
         await _localNotifications.initialize(settings: initializationSettings);
 
         // Required for Android 8.0+ foreground notifications
         const AndroidNotificationChannel channel = AndroidNotificationChannel(
-          'high_importance_channel', 
-          'High Importance Notifications', 
+          'high_importance_channel',
+          'High Importance Notifications',
           description: 'This channel is used for important notifications.',
           importance: Importance.high,
         );
 
         await _localNotifications
-            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >()
             ?.createNotificationChannel(channel);
       }
 
       // 3. Handle background messages
-      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      FirebaseMessaging.onBackgroundMessage(
+        _firebaseMessagingBackgroundHandler,
+      );
 
       // 4. Handle foreground messages
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         debugPrint('Got a message whilst in the foreground!');
-        
+
         if (message.notification != null) {
-          debugPrint('Message also contained a notification: ${message.notification}');
-          
+          debugPrint(
+            'Message also contained a notification: ${message.notification}',
+          );
+
           if (!kIsWeb) {
             _showLocalNotification(message);
           }
-          
+
           // Try to guess if it's a message or notif to increment badge
           if (message.data['type'] == 'chat') {
             BadgeService().incrementUnreadMessages();

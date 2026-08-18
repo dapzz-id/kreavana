@@ -16,7 +16,7 @@ class DisputeService
     {
         return DB::transaction(function () use ($data) {
             // Find an eligible admin randomly to distribute workload
-            $admin = User::where('role', 'admin')->inRandomOrder()->first();
+            $admin = User::where('role', \App\Enums\RoleType::Admin)->inRandomOrder()->first();
 
             if (!$admin) {
                 throw new \Exception('Saat ini tidak ada admin yang tersedia untuk menangani sengketa.', 503);
@@ -25,7 +25,7 @@ class DisputeService
             // Create the chat
             $chatName = 'Dispute - ' . ($data['case_type'] === 'marketplace_refund' ? 'Marketplace Refund' : 'Opportunity Cancellation');
             $chat = Chat::create([
-                'type' => 'dispute',
+                'type' => 'group',
                 'name' => $chatName,
                 'description' => 'Dispute group between parties and admin',
                 'only_admin_can_add' => true,

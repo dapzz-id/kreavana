@@ -63,11 +63,14 @@ class UserModel {
       subRole: json['sub_role'] is Map
           ? json['sub_role']['value']?.toString()
           : json['sub_role']?.toString(),
-      isCreatorApproved: json['is_creator_approved'] == 1 ||
+      isCreatorApproved:
+          json['is_creator_approved'] == 1 ||
           json['is_creator_approved'] == true ||
           json['is_creator_approved'] == '1',
       createdAt: json['created_at'],
-      balance: json['balance'] != null ? double.parse(json['balance'].toString()) : 0.0,
+      balance: json['balance'] != null
+          ? double.parse(json['balance'].toString())
+          : 0.0,
       followersCount: json['followers_count'] ?? 0,
       followingCount: json['following_count'] ?? 0,
       isFollowing: json['is_following'] ?? false,
@@ -75,9 +78,13 @@ class UserModel {
       storageLimitBytes: json['storage_limit_bytes'] ?? 104857600,
       usedStorageBytes: json['used_storage_bytes'] ?? 0,
       publicKey: json['public_key'],
-      maxVoiceCallDurationSeconds: json['max_voice_call_duration_seconds'] ?? 3600,
-      maxVideoCallDurationSeconds: json['max_video_call_duration_seconds'] ?? 1800,
-      performanceBoost: json['performance_boost'] != null ? double.parse(json['performance_boost'].toString()) : 1.0,
+      maxVoiceCallDurationSeconds:
+          json['max_voice_call_duration_seconds'] ?? 3600,
+      maxVideoCallDurationSeconds:
+          json['max_video_call_duration_seconds'] ?? 1800,
+      performanceBoost: json['performance_boost'] != null
+          ? double.parse(json['performance_boost'].toString())
+          : 1.0,
     );
   }
 
@@ -150,8 +157,10 @@ class UserModel {
       storageLimitBytes: storageLimitBytes ?? this.storageLimitBytes,
       usedStorageBytes: usedStorageBytes ?? this.usedStorageBytes,
       publicKey: publicKey ?? this.publicKey,
-      maxVoiceCallDurationSeconds: maxVoiceCallDurationSeconds ?? this.maxVoiceCallDurationSeconds,
-      maxVideoCallDurationSeconds: maxVideoCallDurationSeconds ?? this.maxVideoCallDurationSeconds,
+      maxVoiceCallDurationSeconds:
+          maxVoiceCallDurationSeconds ?? this.maxVoiceCallDurationSeconds,
+      maxVideoCallDurationSeconds:
+          maxVideoCallDurationSeconds ?? this.maxVideoCallDurationSeconds,
       performanceBoost: performanceBoost ?? this.performanceBoost,
     );
   }

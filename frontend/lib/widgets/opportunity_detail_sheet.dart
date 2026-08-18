@@ -17,7 +17,7 @@ class OpportunityDetailSheet extends StatelessWidget {
     required this.currentUserId,
   });
 
-    static Future<void> show(
+  static Future<void> show(
     BuildContext context, {
     required OpportunityModel opportunity,
     String? currentUserId,
@@ -28,8 +28,8 @@ class OpportunityDetailSheet extends StatelessWidget {
         backgroundColor: Colors.transparent,
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            maxWidth: 500, 
-            maxHeight: MediaQuery.of(context).size.height * 0.85
+            maxWidth: 500,
+            maxHeight: MediaQuery.of(context).size.height * 0.85,
           ),
           child: Container(
             decoration: BoxDecoration(
@@ -99,7 +99,9 @@ class OpportunityDetailSheet extends StatelessWidget {
         return;
       }
 
-      final chat = Map<String, dynamic>.from(chatData is Map ? chatData : result);
+      final chat = Map<String, dynamic>.from(
+        chatData is Map ? chatData : result,
+      );
       chat['name'] = name ?? 'Creator';
       if (username != null) chat['username'] = username;
       if (avatarUrl != null) {
@@ -114,9 +116,8 @@ class OpportunityDetailSheet extends StatelessWidget {
         await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => Scaffold(
-              body: ChatDetailSection(chat: chat, isMobile: true),
-            ),
+            builder: (_) =>
+                Scaffold(body: ChatDetailSection(chat: chat, isMobile: true)),
           ),
         );
       }
@@ -253,26 +254,40 @@ class OpportunityDetailSheet extends StatelessWidget {
             ),
             if (opportunity.locationCategory != null)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.orange.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   opportunity.locationCategoryLabel,
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.orange.shade800),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.orange.shade800,
+                  ),
                 ),
               ),
             if (opportunity.subRoleSlug.isNotEmpty)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.deepPurple.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   opportunity.subRoleLabel,
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.deepPurple.shade700),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.deepPurple.shade700,
+                  ),
                 ),
               ),
           ],
@@ -280,10 +295,7 @@ class OpportunityDetailSheet extends StatelessWidget {
         const SizedBox(height: 12),
         Text(
           opportunity.title,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         if (opportunity.description != null) ...[
           const SizedBox(height: 8),
@@ -308,10 +320,7 @@ class OpportunityDetailSheet extends StatelessWidget {
             label: opportunity.budgetRange!,
           ),
         if (opportunity.deadline != null)
-          _InfoRow(
-            icon: Icons.event_outlined,
-            label: 'Deadline: ',
-          ),
+          _InfoRow(icon: Icons.event_outlined, label: 'Deadline: '),
         const SizedBox(height: 20),
         const Divider(),
         const SizedBox(height: 12),
@@ -326,17 +335,21 @@ class OpportunityDetailSheet extends StatelessWidget {
               CircleAvatar(
                 radius: 24,
                 backgroundColor: Colors.grey.shade200,
-                backgroundImage: poster.avatarUrl != null &&
-                        poster.avatarUrl!.isNotEmpty
-                    ? NetworkImage(ApiService.resolveAssetUrl(poster.avatarUrl!))
+                backgroundImage:
+                    poster.avatarUrl != null && poster.avatarUrl!.isNotEmpty
+                    ? NetworkImage(
+                        ApiService.resolveAssetUrl(poster.avatarUrl!),
+                      )
                     : null,
-                child: poster.avatarUrl == null ||
-                        poster.avatarUrl!.isEmpty
+                child: poster.avatarUrl == null || poster.avatarUrl!.isEmpty
                     ? Text(
                         poster.name.isNotEmpty
                             ? poster.name[0].toUpperCase()
                             : '?',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                       )
                     : null,
               ),
@@ -393,100 +406,42 @@ class OpportunityDetailSheet extends StatelessWidget {
               ),
             ),
         ] else ...[
-                Row(
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: Colors.grey.shade200,
+                child: const Icon(Icons.person, color: Colors.grey),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: Colors.grey.shade200,
-                      child: const Icon(Icons.person, color: Colors.grey),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            opportunity.postedBy != null
-                                ? 'Creator #${opportunity.postedBy}'
-                                : 'Creator Kreavana',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                          Text(
-                            'Kontak tidak tersedia. Hubungi via chat Kreavana.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark
-                                  ? AppTheme.textMuted
-                                  : Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
+                    Text(
+                      opportunity.postedBy != null
+                          ? 'Creator #${opportunity.postedBy}'
+                          : 'Creator Kreavana',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
                       ),
                     ),
-                    if (opportunity.postedBy != null && opportunity.postedBy != currentUserId)
-                      IconButton(
-                        onPressed: () {
-                          _openChat(
-                            context,
-                            userId: opportunity.postedBy!,
-                            name: null,
-                            username: null,
-                            avatarUrl: null,
-                          );
-                        },
-                        icon: Icon(Icons.chat_bubble_outline, color: Colors.teal.shade600),
-                        tooltip: 'Hubungi via Chat',
+                    Text(
+                      'Kontak tidak tersedia. Hubungi via chat Kreavana.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark
+                            ? AppTheme.textMuted
+                            : Colors.grey.shade600,
                       ),
+                    ),
                   ],
                 ),
-              ],
-              const SizedBox(height: 20),
-              if (poster != null && poster.id != currentUserId) ...[
-                ElevatedButton.icon(
-                  onPressed: () {
-                    _openChat(
-                      context,
-                      userId: poster.id!,
-                      name: poster.name,
-                      username: poster.username,
-                      avatarUrl: poster.avatarUrl,
-                    );
-                  },
-                  icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
-                  label: Text(
-                    'Hubungi ${poster.name.split(" ").first} via Chat',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal.shade600,
-                    minimumSize: const Size(double.infinity, 48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                OutlinedButton.icon(
-                  onPressed: () => _showReportDialog(context),
-                  icon: const Icon(Icons.flag_outlined, color: Colors.red),
-                  label: const Text(
-                    'Laporkan Peluang',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 48),
-                    side: BorderSide(color: Colors.red.shade300),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ] else if (poster == null && opportunity.postedBy != null &&
-                  opportunity.postedBy != currentUserId) ...[
-                ElevatedButton.icon(
+              ),
+              if (opportunity.postedBy != null &&
+                  opportunity.postedBy != currentUserId)
+                IconButton(
                   onPressed: () {
                     _openChat(
                       context,
@@ -496,22 +451,91 @@ class OpportunityDetailSheet extends StatelessWidget {
                       avatarUrl: null,
                     );
                   },
-                  icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
-                  label: const Text(
-                    'Hubungi via Chat',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  icon: Icon(
+                    Icons.chat_bubble_outline,
+                    color: Colors.teal.shade600,
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal.shade600,
-                    minimumSize: const Size(double.infinity, 48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                  tooltip: 'Hubungi via Chat',
                 ),
-              ],
             ],
-          );
+          ),
+        ],
+        const SizedBox(height: 20),
+        if (poster != null && poster.id != currentUserId) ...[
+          ElevatedButton.icon(
+            onPressed: () {
+              _openChat(
+                context,
+                userId: poster.id!,
+                name: poster.name,
+                username: poster.username,
+                avatarUrl: poster.avatarUrl,
+              );
+            },
+            icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+            label: Text(
+              'Hubungi ${poster.name.split(" ").first} via Chat',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal.shade600,
+              minimumSize: const Size(double.infinity, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: () => _showReportDialog(context),
+            icon: const Icon(Icons.flag_outlined, color: Colors.red),
+            label: const Text(
+              'Laporkan Peluang',
+              style: TextStyle(color: Colors.red),
+            ),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 48),
+              side: BorderSide(color: Colors.red.shade300),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ] else if (poster == null &&
+            opportunity.postedBy != null &&
+            opportunity.postedBy != currentUserId) ...[
+          ElevatedButton.icon(
+            onPressed: () {
+              _openChat(
+                context,
+                userId: opportunity.postedBy!,
+                name: null,
+                username: null,
+                avatarUrl: null,
+              );
+            },
+            icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+            label: const Text(
+              'Hubungi via Chat',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal.shade600,
+              minimumSize: const Size(double.infinity, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 }
 
@@ -530,9 +554,7 @@ class _InfoRow extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: Colors.grey.shade600),
           const SizedBox(width: 8),
-          Expanded(
-            child: Text(label, style: const TextStyle(fontSize: 13)),
-          ),
+          Expanded(child: Text(label, style: const TextStyle(fontSize: 13))),
         ],
       ),
     );

@@ -17,7 +17,8 @@ class MarketplaceDetailScreen extends StatefulWidget {
   const MarketplaceDetailScreen({super.key, required this.itemId});
 
   @override
-  State<MarketplaceDetailScreen> createState() => _MarketplaceDetailScreenState();
+  State<MarketplaceDetailScreen> createState() =>
+      _MarketplaceDetailScreenState();
 }
 
 class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
@@ -131,7 +132,6 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
     }
   }
 
-
   Future<void> _purchaseItem() async {
     if (_item == null) return;
 
@@ -158,7 +158,10 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
           AppSnackbar.success(context, 'Berhasil membeli karya!');
           _loadItem();
         } else {
-          AppSnackbar.error(context, result['message'] ?? 'Gagal membeli karya.');
+          AppSnackbar.error(
+            context,
+            result['message'] ?? 'Gagal membeli karya.',
+          );
         }
       }
     } catch (e) {
@@ -179,7 +182,9 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
       final result = await MarketplaceService.submitReview(
         itemId: widget.itemId,
         rating: _selectedRating,
-        comment: _commentCtrl.text.trim().isEmpty ? null : _commentCtrl.text.trim(),
+        comment: _commentCtrl.text.trim().isEmpty
+            ? null
+            : _commentCtrl.text.trim(),
       );
       if (mounted) {
         setState(() => _isSubmitting = false);
@@ -189,7 +194,10 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
           AppSnackbar.success(context, 'Review berhasil dikirim!');
           _loadItem();
         } else {
-          AppSnackbar.error(context, result['message'] ?? 'Gagal mengirim review.');
+          AppSnackbar.error(
+            context,
+            result['message'] ?? 'Gagal mengirim review.',
+          );
         }
       }
     } catch (e) {
@@ -212,27 +220,28 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
       body: _isLoading
           ? _buildLoadingState(isDark)
           : _item == null
-              ? _buildEmptyState(isDark)
-              : CustomScrollView(
-                  controller: _scrollCtrl,
-                  slivers: [
-                    _buildSliverAppBar(isDark, heroHeight, parallaxOffset),
-                    SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildTitleSection(isDark),
-                          _buildCreatorSection(isDark),
-                          _buildStatsSection(isDark),
-                          _buildDescriptionSection(isDark),
-                          _buildReviewSection(isDark),
-                          _buildWriteReviewSection(isDark),
-                          const SizedBox(height: 120),
-                        ],
-                      ),
-                    ),
-                  ],
+          ? _buildEmptyState(isDark)
+          : CustomScrollView(
+              controller: _scrollCtrl,
+              slivers: [
+                _buildSliverAppBar(isDark, heroHeight, parallaxOffset),
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTitleSection(isDark),
+                      _buildCreatorSection(isDark),
+                      _buildStatsSection(isDark),
+                      _buildDescriptionSection(isDark),
+                      _buildReviewSection(isDark),
+                      // Hiding review form until backend exposes can_review eligibility
+                      if (false) _buildWriteReviewSection(isDark),
+                      const SizedBox(height: 120),
+                    ],
+                  ),
                 ),
+              ],
+            ),
       bottomSheet: _item == null ? null : _buildBottomBar(isDark),
     );
   }
@@ -243,24 +252,28 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
         SliverAppBar(
           expandedHeight: 320,
           pinned: true,
-          backgroundColor: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
+          backgroundColor: isDark
+              ? AppTheme.surfaceDark
+              : AppTheme.surfaceLight,
           flexibleSpace: FlexibleSpaceBar(
             background: _buildShimmerBox(isDark, 320),
           ),
         ),
         SliverPadding(
           padding: const EdgeInsets.all(16),
-          sliver: SliverList.list(children: [
-            _buildShimmerBox(isDark, 24, width: 100),
-            const SizedBox(height: 12),
-            _buildShimmerBox(isDark, 28),
-            const SizedBox(height: 16),
-            _buildShimmerBox(isDark, 56),
-            const SizedBox(height: 16),
-            _buildShimmerBox(isDark, 40),
-            const SizedBox(height: 16),
-            _buildShimmerBox(isDark, 100),
-          ]),
+          sliver: SliverList.list(
+            children: [
+              _buildShimmerBox(isDark, 24, width: 100),
+              const SizedBox(height: 12),
+              _buildShimmerBox(isDark, 28),
+              const SizedBox(height: 16),
+              _buildShimmerBox(isDark, 56),
+              const SizedBox(height: 16),
+              _buildShimmerBox(isDark, 40),
+              const SizedBox(height: 16),
+              _buildShimmerBox(isDark, 100),
+            ],
+          ),
         ),
       ],
     );
@@ -298,18 +311,29 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.storefront_outlined, size: 64,
-              color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight),
+          Icon(
+            Icons.storefront_outlined,
+            size: 64,
+            color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+          ),
           const SizedBox(height: 16),
-          Text('Karya tidak ditemukan.',
-              style: TextStyle(fontSize: 16,
-                  color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight)),
+          Text(
+            'Karya tidak ditemukan.',
+            style: TextStyle(
+              fontSize: 16,
+              color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSliverAppBar(bool isDark, double heroHeight, double parallaxOffset) {
+  Widget _buildSliverAppBar(
+    bool isDark,
+    double heroHeight,
+    double parallaxOffset,
+  ) {
     return SliverAppBar(
       expandedHeight: heroHeight,
       pinned: true,
@@ -363,7 +387,13 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                 itemBuilder: (context, index) {
                   final media = _item!.media![index];
                   if (media.fileType == 'video') {
-                     return const Center(child: Icon(Icons.videocam, size: 64, color: Colors.white54));
+                    return const Center(
+                      child: Icon(
+                        Icons.videocam,
+                        size: 64,
+                        color: Colors.white54,
+                      ),
+                    );
                   }
                   return Image.network(
                     media.filePath,
@@ -382,7 +412,9 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                     height: 100,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppTheme.primaryPurple.withValues(alpha: isDark ? 0.2 : 0.15),
+                      color: AppTheme.primaryPurple.withValues(
+                        alpha: isDark ? 0.2 : 0.15,
+                      ),
                       border: Border.all(
                         color: AppTheme.primaryPurple.withValues(alpha: 0.3),
                         width: 2,
@@ -403,7 +435,10 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                 child: AnimatedEntrance(
                   delay: const Duration(milliseconds: 200),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 7,
+                    ),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
@@ -420,11 +455,20 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.workspace_premium, size: 14, color: Colors.white),
+                        Icon(
+                          Icons.workspace_premium,
+                          size: 14,
+                          color: Colors.white,
+                        ),
                         SizedBox(width: 5),
-                        Text('Unggulan', style: TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white,
-                        )),
+                        Text(
+                          'Unggulan',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -450,9 +494,15 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
           height: 40,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: (isDark ? Colors.black : Colors.white).withValues(alpha: 0.5),
+            color: (isDark ? Colors.black : Colors.white).withValues(
+              alpha: 0.5,
+            ),
           ),
-          child: Icon(icon, size: 20, color: isDark ? Colors.white : AppTheme.textDark),
+          child: Icon(
+            icon,
+            size: 20,
+            color: isDark ? Colors.white : AppTheme.textDark,
+          ),
         ),
       ),
     );
@@ -504,12 +554,16 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                 height: 40,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: (isDark ? Colors.black : Colors.white).withValues(alpha: 0.5),
+                  color: (isDark ? Colors.black : Colors.white).withValues(
+                    alpha: 0.5,
+                  ),
                 ),
                 child: Icon(
                   _isFavorited ? Icons.favorite : Icons.favorite_border,
                   size: 20,
-                  color: _isFavorited ? AppTheme.error : (isDark ? Colors.white : AppTheme.textDark),
+                  color: _isFavorited
+                      ? AppTheme.error
+                      : (isDark ? Colors.white : AppTheme.textDark),
                 ),
               ),
             );
@@ -529,11 +583,19 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
               decoration: BoxDecoration(
-                color: AppTheme.primaryPurple.withValues(alpha: isDark ? 0.15 : 0.1),
+                color: AppTheme.primaryPurple.withValues(
+                  alpha: isDark ? 0.15 : 0.1,
+                ),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Text(_item!.category,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.primaryPurple)),
+              child: Text(
+                _item!.category,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primaryPurple,
+                ),
+              ),
             ),
             const SizedBox(height: 14),
             Text(
@@ -574,11 +636,15 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                 children: [
                   CircleAvatar(
                     radius: 22,
-                    backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.15),
+                    backgroundColor: AppTheme.primaryPurple.withValues(
+                      alpha: 0.15,
+                    ),
                     child: Text(
                       (_item!.creator?.name ?? 'U')[0].toUpperCase(),
                       style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.primaryPurple,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.primaryPurple,
                       ),
                     ),
                   ),
@@ -605,15 +671,22 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(_item!.creator?.name ?? 'Unknown',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? AppTheme.textWhite : AppTheme.textDark,
-                        )),
+                    Text(
+                      _item!.creator?.name ?? 'Unknown',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? AppTheme.textWhite : AppTheme.textDark,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text('@${_item!.creator?.username ?? ''}',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                    Text(
+                      '@${_item!.creator?.username ?? ''}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textMuted,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -633,20 +706,18 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                         color: isOwn
                             ? AppTheme.textMuted
                             : (_isFollowing
-                                ? AppTheme.primaryPurple
-                                : Colors.white),
+                                  ? AppTheme.primaryPurple
+                                  : Colors.white),
                       ),
                 style: TextButton.styleFrom(
                   foregroundColor: isOwn
                       ? AppTheme.textMuted
-                      : (_isFollowing
-                          ? AppTheme.primaryPurple
-                          : Colors.white),
+                      : (_isFollowing ? AppTheme.primaryPurple : Colors.white),
                   backgroundColor: isOwn
                       ? Colors.transparent
                       : _isFollowing
-                          ? AppTheme.primaryPurple.withValues(alpha: 0.08)
-                          : AppTheme.primaryPurple,
+                      ? AppTheme.primaryPurple.withValues(alpha: 0.08)
+                      : AppTheme.primaryPurple,
                   side: isOwn
                       ? BorderSide(
                           color: isDark
@@ -654,8 +725,11 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                               : AppTheme.inputBorderLight,
                         )
                       : _isFollowing
-                          ? const BorderSide(color: AppTheme.primaryPurple, width: 1.5)
-                          : null,
+                      ? const BorderSide(
+                          color: AppTheme.primaryPurple,
+                          width: 1.5,
+                        )
+                      : null,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -668,8 +742,8 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                   isOwn
                       ? 'Karyamu'
                       : _isFollowing
-                          ? 'Diikuti'
-                          : 'Ikuti',
+                      ? 'Diikuti'
+                      : 'Ikuti',
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -730,12 +804,14 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Deskripsi',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? AppTheme.textWhite : AppTheme.textDark,
-                )),
+            Text(
+              'Deskripsi',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppTheme.textWhite : AppTheme.textDark,
+              ),
+            ),
             const SizedBox(height: 10),
             Text(
               _item!.description!,
@@ -763,29 +839,45 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
           children: [
             Row(
               children: [
-                Text('Ulasan',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? AppTheme.textWhite : AppTheme.textDark,
-                    )),
+                Text(
+                  'Ulasan',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? AppTheme.textWhite : AppTheme.textDark,
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryPurple.withValues(alpha: isDark ? 0.15 : 0.1),
+                    color: AppTheme.primaryPurple.withValues(
+                      alpha: isDark ? 0.15 : 0.1,
+                    ),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text('${reviews.length}',
-                      style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.primaryPurple,
-                      )),
+                  child: Text(
+                    '${reviews.length}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.primaryPurple,
+                    ),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 14),
-            ...reviews.asMap().entries.map((entry) =>
-              _ReviewCard(review: entry.value, index: entry.key, isDark: isDark)),
+            ...reviews.asMap().entries.map(
+              (entry) => _ReviewCard(
+                review: entry.value,
+                index: entry.key,
+                isDark: isDark,
+              ),
+            ),
           ],
         ),
       ),
@@ -809,34 +901,43 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Tulis Ulasan',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? AppTheme.textWhite : AppTheme.textDark,
-                  )),
+              Text(
+                'Tulis Ulasan',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? AppTheme.textWhite : AppTheme.textDark,
+                ),
+              ),
               const SizedBox(height: 14),
               Row(
-                children: List.generate(5, (i) => GestureDetector(
-                  onTap: () {
-                    setState(() => _selectedRating = i + 1);
-                  },
-                  child: AnimatedScale(
-                    scale: i < _selectedRating ? 1.15 : 1.0,
-                    duration: const Duration(milliseconds: 200),
-                    curve: AppMotion.spring,
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: Icon(
-                        i < _selectedRating ? Icons.star_rounded : Icons.star_border_rounded,
-                        size: 32,
-                        color: i < _selectedRating
-                            ? const Color(0xFFF59E0B)
-                            : (isDark ? AppTheme.textMuted : AppTheme.textMutedLight),
+                children: List.generate(
+                  5,
+                  (i) => GestureDetector(
+                    onTap: () {
+                      setState(() => _selectedRating = i + 1);
+                    },
+                    child: AnimatedScale(
+                      scale: i < _selectedRating ? 1.15 : 1.0,
+                      duration: const Duration(milliseconds: 200),
+                      curve: AppMotion.spring,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: Icon(
+                          i < _selectedRating
+                              ? Icons.star_rounded
+                              : Icons.star_border_rounded,
+                          size: 32,
+                          color: i < _selectedRating
+                              ? const Color(0xFFF59E0B)
+                              : (isDark
+                                    ? AppTheme.textMuted
+                                    : AppTheme.textMutedLight),
+                        ),
                       ),
                     ),
                   ),
-                )),
+                ),
               ),
               const SizedBox(height: 14),
               TextField(
@@ -848,20 +949,36 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                 ),
                 decoration: InputDecoration(
                   hintText: 'Tulis ulasanmu tentang karya ini...',
-                  hintStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
+                  hintStyle: const TextStyle(
+                    color: AppTheme.textMuted,
+                    fontSize: 14,
+                  ),
                   filled: true,
-                  fillColor: isDark ? AppTheme.inputDark : AppTheme.surfaceLight,
+                  fillColor: isDark
+                      ? AppTheme.inputDark
+                      : AppTheme.surfaceLight,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight),
+                    borderSide: BorderSide(
+                      color: isDark
+                          ? AppTheme.inputBorder
+                          : AppTheme.inputBorderLight,
+                    ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight),
+                    borderSide: BorderSide(
+                      color: isDark
+                          ? AppTheme.inputBorder
+                          : AppTheme.inputBorderLight,
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppTheme.primaryPurple, width: 2),
+                    borderSide: const BorderSide(
+                      color: AppTheme.primaryPurple,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -873,12 +990,18 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                   pressedScale: 0.96,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 250),
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 28,
+                      vertical: 14,
+                    ),
                     decoration: BoxDecoration(
                       gradient: _isSubmitting
                           ? null
                           : const LinearGradient(
-                              colors: [AppTheme.primaryPurple, AppTheme.lightPurple],
+                              colors: [
+                                AppTheme.primaryPurple,
+                                AppTheme.lightPurple,
+                              ],
                             ),
                       color: _isSubmitting ? AppTheme.textMuted : null,
                       borderRadius: BorderRadius.circular(14),
@@ -886,7 +1009,9 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                           ? null
                           : [
                               BoxShadow(
-                                color: AppTheme.primaryPurple.withValues(alpha: 0.35),
+                                color: AppTheme.primaryPurple.withValues(
+                                  alpha: 0.35,
+                                ),
                                 blurRadius: 14,
                                 offset: const Offset(0, 6),
                               ),
@@ -896,14 +1021,19 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
-                        : const Text('Kirim Ulasan',
+                        : const Text(
+                            'Kirim Ulasan',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
-                            )),
+                            ),
+                          ),
                   ),
                 ),
               ),
@@ -919,10 +1049,10 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
     return AnimatedBuilder(
       animation: _bottomBarCtrl,
       builder: (context, child) {
-        final slide = Tween<Offset>(
-          begin: const Offset(0, 1),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(parent: _bottomBarCtrl, curve: AppMotion.easeOut));
+        final slide = Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+            .animate(
+              CurvedAnimation(parent: _bottomBarCtrl, curve: AppMotion.easeOut),
+            );
         return SlideTransition(
           position: slide,
           child: FadeTransition(
@@ -950,8 +1080,13 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Harga',
-                              style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                          Text(
+                            'Harga',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
                           const SizedBox(height: 2),
                           Text(
                             _item!.formattedPrice,
@@ -966,13 +1101,19 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                       ),
                     ),
                     Pressable(
-                      onTap: isOwn ? null : () {
-                        if (_item!.type == 'paid' && !_item!.hasPurchased) {
-                          _purchaseItem();
-                        } else {
-                          AppSnackbar.info(context, 'Fitur download belum tersedia.');
-                        }
-                      },
+                      onTap: isOwn
+                          ? null
+                          : () {
+                              if (_item!.type == 'paid' &&
+                                  !_item!.hasPurchased) {
+                                _purchaseItem();
+                              } else {
+                                AppSnackbar.info(
+                                  context,
+                                  'Fitur download belum tersedia.',
+                                );
+                              }
+                            },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
@@ -989,16 +1130,17 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                                 ),
                           color: isOwn
                               ? (isDark
-                                  ? AppTheme.inputDark
-                                  : AppTheme.inputLight)
+                                    ? AppTheme.inputDark
+                                    : AppTheme.inputLight)
                               : null,
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: isOwn
                               ? null
                               : [
                                   BoxShadow(
-                                    color: AppTheme.primaryPurple
-                                        .withValues(alpha: 0.35),
+                                    color: AppTheme.primaryPurple.withValues(
+                                      alpha: 0.35,
+                                    ),
                                     blurRadius: 14,
                                     offset: const Offset(0, 6),
                                   ),
@@ -1011,27 +1153,40 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                               const SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
                               )
                             else ...[
                               Icon(
                                 isOwn
                                     ? Icons.person_rounded
-                                    : (_item!.type == 'paid' && !_item!.hasPurchased ? Icons.shopping_cart_checkout_rounded : Icons.download_rounded),
+                                    : (_item!.type == 'paid' &&
+                                              !_item!.hasPurchased
+                                          ? Icons.shopping_cart_checkout_rounded
+                                          : Icons.download_rounded),
                                 size: 20,
-                                color: isOwn ? AppTheme.textMuted : Colors.white,
+                                color: isOwn
+                                    ? AppTheme.textMuted
+                                    : Colors.white,
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 isOwn
                                     ? 'Karya Anda'
-                                    : (_item!.type == 'paid' && !_item!.hasPurchased ? 'Beli Sekarang' : 'Download'),
+                                    : (_item!.type == 'paid' &&
+                                              !_item!.hasPurchased
+                                          ? 'Beli Sekarang'
+                                          : 'Download'),
                                 style: TextStyle(
                                   fontWeight: FontWeight.w700,
-                                  color: isOwn ? AppTheme.textMuted : Colors.white,
+                                  color: isOwn
+                                      ? AppTheme.textMuted
+                                      : Colors.white,
                                 ),
                               ),
-                            ]
+                            ],
                           ],
                         ),
                       ),
@@ -1048,12 +1203,18 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
 
   IconData _categoryIcon(String cat) {
     switch (cat) {
-      case 'Fotografi': return Icons.camera_alt_rounded;
-      case 'Videografi': return Icons.videocam_rounded;
-      case 'Desain': return Icons.palette_rounded;
-      case 'Konten': return Icons.edit_note_rounded;
-      case 'Branding': return Icons.branding_watermark_rounded;
-      default: return Icons.palette_rounded;
+      case 'Fotografi':
+        return Icons.camera_alt_rounded;
+      case 'Videografi':
+        return Icons.videocam_rounded;
+      case 'Desain':
+        return Icons.palette_rounded;
+      case 'Konten':
+        return Icons.edit_note_rounded;
+      case 'Branding':
+        return Icons.branding_watermark_rounded;
+      default:
+        return Icons.palette_rounded;
     }
   }
 }
@@ -1091,15 +1252,19 @@ class _StatCard extends StatelessWidget {
           children: [
             Icon(icon, size: 22, color: iconColor),
             const SizedBox(height: 6),
-            Text(value,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: isDark ? AppTheme.textWhite : AppTheme.textDark,
-                )),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: isDark ? AppTheme.textWhite : AppTheme.textDark,
+              ),
+            ),
             const SizedBox(height: 2),
-            Text(label,
-                style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+            ),
           ],
         ),
       ),
@@ -1141,11 +1306,15 @@ class _ReviewCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 16,
-                  backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.15),
+                  backgroundColor: AppTheme.primaryPurple.withValues(
+                    alpha: 0.15,
+                  ),
                   child: Text(
                     (review.user?.name ?? 'U')[0].toUpperCase(),
                     style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.primaryPurple,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.primaryPurple,
                     ),
                   ),
                 ),
@@ -1154,37 +1323,55 @@ class _ReviewCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(review.user?.name ?? 'Anonymous',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? AppTheme.textWhite : AppTheme.textDark,
-                          )),
+                      Text(
+                        review.user?.name ?? 'Anonymous',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: isDark
+                              ? AppTheme.textWhite
+                              : AppTheme.textDark,
+                        ),
+                      ),
                       if (review.createdAt != null)
-                        Text(_formatTime(review.createdAt!),
-                            style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                        Text(
+                          _formatTime(review.createdAt!),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
                     ],
                   ),
                 ),
                 Row(
-                  children: List.generate(5, (i) => Icon(
-                    i < review.rating ? Icons.star_rounded : Icons.star_border_rounded,
-                    size: 15,
-                    color: i < review.rating
-                        ? const Color(0xFFF59E0B)
-                        : (isDark ? AppTheme.textMuted : AppTheme.textMutedLight),
-                  )),
+                  children: List.generate(
+                    5,
+                    (i) => Icon(
+                      i < review.rating
+                          ? Icons.star_rounded
+                          : Icons.star_border_rounded,
+                      size: 15,
+                      color: i < review.rating
+                          ? const Color(0xFFF59E0B)
+                          : (isDark
+                                ? AppTheme.textMuted
+                                : AppTheme.textMutedLight),
+                    ),
+                  ),
                 ),
               ],
             ),
             if (review.comment != null && review.comment!.isNotEmpty) ...[
               const SizedBox(height: 10),
-              Text(review.comment!,
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.5,
-                    color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
-                  )),
+              Text(
+                review.comment!,
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                ),
+              ),
             ],
           ],
         ),
@@ -1227,12 +1414,14 @@ class _HeroPatternPainter extends CustomPainter {
 
     for (var i = 0; i < 5; i++) {
       final offset = math.sin(animationValue * math.pi * 2 + i * 1.2) * 30;
-      final radius = 60.0 + i * 20 + math.cos(animationValue * math.pi * 2 + i) * 10;
+      final radius =
+          60.0 + i * 20 + math.cos(animationValue * math.pi * 2 + i) * 10;
       paint.color = accentColor.withValues(alpha: baseAlpha);
       canvas.drawCircle(
         Offset(
           size.width * (0.15 + i * 0.18) + offset,
-          size.height * (0.3 + math.sin(animationValue * math.pi * 2 + i * 0.8) * 0.15),
+          size.height *
+              (0.3 + math.sin(animationValue * math.pi * 2 + i * 0.8) * 0.15),
         ),
         radius,
         paint,

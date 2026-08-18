@@ -197,7 +197,10 @@ class _KtpCameraViewState extends State<KtpCameraView> {
         Column(
           children: [
             // 1. Top overlay
-            Container(height: frameTop, color: Colors.black.withValues(alpha: 0.3)),
+            Container(
+              height: frameTop,
+              color: Colors.black.withValues(alpha: 0.3),
+            ),
 
             // 2. Middle section (Kunci tinggi total section ini sebesar frameHeight)
             SizedBox(
@@ -243,7 +246,9 @@ class _KtpCameraViewState extends State<KtpCameraView> {
             ),
 
             // 3. Bottom overlay (Sisanya otomatis menutup ke bawah)
-            Expanded(child: Container(color: Colors.black.withValues(alpha: 0.3))),
+            Expanded(
+              child: Container(color: Colors.black.withValues(alpha: 0.3)),
+            ),
           ],
         ),
       ],

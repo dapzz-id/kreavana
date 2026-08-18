@@ -5,8 +5,8 @@ import '../../app/theme.dart';
 class SkeletonGrid extends StatelessWidget {
   final int itemCount;
   final SliverGridDelegate gridDelegate;
-  
-  /// Creates a standard grid view of skeletons. 
+
+  /// Creates a standard grid view of skeletons.
   /// Wrapped in a single [SkeletonAnimator] for performance.
   const SkeletonGrid({
     super.key,
@@ -30,7 +30,7 @@ class SkeletonGrid extends StatelessWidget {
         itemCount: itemCount,
         itemBuilder: (context, index) {
           final isDark = Theme.of(context).brightness == Brightness.dark;
-          
+
           return Container(
             decoration: BoxDecoration(
               color: isDark ? AppTheme.cardBg : Colors.white,
@@ -45,8 +45,12 @@ class SkeletonGrid extends StatelessWidget {
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade300,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                      color: isDark
+                          ? const Color(0xFF2D2A3E)
+                          : Colors.grey.shade300,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(15),
+                      ),
                     ),
                   ),
                 ),

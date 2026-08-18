@@ -22,22 +22,26 @@ class SubRoleThemeConfig {
   Color get borderDark => primaryColor.withValues(alpha: 0.35);
 
   LinearGradient get gradient => LinearGradient(
-        colors: [
-          primaryColor,
-          HSLColor.fromColor(primaryColor)
-              .withLightness((HSLColor.fromColor(primaryColor).lightness * 0.8).clamp(0.0, 1.0))
-              .toColor(),
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
+    colors: [
+      primaryColor,
+      HSLColor.fromColor(primaryColor)
+          .withLightness(
+            (HSLColor.fromColor(primaryColor).lightness * 0.8).clamp(0.0, 1.0),
+          )
+          .toColor(),
+    ],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 }
 
 class SubRoleThemeEngine {
   SubRoleThemeEngine._();
 
   // ── Default fallback color ──────────────────────────────────────────────────
-  static const Color defaultPrimary = Color(0xFF7C3AED); // Signature Kreavana Violet
+  static const Color defaultPrimary = Color(
+    0xFF7C3AED,
+  ); // Signature Kreavana Violet
 
   // ── Admin Theme ─────────────────────────────────────────────────────────────
   static const SubRoleThemeConfig adminConfig = SubRoleThemeConfig(
@@ -55,7 +59,8 @@ class SubRoleThemeEngine {
       label: 'UMKM & Usaha Lokal',
       icon: Icons.storefront_rounded,
       primaryColor: Color(0xFF10B981), // Emerald Green
-      description: 'Pertumbuhan bisnis lokal dengan paket branding & visual terjangkau',
+      description:
+          'Pertumbuhan bisnis lokal dengan paket branding & visual terjangkau',
     ),
     'company': SubRoleThemeConfig(
       slug: 'company',
@@ -160,7 +165,8 @@ class SubRoleThemeEngine {
       label: 'Wedding Organizer (Client)',
       icon: Icons.favorite_rounded,
       primaryColor: Color(0xFFF43F5E), // Rose Crimson
-      description: 'Perekrutan vendor foto, video, & MUA untuk pesta pernikahan',
+      description:
+          'Perekrutan vendor foto, video, & MUA untuk pesta pernikahan',
     ),
     'event_organizer': SubRoleThemeConfig(
       slug: 'event_organizer',
@@ -180,6 +186,41 @@ class SubRoleThemeEngine {
 
   // ── Creator Sub-Roles (11) ──────────────────────────────────────────────────
   static const Map<String, SubRoleThemeConfig> creatorConfigs = {
+    'institution': SubRoleThemeConfig(
+      slug: 'institution',
+      label: 'Lembaga / Yayasan',
+      icon: Icons.assured_workload_rounded,
+      primaryColor: Color(0xFF0F766E), // Slate Teal
+      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+    ),
+    'government': SubRoleThemeConfig(
+      slug: 'government',
+      label: 'Instansi Pemerintah',
+      icon: Icons.account_balance_rounded,
+      primaryColor: Color(0xFF1D4ED8), // Deep Indigo Navy
+      description: 'Dokumentasi & publikasi program pelayanan masyarakat',
+    ),
+    'community': SubRoleThemeConfig(
+      slug: 'community',
+      label: 'Komunitas & Publik',
+      icon: Icons.groups_rounded,
+      primaryColor: Color(0xFF06B6D4), // Bright Cyan
+      description: 'Kolaborasi event komunitas & jaringan kreator lokal',
+    ),
+    'wedding_organizer': SubRoleThemeConfig(
+      slug: 'wedding_organizer',
+      label: 'Wedding Organizer',
+      icon: Icons.favorite_rounded,
+      primaryColor: Color(0xFFF43F5E), // Rose Crimson
+      description: 'Penyelenggara pesta pernikahan profesional',
+    ),
+    'event_organizer': SubRoleThemeConfig(
+      slug: 'event_organizer',
+      label: 'Event Organizer',
+      icon: Icons.festival_rounded,
+      primaryColor: Color(0xFF0284C7), // Sky Cyan
+      description: 'Penyelenggara konser, pameran, & event',
+    ),
     'photographer': SubRoleThemeConfig(
       slug: 'photographer',
       label: 'Fotografer Profesional',

@@ -33,7 +33,7 @@ class _GlobalCallOverlayState extends State<GlobalCallOverlay> {
   void _maximizeCall() {
     final callService = CallService();
     callService.maximizeCall();
-    
+
     // Push the CallScreen again without destroying the service
     if (callService.currentCallId != null && callService.remoteUserId != null) {
       Navigator.of(context).push(
@@ -54,8 +54,9 @@ class _GlobalCallOverlayState extends State<GlobalCallOverlay> {
 
     // Only show In-App overlay if minimized, and we are NOT on Android
     // (Android uses Native PiP, so it doesn't need this overlay)
-    bool useNativePip = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-    
+    bool useNativePip =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
     if (!callService.isMinimized || !callService.isConnected || useNativePip) {
       return const SizedBox.shrink();
     }
@@ -80,7 +81,11 @@ class _GlobalCallOverlayState extends State<GlobalCallOverlay> {
             width: isVideo ? 120 : 180,
             height: isVideo ? 160 : 60,
             decoration: BoxDecoration(
-              color: isVideo ? Colors.black : (callService.isCallWarningActive ? Colors.red.shade700 : Colors.green.shade700),
+              color: isVideo
+                  ? Colors.black
+                  : (callService.isCallWarningActive
+                        ? Colors.red.shade700
+                        : Colors.green.shade700),
               borderRadius: BorderRadius.circular(isVideo ? 12 : 30),
               boxShadow: [
                 BoxShadow(
@@ -97,13 +102,18 @@ class _GlobalCallOverlayState extends State<GlobalCallOverlay> {
                     children: [
                       RTCVideoView(
                         callService.remoteRenderer,
-                        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                        objectFit:
+                            RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
                       ),
                       Positioned(
                         top: 4,
                         right: 4,
                         child: IconButton(
-                          icon: const Icon(Icons.open_in_full, color: Colors.white, size: 20),
+                          icon: const Icon(
+                            Icons.open_in_full,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           onPressed: _maximizeCall,
@@ -120,7 +130,11 @@ class _GlobalCallOverlayState extends State<GlobalCallOverlay> {
                             child: Text(
                               '-${callService.remainingCallFormatted}',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 12),
+                              style: const TextStyle(
+                                color: Colors.redAccent,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
                         ),
@@ -131,10 +145,13 @@ class _GlobalCallOverlayState extends State<GlobalCallOverlay> {
                     children: [
                       const Icon(Icons.call, color: Colors.white),
                       Text(
-                        callService.isCallWarningActive 
+                        callService.isCallWarningActive
                             ? '-${callService.remainingCallFormatted}'
                             : _formatDuration(callService.callDurationSeconds),
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.call_end, color: Colors.white),

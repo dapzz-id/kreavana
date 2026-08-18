@@ -112,7 +112,10 @@ class _AnimatedInputFieldState extends State<AnimatedInputField> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-          borderSide: const BorderSide(color: AppTheme.primaryPurple, width: 1.8),
+          borderSide: const BorderSide(
+            color: AppTheme.primaryPurple,
+            width: 1.8,
+          ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppTheme.radiusMD),
@@ -127,8 +130,10 @@ class _AnimatedInputFieldState extends State<AnimatedInputField> {
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 16,
+        ),
         floatingLabelStyle: TextStyle(
           color: primary,
           fontSize: 12,

@@ -15,8 +15,7 @@ class MockAdapter implements HttpClientAdapter {
     RequestOptions options,
     Stream<List<int>>? requestStream,
     Future<void>? cancelFuture,
-  ) =>
-      onRequest(options);
+  ) => onRequest(options);
 
   @override
   void close({bool force = false}) {}
@@ -50,10 +49,12 @@ void main() {
               'balance': 50000.0,
               'followers_count': 10,
               'following_count': 5,
-            }
+            },
           }),
           200,
-          headers: {Headers.contentTypeHeader: ['application/json']},
+          headers: {
+            Headers.contentTypeHeader: ['application/json'],
+          },
         );
       }
 
@@ -68,10 +69,12 @@ void main() {
               'sub_role_category': 'photographer',
               'skill_description': 'Expert photographer',
               'portfolio_link': null,
-            }
+            },
           }),
           200,
-          headers: {Headers.contentTypeHeader: ['application/json']},
+          headers: {
+            Headers.contentTypeHeader: ['application/json'],
+          },
         );
       }
 
@@ -79,42 +82,54 @@ void main() {
     });
   });
 
-  test('getProfile fetches identity and application concurrently, returns typed result', () async {
-    final result = await ProfileService.getProfile('user-123');
+  test(
+    'getProfile fetches identity and application concurrently, returns typed result',
+    () async {
+      final result = await ProfileService.getProfile('user-123');
 
-    expect(result.success, true, reason: 'should succeed when both endpoints succeed');
+      expect(
+        result.success,
+        true,
+        reason: 'should succeed when both endpoints succeed',
+      );
 
-    final user = result.user;
-    expect(user, isNotNull);
-    expect(user!.id, 'user-123');
-    expect(user.name, 'Test User');
-    expect(user.role, 'creator');
-    expect(user.balance, 50000.0);
-    expect(user.followersCount, 10);
-    expect(user.followingCount, 5);
-    expect(user.isCreatorApproved, true);
+      final user = result.user;
+      expect(user, isNotNull);
+      expect(user!.id, 'user-123');
+      expect(user.name, 'Test User');
+      expect(user.role, 'creator');
+      expect(user.balance, 50000.0);
+      expect(user.followersCount, 10);
+      expect(user.followingCount, 5);
+      expect(user.isCreatorApproved, true);
 
-    final app = result.application;
-    expect(app, isNotNull);
-    expect(app!.status, 'approved');
-  });
+      final app = result.application;
+      expect(app, isNotNull);
+      expect(app!.status, 'approved');
+    },
+  );
 
-  test('getProfile fails gracefully when identity endpoint returns error', () async {
-    dio.httpClientAdapter = MockAdapter((options) async {
-      if (options.path.contains('profile/identity')) {
-        return ResponseBody.fromString(
-          '{"status":false,"message":"Token not valid"}',
-          401,
-          headers: {Headers.contentTypeHeader: ['application/json']},
-        );
-      }
-      return ResponseBody.fromString('{}', 404);
-    });
+  test(
+    'getProfile fails gracefully when identity endpoint returns error',
+    () async {
+      dio.httpClientAdapter = MockAdapter((options) async {
+        if (options.path.contains('profile/identity')) {
+          return ResponseBody.fromString(
+            '{"status":false,"message":"Token not valid"}',
+            401,
+            headers: {
+              Headers.contentTypeHeader: ['application/json'],
+            },
+          );
+        }
+        return ResponseBody.fromString('{}', 404);
+      });
 
-    final result = await ProfileService.getProfile('user-123');
+      final result = await ProfileService.getProfile('user-123');
 
-    expect(result.success, false);
-    expect(result.user, isNull);
-    expect(result.message, isNotNull);
-  });
+      expect(result.success, false);
+      expect(result.user, isNull);
+      expect(result.message, isNotNull);
+    },
+  );
 }

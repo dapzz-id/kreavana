@@ -17,7 +17,7 @@ class DioClient {
   void setStorageForTesting(SecureStorageService storage) {
     _secureStorage = storage;
   }
-  
+
   HttpClientAdapter? refreshAdapterForTesting;
 
   bool _isRefreshing = false;
@@ -144,26 +144,29 @@ class DioClient {
           },
         ),
       );
-      
+
       if (refreshAdapterForTesting != null) {
         refreshDio.httpClientAdapter = refreshAdapterForTesting!;
       }
 
-      final response = await refreshDio.post('/auth/refresh', data: requestData);
+      final response = await refreshDio.post(
+        '/auth/refresh',
+        data: requestData,
+      );
 
       if (response.statusCode == 200 && response.data['status'] == true) {
         final resData = response.data['data'];
         final accessToken = resData['access_token'];
-        
+
         await _secureStorage.saveToken(accessToken);
-        
+
         if (!kIsWeb) {
           final newRefreshToken = resData['refresh_token'];
           if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
             await _secureStorage.saveRefreshToken(newRefreshToken);
           }
         }
-        
+
         _refreshCompleter!.complete(true);
         return true;
       }

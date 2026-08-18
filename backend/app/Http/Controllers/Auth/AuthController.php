@@ -63,20 +63,20 @@ class AuthController extends Controller
 
     public function userLogin(Request $request)
     {
-        return $this->attemptLogin($request, 'user');
+        return $this->attemptLogin($request, \App\Enums\RoleType::User);
     }
 
     public function creatorLogin(Request $request)
     {
-        return $this->attemptLogin($request, 'creator');
+        return $this->attemptLogin($request, \App\Enums\RoleType::Creator);
     }
 
     public function adminLogin(Request $request)
     {
-        return $this->attemptLogin($request, 'admin');
+        return $this->attemptLogin($request, \App\Enums\RoleType::Admin);
     }
 
-    private function attemptLogin(Request $request, ?string $requiredRole = null)
+    private function attemptLogin(Request $request, ?\App\Enums\RoleType $requiredRole = null)
     {
         $request->validate([
             'email' => 'required|string',
@@ -277,10 +277,10 @@ class AuthController extends Controller
                     'name' => $user->name,
                     'username' => $user->username,
                     'email' => $user->email,
-                    'role' => $user->role,
+                    'role' => $user->role->value,
                     'sub_role' => $user->sub_role,
                     'is_creator_approved' => (bool) $user->is_creator_approved,
-                    'permissions' => config('permissions.' . $user->role, []),
+                    'permissions' => config('permissions.' . $user->role->value, []),
                 ],
             ]
         ]);

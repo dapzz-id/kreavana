@@ -7,23 +7,33 @@ class AppBarBadgeWidget extends StatelessWidget {
   final IconData icon;
   final bool isDark;
 
-  const AppBarBadgeWidget({super.key, required this.icon, required this.isDark});
+  const AppBarBadgeWidget({
+    super.key,
+    required this.icon,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final isNotification = icon == Icons.notifications_none_outlined || icon == Icons.notifications_outlined;
-    
+    final isNotification =
+        icon == Icons.notifications_none_outlined ||
+        icon == Icons.notifications_outlined;
+
     return ListenableBuilder(
       listenable: BadgeService(),
       builder: (context, _) {
-        final countStr = isNotification ? BadgeService().unreadNotificationsText : BadgeService().unreadMessagesText;
+        final countStr = isNotification
+            ? BadgeService().unreadNotificationsText
+            : BadgeService().unreadMessagesText;
         return GestureDetector(
           onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => isNotification
-                    ? const NotificationsScreen(userId: 'current') // ID is passed correctly elsewhere usually, or we can handle it
+                    ? const NotificationsScreen(
+                        userId: 'current',
+                      ) // ID is passed correctly elsewhere usually, or we can handle it
                     : const DirectMessageScreen(),
               ),
             );
@@ -37,7 +47,11 @@ class AppBarBadgeWidget extends StatelessWidget {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(icon, size: 20, color: isDark ? Colors.white : Colors.black87),
+                Icon(
+                  icon,
+                  size: 20,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
                 if (countStr.isNotEmpty && countStr != '0')
                   Positioned(
                     right: -4,

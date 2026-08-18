@@ -4,13 +4,10 @@ import '../../app/theme.dart';
 
 class SkeletonList extends StatelessWidget {
   final int itemCount;
-  
-  /// Creates a standard list view of skeletons. 
+
+  /// Creates a standard list view of skeletons.
   /// Wrapped in a single [SkeletonAnimator] for performance.
-  const SkeletonList({
-    super.key,
-    this.itemCount = 5,
-  });
+  const SkeletonList({super.key, this.itemCount = 5});
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +19,7 @@ class SkeletonList extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(height: 16),
         itemBuilder: (context, index) {
           final isDark = Theme.of(context).brightness == Brightness.dark;
-          
+
           return Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(

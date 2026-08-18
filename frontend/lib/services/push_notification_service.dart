@@ -15,8 +15,12 @@ class PushNotificationService {
   static Future<void> initialize() async {
     try {
       if (!kIsWeb) {
-        const androidInitSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-        const initSettings = InitializationSettings(android: androidInitSettings);
+        const androidInitSettings = AndroidInitializationSettings(
+          '@mipmap/ic_launcher',
+        );
+        const initSettings = InitializationSettings(
+          android: androidInitSettings,
+        );
         await _notificationsPlugin.initialize(settings: initSettings);
       }
 
@@ -60,10 +64,10 @@ class PushNotificationService {
       );
       _pusher!.onConnectionEstablished.listen((event) {
         debugPrint('Pusher Notification Connection Event: Connected');
-        
+
         final channel = _pusher!.publicChannel('user.$userId');
         channel.subscribe();
-        
+
         channel.bind('notification.sent').listen((notifEvent) {
           if (notifEvent.data != null) {
             _onEvent(notifEvent.data!);
@@ -84,9 +88,12 @@ class PushNotificationService {
     try {
       final data = eventData is String ? jsonDecode(eventData) : eventData;
       final notif = data['notification'];
-      
+
       if (notif != null) {
-        _showNotification(notif['title'] ?? 'Notifikasi', notif['message'] ?? 'Ada pemberitahuan baru');
+        _showNotification(
+          notif['title'] ?? 'Notifikasi',
+          notif['message'] ?? 'Ada pemberitahuan baru',
+        );
       }
     } catch (e) {
       debugPrint('Error parsing notification: $e');

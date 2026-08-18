@@ -113,7 +113,10 @@ class _AnimatedEntranceState extends State<AnimatedEntrance>
     _controller = AnimationController(vsync: this, duration: widget.duration);
     final curved = CurvedAnimation(parent: _controller, curve: widget.curve);
     _opacity = Tween<double>(begin: 0, end: 1).animate(curved);
-    _slide = Tween<Offset>(begin: widget.offset, end: Offset.zero).animate(curved);
+    _slide = Tween<Offset>(
+      begin: widget.offset,
+      end: Offset.zero,
+    ).animate(curved);
     if (widget.delay > Duration.zero) {
       Future.delayed(widget.delay, () {
         if (mounted) _controller.forward();
@@ -265,9 +268,10 @@ class _HoverRaiseState extends State<HoverRaise> {
           boxShadow: _hovered
               ? [
                   BoxShadow(
-                    color: (widget.glowColor ??
-                            Theme.of(context).colorScheme.primary)
-                        .withValues(alpha: 0.18),
+                    color:
+                        (widget.glowColor ??
+                                Theme.of(context).colorScheme.primary)
+                            .withValues(alpha: 0.18),
                     blurRadius: 24,
                     offset: const Offset(0, 10),
                   ),

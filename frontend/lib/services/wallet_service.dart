@@ -1,7 +1,6 @@
 import 'api_service.dart';
 import '../models/wallet_transaction_model.dart';
 
-
 class WalletService {
   /// Cek apakah user sudah mengatur PIN wallet (wallet "aktif").
   /// Jika belum, wallet tidak bisa digunakan untuk transaksi.
@@ -56,10 +55,7 @@ class WalletService {
         };
       }
     } catch (e) {
-      return {
-        'success': false,
-        'message': 'Koneksi gagal: $e',
-      };
+      return {'success': false, 'message': 'Koneksi gagal: $e'};
     }
   }
 
@@ -80,7 +76,9 @@ class WalletService {
 
       if (response['status'] == true) {
         final data = response['data'];
-        final transaction = WalletTransactionModel.fromJson(data['transaction']);
+        final transaction = WalletTransactionModel.fromJson(
+          data['transaction'],
+        );
         final paymentDetails = data['payment_details'] as Map<String, dynamic>;
 
         return {
@@ -95,26 +93,25 @@ class WalletService {
         };
       }
     } catch (e) {
-      return {
-        'success': false,
-        'message': 'Koneksi gagal: $e',
-      };
+      return {'success': false, 'message': 'Koneksi gagal: $e'};
     }
   }
 
   /// Menyimulasikan pembayaran top-up sukses
-  static Future<Map<String, dynamic>> simulatePayment(String referenceNumber) async {
+  static Future<Map<String, dynamic>> simulatePayment(
+    String referenceNumber,
+  ) async {
     try {
-      final body = {
-        'reference_number': referenceNumber,
-      };
+      final body = {'reference_number': referenceNumber};
 
       final response = await ApiService.post('wallet/topup/simulate', body);
 
       if (response['status'] == true) {
         final data = response['data'];
         final balance = double.parse(data['balance'].toString());
-        final transaction = WalletTransactionModel.fromJson(data['transaction']);
+        final transaction = WalletTransactionModel.fromJson(
+          data['transaction'],
+        );
 
         return {
           'success': true,
@@ -124,14 +121,12 @@ class WalletService {
       } else {
         return {
           'success': false,
-          'message': response['message'] ?? 'Gagal memproses simulasi pembayaran.',
+          'message':
+              response['message'] ?? 'Gagal memproses simulasi pembayaran.',
         };
       }
     } catch (e) {
-      return {
-        'success': false,
-        'message': 'Koneksi gagal: $e',
-      };
+      return {'success': false, 'message': 'Koneksi gagal: $e'};
     }
   }
 
@@ -155,7 +150,9 @@ class WalletService {
         final senderBalance = double.parse(data['sender_balance'].toString());
         final fee = double.parse(data['fee'].toString());
         final netAmount = double.parse(data['net_amount'].toString());
-        final transaction = WalletTransactionModel.fromJson(data['transaction']);
+        final transaction = WalletTransactionModel.fromJson(
+          data['transaction'],
+        );
 
         return {
           'success': true,
@@ -171,10 +168,7 @@ class WalletService {
         };
       }
     } catch (e) {
-      return {
-        'success': false,
-        'message': 'Koneksi gagal: $e',
-      };
+      return {'success': false, 'message': 'Koneksi gagal: $e'};
     }
   }
 
@@ -200,7 +194,9 @@ class WalletService {
         final balance = double.parse(data['balance'].toString());
         final tax = double.parse(data['tax'].toString());
         final netAmount = double.parse(data['net_amount'].toString());
-        final transaction = WalletTransactionModel.fromJson(data['transaction']);
+        final transaction = WalletTransactionModel.fromJson(
+          data['transaction'],
+        );
 
         return {
           'success': true,
@@ -216,10 +212,7 @@ class WalletService {
         };
       }
     } catch (e) {
-      return {
-        'success': false,
-        'message': 'Koneksi gagal: $e',
-      };
+      return {'success': false, 'message': 'Koneksi gagal: $e'};
     }
   }
 }

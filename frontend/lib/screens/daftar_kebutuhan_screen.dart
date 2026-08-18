@@ -78,10 +78,7 @@ class _DaftarKebutuhanScreenState extends State<DaftarKebutuhanScreen> {
     }
 
     if (_error != null) {
-      return AppErrorState(
-        message: _error!,
-        onRetry: _load,
-      );
+      return AppErrorState(message: _error!, onRetry: _load);
     }
 
     if (_items.isEmpty) {
@@ -223,10 +220,7 @@ class _KebutuhanCard extends StatelessWidget {
                   const SizedBox(width: 8),
                 ],
                 if (item.deadline != null)
-                  _MetaChip(
-                    icon: Icons.event_rounded,
-                    label: item.deadline!,
-                  ),
+                  _MetaChip(icon: Icons.event_rounded, label: item.deadline!),
               ],
             ),
           ],
@@ -275,7 +269,9 @@ class _KategoriBadge extends StatelessWidget {
       case 'konten-kreator':
         return 'Konten Kreator';
       default:
-        return slug.isNotEmpty ? slug[0].toUpperCase() + slug.substring(1) : 'Lainnya';
+        return slug.isNotEmpty
+            ? slug[0].toUpperCase() + slug.substring(1)
+            : 'Lainnya';
     }
   }
 
@@ -349,7 +345,9 @@ class _MetaChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(

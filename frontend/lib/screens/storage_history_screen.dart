@@ -69,16 +69,16 @@ class _StorageHistoryScreenState extends State<StorageHistoryScreen> {
     try {
       await ApiService.delete('/storage/$id');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('File berhasil dihapus.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('File berhasil dihapus.')));
         _fetchHistory();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menghapus file: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal menghapus file: $e')));
       }
     }
   }
@@ -118,7 +118,10 @@ class _StorageHistoryScreenState extends State<StorageHistoryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Storage Usage', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Storage Usage',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: progress,
@@ -134,7 +137,10 @@ class _StorageHistoryScreenState extends State<StorageHistoryScreen> {
               Text('Sisa: ${_formatBytes(_remainingStorage)}'),
             ],
           ),
-          Text('Limit: ${_formatBytes(_storageLimit)}', style: const TextStyle(color: Colors.grey)),
+          Text(
+            'Limit: ${_formatBytes(_storageLimit)}',
+            style: const TextStyle(color: Colors.grey),
+          ),
         ],
       ),
     );
@@ -149,8 +155,14 @@ class _StorageHistoryScreenState extends State<StorageHistoryScreen> {
       itemBuilder: (context, index) {
         final file = _files[index];
         return ListTile(
-          title: Text(file['original_name'] ?? 'Unknown', maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: Text('${_formatBytes(file['size'] ?? 0)} • ${file['category']} • ${file['visibility']}'),
+          title: Text(
+            file['original_name'] ?? 'Unknown',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Text(
+            '${_formatBytes(file['size'] ?? 0)} • ${file['category']} • ${file['visibility']}',
+          ),
           trailing: IconButton(
             icon: const Icon(Icons.delete, color: Colors.red),
             onPressed: () => _deleteFile(file['id']),

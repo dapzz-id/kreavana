@@ -1,0 +1,29 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('job_contracts', function (Blueprint $table) {
+            $table->timestamp('client_approved_at')->nullable()->after('client_approved');
+            $table->timestamp('creator_approved_at')->nullable()->after('creator_approved');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('job_contracts', function (Blueprint $table) {
+            $table->dropColumn(['client_approved_at', 'creator_approved_at']);
+        });
+    }
+};

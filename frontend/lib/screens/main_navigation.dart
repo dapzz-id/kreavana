@@ -62,7 +62,11 @@ class MainNavigation extends StatefulWidget {
   final UserModel initialUser;
   final int initialIndex;
 
-  const MainNavigation({super.key, required this.initialUser, this.initialIndex = 0});
+  const MainNavigation({
+    super.key,
+    required this.initialUser,
+    this.initialIndex = 0,
+  });
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
@@ -265,7 +269,9 @@ class _MainNavigationState extends State<MainNavigation> {
               vertical: 12,
             ),
             decoration: BoxDecoration(
-              color: isSelected ? activeColor.withValues(alpha: 0.1) : Colors.transparent,
+              color: isSelected
+                  ? activeColor.withValues(alpha: 0.1)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -288,7 +294,9 @@ class _MainNavigationState extends State<MainNavigation> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w500,
                         fontSize: 14,
                         color: isSelected
                             ? activeColor
@@ -343,8 +351,8 @@ class _MainNavigationState extends State<MainNavigation> {
       _activeGovRoute = null;
     });
     // Sync URL di web
-    final route = _currentUser.isAdmin 
-        ? _adminIndexRouteMap[index] 
+    final route = _currentUser.isAdmin
+        ? _adminIndexRouteMap[index]
         : _indexRouteMap[index];
     if (route != null && mounted) {
       context.go(route);
@@ -383,23 +391,37 @@ class _MainNavigationState extends State<MainNavigation> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: SubRoleThemeEngine.getGradient(_currentUser.role, _currentUser.subRole),
+              gradient: SubRoleThemeEngine.getGradient(
+                _currentUser.role,
+                _currentUser.subRole,
+              ),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Column(
               children: [
-                const Icon(Icons.workspace_premium_outlined, color: Colors.white, size: 28),
+                const Icon(
+                  Icons.workspace_premium_outlined,
+                  color: Colors.white,
+                  size: 28,
+                ),
                 const SizedBox(height: 8),
                 Text(
                   isCreator ? 'Upgrade Akun Kreator' : 'Upgrade Plan & Paket',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   isCreator
                       ? 'Tingkatkan peluang & fitur premium untuk kreator.'
                       : 'Nikmati kuota lebih tinggi, fitur AI, dan prioritas proyek.',
-                  style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.8)),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.white.withValues(alpha: 0.8),
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
@@ -411,9 +433,17 @@ class _MainNavigationState extends State<MainNavigation> {
                       backgroundColor: Colors.white,
                       foregroundColor: accentColor,
                       padding: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                    child: const Text('Upgrade Sekarang', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    child: const Text(
+                      'Upgrade Sekarang',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -531,7 +561,8 @@ class _MainNavigationState extends State<MainNavigation> {
         pageBuilder: (context, animation, secondaryAnimation) => destination,
         transitionDuration: Duration.zero,
         reverseTransitionDuration: Duration.zero,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) => child,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+            child,
       ),
     );
   }
@@ -542,8 +573,9 @@ class _MainNavigationState extends State<MainNavigation> {
     required bool isCollapsed,
     bool isMobileDrawer = false,
   }) {
-    final layananTitle =
-        CreatorSidebarMenus.layananSectionTitle(_currentUser.subRole);
+    final layananTitle = CreatorSidebarMenus.layananSectionTitle(
+      _currentUser.subRole,
+    );
     final layananItems = CreatorSidebarMenus.layananItems(_currentUser.subRole);
 
     if (layananTitle == null || layananItems.isEmpty) {
@@ -557,27 +589,29 @@ class _MainNavigationState extends State<MainNavigation> {
 
     return [
       const SizedBox(height: 18),
-      _buildSidebarSectionHeader(layananTitle, isDark, isCollapsed: isCollapsed),
-      ...layananItems.map(
-        (entry) {
-          final index = switch (entry.route) {
-            'marketplace' => 3,
-            'agenda' => 4,
-            'proyek' => 2,
-            'kolaborasi' => 5,
-            _ => null,
-          };
-          return _buildSidebarLink(
-            icon: entry.icon,
-            label: entry.label,
-            onTap: () => _handleCreatorMenuEntry(entry),
-            isDark: isDark,
-            isCollapsed: isCollapsed,
-            isSelected: index != null && _currentIndex == index,
-            isMobileDrawer: isMobileDrawer,
-          );
-        },
+      _buildSidebarSectionHeader(
+        layananTitle,
+        isDark,
+        isCollapsed: isCollapsed,
       ),
+      ...layananItems.map((entry) {
+        final index = switch (entry.route) {
+          'marketplace' => 3,
+          'agenda' => 4,
+          'proyek' => 2,
+          'kolaborasi' => 5,
+          _ => null,
+        };
+        return _buildSidebarLink(
+          icon: entry.icon,
+          label: entry.label,
+          onTap: () => _handleCreatorMenuEntry(entry),
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: index != null && _currentIndex == index,
+          isMobileDrawer: isMobileDrawer,
+        );
+      }),
       const SizedBox(height: 18),
       _buildSidebarSectionHeader('LAINNYA', isDark, isCollapsed: isCollapsed),
       if (CreatorSidebarMenus.showKolaborasiInLainnya(_currentUser.subRole))
@@ -937,7 +971,13 @@ class _MainNavigationState extends State<MainNavigation> {
           label: 'Profil Instansi',
           onTap: () {
             setState(() => _activeGovRoute = 'profil_instansi');
-            _pushGovScreen(ProfileScreen(user: _currentUser, onUserUpdated: _onUserUpdated, onLogout: _onLogout));
+            _pushGovScreen(
+              ProfileScreen(
+                user: _currentUser,
+                onUserUpdated: _onUserUpdated,
+                onLogout: _onLogout,
+              ),
+            );
           },
           isDark: isDark,
           isCollapsed: isCollapsed,
@@ -983,7 +1023,10 @@ class _MainNavigationState extends State<MainNavigation> {
     ];
   }
 
-  Widget _buildUserBottomCard({required bool isDark, required bool isCollapsed}) {
+  Widget _buildUserBottomCard({
+    required bool isDark,
+    required bool isCollapsed,
+  }) {
     return Container(
       padding: EdgeInsets.all(isCollapsed ? 10 : 16),
       child: isCollapsed
@@ -994,12 +1037,23 @@ class _MainNavigationState extends State<MainNavigation> {
                   message: '${_currentUser.name} (@${_currentUser.username})',
                   child: CircleAvatar(
                     radius: 16,
-                    backgroundColor: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
-                    backgroundImage: _currentUser.avatarUrl != null && _currentUser.avatarUrl!.isNotEmpty
-                        ? CachedNetworkImageProvider(ApiService.resolveAssetUrl(_currentUser.avatarUrl!))
+                    backgroundColor: isDark
+                        ? const Color(0xFF2D2A3E)
+                        : Colors.grey.shade200,
+                    backgroundImage:
+                        _currentUser.avatarUrl != null &&
+                            _currentUser.avatarUrl!.isNotEmpty
+                        ? CachedNetworkImageProvider(
+                            ApiService.resolveAssetUrl(_currentUser.avatarUrl!),
+                          )
                         : null,
-                    child: _currentUser.avatarUrl == null || _currentUser.avatarUrl!.isEmpty
-                        ? const Icon(Icons.person, color: AppTheme.primaryPurple)
+                    child:
+                        _currentUser.avatarUrl == null ||
+                            _currentUser.avatarUrl!.isEmpty
+                        ? const Icon(
+                            Icons.person,
+                            color: AppTheme.primaryPurple,
+                          )
                         : null,
                   ),
                 ),
@@ -1011,7 +1065,11 @@ class _MainNavigationState extends State<MainNavigation> {
                     borderRadius: BorderRadius.circular(8),
                     child: const Padding(
                       padding: EdgeInsets.all(4),
-                      child: Icon(Icons.logout_rounded, color: Colors.redAccent, size: 18),
+                      child: Icon(
+                        Icons.logout_rounded,
+                        color: Colors.redAccent,
+                        size: 18,
+                      ),
                     ),
                   ),
                 ),
@@ -1021,10 +1079,17 @@ class _MainNavigationState extends State<MainNavigation> {
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
-                  backgroundImage: _currentUser.avatarUrl != null && _currentUser.avatarUrl!.isNotEmpty
-                      ? CachedNetworkImageProvider(ApiService.resolveAssetUrl(_currentUser.avatarUrl!))
-                      : const AssetImage('assets/brandlogo.png') as ImageProvider,
+                  backgroundColor: isDark
+                      ? const Color(0xFF2D2A3E)
+                      : Colors.grey.shade200,
+                  backgroundImage:
+                      _currentUser.avatarUrl != null &&
+                          _currentUser.avatarUrl!.isNotEmpty
+                      ? CachedNetworkImageProvider(
+                          ApiService.resolveAssetUrl(_currentUser.avatarUrl!),
+                        )
+                      : const AssetImage('assets/brandlogo.png')
+                            as ImageProvider,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -1036,19 +1101,31 @@ class _MainNavigationState extends State<MainNavigation> {
                         _currentUser.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
                       Text(
                         '@${_currentUser.username}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 11, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.logout_rounded, color: Colors.redAccent, size: 20),
+                  icon: const Icon(
+                    Icons.logout_rounded,
+                    color: Colors.redAccent,
+                    size: 20,
+                  ),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   onPressed: _showLogoutDialog,
@@ -1058,7 +1135,11 @@ class _MainNavigationState extends State<MainNavigation> {
     );
   }
 
-  Widget _buildMobileDrawer(BuildContext context, bool isDark, ThemeData theme) {
+  Widget _buildMobileDrawer(
+    BuildContext context,
+    bool isDark,
+    ThemeData theme,
+  ) {
     return Drawer(
       backgroundColor: isDark ? const Color(0xFF141221) : Colors.white,
       child: SafeArea(
@@ -1134,44 +1215,68 @@ class _MainNavigationState extends State<MainNavigation> {
     final subRole = (_currentUser.subRole ?? '').toLowerCase().trim();
     switch (subRole) {
       case 'umkm':
-        return UmkmDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return UmkmDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'brand_agency':
       case 'agency':
-        return AgencyDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return AgencyDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'government':
       case 'institution':
       case 'pemerintah':
       case 'instansi':
-        return GovtDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return GovtDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'company':
       case 'business':
       case 'corporate':
       case 'perusahaan':
       case 'bisnis':
-        return CompanyDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return CompanyDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'event_organizer':
       case 'eo':
-        return EoDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return EoDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'wedding_organizer':
       case 'wo':
-        return WoDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return WoDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'school':
       case 'education':
       case 'campus':
       case 'sekolah':
       case 'kampus':
-        return SchoolDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return SchoolDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'tourism':
       case 'desa_wisata':
       case 'pariwisata':
-        return TourismDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return TourismDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'individual':
       case 'personal':
@@ -1179,20 +1284,32 @@ class _MainNavigationState extends State<MainNavigation> {
       case 'pribadi':
       case 'individu':
       case 'keluarga':
-        return IndividualDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return IndividualDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'community':
       case 'komunitas':
-        return CommunityDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return CommunityDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'animator':
       case '3d_animator':
       case 'motion_designer':
-        return CreatorAnimatorDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return CreatorAnimatorDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       default:
         // Tampilan Klien Umum (Default untuk akun baru atau sub_role kosong / umum / null)
-        return DashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return DashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
     }
   }
 
@@ -1203,33 +1320,51 @@ class _MainNavigationState extends State<MainNavigation> {
       case 'institution':
       case 'pemerintah':
       case 'instansi':
-        return GovtDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return GovtDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'fotografer':
       case 'photographer':
       case 'foto':
-        return CreatorFotograferDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return CreatorFotograferDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'videografer':
       case 'videographer':
       case 'video':
-        return CreatorVideograferDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return CreatorVideograferDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'editor':
       case 'photo_editor':
       case 'video_editor':
-        return CreatorEditorDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return CreatorEditorDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'desainer':
       case 'designer':
       case 'graphic_designer':
       case 'desain':
-        return CreatorDesainerDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return CreatorDesainerDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'mua':
       case 'makeup_artist':
       case 'makeup':
-        return CreatorMuaDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return CreatorMuaDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'talent':
       case 'model':
@@ -1237,38 +1372,62 @@ class _MainNavigationState extends State<MainNavigation> {
       case 'mc':
       case 'singer':
       case 'penyanyi':
-        return CreatorTalentDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return CreatorTalentDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'wedding_organizer':
       case 'wo':
-        return WoDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return WoDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'event_organizer':
       case 'eo':
-        return EoDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return EoDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'community':
       case 'komunitas':
-        return CommunityDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return CommunityDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'drone':
       case 'drone_pilot':
       case 'pilot_drone':
-        return CreatorDroneDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return CreatorDroneDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'content_creator':
       case 'influencer':
       case 'ugc':
-        return CreatorContentDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return CreatorContentDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       case 'animator':
       case '3d_animator':
       case 'motion_designer':
-        return CreatorAnimatorDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return CreatorAnimatorDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
 
       default:
         // Kreator Umum (Default untuk kreator baru yang belum memilih kategori)
-        return CreatorGeneralDashboardScreen(user: _currentUser, onUserUpdated: _onUserUpdated);
+        return CreatorGeneralDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
     }
   }
 
@@ -1308,7 +1467,10 @@ class _MainNavigationState extends State<MainNavigation> {
             const AgendaScreen(), // 4
             const KolaborasiScreen(), // 5
             const UlasanReputasiScreen(), // 6
-            WalletScreen(user: _currentUser, onUserUpdated: _onUserUpdated), // 7
+            WalletScreen(
+              user: _currentUser,
+              onUserUpdated: _onUserUpdated,
+            ), // 7
             PengaturanScreen(
               user: _currentUser,
               onUserUpdated: _onUserUpdated,
@@ -1471,7 +1633,10 @@ class _MainNavigationState extends State<MainNavigation> {
                           ? const Color(0xFF2D2A3E)
                           : Colors.grey.shade200,
                     ),
-                    _buildUserBottomCard(isDark: isDark, isCollapsed: _isSidebarCollapsed),
+                    _buildUserBottomCard(
+                      isDark: isDark,
+                      isCollapsed: _isSidebarCollapsed,
+                    ),
                   ],
                 ),
               ),
@@ -1568,11 +1733,6 @@ class _MainNavigationState extends State<MainNavigation> {
       );
     }
 
-    return Stack(
-      children: [
-        scaffoldWidget,
-        const KreavanaAiFloatingWidget(),
-      ],
-    );
+    return Stack(children: [scaffoldWidget, const KreavanaAiFloatingWidget()]);
   }
 }

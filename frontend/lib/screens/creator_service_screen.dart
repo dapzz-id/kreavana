@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../app/theme.dart';
 import '../models/user_model.dart';
+import '../widgets/creator_availability_widget.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 
 class CreatorServiceItem {
@@ -27,23 +28,29 @@ class CreatorServiceItem {
   });
 
   Map<String, dynamic> toJson() => {
-        'id': id ?? title,
-        'title': title,
-        'subtitle': subtitle,
-        'iconCodepoint': icon.codePoint,
-        'iconFontFamily': icon.fontFamily,
-        'iconFontPackage': icon.fontPackage,
-        'tag': tag,
-        'value': value,
-        'active': active,
-        'gradientColorsHex': gradient?.map((c) => '#${c.toARGB32().toRadixString(16).padLeft(8, '0')}').toList(),
-      };
+    'id': id ?? title,
+    'title': title,
+    'subtitle': subtitle,
+    'iconCodepoint': icon.codePoint,
+    'iconFontFamily': icon.fontFamily,
+    'iconFontPackage': icon.fontPackage,
+    'tag': tag,
+    'value': value,
+    'active': active,
+    'gradientColorsHex': gradient
+        ?.map((c) => '#${c.toARGB32().toRadixString(16).padLeft(8, '0')}')
+        .toList(),
+  };
 
   static CreatorServiceItem fromJson(Map<String, dynamic> j) {
     final List<Color>? grad = j['gradientColorsHex'] != null
         ? (j['gradientColorsHex'] as List<dynamic>)
-            .map((e) => Color(int.parse((e as String).replaceAll('#', ''), radix: 16)))
-            .toList()
+              .map(
+                (e) => Color(
+                  int.parse((e as String).replaceAll('#', ''), radix: 16),
+                ),
+              )
+              .toList()
         : null;
     return CreatorServiceItem(
       id: j['id']?.toString() ?? j['title']?.toString() ?? '',
@@ -65,7 +72,8 @@ class CreatorLocalStorage {
   static const _kSubmitted = '${_prefix}submitted_items_v1';
   static const _kReviews = '${_prefix}reviews_v1_';
 
-  static Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
+  static Future<SharedPreferences> get _prefs =>
+      SharedPreferences.getInstance();
 
   static Future<List<CreatorServiceItem>> getExtraItems(String menuKey) async {
     try {
@@ -73,16 +81,24 @@ class CreatorLocalStorage {
       final raw = sp.getString('$_kExtra$menuKey');
       if (raw == null || raw.isEmpty) return const [];
       final list = jsonDecode(raw) as List<dynamic>;
-      return list.map((e) => CreatorServiceItem.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => CreatorServiceItem.fromJson(e as Map<String, dynamic>))
+          .toList();
     } catch (_) {
       return const [];
     }
   }
 
-  static Future<void> setExtraItems(String menuKey, List<CreatorServiceItem> items) async {
+  static Future<void> setExtraItems(
+    String menuKey,
+    List<CreatorServiceItem> items,
+  ) async {
     try {
       final sp = await _prefs;
-      await sp.setString('$_kExtra$menuKey', jsonEncode(items.map((e) => e.toJson()).toList()));
+      await sp.setString(
+        '$_kExtra$menuKey',
+        jsonEncode(items.map((e) => e.toJson()).toList()),
+      );
     } catch (_) {}
   }
 
@@ -103,12 +119,27 @@ class CreatorLocalStorage {
   }
 
   static Future<Set<String>> getSavedItems() => _loadStringSet(_kSaved);
-  static Future<void> setSavedItems(Set<String> ids) => _saveStringSet(_kSaved, ids);
+  static Future<void> setSavedItems(Set<String> ids) =>
+      _saveStringSet(_kSaved, ids);
 
   static Future<Set<String>> getSubmittedItems() => _loadStringSet(_kSubmitted);
-  static Future<void> setSubmittedItems(Set<String> ids) => _saveStringSet(_kSubmitted, ids);
+  static Future<void> setSubmittedItems(Set<String> ids) =>
+      _saveStringSet(_kSubmitted, ids);
 
-  static Future<List<({String name, String city, String text, int stars, String date, bool verified, int likes})>> getReviews(String itemId) async {
+  static Future<
+    List<
+      ({
+        String name,
+        String city,
+        String text,
+        int stars,
+        String date,
+        bool verified,
+        int likes,
+      })
+    >
+  >
+  getReviews(String itemId) async {
     try {
       final sp = await _prefs;
       final raw = sp.getString('$_kReviews$itemId');
@@ -131,19 +162,35 @@ class CreatorLocalStorage {
     }
   }
 
-  static Future<void> setReviews(String itemId, List<({String name, String city, String text, int stars, String date, bool verified, int likes})> list) async {
+  static Future<void> setReviews(
+    String itemId,
+    List<
+      ({
+        String name,
+        String city,
+        String text,
+        int stars,
+        String date,
+        bool verified,
+        int likes,
+      })
+    >
+    list,
+  ) async {
     try {
       final sp = await _prefs;
       final encoded = list
-          .map((r) => {
-                'name': r.name,
-                'city': r.city,
-                'text': r.text,
-                'stars': r.stars,
-                'date': r.date,
-                'verified': r.verified,
-                'likes': r.likes,
-              })
+          .map(
+            (r) => {
+              'name': r.name,
+              'city': r.city,
+              'text': r.text,
+              'stars': r.stars,
+              'date': r.date,
+              'verified': r.verified,
+              'likes': r.likes,
+            },
+          )
           .toList();
       await sp.setString('$_kReviews$itemId', jsonEncode(encoded));
     } catch (_) {}
@@ -184,15 +231,45 @@ class CreatorServiceData {
       stats: [
         ('48', 'Proyek', Icons.photo_library_outlined),
         ('4.9', 'Rating', Icons.star_rounded),
-        ('120+', 'Klien', Icons.people_outline)
+        ('120+', 'Klien', Icons.people_outline),
       ],
       isGrid: true,
       items: [
-        CreatorServiceItem(title: 'Wedding & Prewedding', subtitle: 'Dokumentasi pernikahan premium', icon: Icons.favorite_outline, tag: 'Fotografi', value: '24 Proyek'),
-        CreatorServiceItem(title: 'Katalog Produk', subtitle: 'Foto produk untuk e-commerce', icon: Icons.shopping_bag_outlined, tag: 'Produk', value: '15 Proyek'),
-        CreatorServiceItem(title: 'Event & Dokumentasi', subtitle: 'Liputan acara perusahaan & komunitas', icon: Icons.event_outlined, tag: 'Event', value: '12 Proyek'),
-        CreatorServiceItem(title: 'Portrait & Personal Branding', subtitle: 'Foto profil profesional & personal', icon: Icons.face_outlined, tag: 'Portrait', value: '18 Proyek'),
-        CreatorServiceItem(title: 'Arsitektur & Interior', subtitle: 'Foto properti & bangunan', icon: Icons.apartment_outlined, tag: 'Properti', value: '9 Proyek'),
+        CreatorServiceItem(
+          title: 'Wedding & Prewedding',
+          subtitle: 'Dokumentasi pernikahan premium',
+          icon: Icons.favorite_outline,
+          tag: 'Fotografi',
+          value: '24 Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Katalog Produk',
+          subtitle: 'Foto produk untuk e-commerce',
+          icon: Icons.shopping_bag_outlined,
+          tag: 'Produk',
+          value: '15 Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Event & Dokumentasi',
+          subtitle: 'Liputan acara perusahaan & komunitas',
+          icon: Icons.event_outlined,
+          tag: 'Event',
+          value: '12 Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Portrait & Personal Branding',
+          subtitle: 'Foto profil profesional & personal',
+          icon: Icons.face_outlined,
+          tag: 'Portrait',
+          value: '18 Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Arsitektur & Interior',
+          subtitle: 'Foto properti & bangunan',
+          icon: Icons.apartment_outlined,
+          tag: 'Properti',
+          value: '9 Proyek',
+        ),
       ],
     ),
     'foto_booking': CreatorServiceData(
@@ -204,14 +281,38 @@ class CreatorServiceData {
       stats: [
         ('2', 'Hari Ini', Icons.today_outlined),
         ('5', 'Minggu Ini', Icons.date_range_outlined),
-        ('3', 'Pending', Icons.pending_actions_outlined)
+        ('3', 'Pending', Icons.pending_actions_outlined),
       ],
       actionLabel: 'Konfirmasi Booking',
       items: [
-        CreatorServiceItem(title: 'Katalog Produk - Kopi Nusantara', subtitle: '12 Agu 2026 • 09:00 - 13:00 WIB', icon: Icons.photo_camera_outlined, tag: 'Terkonfirmasi', value: 'Studio Senayan'),
-        CreatorServiceItem(title: 'Prewedding - Rina & Budi', subtitle: '18 Agu 2026 • 15:00 - 18:00 WIB', icon: Icons.favorite_outline, tag: 'Menunggu', value: 'Ancol'),
-        CreatorServiceItem(title: 'Launching Toko Sinar Jaya', subtitle: '25 Agu 2026 • 10:00 - 14:00 WIB', icon: Icons.storefront_outlined, tag: 'Terkonfirmasi', value: 'Kelapa Gading'),
-        CreatorServiceItem(title: 'Portrait - Pak Adi', subtitle: '02 Sep 2026 • 09:00 - 10:30 WIB', icon: Icons.person_outline, tag: 'Terkonfirmasi', value: 'Studio Senayan'),
+        CreatorServiceItem(
+          title: 'Katalog Produk - Kopi Nusantara',
+          subtitle: '12 Agu 2026 • 09:00 - 13:00 WIB',
+          icon: Icons.photo_camera_outlined,
+          tag: 'Terkonfirmasi',
+          value: 'Studio Senayan',
+        ),
+        CreatorServiceItem(
+          title: 'Prewedding - Rina & Budi',
+          subtitle: '18 Agu 2026 • 15:00 - 18:00 WIB',
+          icon: Icons.favorite_outline,
+          tag: 'Menunggu',
+          value: 'Ancol',
+        ),
+        CreatorServiceItem(
+          title: 'Launching Toko Sinar Jaya',
+          subtitle: '25 Agu 2026 • 10:00 - 14:00 WIB',
+          icon: Icons.storefront_outlined,
+          tag: 'Terkonfirmasi',
+          value: 'Kelapa Gading',
+        ),
+        CreatorServiceItem(
+          title: 'Portrait - Pak Adi',
+          subtitle: '02 Sep 2026 • 09:00 - 10:30 WIB',
+          icon: Icons.person_outline,
+          tag: 'Terkonfirmasi',
+          value: 'Studio Senayan',
+        ),
       ],
     ),
     'foto_paket': CreatorServiceData(
@@ -223,13 +324,31 @@ class CreatorServiceData {
       stats: [
         ('3', 'Paket Aktif', Icons.card_membership_outlined),
         ('Rp 750K', 'Mulai Dari', Icons.price_change_outlined),
-        ('±2 Hari', 'Estimasi Proses', Icons.schedule_outlined)
+        ('±2 Hari', 'Estimasi Proses', Icons.schedule_outlined),
       ],
       actionLabel: 'Pilih Paket',
       items: [
-        CreatorServiceItem(title: 'Paket Basic', subtitle: '1 jam sesi • 30 foto edit • 1 lokasi', icon: Icons.photo_outlined, tag: 'Populer', value: 'Rp 750.000'),
-        CreatorServiceItem(title: 'Paket Premium', subtitle: '3 jam sesi • 100 foto edit • 2 lokasi', icon: Icons.photo_camera_outlined, tag: 'Best Value', value: 'Rp 1.500.000'),
-        CreatorServiceItem(title: 'Paket Eksklusif', subtitle: '6 jam sesi • 250 foto edit • unlimited lokasi', icon: Icons.workspace_premium_outlined, tag: 'Premium', value: 'Rp 2.750.000'),
+        CreatorServiceItem(
+          title: 'Paket Basic',
+          subtitle: '1 jam sesi • 30 foto edit • 1 lokasi',
+          icon: Icons.photo_outlined,
+          tag: 'Populer',
+          value: 'Rp 750.000',
+        ),
+        CreatorServiceItem(
+          title: 'Paket Premium',
+          subtitle: '3 jam sesi • 100 foto edit • 2 lokasi',
+          icon: Icons.photo_camera_outlined,
+          tag: 'Best Value',
+          value: 'Rp 1.500.000',
+        ),
+        CreatorServiceItem(
+          title: 'Paket Eksklusif',
+          subtitle: '6 jam sesi • 250 foto edit • unlimited lokasi',
+          icon: Icons.workspace_premium_outlined,
+          tag: 'Premium',
+          value: 'Rp 2.750.000',
+        ),
       ],
     ),
     'foto_area': CreatorServiceData(
@@ -241,13 +360,37 @@ class CreatorServiceData {
       stats: [
         ('12', 'Kota Dilayani', Icons.location_city_outlined),
         ('0-150 km', 'Jangkauan', Icons.social_distance_outlined),
-        ('Gratis', 'Dari 0 km', Icons.celebration_outlined)
+        ('Gratis', 'Dari 0 km', Icons.celebration_outlined),
       ],
       items: [
-        CreatorServiceItem(title: 'Jakarta & Sekitarnya', subtitle: 'Jangkauan 0 - 30 km', icon: Icons.location_city_outlined, tag: 'Aktif', value: 'Gratis'),
-        CreatorServiceItem(title: 'Bodetabek', subtitle: 'Jangkauan 30 - 60 km', icon: Icons.directions_car_outlined, tag: 'Aktif', value: 'Rp 150.000'),
-        CreatorServiceItem(title: 'Bandung & Jawa Barat', subtitle: 'Jangkauan 60 - 150 km', icon: Icons.landscape_outlined, tag: 'Aktif', value: 'Rp 350.000'),
-        CreatorServiceItem(title: 'Luar Pulau Jawa', subtitle: 'Perlu koordinasi khusus', icon: Icons.flight_takeoff_outlined, tag: 'Custom', value: 'Negosiasi'),
+        CreatorServiceItem(
+          title: 'Jakarta & Sekitarnya',
+          subtitle: 'Jangkauan 0 - 30 km',
+          icon: Icons.location_city_outlined,
+          tag: 'Aktif',
+          value: 'Gratis',
+        ),
+        CreatorServiceItem(
+          title: 'Bodetabek',
+          subtitle: 'Jangkauan 30 - 60 km',
+          icon: Icons.directions_car_outlined,
+          tag: 'Aktif',
+          value: 'Rp 150.000',
+        ),
+        CreatorServiceItem(
+          title: 'Bandung & Jawa Barat',
+          subtitle: 'Jangkauan 60 - 150 km',
+          icon: Icons.landscape_outlined,
+          tag: 'Aktif',
+          value: 'Rp 350.000',
+        ),
+        CreatorServiceItem(
+          title: 'Luar Pulau Jawa',
+          subtitle: 'Perlu koordinasi khusus',
+          icon: Icons.flight_takeoff_outlined,
+          tag: 'Custom',
+          value: 'Negosiasi',
+        ),
       ],
     ),
 
@@ -261,14 +404,38 @@ class CreatorServiceData {
       stats: [
         ('36', 'Video', Icons.videocam_outlined),
         ('4.8', 'Rating', Icons.star_rounded),
-        ('85+', 'Klien', Icons.people_outline)
+        ('85+', 'Klien', Icons.people_outline),
       ],
       isGrid: true,
       items: [
-        CreatorServiceItem(title: 'Video Company Profile', subtitle: 'Profil perusahaan berdurasi 2-3 menit', icon: Icons.business_outlined, tag: 'Korporat', value: '12 Proyek'),
-        CreatorServiceItem(title: 'Iklan & Promosi', subtitle: 'Video iklan untuk sosial media', icon: Icons.campaign_outlined, tag: 'Iklan', value: '18 Proyek'),
-        CreatorServiceItem(title: 'Dokumentasi Event', subtitle: 'Liputan video acara & konser', icon: Icons.mic_external_on_outlined, tag: 'Event', value: '10 Proyek'),
-        CreatorServiceItem(title: 'Video Musik', subtitle: 'MV & konten kreatif', icon: Icons.music_video_outlined, tag: 'Musik', value: '6 Proyek'),
+        CreatorServiceItem(
+          title: 'Video Company Profile',
+          subtitle: 'Profil perusahaan berdurasi 2-3 menit',
+          icon: Icons.business_outlined,
+          tag: 'Korporat',
+          value: '12 Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Iklan & Promosi',
+          subtitle: 'Video iklan untuk sosial media',
+          icon: Icons.campaign_outlined,
+          tag: 'Iklan',
+          value: '18 Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Dokumentasi Event',
+          subtitle: 'Liputan video acara & konser',
+          icon: Icons.mic_external_on_outlined,
+          tag: 'Event',
+          value: '10 Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Video Musik',
+          subtitle: 'MV & konten kreatif',
+          icon: Icons.music_video_outlined,
+          tag: 'Musik',
+          value: '6 Proyek',
+        ),
       ],
     ),
     'video_booking': CreatorServiceData(
@@ -280,13 +447,31 @@ class CreatorServiceData {
       stats: [
         ('1', 'Hari Ini', Icons.today_outlined),
         ('4', 'Minggu Ini', Icons.date_range_outlined),
-        ('2', 'Pending', Icons.pending_actions_outlined)
+        ('2', 'Pending', Icons.pending_actions_outlined),
       ],
       actionLabel: 'Konfirmasi Booking',
       items: [
-        CreatorServiceItem(title: 'Company Profile - PT Maju Bersama', subtitle: '13 Agu 2026 • 08:00 - 16:00 WIB', icon: Icons.business_outlined, tag: 'Terkonfirmasi', value: 'Kantor Klien'),
-        CreatorServiceItem(title: 'Iklan Produk - Kopi Senja', subtitle: '19 Agu 2026 • 09:00 - 15:00 WIB', icon: Icons.campaign_outlined, tag: 'Menunggu', value: 'Studio'),
-        CreatorServiceItem(title: 'Dokumentasi Festival Budaya', subtitle: '30 Agu 2026 • 07:00 - 22:00 WIB', icon: Icons.festival_outlined, tag: 'Terkonfirmasi', value: 'TMII'),
+        CreatorServiceItem(
+          title: 'Company Profile - PT Maju Bersama',
+          subtitle: '13 Agu 2026 • 08:00 - 16:00 WIB',
+          icon: Icons.business_outlined,
+          tag: 'Terkonfirmasi',
+          value: 'Kantor Klien',
+        ),
+        CreatorServiceItem(
+          title: 'Iklan Produk - Kopi Senja',
+          subtitle: '19 Agu 2026 • 09:00 - 15:00 WIB',
+          icon: Icons.campaign_outlined,
+          tag: 'Menunggu',
+          value: 'Studio',
+        ),
+        CreatorServiceItem(
+          title: 'Dokumentasi Festival Budaya',
+          subtitle: '30 Agu 2026 • 07:00 - 22:00 WIB',
+          icon: Icons.festival_outlined,
+          tag: 'Terkonfirmasi',
+          value: 'TMII',
+        ),
       ],
     ),
     'video_paket': CreatorServiceData(
@@ -298,13 +483,31 @@ class CreatorServiceData {
       stats: [
         ('3', 'Paket Aktif', Icons.card_membership_outlined),
         ('Rp 1.5JT', 'Mulai Dari', Icons.price_change_outlined),
-        ('3-7 Hari', 'Estimasi Produksi', Icons.schedule_outlined)
+        ('3-7 Hari', 'Estimasi Produksi', Icons.schedule_outlined),
       ],
       actionLabel: 'Pilih Paket',
       items: [
-        CreatorServiceItem(title: 'Paket Starter', subtitle: '1 video 60 detik • 1 lokasi • 1x revisi', icon: Icons.videocam_outlined, tag: 'Starter', value: 'Rp 1.500.000'),
-        CreatorServiceItem(title: 'Paket Profesional', subtitle: '2 video • 2 lokasi • unlimited revisi', icon: Icons.videocam_outlined, tag: 'Best Value', value: 'Rp 3.500.000'),
-        CreatorServiceItem(title: 'Paket Premium', subtitle: 'Full produksi • 3+ video • drone • tim lengkap', icon: Icons.workspace_premium_outlined, tag: 'Premium', value: 'Rp 7.500.000'),
+        CreatorServiceItem(
+          title: 'Paket Starter',
+          subtitle: '1 video 60 detik • 1 lokasi • 1x revisi',
+          icon: Icons.videocam_outlined,
+          tag: 'Starter',
+          value: 'Rp 1.500.000',
+        ),
+        CreatorServiceItem(
+          title: 'Paket Profesional',
+          subtitle: '2 video • 2 lokasi • unlimited revisi',
+          icon: Icons.videocam_outlined,
+          tag: 'Best Value',
+          value: 'Rp 3.500.000',
+        ),
+        CreatorServiceItem(
+          title: 'Paket Premium',
+          subtitle: 'Full produksi • 3+ video • drone • tim lengkap',
+          icon: Icons.workspace_premium_outlined,
+          tag: 'Premium',
+          value: 'Rp 7.500.000',
+        ),
       ],
     ),
     'video_equipment': CreatorServiceData(
@@ -316,13 +519,37 @@ class CreatorServiceData {
       stats: [
         ('12', 'Unit Peralatan', Icons.cases_outlined),
         ('4K', 'Resolusi Maks', Icons.high_quality_outlined),
-        ('2', 'Kamera', Icons.photo_camera_outlined)
+        ('2', 'Kamera', Icons.photo_camera_outlined),
       ],
       items: [
-        CreatorServiceItem(title: 'Sony FX3 Full Frame', subtitle: 'Kamera sinema 4K 120fps', icon: Icons.camera_outlined, tag: 'Tersedia', value: '2 Unit'),
-        CreatorServiceItem(title: 'DJI Mavic 3 Pro', subtitle: 'Drone 4K dengan 3 lensa', icon: Icons.flight_outlined, tag: 'Tersedia', value: '1 Unit'),
-        CreatorServiceItem(title: 'Gimbal DJI RS 3 Pro', subtitle: 'Stabilizer profesional', icon: Icons.settings_remote_outlined, tag: 'Tersedia', value: '1 Unit'),
-        CreatorServiceItem(title: 'Lighting Set Profesional', subtitle: 'Aputure 600d + softbox', icon: Icons.light_mode_outlined, tag: 'Tersedia', value: '3 Set'),
+        CreatorServiceItem(
+          title: 'Sony FX3 Full Frame',
+          subtitle: 'Kamera sinema 4K 120fps',
+          icon: Icons.camera_outlined,
+          tag: 'Tersedia',
+          value: '2 Unit',
+        ),
+        CreatorServiceItem(
+          title: 'DJI Mavic 3 Pro',
+          subtitle: 'Drone 4K dengan 3 lensa',
+          icon: Icons.flight_outlined,
+          tag: 'Tersedia',
+          value: '1 Unit',
+        ),
+        CreatorServiceItem(
+          title: 'Gimbal DJI RS 3 Pro',
+          subtitle: 'Stabilizer profesional',
+          icon: Icons.settings_remote_outlined,
+          tag: 'Tersedia',
+          value: '1 Unit',
+        ),
+        CreatorServiceItem(
+          title: 'Lighting Set Profesional',
+          subtitle: 'Aputure 600d + softbox',
+          icon: Icons.light_mode_outlined,
+          tag: 'Tersedia',
+          value: '3 Set',
+        ),
       ],
     ),
 
@@ -336,14 +563,38 @@ class CreatorServiceData {
       stats: [
         ('250+', 'Project', Icons.folder_copy_outlined),
         ('4.9', 'Rating', Icons.star_rounded),
-        ('48 jam', 'Rata-rata Turnaround', Icons.flash_on_rounded)
+        ('48 jam', 'Rata-rata Turnaround', Icons.flash_on_rounded),
       ],
       isGrid: true,
       items: [
-        CreatorServiceItem(title: 'Color Grading Sinematik', subtitle: 'Video 4K dengan tone sinematik', icon: Icons.movie_outlined, tag: 'Video', value: '80+ Proyek'),
-        CreatorServiceItem(title: 'Retouching Portrait', subtitle: 'Skin retouch natural & beauty', icon: Icons.face_retouching_natural_outlined, tag: 'Foto', value: '120+ Proyek'),
-        CreatorServiceItem(title: 'Motion Graphics', subtitle: 'Animasi logo & teks kreatif', icon: Icons.animation_outlined, tag: 'Video', value: '40+ Proyek'),
-        CreatorServiceItem(title: 'Manipulasi Foto', subtitle: 'Composite & manipulasi kreatif', icon: Icons.layers_outlined, tag: 'Foto', value: '35+ Proyek'),
+        CreatorServiceItem(
+          title: 'Color Grading Sinematik',
+          subtitle: 'Video 4K dengan tone sinematik',
+          icon: Icons.movie_outlined,
+          tag: 'Video',
+          value: '80+ Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Retouching Portrait',
+          subtitle: 'Skin retouch natural & beauty',
+          icon: Icons.face_retouching_natural_outlined,
+          tag: 'Foto',
+          value: '120+ Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Motion Graphics',
+          subtitle: 'Animasi logo & teks kreatif',
+          icon: Icons.animation_outlined,
+          tag: 'Video',
+          value: '40+ Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Manipulasi Foto',
+          subtitle: 'Composite & manipulasi kreatif',
+          icon: Icons.layers_outlined,
+          tag: 'Foto',
+          value: '35+ Proyek',
+        ),
       ],
     ),
     'edit_antrian': CreatorServiceData(
@@ -355,14 +606,38 @@ class CreatorServiceData {
       stats: [
         ('5', 'Dalam Antrian', Icons.query_builder_outlined),
         ('2', 'Sedang Dikerjakan', Icons.auto_awesome_motion_outlined),
-        ('3', 'Menunggu Review', Icons.mark_email_unread_outlined)
+        ('3', 'Menunggu Review', Icons.mark_email_unread_outlined),
       ],
       actionLabel: 'Perbarui Status',
       items: [
-        CreatorServiceItem(title: 'Color Grading - Iklan Kopi Senja', subtitle: 'Dikirim 05 Agu • Deadlines 10 Agu', icon: Icons.movie_outlined, tag: 'Sedang Dikerjakan', value: '60%'),
-        CreatorServiceItem(title: 'Retouch - Wedding Rina & Budi', subtitle: 'Dikirim 06 Agu • Deadlines 12 Agu', icon: Icons.face_retouching_natural_outlined, tag: 'Dalam Antrian', value: 'Antrian #2'),
-        CreatorServiceItem(title: 'Motion - Company Profile PT Maju', subtitle: 'Dikirim 03 Agu • Menunggu review', icon: Icons.animation_outlined, tag: 'Menunggu Review', value: '100%'),
-        CreatorServiceItem(title: 'Manipulasi - Poster Launching', subtitle: 'Dikirim 04 Agu • Deadlines 09 Agu', icon: Icons.layers_outlined, tag: 'Selesai', value: 'Terunduh'),
+        CreatorServiceItem(
+          title: 'Color Grading - Iklan Kopi Senja',
+          subtitle: 'Dikirim 05 Agu • Deadlines 10 Agu',
+          icon: Icons.movie_outlined,
+          tag: 'Sedang Dikerjakan',
+          value: '60%',
+        ),
+        CreatorServiceItem(
+          title: 'Retouch - Wedding Rina & Budi',
+          subtitle: 'Dikirim 06 Agu • Deadlines 12 Agu',
+          icon: Icons.face_retouching_natural_outlined,
+          tag: 'Dalam Antrian',
+          value: 'Antrian #2',
+        ),
+        CreatorServiceItem(
+          title: 'Motion - Company Profile PT Maju',
+          subtitle: 'Dikirim 03 Agu • Menunggu review',
+          icon: Icons.animation_outlined,
+          tag: 'Menunggu Review',
+          value: '100%',
+        ),
+        CreatorServiceItem(
+          title: 'Manipulasi - Poster Launching',
+          subtitle: 'Dikirim 04 Agu • Deadlines 09 Agu',
+          icon: Icons.layers_outlined,
+          tag: 'Selesai',
+          value: 'Terunduh',
+        ),
       ],
     ),
     'edit_harga': CreatorServiceData(
@@ -374,14 +649,38 @@ class CreatorServiceData {
       stats: [
         ('6', 'Layanan', Icons.miscellaneous_services_outlined),
         ('Rp 50K', 'Mulai Dari', Icons.price_change_outlined),
-        ('24 jam', 'Express', Icons.flash_on_rounded)
+        ('24 jam', 'Express', Icons.flash_on_rounded),
       ],
       actionLabel: 'Pilih Layanan',
       items: [
-        CreatorServiceItem(title: 'Retouching Foto Dasar', subtitle: 'Per foto • koreksi warna & clean up', icon: Icons.photo_outlined, tag: 'Per Foto', value: 'Rp 50.000'),
-        CreatorServiceItem(title: 'Color Grading Video', subtitle: 'Per menit video • tone & adjustment', icon: Icons.movie_outlined, tag: 'Per Menit', value: 'Rp 100.000'),
-        CreatorServiceItem(title: 'Editing Video Lengkap', subtitle: 'Per menit • cut, transisi, teks, musik', icon: Icons.videocam_outlined, tag: 'Per Menit', value: 'Rp 250.000'),
-        CreatorServiceItem(title: 'Motion Graphics', subtitle: 'Per proyek • animasi logo & teks', icon: Icons.animation_outlined, tag: 'Per Proyek', value: 'Rp 500.000'),
+        CreatorServiceItem(
+          title: 'Retouching Foto Dasar',
+          subtitle: 'Per foto • koreksi warna & clean up',
+          icon: Icons.photo_outlined,
+          tag: 'Per Foto',
+          value: 'Rp 50.000',
+        ),
+        CreatorServiceItem(
+          title: 'Color Grading Video',
+          subtitle: 'Per menit video • tone & adjustment',
+          icon: Icons.movie_outlined,
+          tag: 'Per Menit',
+          value: 'Rp 100.000',
+        ),
+        CreatorServiceItem(
+          title: 'Editing Video Lengkap',
+          subtitle: 'Per menit • cut, transisi, teks, musik',
+          icon: Icons.videocam_outlined,
+          tag: 'Per Menit',
+          value: 'Rp 250.000',
+        ),
+        CreatorServiceItem(
+          title: 'Motion Graphics',
+          subtitle: 'Per proyek • animasi logo & teks',
+          icon: Icons.animation_outlined,
+          tag: 'Per Proyek',
+          value: 'Rp 500.000',
+        ),
       ],
     ),
     'edit_spesialisasi': CreatorServiceData(
@@ -393,13 +692,37 @@ class CreatorServiceData {
       stats: [
         ('5', 'Bidang Ahli', Icons.workspace_premium_outlined),
         ('4.9', 'Rating Keahlian', Icons.star_rounded),
-        ('3', 'Tools Utama', Icons.handyman_outlined)
+        ('3', 'Tools Utama', Icons.handyman_outlined),
       ],
       items: [
-        CreatorServiceItem(title: 'Color Grading Sinematik', subtitle: 'DaVinci Resolve & Premiere Pro', icon: Icons.palette_outlined, tag: 'Expert', value: '92%'),
-        CreatorServiceItem(title: 'Retouching & Beauty', subtitle: 'Photoshop & Lightroom', icon: Icons.face_retouching_natural_outlined, tag: 'Advanced', value: '88%'),
-        CreatorServiceItem(title: 'Motion Graphics & VFX', subtitle: 'After Effects', icon: Icons.animation_outlined, tag: 'Advanced', value: '85%'),
-        CreatorServiceItem(title: 'Audio Mixing', subtitle: 'Audition & editing suara', icon: Icons.graphic_eq_outlined, tag: 'Intermediate', value: '75%'),
+        CreatorServiceItem(
+          title: 'Color Grading Sinematik',
+          subtitle: 'DaVinci Resolve & Premiere Pro',
+          icon: Icons.palette_outlined,
+          tag: 'Expert',
+          value: '92%',
+        ),
+        CreatorServiceItem(
+          title: 'Retouching & Beauty',
+          subtitle: 'Photoshop & Lightroom',
+          icon: Icons.face_retouching_natural_outlined,
+          tag: 'Advanced',
+          value: '88%',
+        ),
+        CreatorServiceItem(
+          title: 'Motion Graphics & VFX',
+          subtitle: 'After Effects',
+          icon: Icons.animation_outlined,
+          tag: 'Advanced',
+          value: '85%',
+        ),
+        CreatorServiceItem(
+          title: 'Audio Mixing',
+          subtitle: 'Audition & editing suara',
+          icon: Icons.graphic_eq_outlined,
+          tag: 'Intermediate',
+          value: '75%',
+        ),
       ],
     ),
 
@@ -413,13 +736,37 @@ class CreatorServiceData {
       stats: [
         ('7+', 'Tahun Pengalaman', Icons.work_history_outlined),
         ('150+', 'Acara', Icons.event_available_outlined),
-        ('4.9', 'Rating', Icons.star_rounded)
+        ('4.9', 'Rating', Icons.star_rounded),
       ],
       items: [
-        CreatorServiceItem(title: 'Bahasa Pengantar', subtitle: 'Indonesia & Inggris (bilingual)', icon: Icons.translate_outlined, tag: 'Bilingual', value: 'Fluent'),
-        CreatorServiceItem(title: 'Gaya Membawakan Acara', subtitle: 'Formal, semi-formal, casual, hingga entertainer', icon: Icons.record_voice_over_outlined, tag: 'Fleksibel', value: '4 Gaya'),
-        CreatorServiceItem(title: 'Pelatihan & Sertifikasi', subtitle: 'Public speaking & MC profesional', icon: Icons.school_outlined, tag: 'Bersertifikat', value: '3 Sertifikat'),
-        CreatorServiceItem(title: 'Akomodasi Tambahan', subtitle: 'Sound system, konten, dan skenario acara', icon: Icons.volume_up_outlined, tag: 'Lengkap', value: 'Tersedia'),
+        CreatorServiceItem(
+          title: 'Bahasa Pengantar',
+          subtitle: 'Indonesia & Inggris (bilingual)',
+          icon: Icons.translate_outlined,
+          tag: 'Bilingual',
+          value: 'Fluent',
+        ),
+        CreatorServiceItem(
+          title: 'Gaya Membawakan Acara',
+          subtitle: 'Formal, semi-formal, casual, hingga entertainer',
+          icon: Icons.record_voice_over_outlined,
+          tag: 'Fleksibel',
+          value: '4 Gaya',
+        ),
+        CreatorServiceItem(
+          title: 'Pelatihan & Sertifikasi',
+          subtitle: 'Public speaking & MC profesional',
+          icon: Icons.school_outlined,
+          tag: 'Bersertifikat',
+          value: '3 Sertifikat',
+        ),
+        CreatorServiceItem(
+          title: 'Akomodasi Tambahan',
+          subtitle: 'Sound system, konten, dan skenario acara',
+          icon: Icons.volume_up_outlined,
+          tag: 'Lengkap',
+          value: 'Tersedia',
+        ),
       ],
     ),
     'mc_booking': CreatorServiceData(
@@ -431,14 +778,38 @@ class CreatorServiceData {
       stats: [
         ('1', 'Hari Ini', Icons.today_outlined),
         ('3', 'Bulan Ini', Icons.date_range_outlined),
-        ('2', 'Pending', Icons.pending_actions_outlined)
+        ('2', 'Pending', Icons.pending_actions_outlined),
       ],
       actionLabel: 'Konfirmasi Booking',
       items: [
-        CreatorServiceItem(title: 'MC Seminar Nasional Digital 2026', subtitle: '15 Agu 2026 • 08:00 - 16:00 WIB', icon: Icons.school_outlined, tag: 'Terkonfirmasi', value: 'Jakarta Convention Hall'),
-        CreatorServiceItem(title: 'MC Pernikahan Rina & Budi', subtitle: '22 Agu 2026 • 10:00 - 15:00 WIB', icon: Icons.favorite_outline, tag: 'Menunggu', value: 'Hotel Borobudur'),
-        CreatorServiceItem(title: 'MC Company Anniversary PT Maju', subtitle: '05 Sep 2026 • 18:00 - 22:00 WIB', icon: Icons.celebration_outlined, tag: 'Terkonfirmasi', value: 'Ballroom Ritz'),
-        CreatorServiceItem(title: 'MC Konser Amal Komunitas', subtitle: '20 Sep 2026 • 19:00 - 22:00 WIB', icon: Icons.music_note_outlined, tag: 'Menunggu', value: 'Gelora Bung Karno'),
+        CreatorServiceItem(
+          title: 'MC Seminar Nasional Digital 2026',
+          subtitle: '15 Agu 2026 • 08:00 - 16:00 WIB',
+          icon: Icons.school_outlined,
+          tag: 'Terkonfirmasi',
+          value: 'Jakarta Convention Hall',
+        ),
+        CreatorServiceItem(
+          title: 'MC Pernikahan Rina & Budi',
+          subtitle: '22 Agu 2026 • 10:00 - 15:00 WIB',
+          icon: Icons.favorite_outline,
+          tag: 'Menunggu',
+          value: 'Hotel Borobudur',
+        ),
+        CreatorServiceItem(
+          title: 'MC Company Anniversary PT Maju',
+          subtitle: '05 Sep 2026 • 18:00 - 22:00 WIB',
+          icon: Icons.celebration_outlined,
+          tag: 'Terkonfirmasi',
+          value: 'Ballroom Ritz',
+        ),
+        CreatorServiceItem(
+          title: 'MC Konser Amal Komunitas',
+          subtitle: '20 Sep 2026 • 19:00 - 22:00 WIB',
+          icon: Icons.music_note_outlined,
+          tag: 'Menunggu',
+          value: 'Gelora Bung Karno',
+        ),
       ],
     ),
     'mc_kategori': CreatorServiceData(
@@ -450,13 +821,37 @@ class CreatorServiceData {
       stats: [
         ('8', 'Kategori', Icons.category_outlined),
         ('150+', 'Acara Ditangani', Icons.event_available_outlined),
-        ('98%', 'Kepuasan', Icons.verified_outlined)
+        ('98%', 'Kepuasan', Icons.verified_outlined),
       ],
       items: [
-        CreatorServiceItem(title: 'Seminar & Konferensi', subtitle: 'MC formal untuk acara korporat', icon: Icons.mic_external_on_outlined, tag: 'Sangat Mahir', value: '60+ Acara'),
-        CreatorServiceItem(title: 'Pernikahan & Resepsi', subtitle: 'MC wedding dengan konsep elegan', icon: Icons.favorite_outline, tag: 'Sangat Mahir', value: '45+ Acara'),
-        CreatorServiceItem(title: 'Konser & Hiburan', subtitle: 'MC entertainer dengan energi tinggi', icon: Icons.music_note_outlined, tag: 'Mahir', value: '25+ Acara'),
-        CreatorServiceItem(title: 'Launching Produk', subtitle: 'MC promosi & peluncuran produk', icon: Icons.rocket_launch_outlined, tag: 'Mahir', value: '20+ Acara'),
+        CreatorServiceItem(
+          title: 'Seminar & Konferensi',
+          subtitle: 'MC formal untuk acara korporat',
+          icon: Icons.mic_external_on_outlined,
+          tag: 'Sangat Mahir',
+          value: '60+ Acara',
+        ),
+        CreatorServiceItem(
+          title: 'Pernikahan & Resepsi',
+          subtitle: 'MC wedding dengan konsep elegan',
+          icon: Icons.favorite_outline,
+          tag: 'Sangat Mahir',
+          value: '45+ Acara',
+        ),
+        CreatorServiceItem(
+          title: 'Konser & Hiburan',
+          subtitle: 'MC entertainer dengan energi tinggi',
+          icon: Icons.music_note_outlined,
+          tag: 'Mahir',
+          value: '25+ Acara',
+        ),
+        CreatorServiceItem(
+          title: 'Launching Produk',
+          subtitle: 'MC promosi & peluncuran produk',
+          icon: Icons.rocket_launch_outlined,
+          tag: 'Mahir',
+          value: '20+ Acara',
+        ),
       ],
     ),
     'mc_tarif': CreatorServiceData(
@@ -468,13 +863,31 @@ class CreatorServiceData {
       stats: [
         ('3', 'Kategori Tarif', Icons.receipt_long_outlined),
         ('Rp 2JT', 'Mulai Dari', Icons.price_change_outlined),
-        ('Termasuk', 'Sound System', Icons.volume_up_outlined)
+        ('Termasuk', 'Sound System', Icons.volume_up_outlined),
       ],
       actionLabel: 'Pilih Paket',
       items: [
-        CreatorServiceItem(title: 'Paket 3 Jam', subtitle: 'Acara lokal • ≤ 200 tamu', icon: Icons.schedule_outlined, tag: 'Populer', value: 'Rp 2.000.000'),
-        CreatorServiceItem(title: 'Paket 6 Jam', subtitle: 'Acara besar • ≤ 500 tamu', icon: Icons.av_timer_outlined, tag: 'Best Value', value: 'Rp 3.500.000'),
-        CreatorServiceItem(title: 'Full Day / Event Spesial', subtitle: 'Lebih dari 6 jam • custom kebutuhan', icon: Icons.workspace_premium_outlined, tag: 'Premium', value: 'Rp 5.000.000'),
+        CreatorServiceItem(
+          title: 'Paket 3 Jam',
+          subtitle: 'Acara lokal • ≤ 200 tamu',
+          icon: Icons.schedule_outlined,
+          tag: 'Populer',
+          value: 'Rp 2.000.000',
+        ),
+        CreatorServiceItem(
+          title: 'Paket 6 Jam',
+          subtitle: 'Acara besar • ≤ 500 tamu',
+          icon: Icons.av_timer_outlined,
+          tag: 'Best Value',
+          value: 'Rp 3.500.000',
+        ),
+        CreatorServiceItem(
+          title: 'Full Day / Event Spesial',
+          subtitle: 'Lebih dari 6 jam • custom kebutuhan',
+          icon: Icons.workspace_premium_outlined,
+          tag: 'Premium',
+          value: 'Rp 5.000.000',
+        ),
       ],
     ),
 
@@ -488,14 +901,38 @@ class CreatorServiceData {
       stats: [
         ('80+', 'Penampilan', Icons.music_note_outlined),
         ('4.8', 'Rating', Icons.star_rounded),
-        ('5', 'Single Rilis', Icons.album_outlined)
+        ('5', 'Single Rilis', Icons.album_outlined),
       ],
       isGrid: true,
       items: [
-        CreatorServiceItem(title: 'Live Performance Acoustic', subtitle: 'Set akustik untuk cafe & restoran', icon: Icons.music_note_outlined, tag: 'Live', value: '50+ Tampil'),
-        CreatorServiceItem(title: 'Wedding Performance', subtitle: 'Solo & band untuk pernikahan', icon: Icons.favorite_outline, tag: 'Wedding', value: '20+ Tampil'),
-        CreatorServiceItem(title: 'Konser & Festival', subtitle: 'Panggung utama festival musik', icon: Icons.festival_outlined, tag: 'Festival', value: '10+ Tampil'),
-        CreatorServiceItem(title: 'Single Original', subtitle: 'Karya original di platform musik', icon: Icons.album_outlined, tag: 'Original', value: '5 Single'),
+        CreatorServiceItem(
+          title: 'Live Performance Acoustic',
+          subtitle: 'Set akustik untuk cafe & restoran',
+          icon: Icons.music_note_outlined,
+          tag: 'Live',
+          value: '50+ Tampil',
+        ),
+        CreatorServiceItem(
+          title: 'Wedding Performance',
+          subtitle: 'Solo & band untuk pernikahan',
+          icon: Icons.favorite_outline,
+          tag: 'Wedding',
+          value: '20+ Tampil',
+        ),
+        CreatorServiceItem(
+          title: 'Konser & Festival',
+          subtitle: 'Panggung utama festival musik',
+          icon: Icons.festival_outlined,
+          tag: 'Festival',
+          value: '10+ Tampil',
+        ),
+        CreatorServiceItem(
+          title: 'Single Original',
+          subtitle: 'Karya original di platform musik',
+          icon: Icons.album_outlined,
+          tag: 'Original',
+          value: '5 Single',
+        ),
       ],
     ),
     'singer_booking': CreatorServiceData(
@@ -507,13 +944,31 @@ class CreatorServiceData {
       stats: [
         ('1', 'Hari Ini', Icons.today_outlined),
         ('4', 'Bulan Ini', Icons.date_range_outlined),
-        ('1', 'Pending', Icons.pending_actions_outlined)
+        ('1', 'Pending', Icons.pending_actions_outlined),
       ],
       actionLabel: 'Konfirmasi Booking',
       items: [
-        CreatorServiceItem(title: 'Acoustic Night - Kopi Senja', subtitle: '14 Agu 2026 • 19:00 - 21:00 WIB', icon: Icons.coffee_outlined, tag: 'Terkonfirmasi', value: 'Kemang'),
-        CreatorServiceItem(title: 'Wedding Reception - Maya & Rio', subtitle: '23 Agu 2026 • 18:00 - 21:00 WIB', icon: Icons.favorite_outline, tag: 'Menunggu', value: 'Ritz Ballroom'),
-        CreatorServiceItem(title: 'Festival Musik Nusantara', subtitle: '07 Sep 2026 • 15:00 - 16:00 WIB', icon: Icons.festival_outlined, tag: 'Terkonfirmasi', value: 'GBK'),
+        CreatorServiceItem(
+          title: 'Acoustic Night - Kopi Senja',
+          subtitle: '14 Agu 2026 • 19:00 - 21:00 WIB',
+          icon: Icons.coffee_outlined,
+          tag: 'Terkonfirmasi',
+          value: 'Kemang',
+        ),
+        CreatorServiceItem(
+          title: 'Wedding Reception - Maya & Rio',
+          subtitle: '23 Agu 2026 • 18:00 - 21:00 WIB',
+          icon: Icons.favorite_outline,
+          tag: 'Menunggu',
+          value: 'Ritz Ballroom',
+        ),
+        CreatorServiceItem(
+          title: 'Festival Musik Nusantara',
+          subtitle: '07 Sep 2026 • 15:00 - 16:00 WIB',
+          icon: Icons.festival_outlined,
+          tag: 'Terkonfirmasi',
+          value: 'GBK',
+        ),
       ],
     ),
     'singer_genre': CreatorServiceData(
@@ -525,13 +980,37 @@ class CreatorServiceData {
       stats: [
         ('6', 'Genre', Icons.category_outlined),
         ('120+', 'Lagu Siap Bawakan', Icons.queue_music_outlined),
-        ('EN/ID', 'Bahasa Lagu', Icons.translate_outlined)
+        ('EN/ID', 'Bahasa Lagu', Icons.translate_outlined),
       ],
       items: [
-        CreatorServiceItem(title: 'Pop & Ballad', subtitle: 'Lagu pop Indonesia & internasional', icon: Icons.music_note_outlined, tag: 'Andalan', value: '40+ Lagu'),
-        CreatorServiceItem(title: 'Acoustic & Jazz', subtitle: 'Aransemen akustik & jazz', icon: Icons.piano_outlined, tag: 'Specialty', value: '30+ Lagu'),
-        CreatorServiceItem(title: 'Dangdut & Koplo', subtitle: 'Untuk acara hiburan & panggung', icon: Icons.music_note_outlined, tag: 'Populer', value: '25+ Lagu'),
-        CreatorServiceItem(title: 'Religi & Klasik', subtitle: 'Untuk acara formal & rohani', icon: Icons.church_outlined, tag: 'Tersedia', value: '20+ Lagu'),
+        CreatorServiceItem(
+          title: 'Pop & Ballad',
+          subtitle: 'Lagu pop Indonesia & internasional',
+          icon: Icons.music_note_outlined,
+          tag: 'Andalan',
+          value: '40+ Lagu',
+        ),
+        CreatorServiceItem(
+          title: 'Acoustic & Jazz',
+          subtitle: 'Aransemen akustik & jazz',
+          icon: Icons.piano_outlined,
+          tag: 'Specialty',
+          value: '30+ Lagu',
+        ),
+        CreatorServiceItem(
+          title: 'Dangdut & Koplo',
+          subtitle: 'Untuk acara hiburan & panggung',
+          icon: Icons.music_note_outlined,
+          tag: 'Populer',
+          value: '25+ Lagu',
+        ),
+        CreatorServiceItem(
+          title: 'Religi & Klasik',
+          subtitle: 'Untuk acara formal & rohani',
+          icon: Icons.church_outlined,
+          tag: 'Tersedia',
+          value: '20+ Lagu',
+        ),
       ],
     ),
     'singer_tarif': CreatorServiceData(
@@ -543,13 +1022,31 @@ class CreatorServiceData {
       stats: [
         ('3', 'Kategori Tarif', Icons.receipt_long_outlined),
         ('Rp 1.5JT', 'Mulai Dari', Icons.price_change_outlined),
-        ('Bawaan', 'Backing Track', Icons.music_video_outlined)
+        ('Bawaan', 'Backing Track', Icons.music_video_outlined),
       ],
       actionLabel: 'Pilih Paket',
       items: [
-        CreatorServiceItem(title: 'Acoustic Set 2 Jam', subtitle: 'Solo performance + instrument', icon: Icons.music_note_outlined, tag: 'Solo', value: 'Rp 1.500.000'),
-        CreatorServiceItem(title: 'Full Band 3 Jam', subtitle: 'Vocal + band 4 orang', icon: Icons.album_outlined, tag: 'Best Value', value: 'Rp 3.000.000'),
-        CreatorServiceItem(title: 'Event Spesial & Konser', subtitle: 'Custom kebutuhan & durasi', icon: Icons.festival_outlined, tag: 'Premium', value: 'Rp 5.000.000+'),
+        CreatorServiceItem(
+          title: 'Acoustic Set 2 Jam',
+          subtitle: 'Solo performance + instrument',
+          icon: Icons.music_note_outlined,
+          tag: 'Solo',
+          value: 'Rp 1.500.000',
+        ),
+        CreatorServiceItem(
+          title: 'Full Band 3 Jam',
+          subtitle: 'Vocal + band 4 orang',
+          icon: Icons.album_outlined,
+          tag: 'Best Value',
+          value: 'Rp 3.000.000',
+        ),
+        CreatorServiceItem(
+          title: 'Event Spesial & Konser',
+          subtitle: 'Custom kebutuhan & durasi',
+          icon: Icons.festival_outlined,
+          tag: 'Premium',
+          value: 'Rp 5.000.000+',
+        ),
       ],
     ),
 
@@ -563,14 +1060,38 @@ class CreatorServiceData {
       stats: [
         ('120+', 'Klien', Icons.people_outline),
         ('4.9', 'Rating', Icons.star_rounded),
-        ('6+', 'Tahun', Icons.work_history_outlined)
+        ('6+', 'Tahun', Icons.work_history_outlined),
       ],
       isGrid: true,
       items: [
-        CreatorServiceItem(title: 'Makeup Bridal', subtitle: 'Rias pengantin adat & modern', icon: Icons.favorite_outline, tag: 'Bridal', value: '40+ Klien'),
-        CreatorServiceItem(title: 'Makeup Pesta', subtitle: 'Rias pesta & wisuda', icon: Icons.celebration_outlined, tag: 'Party', value: '50+ Klien'),
-        CreatorServiceItem(title: 'Makeup Editorial', subtitle: 'Rias untuk foto & video', icon: Icons.photo_camera_outlined, tag: 'Editorial', value: '20+ Klien'),
-        CreatorServiceItem(title: 'Soft Glam Daily', subtitle: 'Rias natural sehari-hari', icon: Icons.face_outlined, tag: 'Daily', value: '30+ Klien'),
+        CreatorServiceItem(
+          title: 'Makeup Bridal',
+          subtitle: 'Rias pengantin adat & modern',
+          icon: Icons.favorite_outline,
+          tag: 'Bridal',
+          value: '40+ Klien',
+        ),
+        CreatorServiceItem(
+          title: 'Makeup Pesta',
+          subtitle: 'Rias pesta & wisuda',
+          icon: Icons.celebration_outlined,
+          tag: 'Party',
+          value: '50+ Klien',
+        ),
+        CreatorServiceItem(
+          title: 'Makeup Editorial',
+          subtitle: 'Rias untuk foto & video',
+          icon: Icons.photo_camera_outlined,
+          tag: 'Editorial',
+          value: '20+ Klien',
+        ),
+        CreatorServiceItem(
+          title: 'Soft Glam Daily',
+          subtitle: 'Rias natural sehari-hari',
+          icon: Icons.face_outlined,
+          tag: 'Daily',
+          value: '30+ Klien',
+        ),
       ],
     ),
     'mua_booking': CreatorServiceData(
@@ -582,13 +1103,31 @@ class CreatorServiceData {
       stats: [
         ('1', 'Hari Ini', Icons.today_outlined),
         ('3', 'Minggu Ini', Icons.date_range_outlined),
-        ('2', 'Pending', Icons.pending_actions_outlined)
+        ('2', 'Pending', Icons.pending_actions_outlined),
       ],
       actionLabel: 'Konfirmasi Booking',
       items: [
-        CreatorServiceItem(title: 'MUA Bridal - Rina & Budi', subtitle: '16 Agu 2026 • 04:00 - 09:00 WIB', icon: Icons.favorite_outline, tag: 'Terkonfirmasi', value: 'Salon Rina'),
-        CreatorServiceItem(title: 'Makeup Wisuda - Siti A.', subtitle: '21 Agu 2026 • 06:00 - 08:30 WIB', icon: Icons.school_outlined, tag: 'Menunggu', value: 'Rumah Klien'),
-        CreatorServiceItem(title: 'Editorial Shoot - Majalah Mode', subtitle: '28 Agu 2026 • 09:00 - 15:00 WIB', icon: Icons.photo_camera_outlined, tag: 'Terkonfirmasi', value: 'Studio 21'),
+        CreatorServiceItem(
+          title: 'MUA Bridal - Rina & Budi',
+          subtitle: '16 Agu 2026 • 04:00 - 09:00 WIB',
+          icon: Icons.favorite_outline,
+          tag: 'Terkonfirmasi',
+          value: 'Salon Rina',
+        ),
+        CreatorServiceItem(
+          title: 'Makeup Wisuda - Siti A.',
+          subtitle: '21 Agu 2026 • 06:00 - 08:30 WIB',
+          icon: Icons.school_outlined,
+          tag: 'Menunggu',
+          value: 'Rumah Klien',
+        ),
+        CreatorServiceItem(
+          title: 'Editorial Shoot - Majalah Mode',
+          subtitle: '28 Agu 2026 • 09:00 - 15:00 WIB',
+          icon: Icons.photo_camera_outlined,
+          tag: 'Terkonfirmasi',
+          value: 'Studio 21',
+        ),
       ],
     ),
     'mua_paket': CreatorServiceData(
@@ -600,13 +1139,31 @@ class CreatorServiceData {
       stats: [
         ('3', 'Paket Aktif', Icons.card_membership_outlined),
         ('Rp 350K', 'Mulai Dari', Icons.price_change_outlined),
-        ('Dengan', 'Produk Premium', Icons.health_and_safety_outlined)
+        ('Dengan', 'Produk Premium', Icons.health_and_safety_outlined),
       ],
       actionLabel: 'Pilih Paket',
       items: [
-        CreatorServiceItem(title: 'Paket Soft Glam', subtitle: 'Rias natural • 60 menit', icon: Icons.face_outlined, tag: 'Populer', value: 'Rp 350.000'),
-        CreatorServiceItem(title: 'Paket Party Glam', subtitle: 'Rias tahan lama • 90 menit + lashes', icon: Icons.celebration_outlined, tag: 'Best Value', value: 'Rp 550.000'),
-        CreatorServiceItem(title: 'Paket Bridal Premium', subtitle: 'Rias pengantin + trial + setting', icon: Icons.workspace_premium_outlined, tag: 'Premium', value: 'Rp 1.500.000'),
+        CreatorServiceItem(
+          title: 'Paket Soft Glam',
+          subtitle: 'Rias natural • 60 menit',
+          icon: Icons.face_outlined,
+          tag: 'Populer',
+          value: 'Rp 350.000',
+        ),
+        CreatorServiceItem(
+          title: 'Paket Party Glam',
+          subtitle: 'Rias tahan lama • 90 menit + lashes',
+          icon: Icons.celebration_outlined,
+          tag: 'Best Value',
+          value: 'Rp 550.000',
+        ),
+        CreatorServiceItem(
+          title: 'Paket Bridal Premium',
+          subtitle: 'Rias pengantin + trial + setting',
+          icon: Icons.workspace_premium_outlined,
+          tag: 'Premium',
+          value: 'Rp 1.500.000',
+        ),
       ],
     ),
     'mua_spesialisasi': CreatorServiceData(
@@ -618,13 +1175,37 @@ class CreatorServiceData {
       stats: [
         ('5', 'Spesialisasi', Icons.category_outlined),
         ('4.9', 'Rating', Icons.star_rounded),
-        ('12', 'Brand Kosmetik', Icons.shopping_bag_outlined)
+        ('12', 'Brand Kosmetik', Icons.shopping_bag_outlined),
       ],
       items: [
-        CreatorServiceItem(title: 'Bridal & Engagement', subtitle: 'Rias pengantin adat & modern', icon: Icons.favorite_outline, tag: 'Expert', value: '40+ Klien'),
-        CreatorServiceItem(title: 'Editorial & Commercial', subtitle: 'Rias untuk shooting profesional', icon: Icons.photo_camera_outlined, tag: 'Advanced', value: '20+ Proyek'),
-        CreatorServiceItem(title: 'Special Effects (SFX)', subtitle: 'Rias efek khusus & karakter', icon: Icons.auto_awesome_outlined, tag: 'Advanced', value: '10+ Proyek'),
-        CreatorServiceItem(title: 'Hijab & Muslimah', subtitle: 'Rias khsus pengantin muslimah', icon: Icons.volunteer_activism_outlined, tag: 'Expert', value: '30+ Klien'),
+        CreatorServiceItem(
+          title: 'Bridal & Engagement',
+          subtitle: 'Rias pengantin adat & modern',
+          icon: Icons.favorite_outline,
+          tag: 'Expert',
+          value: '40+ Klien',
+        ),
+        CreatorServiceItem(
+          title: 'Editorial & Commercial',
+          subtitle: 'Rias untuk shooting profesional',
+          icon: Icons.photo_camera_outlined,
+          tag: 'Advanced',
+          value: '20+ Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Special Effects (SFX)',
+          subtitle: 'Rias efek khusus & karakter',
+          icon: Icons.auto_awesome_outlined,
+          tag: 'Advanced',
+          value: '10+ Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Hijab & Muslimah',
+          subtitle: 'Rias khsus pengantin muslimah',
+          icon: Icons.volunteer_activism_outlined,
+          tag: 'Expert',
+          value: '30+ Klien',
+        ),
       ],
     ),
 
@@ -638,13 +1219,31 @@ class CreatorServiceData {
       stats: [
         ('3', 'Paket Aktif', Icons.card_membership_outlined),
         ('250+', 'Pernikahan', Icons.favorite_border_outlined),
-        ('4.9', 'Rating', Icons.star_rounded)
+        ('4.9', 'Rating', Icons.star_rounded),
       ],
       actionLabel: 'Pilih Paket',
       items: [
-        CreatorServiceItem(title: 'Paket Sakura', subtitle: 'Akad + resepsi • 300 tamu • 5 vendor', icon: Icons.favorite_outline, tag: 'Populer', value: 'Rp 25.000.000'),
-        CreatorServiceItem(title: 'Paket Premium', subtitle: 'Akad + resepsi + prewedding • 500 tamu', icon: Icons.workspace_premium_outlined, tag: 'Premium', value: 'Rp 50.000.000'),
-        CreatorServiceItem(title: 'Paket Intimate', subtitle: 'Acara privat • 100 tamu • 3 vendor', icon: Icons.favorite_border_outlined, tag: 'Intimate', value: 'Rp 15.000.000'),
+        CreatorServiceItem(
+          title: 'Paket Sakura',
+          subtitle: 'Akad + resepsi • 300 tamu • 5 vendor',
+          icon: Icons.favorite_outline,
+          tag: 'Populer',
+          value: 'Rp 25.000.000',
+        ),
+        CreatorServiceItem(
+          title: 'Paket Premium',
+          subtitle: 'Akad + resepsi + prewedding • 500 tamu',
+          icon: Icons.workspace_premium_outlined,
+          tag: 'Premium',
+          value: 'Rp 50.000.000',
+        ),
+        CreatorServiceItem(
+          title: 'Paket Intimate',
+          subtitle: 'Acara privat • 100 tamu • 3 vendor',
+          icon: Icons.favorite_border_outlined,
+          tag: 'Intimate',
+          value: 'Rp 15.000.000',
+        ),
       ],
     ),
     'wo_jadwal': CreatorServiceData(
@@ -656,13 +1255,31 @@ class CreatorServiceData {
       stats: [
         ('1', 'Bulan Ini', Icons.today_outlined),
         ('2', 'Bulan Depan', Icons.date_range_outlined),
-        ('1', 'Pending', Icons.pending_actions_outlined)
+        ('1', 'Pending', Icons.pending_actions_outlined),
       ],
       actionLabel: 'Kelola Jadwal',
       items: [
-        CreatorServiceItem(title: 'Pernikahan Rina & Budi', subtitle: '22 Agu 2026 • Akad 08:00 • Resepsi 12:00', icon: Icons.favorite_outline, tag: 'Aktif', value: 'Hotel Borobudur'),
-        CreatorServiceItem(title: 'Pernikahan Maya & Rio', subtitle: '13 Sep 2026 • Akad 09:00 • Resepsi 18:00', icon: Icons.favorite_outline, tag: 'Persiapan', value: 'Ritz Ballroom'),
-        CreatorServiceItem(title: 'Pernikahan Dewi & Andi', subtitle: '27 Sep 2026 • Akad 07:00 • Resepsi 13:00', icon: Icons.favorite_outline, tag: 'Menunggu', value: 'Balai Kartini'),
+        CreatorServiceItem(
+          title: 'Pernikahan Rina & Budi',
+          subtitle: '22 Agu 2026 • Akad 08:00 • Resepsi 12:00',
+          icon: Icons.favorite_outline,
+          tag: 'Aktif',
+          value: 'Hotel Borobudur',
+        ),
+        CreatorServiceItem(
+          title: 'Pernikahan Maya & Rio',
+          subtitle: '13 Sep 2026 • Akad 09:00 • Resepsi 18:00',
+          icon: Icons.favorite_outline,
+          tag: 'Persiapan',
+          value: 'Ritz Ballroom',
+        ),
+        CreatorServiceItem(
+          title: 'Pernikahan Dewi & Andi',
+          subtitle: '27 Sep 2026 • Akad 07:00 • Resepsi 13:00',
+          icon: Icons.favorite_outline,
+          tag: 'Menunggu',
+          value: 'Balai Kartini',
+        ),
       ],
     ),
     'wo_vendor': CreatorServiceData(
@@ -674,13 +1291,37 @@ class CreatorServiceData {
       stats: [
         ('25', 'Vendor Aktif', Icons.business_outlined),
         ('8', 'Kategori', Icons.category_outlined),
-        ('98%', 'Ketepatan', Icons.verified_outlined)
+        ('98%', 'Ketepatan', Icons.verified_outlined),
       ],
       items: [
-        CreatorServiceItem(title: 'Catering Dapur Nusantara', subtitle: 'Catering & wedding cake', icon: Icons.restaurant_outlined, tag: 'Aktif', value: '150+ Event'),
-        CreatorServiceItem(title: 'Dekorasi Floral Art', subtitle: 'Dekorasi & florist', icon: Icons.local_florist_outlined, tag: 'Aktif', value: '200+ Event'),
-        CreatorServiceItem(title: 'Venue Collection', subtitle: 'Hotel & gedung pernikahan', icon: Icons.apartment_outlined, tag: 'Aktif', value: '40 Venue'),
-        CreatorServiceItem(title: 'Entertainment Pro', subtitle: 'MC, band, & hiburan', icon: Icons.mic_external_on_outlined, tag: 'Aktif', value: '30+ Talent'),
+        CreatorServiceItem(
+          title: 'Catering Dapur Nusantara',
+          subtitle: 'Catering & wedding cake',
+          icon: Icons.restaurant_outlined,
+          tag: 'Aktif',
+          value: '150+ Event',
+        ),
+        CreatorServiceItem(
+          title: 'Dekorasi Floral Art',
+          subtitle: 'Dekorasi & florist',
+          icon: Icons.local_florist_outlined,
+          tag: 'Aktif',
+          value: '200+ Event',
+        ),
+        CreatorServiceItem(
+          title: 'Venue Collection',
+          subtitle: 'Hotel & gedung pernikahan',
+          icon: Icons.apartment_outlined,
+          tag: 'Aktif',
+          value: '40 Venue',
+        ),
+        CreatorServiceItem(
+          title: 'Entertainment Pro',
+          subtitle: 'MC, band, & hiburan',
+          icon: Icons.mic_external_on_outlined,
+          tag: 'Aktif',
+          value: '30+ Talent',
+        ),
       ],
     ),
     'wo_timeline': CreatorServiceData(
@@ -692,15 +1333,51 @@ class CreatorServiceData {
       stats: [
         ('6', 'Tahapan', Icons.view_list_outlined),
         ('H-90', 'Mulai Persiapan', Icons.query_builder_outlined),
-        ('100%', 'Acara Tepat Waktu', Icons.event_available_outlined)
+        ('100%', 'Acara Tepat Waktu', Icons.event_available_outlined),
       ],
       items: [
-        CreatorServiceItem(title: 'H-90: Konsultasi & Kontrak', subtitle: 'Diskusi kebutuhan & penandatanganan', icon: Icons.edit_outlined, tag: 'Selesai', value: 'Tahap 1'),
-        CreatorServiceItem(title: 'H-60: Booking Vendor', subtitle: 'Venue, catering, dekorasi, dokumentasi', icon: Icons.handshake_outlined, tag: 'Selesai', value: 'Tahap 2'),
-        CreatorServiceItem(title: 'H-30: Fitting & Trial', subtitle: 'Trial makeup & fitting baju', icon: Icons.checkroom_outlined, tag: 'Berjalan', value: 'Tahap 3'),
-        CreatorServiceItem(title: 'H-7: Gladi Bersih', subtitle: 'Simulasi akad & resepsi', icon: Icons.fact_check_outlined, tag: 'Berjalan', value: 'Tahap 4'),
-        CreatorServiceItem(title: 'H-Day: Eksekusi', subtitle: 'Koordinasi penuh di hari H', icon: Icons.celebration_outlined, tag: 'Berjalan', value: 'Tahap 5'),
-        CreatorServiceItem(title: 'H+7: Evaluasi', subtitle: 'Serah terima album & evaluasi', icon: Icons.assignment_turned_in_outlined, tag: 'Selesai', value: 'Tahap 6'),
+        CreatorServiceItem(
+          title: 'H-90: Konsultasi & Kontrak',
+          subtitle: 'Diskusi kebutuhan & penandatanganan',
+          icon: Icons.edit_outlined,
+          tag: 'Selesai',
+          value: 'Tahap 1',
+        ),
+        CreatorServiceItem(
+          title: 'H-60: Booking Vendor',
+          subtitle: 'Venue, catering, dekorasi, dokumentasi',
+          icon: Icons.handshake_outlined,
+          tag: 'Selesai',
+          value: 'Tahap 2',
+        ),
+        CreatorServiceItem(
+          title: 'H-30: Fitting & Trial',
+          subtitle: 'Trial makeup & fitting baju',
+          icon: Icons.checkroom_outlined,
+          tag: 'Berjalan',
+          value: 'Tahap 3',
+        ),
+        CreatorServiceItem(
+          title: 'H-7: Gladi Bersih',
+          subtitle: 'Simulasi akad & resepsi',
+          icon: Icons.fact_check_outlined,
+          tag: 'Berjalan',
+          value: 'Tahap 4',
+        ),
+        CreatorServiceItem(
+          title: 'H-Day: Eksekusi',
+          subtitle: 'Koordinasi penuh di hari H',
+          icon: Icons.celebration_outlined,
+          tag: 'Berjalan',
+          value: 'Tahap 5',
+        ),
+        CreatorServiceItem(
+          title: 'H+7: Evaluasi',
+          subtitle: 'Serah terima album & evaluasi',
+          icon: Icons.assignment_turned_in_outlined,
+          tag: 'Selesai',
+          value: 'Tahap 6',
+        ),
       ],
     ),
 
@@ -714,13 +1391,31 @@ class CreatorServiceData {
       stats: [
         ('3', 'Paket Aktif', Icons.card_membership_outlined),
         ('80+', 'Event', Icons.event_available_outlined),
-        ('4.8', 'Rating', Icons.star_rounded)
+        ('4.8', 'Rating', Icons.star_rounded),
       ],
       actionLabel: 'Pilih Paket',
       items: [
-        CreatorServiceItem(title: 'Paket Corporate', subtitle: 'Seminar & gathering • 200 peserta', icon: Icons.business_outlined, tag: 'Populer', value: 'Rp 35.000.000'),
-        CreatorServiceItem(title: 'Paket Festival', subtitle: 'Festival & konser • 1000+ pengunjung', icon: Icons.festival_outlined, tag: 'Premium', value: 'Rp 75.000.000'),
-        CreatorServiceItem(title: 'Paket Private', subtitle: 'Ultah & gathering privat • 100 tamu', icon: Icons.celebration_outlined, tag: 'Intimate', value: 'Rp 15.000.000'),
+        CreatorServiceItem(
+          title: 'Paket Corporate',
+          subtitle: 'Seminar & gathering • 200 peserta',
+          icon: Icons.business_outlined,
+          tag: 'Populer',
+          value: 'Rp 35.000.000',
+        ),
+        CreatorServiceItem(
+          title: 'Paket Festival',
+          subtitle: 'Festival & konser • 1000+ pengunjung',
+          icon: Icons.festival_outlined,
+          tag: 'Premium',
+          value: 'Rp 75.000.000',
+        ),
+        CreatorServiceItem(
+          title: 'Paket Private',
+          subtitle: 'Ultah & gathering privat • 100 tamu',
+          icon: Icons.celebration_outlined,
+          tag: 'Intimate',
+          value: 'Rp 15.000.000',
+        ),
       ],
     ),
     'eo_jadwal': CreatorServiceData(
@@ -732,14 +1427,38 @@ class CreatorServiceData {
       stats: [
         ('2', 'Bulan Ini', Icons.today_outlined),
         ('3', 'Bulan Depan', Icons.date_range_outlined),
-        ('2', 'Pending', Icons.pending_actions_outlined)
+        ('2', 'Pending', Icons.pending_actions_outlined),
       ],
       actionLabel: 'Kelola Jadwal',
       items: [
-        CreatorServiceItem(title: 'Seminar Digitalisasi UMKM', subtitle: '18 Agu 2026 • 09:00 - 17:00 WIB', icon: Icons.school_outlined, tag: 'Aktif', value: 'JCC'),
-        CreatorServiceItem(title: 'Festival Musik Nusantara', subtitle: '07 Sep 2026 • 12:00 - 22:00 WIB', icon: Icons.festival_outlined, tag: 'Persiapan', value: 'GBK'),
-        CreatorServiceItem(title: 'Launching Produk Tech', subtitle: '21 Sep 2026 • 10:00 - 16:00 WIB', icon: Icons.rocket_launch_outlined, tag: 'Menunggu', value: 'Jakarta Creative Hub'),
-        CreatorServiceItem(title: 'Company Anniversary PT Maju', subtitle: '05 Okt 2026 • 18:00 - 22:00 WIB', icon: Icons.celebration_outlined, tag: 'Menunggu', value: 'Ballroom Ritz'),
+        CreatorServiceItem(
+          title: 'Seminar Digitalisasi UMKM',
+          subtitle: '18 Agu 2026 • 09:00 - 17:00 WIB',
+          icon: Icons.school_outlined,
+          tag: 'Aktif',
+          value: 'JCC',
+        ),
+        CreatorServiceItem(
+          title: 'Festival Musik Nusantara',
+          subtitle: '07 Sep 2026 • 12:00 - 22:00 WIB',
+          icon: Icons.festival_outlined,
+          tag: 'Persiapan',
+          value: 'GBK',
+        ),
+        CreatorServiceItem(
+          title: 'Launching Produk Tech',
+          subtitle: '21 Sep 2026 • 10:00 - 16:00 WIB',
+          icon: Icons.rocket_launch_outlined,
+          tag: 'Menunggu',
+          value: 'Jakarta Creative Hub',
+        ),
+        CreatorServiceItem(
+          title: 'Company Anniversary PT Maju',
+          subtitle: '05 Okt 2026 • 18:00 - 22:00 WIB',
+          icon: Icons.celebration_outlined,
+          tag: 'Menunggu',
+          value: 'Ballroom Ritz',
+        ),
       ],
     ),
     'eo_vendor': CreatorServiceData(
@@ -751,13 +1470,37 @@ class CreatorServiceData {
       stats: [
         ('30', 'Vendor Aktif', Icons.business_outlined),
         ('10', 'Kategori', Icons.category_outlined),
-        ('95%', 'Ketepatan', Icons.verified_outlined)
+        ('95%', 'Ketepatan', Icons.verified_outlined),
       ],
       items: [
-        CreatorServiceItem(title: 'Stage & Lighting Pro', subtitle: 'Sound system, lighting, panggung', icon: Icons.light_mode_outlined, tag: 'Aktif', value: '120+ Event'),
-        CreatorServiceItem(title: 'Catering Nusantara', subtitle: 'Katering & konsumsi peserta', icon: Icons.restaurant_outlined, tag: 'Aktif', value: '90+ Event'),
-        CreatorServiceItem(title: 'Ticketing & Registrasi', subtitle: 'Sistem tiket & check-in', icon: Icons.confirmation_number_outlined, tag: 'Aktif', value: '60+ Event'),
-        CreatorServiceItem(title: 'Keamanan & Medis', subtitle: 'Petugas keamanan & ambulance', icon: Icons.health_and_safety_outlined, tag: 'Aktif', value: '40+ Event'),
+        CreatorServiceItem(
+          title: 'Stage & Lighting Pro',
+          subtitle: 'Sound system, lighting, panggung',
+          icon: Icons.light_mode_outlined,
+          tag: 'Aktif',
+          value: '120+ Event',
+        ),
+        CreatorServiceItem(
+          title: 'Catering Nusantara',
+          subtitle: 'Katering & konsumsi peserta',
+          icon: Icons.restaurant_outlined,
+          tag: 'Aktif',
+          value: '90+ Event',
+        ),
+        CreatorServiceItem(
+          title: 'Ticketing & Registrasi',
+          subtitle: 'Sistem tiket & check-in',
+          icon: Icons.confirmation_number_outlined,
+          tag: 'Aktif',
+          value: '60+ Event',
+        ),
+        CreatorServiceItem(
+          title: 'Keamanan & Medis',
+          subtitle: 'Petugas keamanan & ambulance',
+          icon: Icons.health_and_safety_outlined,
+          tag: 'Aktif',
+          value: '40+ Event',
+        ),
       ],
     ),
     'eo_timeline': CreatorServiceData(
@@ -769,15 +1512,51 @@ class CreatorServiceData {
       stats: [
         ('6', 'Tahapan', Icons.view_list_outlined),
         ('H-60', 'Mulai Persiapan', Icons.query_builder_outlined),
-        ('100%', 'Event Tepat Waktu', Icons.event_available_outlined)
+        ('100%', 'Event Tepat Waktu', Icons.event_available_outlined),
       ],
       items: [
-        CreatorServiceItem(title: 'H-60: Brief & Konsep', subtitle: 'Diskusi kebutuhan & proposal', icon: Icons.edit_outlined, tag: 'Selesai', value: 'Tahap 1'),
-        CreatorServiceItem(title: 'H-45: Vendor & Venue', subtitle: 'Booking vendor & perizinan', icon: Icons.handshake_outlined, tag: 'Selesai', value: 'Tahap 2'),
-        CreatorServiceItem(title: 'H-21: Promosi & Tiket', subtitle: 'Marketing event & penjualan tiket', icon: Icons.campaign_outlined, tag: 'Berjalan', value: 'Tahap 3'),
-        CreatorServiceItem(title: 'H-7: Finalisasi', subtitle: 'Gladi bersih & teknis', icon: Icons.fact_check_outlined, tag: 'Berjalan', value: 'Tahap 4'),
-        CreatorServiceItem(title: 'H-Day: Eksekusi', subtitle: 'Operasional event penuh', icon: Icons.celebration_outlined, tag: 'Berjalan', value: 'Tahap 5'),
-        CreatorServiceItem(title: 'H+7: Laporan', subtitle: 'Laporan & evaluasi klien', icon: Icons.assignment_turned_in_outlined, tag: 'Selesai', value: 'Tahap 6'),
+        CreatorServiceItem(
+          title: 'H-60: Brief & Konsep',
+          subtitle: 'Diskusi kebutuhan & proposal',
+          icon: Icons.edit_outlined,
+          tag: 'Selesai',
+          value: 'Tahap 1',
+        ),
+        CreatorServiceItem(
+          title: 'H-45: Vendor & Venue',
+          subtitle: 'Booking vendor & perizinan',
+          icon: Icons.handshake_outlined,
+          tag: 'Selesai',
+          value: 'Tahap 2',
+        ),
+        CreatorServiceItem(
+          title: 'H-21: Promosi & Tiket',
+          subtitle: 'Marketing event & penjualan tiket',
+          icon: Icons.campaign_outlined,
+          tag: 'Berjalan',
+          value: 'Tahap 3',
+        ),
+        CreatorServiceItem(
+          title: 'H-7: Finalisasi',
+          subtitle: 'Gladi bersih & teknis',
+          icon: Icons.fact_check_outlined,
+          tag: 'Berjalan',
+          value: 'Tahap 4',
+        ),
+        CreatorServiceItem(
+          title: 'H-Day: Eksekusi',
+          subtitle: 'Operasional event penuh',
+          icon: Icons.celebration_outlined,
+          tag: 'Berjalan',
+          value: 'Tahap 5',
+        ),
+        CreatorServiceItem(
+          title: 'H+7: Laporan',
+          subtitle: 'Laporan & evaluasi klien',
+          icon: Icons.assignment_turned_in_outlined,
+          tag: 'Selesai',
+          value: 'Tahap 6',
+        ),
       ],
     ),
 
@@ -791,13 +1570,37 @@ class CreatorServiceData {
       stats: [
         ('1.240', 'Anggota', Icons.people_outline),
         ('85', 'Aktif Minggu Ini', Icons.how_to_reg_outlined),
-        ('12', 'Pengurus', Icons.admin_panel_settings_outlined)
+        ('12', 'Pengurus', Icons.admin_panel_settings_outlined),
       ],
       items: [
-        CreatorServiceItem(title: 'Pengurus Inti', subtitle: 'Ketua, sekretaris, bendahara', icon: Icons.admin_panel_settings_outlined, tag: '12 Orang', value: 'Aktif'),
-        CreatorServiceItem(title: 'Anggota Aktif', subtitle: 'Kontributor kegiatan rutin', icon: Icons.people_outline, tag: '240 Orang', value: 'Aktif'),
-        CreatorServiceItem(title: 'Anggota Baru (Bulan Ini)', subtitle: 'Pendaftar anggota baru', icon: Icons.person_add_alt_outlined, tag: '35 Orang', value: 'Diproses'),
-        CreatorServiceItem(title: 'Anggota Tidak Aktif', subtitle: 'Tidak aktif 90+ hari', icon: Icons.person_off_outlined, tag: '18 Orang', value: 'Perlu Follow-up'),
+        CreatorServiceItem(
+          title: 'Pengurus Inti',
+          subtitle: 'Ketua, sekretaris, bendahara',
+          icon: Icons.admin_panel_settings_outlined,
+          tag: '12 Orang',
+          value: 'Aktif',
+        ),
+        CreatorServiceItem(
+          title: 'Anggota Aktif',
+          subtitle: 'Kontributor kegiatan rutin',
+          icon: Icons.people_outline,
+          tag: '240 Orang',
+          value: 'Aktif',
+        ),
+        CreatorServiceItem(
+          title: 'Anggota Baru (Bulan Ini)',
+          subtitle: 'Pendaftar anggota baru',
+          icon: Icons.person_add_alt_outlined,
+          tag: '35 Orang',
+          value: 'Diproses',
+        ),
+        CreatorServiceItem(
+          title: 'Anggota Tidak Aktif',
+          subtitle: 'Tidak aktif 90+ hari',
+          icon: Icons.person_off_outlined,
+          tag: '18 Orang',
+          value: 'Perlu Follow-up',
+        ),
       ],
     ),
     'komunitas_kegiatan': CreatorServiceData(
@@ -809,14 +1612,38 @@ class CreatorServiceData {
       stats: [
         ('3', 'Minggu Ini', Icons.today_outlined),
         ('5', 'Bulan Ini', Icons.date_range_outlined),
-        ('2', 'Rutin', Icons.repeat_outlined)
+        ('2', 'Rutin', Icons.repeat_outlined),
       ],
       actionLabel: 'Daftar Kegiatan',
       items: [
-        CreatorServiceItem(title: 'Kopi Darat Bulanan', subtitle: '16 Agu 2026 • 10:00 - 12:00 WIB', icon: Icons.coffee_outlined, tag: 'Rutin', value: '12 Peserta'),
-        CreatorServiceItem(title: 'Workshop Fotografi Dasar', subtitle: '23 Agu 2026 • 09:00 - 15:00 WIB', icon: Icons.camera_outlined, tag: 'Workshop', value: '30 Peserta'),
-        CreatorServiceItem(title: 'Bakti Sosial Komunitas', subtitle: '30 Agu 2026 • 07:00 - 14:00 WIB', icon: Icons.volunteer_activism_outlined, tag: 'Sosial', value: '50 Peserta'),
-        CreatorServiceItem(title: 'Pameran Karya Anggota', subtitle: '12 Sep 2026 • 10:00 - 20:00 WIB', icon: Icons.palette_outlined, tag: 'Bulanan', value: '100+ Peserta'),
+        CreatorServiceItem(
+          title: 'Kopi Darat Bulanan',
+          subtitle: '16 Agu 2026 • 10:00 - 12:00 WIB',
+          icon: Icons.coffee_outlined,
+          tag: 'Rutin',
+          value: '12 Peserta',
+        ),
+        CreatorServiceItem(
+          title: 'Workshop Fotografi Dasar',
+          subtitle: '23 Agu 2026 • 09:00 - 15:00 WIB',
+          icon: Icons.camera_outlined,
+          tag: 'Workshop',
+          value: '30 Peserta',
+        ),
+        CreatorServiceItem(
+          title: 'Bakti Sosial Komunitas',
+          subtitle: '30 Agu 2026 • 07:00 - 14:00 WIB',
+          icon: Icons.volunteer_activism_outlined,
+          tag: 'Sosial',
+          value: '50 Peserta',
+        ),
+        CreatorServiceItem(
+          title: 'Pameran Karya Anggota',
+          subtitle: '12 Sep 2026 • 10:00 - 20:00 WIB',
+          icon: Icons.palette_outlined,
+          tag: 'Bulanan',
+          value: '100+ Peserta',
+        ),
       ],
     ),
     'komunitas_pengumuman': CreatorServiceData(
@@ -828,14 +1655,38 @@ class CreatorServiceData {
       stats: [
         ('2', 'Penting', Icons.priority_high_outlined),
         ('5', 'Minggu Ini', Icons.mark_email_unread_outlined),
-        ('12', 'Total', Icons.inbox_outlined)
+        ('12', 'Total', Icons.inbox_outlined),
       ],
       actionLabel: 'Lihat Detail',
       items: [
-        CreatorServiceItem(title: 'Pendaftaran Pengurus Baru', subtitle: 'Dibuka sampai 20 Agu 2026', icon: Icons.how_to_reg_outlined, tag: 'Penting', value: '2 Hari Lagi'),
-        CreatorServiceItem(title: 'Perubahan Jadwal Kopdar', subtitle: 'Kopdar pindah ke 23 Agu 2026', icon: Icons.update_outlined, tag: 'Info', value: 'Baca'),
-        CreatorServiceItem(title: 'Pengumuman Sponsor Baru', subtitle: 'Kerjasama dengan Brand XYZ', icon: Icons.handshake_outlined, tag: 'Info', value: 'Baca'),
-        CreatorServiceItem(title: 'Rekap Kegiatan Juli 2026', subtitle: 'Laporan kegiatan bulan lalu', icon: Icons.summarize_outlined, tag: 'Rekap', value: 'Baca'),
+        CreatorServiceItem(
+          title: 'Pendaftaran Pengurus Baru',
+          subtitle: 'Dibuka sampai 20 Agu 2026',
+          icon: Icons.how_to_reg_outlined,
+          tag: 'Penting',
+          value: '2 Hari Lagi',
+        ),
+        CreatorServiceItem(
+          title: 'Perubahan Jadwal Kopdar',
+          subtitle: 'Kopdar pindah ke 23 Agu 2026',
+          icon: Icons.update_outlined,
+          tag: 'Info',
+          value: 'Baca',
+        ),
+        CreatorServiceItem(
+          title: 'Pengumuman Sponsor Baru',
+          subtitle: 'Kerjasama dengan Brand XYZ',
+          icon: Icons.handshake_outlined,
+          tag: 'Info',
+          value: 'Baca',
+        ),
+        CreatorServiceItem(
+          title: 'Rekap Kegiatan Juli 2026',
+          subtitle: 'Laporan kegiatan bulan lalu',
+          icon: Icons.summarize_outlined,
+          tag: 'Rekap',
+          value: 'Baca',
+        ),
       ],
     ),
     'komunitas_kolaborasi': CreatorServiceData(
@@ -847,14 +1698,38 @@ class CreatorServiceData {
       stats: [
         ('5', 'Kolaborasi', Icons.link_outlined),
         ('3', 'Aktif', Icons.play_circle_outline),
-        ('2', 'Selesai', Icons.check_circle_outline)
+        ('2', 'Selesai', Icons.check_circle_outline),
       ],
       actionLabel: 'Ajukan Kolaborasi',
       items: [
-        CreatorServiceItem(title: 'Kolaborasi Brand XYZ', subtitle: 'Konten bersama 3 bulan', icon: Icons.branding_watermark_outlined, tag: 'Aktif', value: 'Sampai Okt 2026'),
-        CreatorServiceItem(title: 'Kolaborasi Komunitas Fotografi', subtitle: 'Pameran karya bersama', icon: Icons.camera_outlined, tag: 'Aktif', value: '12 Sep 2026'),
-        CreatorServiceItem(title: 'CSR Perusahaan ABC', subtitle: 'Program pelatihan anggota', icon: Icons.volunteer_activism_outlined, tag: 'Menunggu', value: 'Proposal'),
-        CreatorServiceItem(title: 'Bazaar UMKM Bersama', subtitle: 'Event tahunan komunitas', icon: Icons.storefront_outlined, tag: 'Selesai', value: 'Feb 2026'),
+        CreatorServiceItem(
+          title: 'Kolaborasi Brand XYZ',
+          subtitle: 'Konten bersama 3 bulan',
+          icon: Icons.branding_watermark_outlined,
+          tag: 'Aktif',
+          value: 'Sampai Okt 2026',
+        ),
+        CreatorServiceItem(
+          title: 'Kolaborasi Komunitas Fotografi',
+          subtitle: 'Pameran karya bersama',
+          icon: Icons.camera_outlined,
+          tag: 'Aktif',
+          value: '12 Sep 2026',
+        ),
+        CreatorServiceItem(
+          title: 'CSR Perusahaan ABC',
+          subtitle: 'Program pelatihan anggota',
+          icon: Icons.volunteer_activism_outlined,
+          tag: 'Menunggu',
+          value: 'Proposal',
+        ),
+        CreatorServiceItem(
+          title: 'Bazaar UMKM Bersama',
+          subtitle: 'Event tahunan komunitas',
+          icon: Icons.storefront_outlined,
+          tag: 'Selesai',
+          value: 'Feb 2026',
+        ),
       ],
     ),
 
@@ -868,15 +1743,45 @@ class CreatorServiceData {
       stats: [
         ('90+', 'Proyek', Icons.folder_copy_outlined),
         ('4.9', 'Rating', Icons.star_rounded),
-        ('60+', 'Klien', Icons.people_outline)
+        ('60+', 'Klien', Icons.people_outline),
       ],
       isGrid: true,
       items: [
-        CreatorServiceItem(title: 'Desain Logo & Branding', subtitle: 'Identitas visual brand', icon: Icons.branding_watermark_outlined, tag: 'Branding', value: '35+ Proyek'),
-        CreatorServiceItem(title: 'Desain Kemasan', subtitle: 'Kemasan produk yang menarik', icon: Icons.inventory_2_outlined, tag: 'Packaging', value: '25+ Proyek'),
-        CreatorServiceItem(title: 'UI/UX Design', subtitle: 'Desain aplikasi & website', icon: Icons.design_services_outlined, tag: 'Digital', value: '18+ Proyek'),
-        CreatorServiceItem(title: 'Poster & Konten Visual', subtitle: 'Konten sosial media & promosi', icon: Icons.brush_outlined, tag: 'Konten', value: '40+ Proyek'),
-        CreatorServiceItem(title: 'Ilustrasi Digital', subtitle: 'Ilustrasi custom & karakter', icon: Icons.auto_awesome_outlined, tag: 'Ilustrasi', value: '12+ Proyek'),
+        CreatorServiceItem(
+          title: 'Desain Logo & Branding',
+          subtitle: 'Identitas visual brand',
+          icon: Icons.branding_watermark_outlined,
+          tag: 'Branding',
+          value: '35+ Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Desain Kemasan',
+          subtitle: 'Kemasan produk yang menarik',
+          icon: Icons.inventory_2_outlined,
+          tag: 'Packaging',
+          value: '25+ Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'UI/UX Design',
+          subtitle: 'Desain aplikasi & website',
+          icon: Icons.design_services_outlined,
+          tag: 'Digital',
+          value: '18+ Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Poster & Konten Visual',
+          subtitle: 'Konten sosial media & promosi',
+          icon: Icons.brush_outlined,
+          tag: 'Konten',
+          value: '40+ Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Ilustrasi Digital',
+          subtitle: 'Ilustrasi custom & karakter',
+          icon: Icons.auto_awesome_outlined,
+          tag: 'Ilustrasi',
+          value: '12+ Proyek',
+        ),
       ],
     ),
     'desain_proyek': CreatorServiceData(
@@ -888,14 +1793,38 @@ class CreatorServiceData {
       stats: [
         ('4', 'Aktif', Icons.auto_awesome_motion_outlined),
         ('2', 'Review', Icons.mark_email_unread_outlined),
-        ('3', 'Selesai', Icons.check_circle_outline)
+        ('3', 'Selesai', Icons.check_circle_outline),
       ],
       actionLabel: 'Perbarui Status',
       items: [
-        CreatorServiceItem(title: 'Rebranding - Kopi Senja', subtitle: 'Brief diterima 05 Agu • 2x revisi', icon: Icons.branding_watermark_outlined, tag: 'Sedang Dikerjakan', value: '70%'),
-        CreatorServiceItem(title: 'Kemasan Produk - UMKM Madu', subtitle: 'Brief diterima 07 Agu • 1x revisi', icon: Icons.inventory_2_outlined, tag: 'Dalam Antrian', value: 'Antrian #1'),
-        CreatorServiceItem(title: 'UI/UX - Aplikasi Pesantren', subtitle: 'Brief diterima 02 Agu • menunggu review', icon: Icons.design_services_outlined, tag: 'Menunggu Review', value: '100%'),
-        CreatorServiceItem(title: 'Poster Launching - Brand ABC', subtitle: 'Brief diterima 28 Jul • terkirim', icon: Icons.brush_outlined, tag: 'Selesai', value: 'Terunduh'),
+        CreatorServiceItem(
+          title: 'Rebranding - Kopi Senja',
+          subtitle: 'Brief diterima 05 Agu • 2x revisi',
+          icon: Icons.branding_watermark_outlined,
+          tag: 'Sedang Dikerjakan',
+          value: '70%',
+        ),
+        CreatorServiceItem(
+          title: 'Kemasan Produk - UMKM Madu',
+          subtitle: 'Brief diterima 07 Agu • 1x revisi',
+          icon: Icons.inventory_2_outlined,
+          tag: 'Dalam Antrian',
+          value: 'Antrian #1',
+        ),
+        CreatorServiceItem(
+          title: 'UI/UX - Aplikasi Pesantren',
+          subtitle: 'Brief diterima 02 Agu • menunggu review',
+          icon: Icons.design_services_outlined,
+          tag: 'Menunggu Review',
+          value: '100%',
+        ),
+        CreatorServiceItem(
+          title: 'Poster Launching - Brand ABC',
+          subtitle: 'Brief diterima 28 Jul • terkirim',
+          icon: Icons.brush_outlined,
+          tag: 'Selesai',
+          value: 'Terunduh',
+        ),
       ],
     ),
     'desain_paket': CreatorServiceData(
@@ -907,14 +1836,38 @@ class CreatorServiceData {
       stats: [
         ('4', 'Layanan', Icons.miscellaneous_services_outlined),
         ('Rp 250K', 'Mulai Dari', Icons.price_change_outlined),
-        ('3 Hari', 'Rata-rata', Icons.schedule_outlined)
+        ('3 Hari', 'Rata-rata', Icons.schedule_outlined),
       ],
       actionLabel: 'Pilih Paket',
       items: [
-        CreatorServiceItem(title: 'Paket Logo Dasar', subtitle: '3 konsep • 2x revisi • file siap cetak', icon: Icons.branding_watermark_outlined, tag: 'Populer', value: 'Rp 750.000'),
-        CreatorServiceItem(title: 'Paket Branding Lengkap', subtitle: 'Logo + 5 media sosial + kartu nama', icon: Icons.palette_outlined, tag: 'Best Value', value: 'Rp 2.500.000'),
-        CreatorServiceItem(title: 'Paket Desain Kemasan', subtitle: 'Kemasan produk + mockup 3D', icon: Icons.inventory_2_outlined, tag: 'Produk', value: 'Rp 1.800.000'),
-        CreatorServiceItem(title: 'UI/UX Screen', subtitle: 'Per layar • prototipe interaktif', icon: Icons.design_services_outlined, tag: 'Per Screen', value: 'Rp 350.000'),
+        CreatorServiceItem(
+          title: 'Paket Logo Dasar',
+          subtitle: '3 konsep • 2x revisi • file siap cetak',
+          icon: Icons.branding_watermark_outlined,
+          tag: 'Populer',
+          value: 'Rp 750.000',
+        ),
+        CreatorServiceItem(
+          title: 'Paket Branding Lengkap',
+          subtitle: 'Logo + 5 media sosial + kartu nama',
+          icon: Icons.palette_outlined,
+          tag: 'Best Value',
+          value: 'Rp 2.500.000',
+        ),
+        CreatorServiceItem(
+          title: 'Paket Desain Kemasan',
+          subtitle: 'Kemasan produk + mockup 3D',
+          icon: Icons.inventory_2_outlined,
+          tag: 'Produk',
+          value: 'Rp 1.800.000',
+        ),
+        CreatorServiceItem(
+          title: 'UI/UX Screen',
+          subtitle: 'Per layar • prototipe interaktif',
+          icon: Icons.design_services_outlined,
+          tag: 'Per Screen',
+          value: 'Rp 350.000',
+        ),
       ],
     ),
     'desain_spesialisasi': CreatorServiceData(
@@ -926,13 +1879,37 @@ class CreatorServiceData {
       stats: [
         ('5', 'Bidang', Icons.category_outlined),
         ('4.9', 'Rating', Icons.star_rounded),
-        ('7+', 'Tahun', Icons.work_history_outlined)
+        ('7+', 'Tahun', Icons.work_history_outlined),
       ],
       items: [
-        CreatorServiceItem(title: 'Brand Identity', subtitle: 'Logo, brand guideline & aplikasi', icon: Icons.branding_watermark_outlined, tag: 'Expert', value: '35+ Proyek'),
-        CreatorServiceItem(title: 'Packaging Design', subtitle: 'Kemasan produk F&B & retail', icon: Icons.inventory_2_outlined, tag: 'Advanced', value: '25+ Proyek'),
-        CreatorServiceItem(title: 'UI/UX & Web Design', subtitle: 'Figma, prototipe & design system', icon: Icons.design_services_outlined, tag: 'Advanced', value: '18+ Proyek'),
-        CreatorServiceItem(title: 'Ilustrasi & Karakter', subtitle: 'Procreate & vector art', icon: Icons.auto_awesome_outlined, tag: 'Intermediate', value: '12+ Proyek'),
+        CreatorServiceItem(
+          title: 'Brand Identity',
+          subtitle: 'Logo, brand guideline & aplikasi',
+          icon: Icons.branding_watermark_outlined,
+          tag: 'Expert',
+          value: '35+ Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Packaging Design',
+          subtitle: 'Kemasan produk F&B & retail',
+          icon: Icons.inventory_2_outlined,
+          tag: 'Advanced',
+          value: '25+ Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'UI/UX & Web Design',
+          subtitle: 'Figma, prototipe & design system',
+          icon: Icons.design_services_outlined,
+          tag: 'Advanced',
+          value: '18+ Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Ilustrasi & Karakter',
+          subtitle: 'Procreate & vector art',
+          icon: Icons.auto_awesome_outlined,
+          tag: 'Intermediate',
+          value: '12+ Proyek',
+        ),
       ],
     ),
 
@@ -946,14 +1923,38 @@ class CreatorServiceData {
       stats: [
         ('60+', 'Proyek', Icons.airplanemode_active_outlined),
         ('4.8', 'Rating', Icons.star_rounded),
-        ('100%', 'Legal & Berizin', Icons.verified_outlined)
+        ('100%', 'Legal & Berizin', Icons.verified_outlined),
       ],
       isGrid: true,
       items: [
-        CreatorServiceItem(title: 'Cinematic Aerial', subtitle: 'Video sinematik dari udara', icon: Icons.movie_outlined, tag: 'Video', value: '25+ Proyek'),
-        CreatorServiceItem(title: 'Foto Udara Real Estate', subtitle: 'Dokumentasi properti dari udara', icon: Icons.apartment_outlined, tag: 'Foto', value: '18+ Proyek'),
-        CreatorServiceItem(title: 'Dokumentasi Event', subtitle: 'Liputan udara konser & festival', icon: Icons.festival_outlined, tag: 'Event', value: '12+ Proyek'),
-        CreatorServiceItem(title: 'Pemetaan & Survey', subtitle: 'Pemetaan lahan & konstruksi', icon: Icons.map_outlined, tag: 'Survey', value: '8+ Proyek'),
+        CreatorServiceItem(
+          title: 'Cinematic Aerial',
+          subtitle: 'Video sinematik dari udara',
+          icon: Icons.movie_outlined,
+          tag: 'Video',
+          value: '25+ Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Foto Udara Real Estate',
+          subtitle: 'Dokumentasi properti dari udara',
+          icon: Icons.apartment_outlined,
+          tag: 'Foto',
+          value: '18+ Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Dokumentasi Event',
+          subtitle: 'Liputan udara konser & festival',
+          icon: Icons.festival_outlined,
+          tag: 'Event',
+          value: '12+ Proyek',
+        ),
+        CreatorServiceItem(
+          title: 'Pemetaan & Survey',
+          subtitle: 'Pemetaan lahan & konstruksi',
+          icon: Icons.map_outlined,
+          tag: 'Survey',
+          value: '8+ Proyek',
+        ),
       ],
     ),
     'drone_booking': CreatorServiceData(
@@ -965,13 +1966,31 @@ class CreatorServiceData {
       stats: [
         ('1', 'Hari Ini', Icons.today_outlined),
         ('3', 'Minggu Ini', Icons.date_range_outlined),
-        ('1', 'Pending', Icons.pending_actions_outlined)
+        ('1', 'Pending', Icons.pending_actions_outlined),
       ],
       actionLabel: 'Konfirmasi Booking',
       items: [
-        CreatorServiceItem(title: 'Aerial - Perumahan Griya Asri', subtitle: '15 Agu 2026 • 07:00 - 10:00 WIB', icon: Icons.apartment_outlined, tag: 'Terkonfirmasi', value: 'Cikarang'),
-        CreatorServiceItem(title: 'Festival Musik Nusantara', subtitle: '07 Sep 2026 • 14:00 - 18:00 WIB', icon: Icons.festival_outlined, tag: 'Menunggu', value: 'GBK'),
-        CreatorServiceItem(title: 'Pemetaan Lahan - PT Agro', subtitle: '12 Sep 2026 • 06:00 - 12:00 WIB', icon: Icons.map_outlined, tag: 'Terkonfirmasi', value: 'Subang'),
+        CreatorServiceItem(
+          title: 'Aerial - Perumahan Griya Asri',
+          subtitle: '15 Agu 2026 • 07:00 - 10:00 WIB',
+          icon: Icons.apartment_outlined,
+          tag: 'Terkonfirmasi',
+          value: 'Cikarang',
+        ),
+        CreatorServiceItem(
+          title: 'Festival Musik Nusantara',
+          subtitle: '07 Sep 2026 • 14:00 - 18:00 WIB',
+          icon: Icons.festival_outlined,
+          tag: 'Menunggu',
+          value: 'GBK',
+        ),
+        CreatorServiceItem(
+          title: 'Pemetaan Lahan - PT Agro',
+          subtitle: '12 Sep 2026 • 06:00 - 12:00 WIB',
+          icon: Icons.map_outlined,
+          tag: 'Terkonfirmasi',
+          value: 'Subang',
+        ),
       ],
     ),
     'drone_paket': CreatorServiceData(
@@ -983,13 +2002,31 @@ class CreatorServiceData {
       stats: [
         ('3', 'Paket', Icons.card_membership_outlined),
         ('Rp 1JT', 'Mulai Dari', Icons.price_change_outlined),
-        ('Legal', 'Sertifikat & Izin', Icons.verified_outlined)
+        ('Legal', 'Sertifikat & Izin', Icons.verified_outlined),
       ],
       actionLabel: 'Pilih Paket',
       items: [
-        CreatorServiceItem(title: 'Paket Foto Udara', subtitle: '1 jam • 50 foto • 1 lokasi', icon: Icons.photo_outlined, tag: 'Populer', value: 'Rp 1.000.000'),
-        CreatorServiceItem(title: 'Paket Video Sinematik', subtitle: '2 jam • video 4K + edit', icon: Icons.movie_outlined, tag: 'Best Value', value: 'Rp 2.500.000'),
-        CreatorServiceItem(title: 'Paket Pemetaan & Survey', subtitle: 'Full day • data ortofoto & 3D', icon: Icons.map_outlined, tag: 'Profesional', value: 'Rp 4.500.000'),
+        CreatorServiceItem(
+          title: 'Paket Foto Udara',
+          subtitle: '1 jam • 50 foto • 1 lokasi',
+          icon: Icons.photo_outlined,
+          tag: 'Populer',
+          value: 'Rp 1.000.000',
+        ),
+        CreatorServiceItem(
+          title: 'Paket Video Sinematik',
+          subtitle: '2 jam • video 4K + edit',
+          icon: Icons.movie_outlined,
+          tag: 'Best Value',
+          value: 'Rp 2.500.000',
+        ),
+        CreatorServiceItem(
+          title: 'Paket Pemetaan & Survey',
+          subtitle: 'Full day • data ortofoto & 3D',
+          icon: Icons.map_outlined,
+          tag: 'Profesional',
+          value: 'Rp 4.500.000',
+        ),
       ],
     ),
     'drone_equipment': CreatorServiceData(
@@ -1001,13 +2038,37 @@ class CreatorServiceData {
       stats: [
         ('4', 'Unit Drone', Icons.airplanemode_active_outlined),
         ('4K60', 'Resolusi Maks', Icons.high_quality_outlined),
-        ('A1', 'Kategori Legal', Icons.verified_outlined)
+        ('A1', 'Kategori Legal', Icons.verified_outlined),
       ],
       items: [
-        CreatorServiceItem(title: 'DJI Mavic 3 Pro', subtitle: 'Kamera 4K 60fps • 3 lensa', icon: Icons.airplanemode_active_outlined, tag: 'Tersedia', value: '2 Unit'),
-        CreatorServiceItem(title: 'DJI Mini 4 Pro', subtitle: 'Drone ringan < 249 gram', icon: Icons.flight_outlined, tag: 'Tersedia', value: '1 Unit'),
-        CreatorServiceItem(title: 'Baterai & Aksesoris', subtitle: '6 baterai + charger ganda', icon: Icons.battery_charging_full_outlined, tag: 'Tersedia', value: '6 Unit'),
-        CreatorServiceItem(title: 'Sertifikat & Izin Terbang', subtitle: 'Sertifikasi pilot & izin penerbangan', icon: Icons.verified_outlined, tag: 'Lengkap', value: 'Terdaftar'),
+        CreatorServiceItem(
+          title: 'DJI Mavic 3 Pro',
+          subtitle: 'Kamera 4K 60fps • 3 lensa',
+          icon: Icons.airplanemode_active_outlined,
+          tag: 'Tersedia',
+          value: '2 Unit',
+        ),
+        CreatorServiceItem(
+          title: 'DJI Mini 4 Pro',
+          subtitle: 'Drone ringan < 249 gram',
+          icon: Icons.flight_outlined,
+          tag: 'Tersedia',
+          value: '1 Unit',
+        ),
+        CreatorServiceItem(
+          title: 'Baterai & Aksesoris',
+          subtitle: '6 baterai + charger ganda',
+          icon: Icons.battery_charging_full_outlined,
+          tag: 'Tersedia',
+          value: '6 Unit',
+        ),
+        CreatorServiceItem(
+          title: 'Sertifikat & Izin Terbang',
+          subtitle: 'Sertifikasi pilot & izin penerbangan',
+          icon: Icons.verified_outlined,
+          tag: 'Lengkap',
+          value: 'Terdaftar',
+        ),
       ],
     ),
 
@@ -1021,13 +2082,37 @@ class CreatorServiceData {
       stats: [
         ('5+', 'Tahun', Icons.work_history_outlined),
         ('80+', 'Job', Icons.work_outline),
-        ('4.9', 'Rating', Icons.star_rounded)
+        ('4.9', 'Rating', Icons.star_rounded),
       ],
       items: [
-        CreatorServiceItem(title: 'Data Diri & Portofolio', subtitle: 'Portofolio & comp card terbaru', icon: Icons.badge_outlined, tag: 'Lengkap', value: 'Diperbarui'),
-        CreatorServiceItem(title: 'Pengukuran & Spesifikasi', subtitle: 'Tinggi, berat, ukuran baju', icon: Icons.straighten_outlined, tag: 'Tersedia', value: 'On Request'),
-        CreatorServiceItem(title: 'Bahasa & Kemampuan', subtitle: 'Indonesia, Inggris, MC & akting', icon: Icons.translate_outlined, tag: 'Bilingual', value: '3 Skill'),
-        CreatorServiceItem(title: 'Visa & Dokumen', subtitle: 'Dokumen kerja & identitas', icon: Icons.folder_outlined, tag: 'Lengkap', value: 'Valid'),
+        CreatorServiceItem(
+          title: 'Data Diri & Portofolio',
+          subtitle: 'Portofolio & comp card terbaru',
+          icon: Icons.badge_outlined,
+          tag: 'Lengkap',
+          value: 'Diperbarui',
+        ),
+        CreatorServiceItem(
+          title: 'Pengukuran & Spesifikasi',
+          subtitle: 'Tinggi, berat, ukuran baju',
+          icon: Icons.straighten_outlined,
+          tag: 'Tersedia',
+          value: 'On Request',
+        ),
+        CreatorServiceItem(
+          title: 'Bahasa & Kemampuan',
+          subtitle: 'Indonesia, Inggris, MC & akting',
+          icon: Icons.translate_outlined,
+          tag: 'Bilingual',
+          value: '3 Skill',
+        ),
+        CreatorServiceItem(
+          title: 'Visa & Dokumen',
+          subtitle: 'Dokumen kerja & identitas',
+          icon: Icons.folder_outlined,
+          tag: 'Lengkap',
+          value: 'Valid',
+        ),
       ],
     ),
     'talent_jadwal': CreatorServiceData(
@@ -1039,14 +2124,38 @@ class CreatorServiceData {
       stats: [
         ('1', 'Hari Ini', Icons.today_outlined),
         ('4', 'Bulan Ini', Icons.date_range_outlined),
-        ('2', 'Pending', Icons.pending_actions_outlined)
+        ('2', 'Pending', Icons.pending_actions_outlined),
       ],
       actionLabel: 'Konfirmasi Booking',
       items: [
-        CreatorServiceItem(title: 'Model Katalog - Fashion Brand Z', subtitle: '14 Agu 2026 • 08:00 - 16:00 WIB', icon: Icons.checkroom_outlined, tag: 'Terkonfirmasi', value: 'Studio 21'),
-        CreatorServiceItem(title: 'Talent Iklan TVC - Kopi', subtitle: '20 Agu 2026 • 09:00 - 17:00 WIB', icon: Icons.tv_outlined, tag: 'Menunggu', value: 'Production House'),
-        CreatorServiceItem(title: 'Runway Fashion Week', subtitle: '05 Sep 2026 • 13:00 - 18:00 WIB', icon: Icons.checkroom_outlined, tag: 'Terkonfirmasi', value: 'Jakarta Fashion Week'),
-        CreatorServiceItem(title: 'Brand Ambassador - Skincare', subtitle: '12 Sep 2026 • 10:00 - 14:00 WIB', icon: Icons.face_outlined, tag: 'Menunggu', value: 'Kantor Brand'),
+        CreatorServiceItem(
+          title: 'Model Katalog - Fashion Brand Z',
+          subtitle: '14 Agu 2026 • 08:00 - 16:00 WIB',
+          icon: Icons.checkroom_outlined,
+          tag: 'Terkonfirmasi',
+          value: 'Studio 21',
+        ),
+        CreatorServiceItem(
+          title: 'Talent Iklan TVC - Kopi',
+          subtitle: '20 Agu 2026 • 09:00 - 17:00 WIB',
+          icon: Icons.tv_outlined,
+          tag: 'Menunggu',
+          value: 'Production House',
+        ),
+        CreatorServiceItem(
+          title: 'Runway Fashion Week',
+          subtitle: '05 Sep 2026 • 13:00 - 18:00 WIB',
+          icon: Icons.checkroom_outlined,
+          tag: 'Terkonfirmasi',
+          value: 'Jakarta Fashion Week',
+        ),
+        CreatorServiceItem(
+          title: 'Brand Ambassador - Skincare',
+          subtitle: '12 Sep 2026 • 10:00 - 14:00 WIB',
+          icon: Icons.face_outlined,
+          tag: 'Menunggu',
+          value: 'Kantor Brand',
+        ),
       ],
     ),
     'talent_kategori': CreatorServiceData(
@@ -1058,13 +2167,37 @@ class CreatorServiceData {
       stats: [
         ('6', 'Kategori', Icons.category_outlined),
         ('80+', 'Job Selesai', Icons.check_circle_outline),
-        ('98%', 'Kepuasan', Icons.verified_outlined)
+        ('98%', 'Kepuasan', Icons.verified_outlined),
       ],
       items: [
-        CreatorServiceItem(title: 'Model Fashion & Editorial', subtitle: 'Katalog, majalah & editorial', icon: Icons.checkroom_outlined, tag: 'Sangat Mahir', value: '35+ Job'),
-        CreatorServiceItem(title: 'Iklan TVC & Digital', subtitle: 'Bintang iklan TV & online', icon: Icons.tv_outlined, tag: 'Mahir', value: '20+ Job'),
-        CreatorServiceItem(title: 'Runway & Catwalk', subtitle: 'Model panggung fashion show', icon: Icons.stairs_outlined, tag: 'Mahir', value: '15+ Job'),
-        CreatorServiceItem(title: 'Brand Ambassador', subtitle: 'Kerjasama jangka panjang', icon: Icons.thumb_up_outlined, tag: 'Sangat Mahir', value: '10+ Brand'),
+        CreatorServiceItem(
+          title: 'Model Fashion & Editorial',
+          subtitle: 'Katalog, majalah & editorial',
+          icon: Icons.checkroom_outlined,
+          tag: 'Sangat Mahir',
+          value: '35+ Job',
+        ),
+        CreatorServiceItem(
+          title: 'Iklan TVC & Digital',
+          subtitle: 'Bintang iklan TV & online',
+          icon: Icons.tv_outlined,
+          tag: 'Mahir',
+          value: '20+ Job',
+        ),
+        CreatorServiceItem(
+          title: 'Runway & Catwalk',
+          subtitle: 'Model panggung fashion show',
+          icon: Icons.stairs_outlined,
+          tag: 'Mahir',
+          value: '15+ Job',
+        ),
+        CreatorServiceItem(
+          title: 'Brand Ambassador',
+          subtitle: 'Kerjasama jangka panjang',
+          icon: Icons.thumb_up_outlined,
+          tag: 'Sangat Mahir',
+          value: '10+ Brand',
+        ),
       ],
     ),
     'talent_tarif': CreatorServiceData(
@@ -1076,13 +2209,31 @@ class CreatorServiceData {
       stats: [
         ('3', 'Kategori Tarif', Icons.receipt_long_outlined),
         ('Rp 1.5JT', 'Mulai Dari', Icons.price_change_outlined),
-        ('Termasuk', 'Transport & MUA', Icons.local_taxi_outlined)
+        ('Termasuk', 'Transport & MUA', Icons.local_taxi_outlined),
       ],
       actionLabel: 'Pilih Paket',
       items: [
-        CreatorServiceItem(title: 'Katalog / Editorial', subtitle: 'Per sesi 4 jam • 3-5 outfit', icon: Icons.photo_outlined, tag: 'Per Sesi', value: 'Rp 1.500.000'),
-        CreatorServiceItem(title: 'Iklan TVC / Digital', subtitle: 'Per hari produksi', icon: Icons.tv_outlined, tag: 'Per Hari', value: 'Rp 3.500.000'),
-        CreatorServiceItem(title: 'Brand Ambassador', subtitle: 'Per bulan • durasi minimal 3 bulan', icon: Icons.thumb_up_outlined, tag: 'Per Bulan', value: 'Rp 8.000.000'),
+        CreatorServiceItem(
+          title: 'Katalog / Editorial',
+          subtitle: 'Per sesi 4 jam • 3-5 outfit',
+          icon: Icons.photo_outlined,
+          tag: 'Per Sesi',
+          value: 'Rp 1.500.000',
+        ),
+        CreatorServiceItem(
+          title: 'Iklan TVC / Digital',
+          subtitle: 'Per hari produksi',
+          icon: Icons.tv_outlined,
+          tag: 'Per Hari',
+          value: 'Rp 3.500.000',
+        ),
+        CreatorServiceItem(
+          title: 'Brand Ambassador',
+          subtitle: 'Per bulan • durasi minimal 3 bulan',
+          icon: Icons.thumb_up_outlined,
+          tag: 'Per Bulan',
+          value: 'Rp 8.000.000',
+        ),
       ],
     ),
 
@@ -1096,14 +2247,38 @@ class CreatorServiceData {
       stats: [
         ('120+', 'Konten', Icons.photo_library_outlined),
         ('4.8', 'Rating', Icons.star_rounded),
-        ('450K', 'Total Reach', Icons.insights_outlined)
+        ('450K', 'Total Reach', Icons.insights_outlined),
       ],
       isGrid: true,
       items: [
-        CreatorServiceItem(title: 'UGC & Review Produk', subtitle: 'Konten testimoni pengguna', icon: Icons.thumb_up_outlined, tag: 'UGC', value: '45+ Konten'),
-        CreatorServiceItem(title: 'Reels & Short Video', subtitle: 'Video pendek viral', icon: Icons.movie_outlined, tag: 'Reels', value: '60+ Konten'),
-        CreatorServiceItem(title: 'Konten Foto Produk', subtitle: 'Foto produk lifestyle', icon: Icons.photo_camera_outlined, tag: 'Foto', value: '35+ Konten'),
-        CreatorServiceItem(title: 'Tutorial & Tips', subtitle: 'Konten edukasi untuk brand', icon: Icons.school_outlined, tag: 'Edukasi', value: '20+ Konten'),
+        CreatorServiceItem(
+          title: 'UGC & Review Produk',
+          subtitle: 'Konten testimoni pengguna',
+          icon: Icons.thumb_up_outlined,
+          tag: 'UGC',
+          value: '45+ Konten',
+        ),
+        CreatorServiceItem(
+          title: 'Reels & Short Video',
+          subtitle: 'Video pendek viral',
+          icon: Icons.movie_outlined,
+          tag: 'Reels',
+          value: '60+ Konten',
+        ),
+        CreatorServiceItem(
+          title: 'Konten Foto Produk',
+          subtitle: 'Foto produk lifestyle',
+          icon: Icons.photo_camera_outlined,
+          tag: 'Foto',
+          value: '35+ Konten',
+        ),
+        CreatorServiceItem(
+          title: 'Tutorial & Tips',
+          subtitle: 'Konten edukasi untuk brand',
+          icon: Icons.school_outlined,
+          tag: 'Edukasi',
+          value: '20+ Konten',
+        ),
       ],
     ),
     'konten_campaign': CreatorServiceData(
@@ -1115,13 +2290,31 @@ class CreatorServiceData {
       stats: [
         ('3', 'Campaign', Icons.campaign_outlined),
         ('5', 'Konten/Minggu', Icons.content_paste_outlined),
-        ('2', 'Pending', Icons.pending_actions_outlined)
+        ('2', 'Pending', Icons.pending_actions_outlined),
       ],
       actionLabel: 'Kelola Campaign',
       items: [
-        CreatorServiceItem(title: 'Campaign Ramadhan - Brand X', subtitle: '12 Agu - 05 Sep • 12 konten', icon: Icons.campaign_outlined, tag: 'Berjalan', value: '8/12 Konten'),
-        CreatorServiceItem(title: 'Launching Produk Baru - Skincare', subtitle: '20 Agu - 10 Sep • 8 konten', icon: Icons.rocket_launch_outlined, tag: 'Menunggu', value: 'Brief'),
-        CreatorServiceItem(title: 'Konten Bulanan - Kopi Senja', subtitle: 'Sepanjang bulan • 4 konten/minggu', icon: Icons.coffee_outlined, tag: 'Berjalan', value: '16/16 Konten'),
+        CreatorServiceItem(
+          title: 'Campaign Ramadhan - Brand X',
+          subtitle: '12 Agu - 05 Sep • 12 konten',
+          icon: Icons.campaign_outlined,
+          tag: 'Berjalan',
+          value: '8/12 Konten',
+        ),
+        CreatorServiceItem(
+          title: 'Launching Produk Baru - Skincare',
+          subtitle: '20 Agu - 10 Sep • 8 konten',
+          icon: Icons.rocket_launch_outlined,
+          tag: 'Menunggu',
+          value: 'Brief',
+        ),
+        CreatorServiceItem(
+          title: 'Konten Bulanan - Kopi Senja',
+          subtitle: 'Sepanjang bulan • 4 konten/minggu',
+          icon: Icons.coffee_outlined,
+          tag: 'Berjalan',
+          value: '16/16 Konten',
+        ),
       ],
     ),
     'konten_paket': CreatorServiceData(
@@ -1133,13 +2326,31 @@ class CreatorServiceData {
       stats: [
         ('3', 'Paket', Icons.card_membership_outlined),
         ('Rp 2JT', 'Mulai Dari', Icons.price_change_outlined),
-        ('30 Hari', 'Durasi', Icons.date_range_outlined)
+        ('30 Hari', 'Durasi', Icons.date_range_outlined),
       ],
       actionLabel: 'Pilih Paket',
       items: [
-        CreatorServiceItem(title: 'Paket Starter', subtitle: '4 konten/bulan • 1 platform', icon: Icons.photo_outlined, tag: 'Populer', value: 'Rp 2.000.000'),
-        CreatorServiceItem(title: 'Paket Professional', subtitle: '8 konten/bulan • 2 platform + review', icon: Icons.photo_library_outlined, tag: 'Best Value', value: 'Rp 4.000.000'),
-        CreatorServiceItem(title: 'Paket Campaign', subtitle: 'Full campaign 30 hari • konten + iklan', icon: Icons.campaign_outlined, tag: 'Premium', value: 'Rp 8.000.000'),
+        CreatorServiceItem(
+          title: 'Paket Starter',
+          subtitle: '4 konten/bulan • 1 platform',
+          icon: Icons.photo_outlined,
+          tag: 'Populer',
+          value: 'Rp 2.000.000',
+        ),
+        CreatorServiceItem(
+          title: 'Paket Professional',
+          subtitle: '8 konten/bulan • 2 platform + review',
+          icon: Icons.photo_library_outlined,
+          tag: 'Best Value',
+          value: 'Rp 4.000.000',
+        ),
+        CreatorServiceItem(
+          title: 'Paket Campaign',
+          subtitle: 'Full campaign 30 hari • konten + iklan',
+          icon: Icons.campaign_outlined,
+          tag: 'Premium',
+          value: 'Rp 8.000.000',
+        ),
       ],
     ),
     'konten_platform': CreatorServiceData(
@@ -1151,13 +2362,37 @@ class CreatorServiceData {
       stats: [
         ('4', 'Platform', Icons.language_outlined),
         ('3', 'Niche', Icons.category_outlined),
-        ('450K', 'Total Followers', Icons.people_outline)
+        ('450K', 'Total Followers', Icons.people_outline),
       ],
       items: [
-        CreatorServiceItem(title: 'Instagram & Reels', subtitle: 'Konten feed, story & reels', icon: Icons.photo_camera_outlined, tag: 'Aktif', value: '250K Followers'),
-        CreatorServiceItem(title: 'TikTok', subtitle: 'Video pendek viral', icon: Icons.music_note_outlined, tag: 'Aktif', value: '180K Followers'),
-        CreatorServiceItem(title: 'YouTube', subtitle: 'Konten panjang & tutorial', icon: Icons.play_circle_outline, tag: 'Aktif', value: '45K Subscriber'),
-        CreatorServiceItem(title: 'Niche: Food & Kuliner', subtitle: 'Review kuliner & resep', icon: Icons.restaurant_outlined, tag: 'Spesialis', value: '40% Konten'),
+        CreatorServiceItem(
+          title: 'Instagram & Reels',
+          subtitle: 'Konten feed, story & reels',
+          icon: Icons.photo_camera_outlined,
+          tag: 'Aktif',
+          value: '250K Followers',
+        ),
+        CreatorServiceItem(
+          title: 'TikTok',
+          subtitle: 'Video pendek viral',
+          icon: Icons.music_note_outlined,
+          tag: 'Aktif',
+          value: '180K Followers',
+        ),
+        CreatorServiceItem(
+          title: 'YouTube',
+          subtitle: 'Konten panjang & tutorial',
+          icon: Icons.play_circle_outline,
+          tag: 'Aktif',
+          value: '45K Subscriber',
+        ),
+        CreatorServiceItem(
+          title: 'Niche: Food & Kuliner',
+          subtitle: 'Review kuliner & resep',
+          icon: Icons.restaurant_outlined,
+          tag: 'Spesialis',
+          value: '40% Konten',
+        ),
       ],
     ),
   };
@@ -1220,7 +2455,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
   }
 
   UserModel get _user => widget.user;
-  double get _personalRating => (_user.followersCount > 500) ? 4.95 : ((_user.followersCount * 0.0035) + 4.2).clamp(4.2, 4.95);
+  double get _personalRating => (_user.followersCount > 500)
+      ? 4.95
+      : ((_user.followersCount * 0.0035) + 4.2).clamp(4.2, 4.95);
   String get _ratingDisplay => _personalRating.toStringAsFixed(1);
 
   List<String> get _availableFilters {
@@ -1236,12 +2473,12 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
   }
 
   List<String> get _sortOptions => const [
-        'Terbaru',
-        'Terpopuler',
-        'A - Z',
-        'Harga Tertinggi',
-        'Harga Terendah',
-      ];
+    'Terbaru',
+    'Terpopuler',
+    'A - Z',
+    'Harga Tertinggi',
+    'Harga Terendah',
+  ];
 
   List<CreatorServiceItem> get _filteredItems {
     final data = _data;
@@ -1253,11 +2490,13 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     if (_query.trim().isNotEmpty) {
       final q = _query.toLowerCase();
       items = items
-          .where((i) =>
-              i.title.toLowerCase().contains(q) ||
-              i.subtitle.toLowerCase().contains(q) ||
-              (i.tag?.toLowerCase().contains(q) ?? false) ||
-              (i.value?.toLowerCase().contains(q) ?? false))
+          .where(
+            (i) =>
+                i.title.toLowerCase().contains(q) ||
+                i.subtitle.toLowerCase().contains(q) ||
+                (i.tag?.toLowerCase().contains(q) ?? false) ||
+                (i.value?.toLowerCase().contains(q) ?? false),
+          )
           .toList();
     }
     if (_selectedSort == 'A - Z') {
@@ -1337,7 +2576,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       if (extras.isNotEmpty || saved.isNotEmpty || submitted.isNotEmpty) {
         setState(() {
           if (extras.isNotEmpty) {
-            _extraItems[widget.serviceKey] = List<CreatorServiceItem>.from(extras);
+            _extraItems[widget.serviceKey] = List<CreatorServiceItem>.from(
+              extras,
+            );
           }
           for (final id in saved) {
             final idx = int.tryParse(id);
@@ -1351,7 +2592,6 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       }
     } catch (_) {}
   }
-
 
   @override
   void dispose() {
@@ -1394,13 +2634,11 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
           children: [
             Text(
               data.title,
-              style:
-                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(width: 10),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 gradient: AppTheme.primaryGradient,
                 borderRadius: BorderRadius.circular(20),
@@ -1409,15 +2647,19 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.auto_awesome_rounded,
-                      size: 12, color: Colors.white),
+                  Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 12,
+                    color: Colors.white,
+                  ),
                   SizedBox(width: 4),
                   Text(
                     'Premium',
                     style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold),
+                      fontSize: 10,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -1437,19 +2679,37 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                 SnackBar(
                   behavior: SnackBarBehavior.floating,
                   backgroundColor: AppTheme.primaryPurple,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   content: Row(
                     children: [
-                      const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 18),
+                      const Icon(
+                        Icons.notifications_active_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('Notifikasi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
-                            Text('${(_user.followersCount ~/ 18).clamp(2, 47)} notifikasi baru untuk Anda',
-                                style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                            const Text(
+                              'Notifikasi',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              '${(_user.followersCount ~/ 18).clamp(2, 47)} notifikasi baru untuk Anda',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 11,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -1468,46 +2728,129 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
               showDialog(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(22),
+                  ),
                   title: Row(
                     children: [
                       Container(
-                        width: 40, height: 40,
-                        decoration: BoxDecoration(color: const Color(0xFFF59E0B).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
-                        child: const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 22),
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: const Color(
+                            0xFFF59E0B,
+                          ).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.star_rounded,
+                          color: Color(0xFFF59E0B),
+                          size: 22,
+                        ),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(child: Text('Rating & Reputasi', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900))),
+                      const Expanded(
+                        child: Text(
+                          'Rating & Reputasi',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                  content: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(_ratingDisplay, style: const TextStyle(fontSize: 42, fontWeight: FontWeight.w900, color: Color(0xFFF59E0B), letterSpacing: -1)),
-                        const Padding(padding: EdgeInsets.only(bottom: 12), child: Text('/5.0', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFFF59E0B)))),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(5, (i) => Icon(i < _personalRating.round() ? Icons.star_rounded : Icons.star_border_rounded, size: 18, color: const Color(0xFFF59E0B)))),
-                    const SizedBox(height: 14),
-                    Text('Berdasarkan ${(_user.followersCount * 0.7).round()} ulasan dari klien & mitra Kreavana',
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _ratingDisplay,
+                            style: const TextStyle(
+                              fontSize: 42,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFFF59E0B),
+                              letterSpacing: -1,
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 12),
+                            child: Text(
+                              '/5.0',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFF59E0B),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          5,
+                          (i) => Icon(
+                            i < _personalRating.round()
+                                ? Icons.star_rounded
+                                : Icons.star_border_rounded,
+                            size: 18,
+                            color: const Color(0xFFF59E0B),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Berdasarkan ${(_user.followersCount * 0.7).round()} ulasan dari klien & mitra Kreavana',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600, height: 1.45)),
-                  ]),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Colors.grey.shade600,
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
+                  ),
                   actions: [
-                    TextButton(onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Tutup', style: TextStyle(fontWeight: FontWeight.w700))),
-                    ElevatedButton(onPressed: () {
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(behavior: SnackBarBehavior.floating,
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text(
+                        'Tutup',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: AppTheme.primaryPurple,
+                            content: Text(
+                              'Melihat halaman reputasi...',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryPurple,
-                        content: Text('Melihat halaman reputasi...', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700))));
-                    },
-                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryPurple, foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                      child: const Text('Lihat Reputasi', style: TextStyle(fontWeight: FontWeight.w800))),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Lihat Reputasi',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -1523,6 +2866,12 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
           slivers: [
             SliverToBoxAdapter(child: _buildHeader(context, data)),
             SliverToBoxAdapter(child: _buildQuickStatsRow(context, data)),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: CreatorAvailabilityWidget(creatorId: _user.id ?? ''),
+              ),
+            ),
             SliverToBoxAdapter(child: _buildSearchBar(context, data)),
             SliverToBoxAdapter(child: _buildFilterSortBar(context, data)),
             if (_filteredItems.isEmpty)
@@ -1531,8 +2880,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
                 sliver: SliverGrid(
-                  gridDelegate:
-                      const SliverGridDelegateWithMaxCrossAxisExtent(
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                     maxCrossAxisExtent: 340,
                     mainAxisSpacing: 16,
                     crossAxisSpacing: 16,
@@ -1540,7 +2888,11 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                   ),
                   delegate: SliverChildBuilderDelegate(
                     (context, index) => _buildAnimatedGridItem(
-                        context, data, _filteredItems[index], index),
+                      context,
+                      data,
+                      _filteredItems[index],
+                      index,
+                    ),
                     childCount: _filteredItems.length,
                   ),
                 ),
@@ -1551,7 +2903,11 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) => _buildAnimatedListItem(
-                        context, data, _filteredItems[index], index),
+                      context,
+                      data,
+                      _filteredItems[index],
+                      index,
+                    ),
                     childCount: _filteredItems.length,
                   ),
                 ),
@@ -1585,14 +2941,14 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
               onTap: onTap,
               child: Container(
                 height: 40,
-                padding: EdgeInsets.symmetric(horizontal: label != null ? 12 : 10),
+                padding: EdgeInsets.symmetric(
+                  horizontal: label != null ? 12 : 10,
+                ),
                 decoration: BoxDecoration(
                   color: isDark ? AppTheme.cardDark2 : Colors.white,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: isDark
-                        ? AppTheme.inputBorder
-                        : Colors.grey.shade200,
+                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
                   ),
                   boxShadow: AppTheme.cardShadowLight,
                 ),
@@ -1600,17 +2956,21 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(icon,
-                          size: 18,
-                          color: isStar
-                              ? const Color(0xFFF59E0B)
-                              : AppTheme.primaryPurple),
+                      Icon(
+                        icon,
+                        size: 18,
+                        color: isStar
+                            ? const Color(0xFFF59E0B)
+                            : AppTheme.primaryPurple,
+                      ),
                       if (label != null) ...[
                         const SizedBox(width: 6),
                         Text(
                           label,
                           style: const TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.bold),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ],
@@ -1749,8 +3109,11 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                               child: Stack(
                                 children: [
                                   Center(
-                                    child: Icon(data.icon,
-                                        color: Colors.white, size: 32),
+                                    child: Icon(
+                                      data.icon,
+                                      color: Colors.white,
+                                      size: 32,
+                                    ),
                                   ),
                                   Positioned(
                                     top: 6,
@@ -1762,7 +3125,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                         shape: BoxShape.circle,
                                         color: AppTheme.success,
                                         border: Border.all(
-                                            color: Colors.white, width: 1.5),
+                                          color: Colors.white,
+                                          width: 1.5,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -1793,7 +3158,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                   Text(
                                     data.subtitle,
                                     style: TextStyle(
-                                      color: Colors.white.withValues(alpha: 0.88),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.88,
+                                      ),
                                       fontSize: 13.5,
                                       height: 1.35,
                                     ),
@@ -1803,17 +3170,25 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                     children: [
                                       Container(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 5),
+                                          horizontal: 10,
+                                          vertical: 5,
+                                        ),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withValues(alpha: 0.2),
-                                          borderRadius:
-                                              BorderRadius.circular(20),
+                                          color: Colors.white.withValues(
+                                            alpha: 0.2,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
                                         ),
                                         child: const Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Icon(Icons.verified_rounded,
-                                                size: 12, color: Colors.white),
+                                            Icon(
+                                              Icons.verified_rounded,
+                                              size: 12,
+                                              color: Colors.white,
+                                            ),
                                             SizedBox(width: 4),
                                             Text(
                                               'Terverifikasi',
@@ -1829,17 +3204,25 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                       const SizedBox(width: 8),
                                       Container(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 5),
+                                          horizontal: 10,
+                                          vertical: 5,
+                                        ),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withValues(alpha: 0.2),
-                                          borderRadius:
-                                              BorderRadius.circular(20),
+                                          color: Colors.white.withValues(
+                                            alpha: 0.2,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            const Icon(Icons.flash_on_rounded,
-                                                size: 12, color: Colors.white),
+                                            const Icon(
+                                              Icons.flash_on_rounded,
+                                              size: 12,
+                                              color: Colors.white,
+                                            ),
                                             const SizedBox(width: 4),
                                             Text(
                                               _getResponseTime(data.key),
@@ -1878,9 +3261,18 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
         key.contains('paket') ||
         key.contains('tarif')) {
       return 'Harga Terjangkau';
-    } else if (key.contains('spesialisasi') || key.contains('area') || key.contains('equipment') || key.contains('platform') || key.contains('genre') || key.contains('kategori')) {
+    } else if (key.contains('spesialisasi') ||
+        key.contains('area') ||
+        key.contains('equipment') ||
+        key.contains('platform') ||
+        key.contains('genre') ||
+        key.contains('kategori')) {
       return 'Spesialis Handal';
-    } else if (key.contains('jadwal') || key.contains('booking') || key.contains('antrian') || key.contains('proyek') || key.contains('campaign')) {
+    } else if (key.contains('jadwal') ||
+        key.contains('booking') ||
+        key.contains('antrian') ||
+        key.contains('proyek') ||
+        key.contains('campaign')) {
       return 'Tepat Waktu';
     } else {
       return 'Kualitas Premium';
@@ -1890,16 +3282,15 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
   List<(String, String, IconData)> _personalizeStats(CreatorServiceData data) {
     final u = _user;
     final base = data.stats;
-    final int baseProjectNum = int.tryParse(base[0].$1.replaceAll(RegExp(r'[^0-9]'), '')) ?? 24;
-    final projectCount = u.followersCount > 0 ? (u.followersCount * 0.55).round().clamp(6, 350) : baseProjectNum;
+    final int baseProjectNum =
+        int.tryParse(base[0].$1.replaceAll(RegExp(r'[^0-9]'), '')) ?? 24;
+    final projectCount = u.followersCount > 0
+        ? (u.followersCount * 0.55).round().clamp(6, 350)
+        : baseProjectNum;
     final bool needPlus = base[0].$1.contains('+') || baseProjectNum == 24;
     final clientCount = (u.followersCount * 0.35).round().clamp(5, 420);
     return <(String, String, IconData)>[
-      (
-        '$projectCount${needPlus ? '+' : ''}',
-        base[0].$2,
-        base[0].$3,
-      ),
+      ('$projectCount${needPlus ? '+' : ''}', base[0].$2, base[0].$3),
       (
         _ratingDisplay,
         'Rating ${u.name.split(' ')[0]}',
@@ -1912,7 +3303,6 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       ),
     ];
   }
-
 
   Widget _buildDecorativeStats(BuildContext context, CreatorServiceData data) {
     final personalized = _personalizeStats(data);
@@ -1929,9 +3319,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       child: Row(
         children: [
           for (int i = 0; i < personalized.length; i++) ...[
-            Expanded(
-              child: _buildStatCard(personalized[i], i),
-            ),
+            Expanded(child: _buildStatCard(personalized[i], i)),
             if (i != personalized.length - 1)
               Container(
                 width: 1,
@@ -2023,24 +3411,29 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
   String _getActivityCount(String key) {
     if (key.contains('antrian') || key.contains('proyek')) return '8 Proyek';
     if (key.contains('booking') || key.contains('jadwal')) return '6 Agenda';
-    if (key.contains('portofolio') || key.contains('galeri')) return '24 Tayangan';
-    if (key.contains('harga') || key.contains('paket') || key.contains('tarif')) return '4 Paket';
+    if (key.contains('portofolio') || key.contains('galeri'))
+      return '24 Tayangan';
+    if (key.contains('harga') || key.contains('paket') || key.contains('tarif'))
+      return '4 Paket';
     return '5 Item';
   }
 
   String _getAchievementBadge(String key) {
     if (key.contains('spesialisasi')) return 'Expert ✨';
-    if (key.contains('portofolio') || key.contains('galeri')) return 'Top Rated ⭐';
+    if (key.contains('portofolio') || key.contains('galeri'))
+      return 'Top Rated ⭐';
     if (key.contains('vendor') || key.contains('partner')) return 'Trusted 🛡️';
     if (key.contains('timeline')) return 'On Track 📈';
     return 'Pro Player 💎';
   }
 
-  Widget _buildMiniStatCard(BuildContext context,
-      {required IconData icon,
-      required String label,
-      required String value,
-      bool highlight = false}) {
+  Widget _buildMiniStatCard(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+    bool highlight = false,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(12),
@@ -2073,9 +3466,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
             child: Icon(
               icon,
               size: 16,
-              color: highlight
-                  ? Colors.white
-                  : AppTheme.primaryPurple,
+              color: highlight ? Colors.white : AppTheme.primaryPurple,
             ),
           ),
           const SizedBox(width: 10),
@@ -2136,8 +3527,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
           decoration: InputDecoration(
             hintText: 'Cari ${data.title.toLowerCase()}...',
             hintStyle: TextStyle(
-                fontSize: 13,
-                color: isDark ? AppTheme.textMuted : Colors.grey.shade500),
+              fontSize: 13,
+              color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+            ),
             prefixIcon: Padding(
               padding: const EdgeInsets.only(left: 14, right: 10),
               child: Container(
@@ -2147,8 +3539,11 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                   gradient: AppTheme.primaryGradient,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child:
-                    const Icon(Icons.search_rounded, size: 18, color: Colors.white),
+                child: const Icon(
+                  Icons.search_rounded,
+                  size: 18,
+                  color: Colors.white,
+                ),
               ),
             ),
             prefixIconConstraints: const BoxConstraints(minWidth: 62),
@@ -2169,11 +3564,13 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                         color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(Icons.close_rounded,
-                          size: 16,
-                          color: isDark
-                              ? AppTheme.textMuted
-                              : Colors.grey.shade600),
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: 16,
+                        color: isDark
+                            ? AppTheme.textMuted
+                            : Colors.grey.shade600,
+                      ),
                     ),
                   ),
                 Container(
@@ -2195,126 +3592,286 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                           backgroundColor: Colors.transparent,
                           isScrollControlled: true,
                           builder: (ctx) {
-                            final dark = Theme.of(ctx).brightness == Brightness.dark;
+                            final dark =
+                                Theme.of(ctx).brightness == Brightness.dark;
                             return StatefulBuilder(
                               builder: (ctx2, setSheetState) {
                                 return Container(
-                                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 26),
-                                  decoration: BoxDecoration(
-                                    color: dark ? AppTheme.cardBg : Colors.white,
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                                  padding: const EdgeInsets.fromLTRB(
+                                    20,
+                                    14,
+                                    20,
+                                    26,
                                   ),
-                                  child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                    Center(child: Container(width: 44, height: 5,
-                                      decoration: BoxDecoration(color: dark ? AppTheme.cardDark2 : Colors.grey.shade300, borderRadius: BorderRadius.circular(3)))),
-                                    const SizedBox(height: 18),
-                                    const Text('Filter & Urutan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
-                                    const SizedBox(height: 14),
-                                    const Text('Kategori Tag', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey)),
-                                    const SizedBox(height: 8),
-                                    Wrap(spacing: 8, runSpacing: 8,
-                                      children: _availableFilters.map((f) {
-                                        final sel = _selectedFilter == f;
-                                        return GestureDetector(
-                                          onTap: () {
-                                            setSheetState(() {
-                                              setState(() => _selectedFilter = f);
-                                            });
-                                          },
-                                          child: AnimatedContainer(
-                                            duration: const Duration(milliseconds: 220),
-                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                            decoration: BoxDecoration(
-                                              gradient: sel ? AppTheme.primaryGradient : null,
-                                              color: sel ? null : (dark ? AppTheme.cardDark2 : Colors.grey.shade100),
-                                              borderRadius: BorderRadius.circular(12),
-                                              border: Border.all(color: sel ? Colors.transparent : (dark ? AppTheme.inputBorder : Colors.grey.shade200)),
-                                            ),
-                                            child: Text(f, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800,
-                                                color: sel ? Colors.white : (dark ? Colors.white : AppTheme.textDark))),
-                                          ),
-                                        );
-                                      }).toList(),
+                                  decoration: BoxDecoration(
+                                    color: dark
+                                        ? AppTheme.cardBg
+                                        : Colors.white,
+                                    borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(28),
                                     ),
-                                    const SizedBox(height: 16),
-                                    const Text('Urutkan', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey)),
-                                    const SizedBox(height: 8),
-                                    ..._sortOptions.map((opt) {
-                                      final selected = _selectedSort == opt;
-                                      return Padding(
-                                        padding: const EdgeInsets.only(bottom: 6),
-                                        child: Material(
-                                          color: selected ? AppTheme.primaryPurple.withValues(alpha: 0.08) : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: InkWell(
-                                            borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Center(
+                                        child: Container(
+                                          width: 44,
+                                          height: 5,
+                                          decoration: BoxDecoration(
+                                            color: dark
+                                                ? AppTheme.cardDark2
+                                                : Colors.grey.shade300,
+                                            borderRadius: BorderRadius.circular(
+                                              3,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 18),
+                                      const Text(
+                                        'Filter & Urutan',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 14),
+                                      const Text(
+                                        'Kategori Tag',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: _availableFilters.map((f) {
+                                          final sel = _selectedFilter == f;
+                                          return GestureDetector(
                                             onTap: () {
                                               setSheetState(() {
-                                                setState(() => _selectedSort = opt);
+                                                setState(
+                                                  () => _selectedFilter = f,
+                                                );
                                               });
                                             },
-                                            child: Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                              child: Row(children: [
-                                                Icon(selected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                                                    size: 17, color: selected ? AppTheme.primaryPurple : (dark ? AppTheme.textMuted : Colors.grey.shade500)),
-                                                const SizedBox(width: 10),
-                                                Text(opt, style: TextStyle(fontSize: 12.5, fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
-                                                  color: selected ? AppTheme.primaryPurple : (dark ? Colors.white : AppTheme.textDark))),
-                                              ]),
+                                            child: AnimatedContainer(
+                                              duration: const Duration(
+                                                milliseconds: 220,
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 14,
+                                                    vertical: 8,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                gradient: sel
+                                                    ? AppTheme.primaryGradient
+                                                    : null,
+                                                color: sel
+                                                    ? null
+                                                    : (dark
+                                                          ? AppTheme.cardDark2
+                                                          : Colors
+                                                                .grey
+                                                                .shade100),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: sel
+                                                      ? Colors.transparent
+                                                      : (dark
+                                                            ? AppTheme
+                                                                  .inputBorder
+                                                            : Colors
+                                                                  .grey
+                                                                  .shade200),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                f,
+                                                style: TextStyle(
+                                                  fontSize: 11.5,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: sel
+                                                      ? Colors.white
+                                                      : (dark
+                                                            ? Colors.white
+                                                            : AppTheme
+                                                                  .textDark),
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      const Text(
+                                        'Urutkan',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      ..._sortOptions.map((opt) {
+                                        final selected = _selectedSort == opt;
+                                        return Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 6,
+                                          ),
+                                          child: Material(
+                                            color: selected
+                                                ? AppTheme.primaryPurple
+                                                      .withValues(alpha: 0.08)
+                                                : Colors.transparent,
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            child: InkWell(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              onTap: () {
+                                                setSheetState(() {
+                                                  setState(
+                                                    () => _selectedSort = opt,
+                                                  );
+                                                });
+                                              },
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 12,
+                                                    ),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      selected
+                                                          ? Icons
+                                                                .check_circle_rounded
+                                                          : Icons
+                                                                .radio_button_unchecked_rounded,
+                                                      size: 17,
+                                                      color: selected
+                                                          ? AppTheme
+                                                                .primaryPurple
+                                                          : (dark
+                                                                ? AppTheme
+                                                                      .textMuted
+                                                                : Colors
+                                                                      .grey
+                                                                      .shade500),
+                                                    ),
+                                                    const SizedBox(width: 10),
+                                                    Text(
+                                                      opt,
+                                                      style: TextStyle(
+                                                        fontSize: 12.5,
+                                                        fontWeight: selected
+                                                            ? FontWeight.w800
+                                                            : FontWeight.w500,
+                                                        color: selected
+                                                            ? AppTheme
+                                                                  .primaryPurple
+                                                            : (dark
+                                                                  ? Colors.white
+                                                                  : AppTheme
+                                                                        .textDark),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      );
-                                    }),
-                                    const SizedBox(height: 18),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: OutlinedButton(
-                                            onPressed: () {
-                                              setState(() {
-                                                _selectedFilter = 'Semua';
-                                                _selectedSort = 'Terbaru';
-                                                _searchController.clear();
-                                                _query = '';
-                                              });
-                                              Navigator.pop(ctx);
-                                              _replayAnimations();
-                                            },
-                                            style: OutlinedButton.styleFrom(
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                              padding: const EdgeInsets.symmetric(vertical: 14),
+                                        );
+                                      }),
+                                      const SizedBox(height: 18),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: OutlinedButton(
+                                              onPressed: () {
+                                                setState(() {
+                                                  _selectedFilter = 'Semua';
+                                                  _selectedSort = 'Terbaru';
+                                                  _searchController.clear();
+                                                  _query = '';
+                                                });
+                                                Navigator.pop(ctx);
+                                                _replayAnimations();
+                                              },
+                                              style: OutlinedButton.styleFrom(
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(14),
+                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 14,
+                                                    ),
+                                              ),
+                                              child: const Text(
+                                                'Reset',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
                                             ),
-                                            child: const Text('Reset', style: TextStyle(fontWeight: FontWeight.w800)),
                                           ),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Expanded(flex: 2,
-                                          child: ElevatedButton(
-                                            onPressed: () {
-                                              Navigator.pop(ctx);
-                                              _replayAnimations();
-                                            },
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: AppTheme.primaryPurple, foregroundColor: Colors.white,
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                              padding: const EdgeInsets.symmetric(vertical: 14),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            flex: 2,
+                                            child: ElevatedButton(
+                                              onPressed: () {
+                                                Navigator.pop(ctx);
+                                                _replayAnimations();
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    AppTheme.primaryPurple,
+                                                foregroundColor: Colors.white,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(14),
+                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 14,
+                                                    ),
+                                              ),
+                                              child: const Text(
+                                                'Terapkan Filter',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w900,
+                                                  letterSpacing: 0.2,
+                                                ),
+                                              ),
                                             ),
-                                            child: const Text('Terapkan Filter', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.2)),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  ]),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 );
                               },
                             );
                           },
                         );
                       },
-                      child: const Icon(Icons.tune_rounded,
-                          size: 18, color: Colors.white),
+                      child: const Icon(
+                        Icons.tune_rounded,
+                        size: 18,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -2326,12 +3883,15 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18),
               borderSide: BorderSide(
-                  color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18),
-              borderSide:
-                  const BorderSide(color: AppTheme.primaryPurple, width: 2),
+              borderSide: const BorderSide(
+                color: AppTheme.primaryPurple,
+                width: 2,
+              ),
             ),
           ),
         ),
@@ -2377,12 +3937,12 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOutCubic,
         padding: EdgeInsets.symmetric(
-            horizontal: selected ? 18 : 14, vertical: 10),
+          horizontal: selected ? 18 : 14,
+          vertical: 10,
+        ),
         decoration: BoxDecoration(
           gradient: selected ? AppTheme.primaryGradient : null,
-          color: selected
-              ? null
-              : (isDark ? AppTheme.cardBg : Colors.white),
+          color: selected ? null : (isDark ? AppTheme.cardBg : Colors.white),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: selected
@@ -2419,35 +3979,38 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-            color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
       ),
       itemBuilder: (ctx) => _sortOptions
-          .map((opt) => PopupMenuItem<String>(
-                value: opt,
-                child: Row(
-                  children: [
-                    Icon(
-                      _selectedSort == opt
-                          ? Icons.check_circle_rounded
-                          : Icons.radio_button_unchecked_rounded,
-                      size: 16,
-                      color: _selectedSort == opt
-                          ? AppTheme.primaryPurple
-                          : (isDark ? AppTheme.textMuted : Colors.grey.shade500),
+          .map(
+            (opt) => PopupMenuItem<String>(
+              value: opt,
+              child: Row(
+                children: [
+                  Icon(
+                    _selectedSort == opt
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    size: 16,
+                    color: _selectedSort == opt
+                        ? AppTheme.primaryPurple
+                        : (isDark ? AppTheme.textMuted : Colors.grey.shade500),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    opt,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: _selectedSort == opt
+                          ? FontWeight.w700
+                          : FontWeight.w500,
                     ),
-                    const SizedBox(width: 10),
-                    Text(
-                      opt,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: _selectedSort == opt
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ))
+                  ),
+                ],
+              ),
+            ),
+          )
           .toList(),
       child: Container(
         height: 42,
@@ -2456,24 +4019,28 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
           color: isDark ? AppTheme.cardBg : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-              color: isDark ? AppTheme.inputBorder : Colors.grey.shade300),
+            color: isDark ? AppTheme.inputBorder : Colors.grey.shade300,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.sort_rounded,
-                size: 16,
-                color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
+            Icon(
+              Icons.sort_rounded,
+              size: 16,
+              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+            ),
             const SizedBox(width: 6),
             Text(
               _selectedSort,
-              style: const TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.keyboard_arrow_down_rounded,
-                size: 16,
-                color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 16,
+              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+            ),
           ],
         ),
       ),
@@ -2505,8 +4072,11 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                 ),
               ],
             ),
-            child: Icon(Icons.search_off_rounded,
-                size: 44, color: AppTheme.primaryPurple),
+            child: Icon(
+              Icons.search_off_rounded,
+              size: 44,
+              color: AppTheme.primaryPurple,
+            ),
           ),
           const SizedBox(height: 20),
           Text(
@@ -2536,16 +4106,22 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
               });
             },
             icon: const Icon(Icons.refresh_rounded, size: 16),
-            label: const Text('Reset Pencarian',
-                style: TextStyle(fontWeight: FontWeight.w700)),
+            label: const Text(
+              'Reset Pencarian',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAnimatedGridItem(BuildContext context, CreatorServiceData data,
-      CreatorServiceItem item, int index) {
+  Widget _buildAnimatedGridItem(
+    BuildContext context,
+    CreatorServiceData data,
+    CreatorServiceItem item,
+    int index,
+  ) {
     final anim = _itemAnimations[index % _itemAnimations.length];
     return AnimatedBuilder(
       animation: anim,
@@ -2565,8 +4141,11 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     );
   }
 
-  Widget _buildGridItem(BuildContext context, CreatorServiceData data,
-      CreatorServiceItem item) {
+  Widget _buildGridItem(
+    BuildContext context,
+    CreatorServiceData data,
+    CreatorServiceItem item,
+  ) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -2575,10 +4154,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOutCubic,
       builder: (context, scale, child) {
-        return Transform.scale(
-          scale: scale,
-          child: child,
-        );
+        return Transform.scale(scale: scale, child: child);
       },
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
@@ -2648,11 +4224,16 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                     color: Colors.white.withValues(alpha: 0.18),
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: Colors.white.withValues(alpha: 0.3),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.3,
+                                      ),
                                     ),
                                   ),
-                                  child: Icon(item.icon,
-                                      size: 30, color: Colors.white),
+                                  child: Icon(
+                                    item.icon,
+                                    size: 30,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ],
@@ -2665,7 +4246,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                           left: 12,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.92),
                               borderRadius: BorderRadius.circular(12),
@@ -2692,7 +4275,8 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                         right: 12,
                         child: GestureDetector(
                           onTap: () {
-                            final idx = '${data.key}:${item.title}'.hashCode.abs();
+                            final idx = '${data.key}:${item.title}'.hashCode
+                                .abs();
                             setState(() {
                               if (_likedItems.contains(idx)) {
                                 _likedItems.remove(idx);
@@ -2707,10 +4291,18 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                     ? const Color(0xFFEC4899)
                                     : Colors.grey.shade700,
                                 duration: const Duration(milliseconds: 800),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
                                 content: Text(
-                                  _likedItems.contains(idx) ? 'Ditambahkan ke favorit ❤️' : 'Dihapus dari favorit',
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
+                                  _likedItems.contains(idx)
+                                      ? 'Ditambahkan ke favorit ❤️'
+                                      : 'Dihapus dari favorit',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ),
                             );
@@ -2721,19 +4313,35 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                             width: 32,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
+                              color:
+                                  _likedItems.contains(
+                                    '${data.key}:${item.title}'.hashCode.abs(),
+                                  )
                                   ? const Color(0xFFEC4899)
                                   : Colors.black.withValues(alpha: 0.2),
                               shape: BoxShape.circle,
                               border: Border.all(
                                 color: Colors.white.withValues(alpha: 0.25),
                               ),
-                              boxShadow: _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
-                                  ? [BoxShadow(color: const Color(0xFFEC4899).withValues(alpha: 0.5), blurRadius: 10, spreadRadius: 1)]
+                              boxShadow:
+                                  _likedItems.contains(
+                                    '${data.key}:${item.title}'.hashCode.abs(),
+                                  )
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(
+                                          0xFFEC4899,
+                                        ).withValues(alpha: 0.5),
+                                        blurRadius: 10,
+                                        spreadRadius: 1,
+                                      ),
+                                    ]
                                   : null,
                             ),
                             child: Icon(
-                              _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
+                              _likedItems.contains(
+                                    '${data.key}:${item.title}'.hashCode.abs(),
+                                  )
                                   ? Icons.favorite_rounded
                                   : Icons.favorite_border_rounded,
                               size: 15,
@@ -2793,13 +4401,18 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                             Expanded(
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 7),
+                                  horizontal: 10,
+                                  vertical: 7,
+                                ),
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
                                     colors: [
-                                      AppTheme.primaryPurple
-                                          .withValues(alpha: 0.08),
-                                      AppTheme.lightPurple.withValues(alpha: 0.08),
+                                      AppTheme.primaryPurple.withValues(
+                                        alpha: 0.08,
+                                      ),
+                                      AppTheme.lightPurple.withValues(
+                                        alpha: 0.08,
+                                      ),
                                     ],
                                   ),
                                   borderRadius: BorderRadius.circular(10),
@@ -2807,9 +4420,11 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.folder_rounded,
-                                        size: 12,
-                                        color: AppTheme.primaryPurple),
+                                    const Icon(
+                                      Icons.folder_rounded,
+                                      size: 12,
+                                      color: AppTheme.primaryPurple,
+                                    ),
                                     const SizedBox(width: 5),
                                     Expanded(
                                       child: Text(
@@ -2830,7 +4445,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                             const SizedBox(width: 6),
                             GestureDetector(
                               onTap: () {
-                                final idx = 'save:${data.key}:${item.title}'.hashCode.abs();
+                                final idx = 'save:${data.key}:${item.title}'
+                                    .hashCode
+                                    .abs();
                                 setState(() {
                                   if (_savedItems.contains(idx)) {
                                     _savedItems.remove(idx);
@@ -2843,10 +4460,18 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                     behavior: SnackBarBehavior.floating,
                                     backgroundColor: AppTheme.primaryPurple,
                                     duration: const Duration(milliseconds: 900),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
                                     content: Text(
-                                      _savedItems.contains(idx) ? '${item.title} disimpan' : '${item.title} dihapus dari simpanan',
-                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
+                                      _savedItems.contains(idx)
+                                          ? '${item.title} disimpan'
+                                          : '${item.title} dihapus dari simpanan',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12,
+                                      ),
                                     ),
                                   ),
                                 );
@@ -2856,17 +4481,31 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                 width: 32,
                                 height: 32,
                                 decoration: BoxDecoration(
-                                  gradient: _savedItems.contains('save:${data.key}:${item.title}'.hashCode.abs())
+                                  gradient:
+                                      _savedItems.contains(
+                                        'save:${data.key}:${item.title}'
+                                            .hashCode
+                                            .abs(),
+                                      )
                                       ? null
                                       : AppTheme.primaryGradient,
-                                  color: _savedItems.contains('save:${data.key}:${item.title}'.hashCode.abs())
+                                  color:
+                                      _savedItems.contains(
+                                        'save:${data.key}:${item.title}'
+                                            .hashCode
+                                            .abs(),
+                                      )
                                       ? AppTheme.success
                                       : null,
                                   borderRadius: BorderRadius.circular(10),
                                   boxShadow: AppTheme.primaryShadow,
                                 ),
                                 child: Icon(
-                                  _savedItems.contains('save:${data.key}:${item.title}'.hashCode.abs())
+                                  _savedItems.contains(
+                                        'save:${data.key}:${item.title}'
+                                            .hashCode
+                                            .abs(),
+                                      )
                                       ? Icons.bookmark_rounded
                                       : Icons.bookmark_add_outlined,
                                   size: 14,
@@ -2881,14 +4520,22 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                 width: 32,
                                 height: 32,
                                 decoration: BoxDecoration(
-                                  color: isDark ? AppTheme.cardDark2 : Colors.grey.shade100,
+                                  color: isDark
+                                      ? AppTheme.cardDark2
+                                      : Colors.grey.shade100,
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+                                  border: Border.all(
+                                    color: isDark
+                                        ? AppTheme.inputBorder
+                                        : Colors.grey.shade200,
+                                  ),
                                 ),
                                 child: Icon(
                                   Icons.remove_red_eye_outlined,
                                   size: 14,
-                                  color: isDark ? Colors.white70 : AppTheme.textDark,
+                                  color: isDark
+                                      ? Colors.white70
+                                      : AppTheme.textDark,
                                 ),
                               ),
                             ),
@@ -2910,7 +4557,8 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     final r = _personalRating;
     final fullStars = r.floor();
     final hasHalf = (r - fullStars) >= 0.35 && (r - fullStars) <= 0.85;
-    final totalFill = fullStars + (hasHalf ? 1 : ((r - fullStars) > 0.85 ? 1 : 0));
+    final totalFill =
+        fullStars + (hasHalf ? 1 : ((r - fullStars) > 0.85 ? 1 : 0));
     return Row(
       children: [
         ...List.generate(5, (i) {
@@ -2924,11 +4572,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
           }
           return Padding(
             padding: const EdgeInsets.only(right: 2),
-            child: Icon(
-              icn,
-              size: 11,
-              color: const Color(0xFFF59E0B),
-            ),
+            child: Icon(icn, size: 11, color: const Color(0xFFF59E0B)),
           );
         }),
         Padding(
@@ -2946,8 +4590,12 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     );
   }
 
-  Widget _buildAnimatedListItem(BuildContext context, CreatorServiceData data,
-      CreatorServiceItem item, int index) {
+  Widget _buildAnimatedListItem(
+    BuildContext context,
+    CreatorServiceData data,
+    CreatorServiceItem item,
+    int index,
+  ) {
     final anim = _itemAnimations[index % _itemAnimations.length];
     final skillValue = _parseSkill(item.value);
     final isSkillPage = data.key.contains('spesialisasi');
@@ -2959,8 +4607,10 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
         final translateX = (1 - anim.value) * -40;
         return Opacity(
           opacity: opacity,
-          child:
-              Transform.translate(offset: Offset(translateX, 0), child: child),
+          child: Transform.translate(
+            offset: Offset(translateX, 0),
+            child: child,
+          ),
         );
       },
       child: Padding(
@@ -2972,12 +4622,16 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     );
   }
 
-  Widget _buildListItem(BuildContext context, CreatorServiceData data,
-      CreatorServiceItem item) {
+  Widget _buildListItem(
+    BuildContext context,
+    CreatorServiceData data,
+    CreatorServiceItem item,
+  ) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final progressValue = _parseProgress(item.value);
-    final isPricing = data.key.contains('harga') ||
+    final isPricing =
+        data.key.contains('harga') ||
         data.key.contains('paket') ||
         data.key.contains('tarif');
     final isTimeline = data.key.contains('timeline');
@@ -3020,7 +4674,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.primaryPurple.withValues(alpha: 0.3),
+                            color: AppTheme.primaryPurple.withValues(
+                              alpha: 0.3,
+                            ),
                             blurRadius: 14,
                             offset: const Offset(0, 6),
                           ),
@@ -3029,8 +4685,11 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                       child: Stack(
                         children: [
                           Center(
-                            child: Icon(item.icon,
-                                color: Colors.white, size: 26),
+                            child: Icon(
+                              item.icon,
+                              color: Colors.white,
+                              size: 26,
+                            ),
                           ),
                           if (isTimeline)
                             Positioned(
@@ -3095,21 +4754,26 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  if (item.tag != null && !isPricing && !isTimeline)
+                                  if (item.tag != null &&
+                                      !isPricing &&
+                                      !isTimeline)
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 4),
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
                                           colors: [
-                                            AppTheme.primaryPurple
-                                                .withValues(alpha: 0.1),
-                                            AppTheme.lightPurple
-                                                .withValues(alpha: 0.1),
+                                            AppTheme.primaryPurple.withValues(
+                                              alpha: 0.1,
+                                            ),
+                                            AppTheme.lightPurple.withValues(
+                                              alpha: 0.1,
+                                            ),
                                           ],
                                         ),
-                                        borderRadius:
-                                            BorderRadius.circular(8),
+                                        borderRadius: BorderRadius.circular(8),
                                         border: Border.all(
                                           color: AppTheme.primaryPurple
                                               .withValues(alpha: 0.2),
@@ -3129,7 +4793,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                   const SizedBox(height: 6),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 6),
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
                                     decoration: BoxDecoration(
                                       gradient: AppTheme.primaryGradient,
                                       borderRadius: BorderRadius.circular(10),
@@ -3153,7 +4819,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                             children: [
                               GestureDetector(
                                 onTap: () {
-                                  final idx = '${data.key}:${item.title}'.hashCode.abs();
+                                  final idx = '${data.key}:${item.title}'
+                                      .hashCode
+                                      .abs();
                                   setState(() {
                                     if (_likedItems.contains(idx)) {
                                       _likedItems.remove(idx);
@@ -3164,29 +4832,59 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                 },
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 220),
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 7,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
-                                        ? const Color(0xFFEC4899).withValues(alpha: 0.1)
-                                        : (isDark ? AppTheme.cardDark2 : Colors.grey.shade100),
+                                    color:
+                                        _likedItems.contains(
+                                          '${data.key}:${item.title}'.hashCode
+                                              .abs(),
+                                        )
+                                        ? const Color(
+                                            0xFFEC4899,
+                                          ).withValues(alpha: 0.1)
+                                        : (isDark
+                                              ? AppTheme.cardDark2
+                                              : Colors.grey.shade100),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
-                                          ? const Color(0xFFEC4899).withValues(alpha: 0.3)
-                                          : (isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+                                      color:
+                                          _likedItems.contains(
+                                            '${data.key}:${item.title}'.hashCode
+                                                .abs(),
+                                          )
+                                          ? const Color(
+                                              0xFFEC4899,
+                                            ).withValues(alpha: 0.3)
+                                          : (isDark
+                                                ? AppTheme.inputBorder
+                                                : Colors.grey.shade200),
                                     ),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(
-                                        _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
+                                        _likedItems.contains(
+                                              '${data.key}:${item.title}'
+                                                  .hashCode
+                                                  .abs(),
+                                            )
                                             ? Icons.favorite_rounded
                                             : Icons.favorite_border_rounded,
                                         size: 13,
-                                        color: _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
+                                        color:
+                                            _likedItems.contains(
+                                              '${data.key}:${item.title}'
+                                                  .hashCode
+                                                  .abs(),
+                                            )
                                             ? const Color(0xFFEC4899)
-                                            : (isDark ? Colors.white70 : Colors.grey.shade600),
+                                            : (isDark
+                                                  ? Colors.white70
+                                                  : Colors.grey.shade600),
                                       ),
                                       const SizedBox(width: 5),
                                       Text(
@@ -3194,9 +4892,16 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                         style: TextStyle(
                                           fontSize: 10.5,
                                           fontWeight: FontWeight.w800,
-                                          color: _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
+                                          color:
+                                              _likedItems.contains(
+                                                '${data.key}:${item.title}'
+                                                    .hashCode
+                                                    .abs(),
+                                              )
                                               ? const Color(0xFFEC4899)
-                                              : (isDark ? Colors.white70 : Colors.grey.shade600),
+                                              : (isDark
+                                                    ? Colors.white70
+                                                    : Colors.grey.shade600),
                                         ),
                                       ),
                                     ],
@@ -3206,7 +4911,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                               const SizedBox(width: 8),
                               GestureDetector(
                                 onTap: () {
-                                  final idx = 'save:${data.key}:${item.title}'.hashCode.abs();
+                                  final idx = 'save:${data.key}:${item.title}'
+                                      .hashCode
+                                      .abs();
                                   setState(() {
                                     if (_savedItems.contains(idx)) {
                                       _savedItems.remove(idx);
@@ -3217,29 +4924,61 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                 },
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 200),
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 7,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: _savedItems.contains('save:${data.key}:${item.title}'.hashCode.abs())
-                                        ? AppTheme.success.withValues(alpha: 0.1)
-                                        : (isDark ? AppTheme.cardDark2 : Colors.grey.shade100),
+                                    color:
+                                        _savedItems.contains(
+                                          'save:${data.key}:${item.title}'
+                                              .hashCode
+                                              .abs(),
+                                        )
+                                        ? AppTheme.success.withValues(
+                                            alpha: 0.1,
+                                          )
+                                        : (isDark
+                                              ? AppTheme.cardDark2
+                                              : Colors.grey.shade100),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: _savedItems.contains('save:${data.key}:${item.title}'.hashCode.abs())
-                                          ? AppTheme.success.withValues(alpha: 0.3)
-                                          : (isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+                                      color:
+                                          _savedItems.contains(
+                                            'save:${data.key}:${item.title}'
+                                                .hashCode
+                                                .abs(),
+                                          )
+                                          ? AppTheme.success.withValues(
+                                              alpha: 0.3,
+                                            )
+                                          : (isDark
+                                                ? AppTheme.inputBorder
+                                                : Colors.grey.shade200),
                                     ),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(
-                                        _savedItems.contains('save:${data.key}:${item.title}'.hashCode.abs())
+                                        _savedItems.contains(
+                                              'save:${data.key}:${item.title}'
+                                                  .hashCode
+                                                  .abs(),
+                                            )
                                             ? Icons.bookmark_rounded
                                             : Icons.bookmark_border_rounded,
                                         size: 13,
-                                        color: _savedItems.contains('save:${data.key}:${item.title}'.hashCode.abs())
+                                        color:
+                                            _savedItems.contains(
+                                              'save:${data.key}:${item.title}'
+                                                  .hashCode
+                                                  .abs(),
+                                            )
                                             ? AppTheme.success
-                                            : (isDark ? Colors.white70 : Colors.grey.shade600),
+                                            : (isDark
+                                                  ? Colors.white70
+                                                  : Colors.grey.shade600),
                                       ),
                                       const SizedBox(width: 5),
                                       Text(
@@ -3247,9 +4986,16 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                         style: TextStyle(
                                           fontSize: 10.5,
                                           fontWeight: FontWeight.w800,
-                                          color: _savedItems.contains('save:${data.key}:${item.title}'.hashCode.abs())
+                                          color:
+                                              _savedItems.contains(
+                                                'save:${data.key}:${item.title}'
+                                                    .hashCode
+                                                    .abs(),
+                                              )
                                               ? AppTheme.success
-                                              : (isDark ? Colors.white70 : Colors.grey.shade600),
+                                              : (isDark
+                                                    ? Colors.white70
+                                                    : Colors.grey.shade600),
                                         ),
                                       ),
                                     ],
@@ -3260,7 +5006,10 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                               GestureDetector(
                                 onTap: () => _showDetail(context, data, item),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 7,
+                                  ),
                                   decoration: BoxDecoration(
                                     gradient: AppTheme.primaryGradient,
                                     borderRadius: BorderRadius.circular(10),
@@ -3269,11 +5018,19 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                   child: const Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.visibility_outlined, size: 12, color: Colors.white),
+                                      Icon(
+                                        Icons.visibility_outlined,
+                                        size: 12,
+                                        color: Colors.white,
+                                      ),
                                       SizedBox(width: 5),
                                       Text(
                                         'Lihat',
-                                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -3295,9 +5052,10 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                   ),
                                   TweenAnimationBuilder<double>(
                                     tween: Tween<double>(
-                                        begin: 0, end: progressValue),
-                                    duration:
-                                        const Duration(milliseconds: 900),
+                                      begin: 0,
+                                      end: progressValue,
+                                    ),
+                                    duration: const Duration(milliseconds: 900),
                                     curve: Curves.easeOutCubic,
                                     builder: (context, val, _) {
                                       return FractionallySizedBox(
@@ -3306,8 +5064,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                           height: 8,
                                           decoration: BoxDecoration(
                                             gradient: AppTheme.primaryGradient,
-                                            borderRadius:
-                                                BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                           ),
                                         ),
                                       );
@@ -3318,8 +5077,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                             ),
                             const SizedBox(height: 6),
                             Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
                                   'Progress',
@@ -3380,17 +5138,17 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       ),
       child: Text(
         tag,
-        style: TextStyle(
-          fontSize: 9.5,
-          fontWeight: FontWeight.w800,
-          color: fg,
-        ),
+        style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, color: fg),
       ),
     );
   }
 
-  Widget _buildSkillListItem(BuildContext context, CreatorServiceData data,
-      CreatorServiceItem item, double skillValue) {
+  Widget _buildSkillListItem(
+    BuildContext context,
+    CreatorServiceData data,
+    CreatorServiceItem item,
+    double skillValue,
+  ) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -3432,15 +5190,16 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.primaryPurple.withValues(alpha: 0.3),
+                            color: AppTheme.primaryPurple.withValues(
+                              alpha: 0.3,
+                            ),
                             blurRadius: 14,
                             offset: const Offset(0, 6),
                           ),
                         ],
                       ),
                       child: Center(
-                        child: Icon(item.icon,
-                            color: Colors.white, size: 26),
+                        child: Icon(item.icon, color: Colors.white, size: 26),
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -3511,8 +5270,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                             : Colors.grey.shade100,
                       ),
                       TweenAnimationBuilder<double>(
-                        tween:
-                            Tween<double>(begin: 0, end: skillValue),
+                        tween: Tween<double>(begin: 0, end: skillValue),
                         duration: const Duration(milliseconds: 1200),
                         curve: Curves.easeOutCubic,
                         builder: (context, val, _) {
@@ -3565,29 +5323,49 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 220),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 7,
+                        ),
                         decoration: BoxDecoration(
-                          color: _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
+                          color:
+                              _likedItems.contains(
+                                '${data.key}:${item.title}'.hashCode.abs(),
+                              )
                               ? const Color(0xFFEC4899).withValues(alpha: 0.1)
-                              : (isDark ? AppTheme.cardDark2 : Colors.grey.shade100),
+                              : (isDark
+                                    ? AppTheme.cardDark2
+                                    : Colors.grey.shade100),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
+                            color:
+                                _likedItems.contains(
+                                  '${data.key}:${item.title}'.hashCode.abs(),
+                                )
                                 ? const Color(0xFFEC4899).withValues(alpha: 0.3)
-                                : (isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+                                : (isDark
+                                      ? AppTheme.inputBorder
+                                      : Colors.grey.shade200),
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
+                              _likedItems.contains(
+                                    '${data.key}:${item.title}'.hashCode.abs(),
+                                  )
                                   ? Icons.favorite_rounded
                                   : Icons.favorite_border_rounded,
                               size: 13,
-                              color: _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
+                              color:
+                                  _likedItems.contains(
+                                    '${data.key}:${item.title}'.hashCode.abs(),
+                                  )
                                   ? const Color(0xFFEC4899)
-                                  : (isDark ? Colors.white70 : Colors.grey.shade600),
+                                  : (isDark
+                                        ? Colors.white70
+                                        : Colors.grey.shade600),
                             ),
                             const SizedBox(width: 5),
                             Text(
@@ -3595,9 +5373,15 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                               style: TextStyle(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w800,
-                                color: _likedItems.contains('${data.key}:${item.title}'.hashCode.abs())
+                                color:
+                                    _likedItems.contains(
+                                      '${data.key}:${item.title}'.hashCode
+                                          .abs(),
+                                    )
                                     ? const Color(0xFFEC4899)
-                                    : (isDark ? Colors.white70 : Colors.grey.shade600),
+                                    : (isDark
+                                          ? Colors.white70
+                                          : Colors.grey.shade600),
                               ),
                             ),
                           ],
@@ -3607,7 +5391,8 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                     const SizedBox(width: 8),
                     GestureDetector(
                       onTap: () {
-                        final idx = 'save:${data.key}:${item.title}'.hashCode.abs();
+                        final idx = 'save:${data.key}:${item.title}'.hashCode
+                            .abs();
                         setState(() {
                           if (_savedItems.contains(idx)) {
                             _savedItems.remove(idx);
@@ -3618,29 +5403,52 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 7,
+                        ),
                         decoration: BoxDecoration(
-                          color: _savedItems.contains('save:${data.key}:${item.title}'.hashCode.abs())
+                          color:
+                              _savedItems.contains(
+                                'save:${data.key}:${item.title}'.hashCode.abs(),
+                              )
                               ? AppTheme.success.withValues(alpha: 0.1)
-                              : (isDark ? AppTheme.cardDark2 : Colors.grey.shade100),
+                              : (isDark
+                                    ? AppTheme.cardDark2
+                                    : Colors.grey.shade100),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: _savedItems.contains('save:${data.key}:${item.title}'.hashCode.abs())
+                            color:
+                                _savedItems.contains(
+                                  'save:${data.key}:${item.title}'.hashCode
+                                      .abs(),
+                                )
                                 ? AppTheme.success.withValues(alpha: 0.3)
-                                : (isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+                                : (isDark
+                                      ? AppTheme.inputBorder
+                                      : Colors.grey.shade200),
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              _savedItems.contains('save:${data.key}:${item.title}'.hashCode.abs())
+                              _savedItems.contains(
+                                    'save:${data.key}:${item.title}'.hashCode
+                                        .abs(),
+                                  )
                                   ? Icons.bookmark_rounded
                                   : Icons.bookmark_border_rounded,
                               size: 13,
-                              color: _savedItems.contains('save:${data.key}:${item.title}'.hashCode.abs())
+                              color:
+                                  _savedItems.contains(
+                                    'save:${data.key}:${item.title}'.hashCode
+                                        .abs(),
+                                  )
                                   ? AppTheme.success
-                                  : (isDark ? Colors.white70 : Colors.grey.shade600),
+                                  : (isDark
+                                        ? Colors.white70
+                                        : Colors.grey.shade600),
                             ),
                             const SizedBox(width: 5),
                             Text(
@@ -3648,9 +5456,15 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                               style: TextStyle(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w800,
-                                color: _savedItems.contains('save:${data.key}:${item.title}'.hashCode.abs())
+                                color:
+                                    _savedItems.contains(
+                                      'save:${data.key}:${item.title}'.hashCode
+                                          .abs(),
+                                    )
                                     ? AppTheme.success
-                                    : (isDark ? Colors.white70 : Colors.grey.shade600),
+                                    : (isDark
+                                          ? Colors.white70
+                                          : Colors.grey.shade600),
                               ),
                             ),
                           ],
@@ -3661,7 +5475,10 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                     GestureDetector(
                       onTap: () => _showDetail(context, data, item),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
                         decoration: BoxDecoration(
                           gradient: AppTheme.primaryGradient,
                           borderRadius: BorderRadius.circular(10),
@@ -3670,11 +5487,19 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.info_outline_rounded, size: 12, color: Colors.white),
+                            Icon(
+                              Icons.info_outline_rounded,
+                              size: 12,
+                              color: Colors.white,
+                            ),
                             SizedBox(width: 5),
                             Text(
                               'Detail',
-                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ],
                         ),
@@ -3690,8 +5515,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     );
   }
 
-  Widget _buildMiniSkillMarker(
-      String label, double threshold, double current) {
+  Widget _buildMiniSkillMarker(String label, double threshold, double current) {
     final reached = current >= threshold;
     return Column(
       children: [
@@ -3702,9 +5526,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
             shape: BoxShape.circle,
             color: reached ? AppTheme.primaryPurple : Colors.grey.shade300,
             border: Border.all(
-              color: reached
-                  ? AppTheme.lightPurple
-                  : Colors.transparent,
+              color: reached ? AppTheme.lightPurple : Colors.transparent,
               width: 1.5,
             ),
           ),
@@ -3715,9 +5537,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
           style: TextStyle(
             fontSize: 8.5,
             fontWeight: reached ? FontWeight.w800 : FontWeight.w500,
-            color: reached
-                ? AppTheme.primaryPurple
-                : Colors.grey.shade500,
+            color: reached ? AppTheme.primaryPurple : Colors.grey.shade500,
           ),
         ),
       ],
@@ -3780,19 +5600,17 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     Gradient? grad;
     Color border = Colors.transparent;
     if (lower.contains('premium') || lower.contains('eksklusif')) {
-      grad = LinearGradient(colors: [
-        const Color(0xFFF59E0B),
-        const Color(0xFFFBBF24),
-      ]);
+      grad = LinearGradient(
+        colors: [const Color(0xFFF59E0B), const Color(0xFFFBBF24)],
+      );
       border = const Color(0xFFF59E0B);
     } else if (lower.contains('best') || lower.contains('value')) {
       grad = AppTheme.primaryGradient;
       border = AppTheme.primaryPurple;
     } else if (lower.contains('populer') || lower.contains('popular')) {
-      grad = LinearGradient(colors: [
-        AppTheme.deepPurple,
-        AppTheme.lightPurple,
-      ]);
+      grad = LinearGradient(
+        colors: [AppTheme.deepPurple, AppTheme.lightPurple],
+      );
       border = AppTheme.deepPurple;
     }
     if (grad == null) return const SizedBox.shrink();
@@ -3817,8 +5635,8 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
             lower.contains('premium')
                 ? Icons.workspace_premium_rounded
                 : (lower.contains('best')
-                    ? Icons.local_fire_department_rounded
-                    : Icons.favorite_rounded),
+                      ? Icons.local_fire_department_rounded
+                      : Icons.favorite_rounded),
             size: 10,
             color: Colors.white,
           ),
@@ -3914,8 +5732,10 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
         onPressed: () => _showDetail(context, data, null),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        extendedPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+        extendedPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 4,
+        ),
         label: Container(
           decoration: BoxDecoration(
             gradient: AppTheme.primaryGradient,
@@ -3933,8 +5753,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
               ),
             ],
           ),
-          padding:
-              const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -3964,20 +5783,22 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     );
   }
 
-  void _showDetail(BuildContext context, CreatorServiceData data,
-      CreatorServiceItem? item) {
+  void _showDetail(
+    BuildContext context,
+    CreatorServiceData data,
+    CreatorServiceItem? item,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) =>
-          _ServiceDetailSheet(
-            data: data,
-            item: item,
-            actionLabel: data.actionLabel,
-            user: widget.user,
-            onAddItem: (newItem) => _addItem(data.key, newItem),
-          ),
+      builder: (ctx) => _ServiceDetailSheet(
+        data: data,
+        item: item,
+        actionLabel: data.actionLabel,
+        user: widget.user,
+        onAddItem: (newItem) => _addItem(data.key, newItem),
+      ),
     );
   }
 }
@@ -4002,9 +5823,10 @@ class _AnimatedSkillPercentState extends State<_AnimatedSkillPercent>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    _anim = Tween<double>(begin: 0, end: widget.skillValue).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
-    );
+    _anim = Tween<double>(
+      begin: 0,
+      end: widget.skillValue,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
     Future.delayed(Duration.zero, () => _ctrl.forward());
   }
 
@@ -4077,15 +5899,40 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
   IconData? _formIcon;
   DateTime? _formDate;
 
-  final List<({String name, String city, String text, int stars, String date, bool verified, int likes})> _customReviews = [];
+  final List<
+    ({
+      String name,
+      String city,
+      String text,
+      int stars,
+      String date,
+      bool verified,
+      int likes,
+    })
+  >
+  _customReviews = [];
   bool _itemSubmitted = false;
   bool _itemSaved = false;
 
   final List<String> _availableFormTags = const [
-    'Video Editing', 'Retouch Foto', 'Color Grading', 'Motion Grafis',
-    'Desain Logo', 'UI/UX Design', 'Sound Design', 'Brand Identity',
-    'Konten Sosmed', 'Short Movie', 'Dokumentasi', 'Live Streaming',
-    'Premium', 'Unggulan', 'Baru', 'Trending', 'Limited', 'Diskon'
+    'Video Editing',
+    'Retouch Foto',
+    'Color Grading',
+    'Motion Grafis',
+    'Desain Logo',
+    'UI/UX Design',
+    'Sound Design',
+    'Brand Identity',
+    'Konten Sosmed',
+    'Short Movie',
+    'Dokumentasi',
+    'Live Streaming',
+    'Premium',
+    'Unggulan',
+    'Baru',
+    'Trending',
+    'Limited',
+    'Diskon',
   ];
   final List<(String, IconData)> _availableFormIcons = const [
     ('Edit', Icons.edit_outlined),
@@ -4120,17 +5967,32 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
           builder: (ctx, setDialogState) => AlertDialog(
             backgroundColor: dark ? AppTheme.cardDark2 : Colors.white,
             surfaceTintColor: Colors.transparent,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(22),
+            ),
             title: Row(
               children: [
                 Container(
                   width: 36,
                   height: 36,
-                  decoration: BoxDecoration(gradient: AppTheme.primaryGradient, borderRadius: BorderRadius.circular(12)),
-                  child: Icon(Icons.edit_outlined, size: 17, color: Colors.white),
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.primaryGradient,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.edit_outlined,
+                    size: 17,
+                    color: Colors.white,
+                  ),
                 ),
                 const SizedBox(width: 10),
-                Text(title, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
               ],
             ),
             content: SizedBox(
@@ -4142,19 +6004,34 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                 autofocus: true,
                 decoration: InputDecoration(
                   prefixText: prefix.isEmpty ? null : prefix,
-                  prefixStyle: const TextStyle(color: AppTheme.primaryPurple, fontWeight: FontWeight.w800, fontSize: 14),
+                  prefixStyle: const TextStyle(
+                    color: AppTheme.primaryPurple,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
                   hintText: hint,
-                  hintStyle: TextStyle(fontSize: 12.5, color: Colors.grey.shade500),
+                  hintStyle: TextStyle(
+                    fontSize: 12.5,
+                    color: Colors.grey.shade500,
+                  ),
                   filled: true,
                   fillColor: dark ? AppTheme.cardBg : Colors.grey.shade50,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: dark ? AppTheme.inputBorder : Colors.grey.shade200),
+                    borderSide: BorderSide(
+                      color: dark ? AppTheme.inputBorder : Colors.grey.shade200,
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppTheme.primaryPurple, width: 2),
+                    borderSide: const BorderSide(
+                      color: AppTheme.primaryPurple,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -4163,17 +6040,31 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text('Batal', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.grey.shade600)),
+                child: Text(
+                  'Batal',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
               ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryPurple,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 11,
+                  ),
                 ),
-                child: const Text('Simpan', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5)),
+                child: const Text(
+                  'Simpan',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
+                ),
               ),
             ],
           ),
@@ -4188,8 +6079,17 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppTheme.success,
           duration: const Duration(milliseconds: 900),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          content: Text('$title berhasil disimpan ✓', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          content: Text(
+            '$title berhasil disimpan ✓',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
         ),
       );
     }
@@ -4211,19 +6111,46 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
               child: Container(
                 decoration: BoxDecoration(
                   color: dark ? AppTheme.cardBg : Colors.white,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
+                  ),
                 ),
                 padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(width: 44, height: 5, decoration: BoxDecoration(color: dark ? AppTheme.cardDark2 : Colors.grey.shade300, borderRadius: BorderRadius.circular(3))),
+                    Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: dark ? AppTheme.cardDark2 : Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
                     const SizedBox(height: 18),
                     Row(
                       children: [
-                        Container(width: 36, height: 36, decoration: BoxDecoration(gradient: AppTheme.primaryGradient, borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.label_outline_rounded, size: 17, color: Colors.white)),
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.primaryGradient,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.label_outline_rounded,
+                            size: 17,
+                            color: Colors.white,
+                          ),
+                        ),
                         const SizedBox(width: 10),
-                        const Text('Pilih Kategori / Tag', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900)),
+                        const Text(
+                          'Pilih Kategori / Tag',
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -4236,15 +6163,37 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                           onTap: () => setSheet(() => temp = t),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 9,
+                            ),
                             decoration: BoxDecoration(
                               gradient: sel ? AppTheme.primaryGradient : null,
-                              color: sel ? null : (dark ? AppTheme.cardDark2 : Colors.grey.shade50),
+                              color: sel
+                                  ? null
+                                  : (dark
+                                        ? AppTheme.cardDark2
+                                        : Colors.grey.shade50),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: sel ? Colors.transparent : (dark ? AppTheme.inputBorder : Colors.grey.shade200)),
+                              border: Border.all(
+                                color: sel
+                                    ? Colors.transparent
+                                    : (dark
+                                          ? AppTheme.inputBorder
+                                          : Colors.grey.shade200),
+                              ),
                               boxShadow: sel ? AppTheme.primaryShadow : null,
                             ),
-                            child: Text(t, style: TextStyle(color: sel ? Colors.white : (dark ? Colors.white : AppTheme.textDark), fontSize: 11.5, fontWeight: FontWeight.w800)),
+                            child: Text(
+                              t,
+                              style: TextStyle(
+                                color: sel
+                                    ? Colors.white
+                                    : (dark ? Colors.white : AppTheme.textDark),
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                           ),
                         );
                       }).toList(),
@@ -4258,7 +6207,13 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                               setSheet(() => temp = '');
                               Navigator.pop(ctx);
                             },
-                            child: Text('Reset', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.grey.shade600)),
+                            child: Text(
+                              'Reset',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -4273,13 +6228,37 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                   behavior: SnackBarBehavior.floating,
                                   backgroundColor: AppTheme.success,
                                   duration: const Duration(milliseconds: 900),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                  content: Text(temp.isEmpty ? 'Tag dihapus' : 'Tag "$temp" dipilih ✓', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  content: Text(
+                                    temp.isEmpty
+                                        ? 'Tag dihapus'
+                                        : 'Tag "$temp" dipilih ✓',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ),
                               );
                             },
-                            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryPurple, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), padding: const EdgeInsets.symmetric(vertical: 13)),
-                            child: const Text('Pilih Tag', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryPurple,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                            ),
+                            child: const Text(
+                              'Pilih Tag',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12.5,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -4308,18 +6287,48 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
             padding: EdgeInsets.only(bottom: viewInsets.bottom),
             child: SingleChildScrollView(
               child: Container(
-                decoration: BoxDecoration(color: dark ? AppTheme.cardBg : Colors.white, borderRadius: const BorderRadius.vertical(top: Radius.circular(28))),
+                decoration: BoxDecoration(
+                  color: dark ? AppTheme.cardBg : Colors.white,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
+                  ),
+                ),
                 padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(width: 44, height: 5, decoration: BoxDecoration(color: dark ? AppTheme.cardDark2 : Colors.grey.shade300, borderRadius: BorderRadius.circular(3))),
+                    Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: dark ? AppTheme.cardDark2 : Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
                     const SizedBox(height: 18),
                     Row(
                       children: [
-                        Container(width: 36, height: 36, decoration: BoxDecoration(gradient: AppTheme.primaryGradient, borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.image_outlined, size: 17, color: Colors.white)),
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.primaryGradient,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.image_outlined,
+                            size: 17,
+                            color: Colors.white,
+                          ),
+                        ),
                         const SizedBox(width: 10),
-                        const Text('Pilih Thumbnail / Icon', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900)),
+                        const Text(
+                          'Pilih Thumbnail / Icon',
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -4339,17 +6348,44 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                             curve: Curves.easeOutBack,
                             decoration: BoxDecoration(
                               gradient: sel ? AppTheme.primaryGradient : null,
-                              color: sel ? null : (dark ? AppTheme.cardDark2 : Colors.grey.shade50),
+                              color: sel
+                                  ? null
+                                  : (dark
+                                        ? AppTheme.cardDark2
+                                        : Colors.grey.shade50),
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: sel ? Colors.transparent : (dark ? AppTheme.inputBorder : Colors.grey.shade200)),
+                              border: Border.all(
+                                color: sel
+                                    ? Colors.transparent
+                                    : (dark
+                                          ? AppTheme.inputBorder
+                                          : Colors.grey.shade200),
+                              ),
                               boxShadow: sel ? AppTheme.primaryShadow : null,
                             ),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(e.$2, size: 20, color: sel ? Colors.white : AppTheme.primaryPurple),
+                                Icon(
+                                  e.$2,
+                                  size: 20,
+                                  color: sel
+                                      ? Colors.white
+                                      : AppTheme.primaryPurple,
+                                ),
                                 const SizedBox(height: 4),
-                                Text(e.$1, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: sel ? Colors.white : (dark ? Colors.white70 : Colors.grey.shade600))),
+                                Text(
+                                  e.$1,
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                    color: sel
+                                        ? Colors.white
+                                        : (dark
+                                              ? Colors.white70
+                                              : Colors.grey.shade600),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -4369,13 +6405,35 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                   behavior: SnackBarBehavior.floating,
                                   backgroundColor: AppTheme.success,
                                   duration: const Duration(milliseconds: 900),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                  content: const Text('Icon berhasil dipilih ✓', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  content: const Text(
+                                    'Icon berhasil dipilih ✓',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ),
                               );
                             },
-                            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryPurple, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), padding: const EdgeInsets.symmetric(vertical: 13)),
-                            child: const Text('Gunakan Icon Ini', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryPurple,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                            ),
+                            child: const Text(
+                              'Gunakan Icon Ini',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12.5,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -4401,8 +6459,17 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
       builder: (ctx, child) {
         return Theme(
           data: Theme.of(ctx).copyWith(
-            colorScheme: dark ? const ColorScheme.dark(primary: AppTheme.primaryPurple, surface: AppTheme.cardDark2) : const ColorScheme.light(primary: AppTheme.primaryPurple),
-            dialogTheme: DialogThemeData(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
+            colorScheme: dark
+                ? const ColorScheme.dark(
+                    primary: AppTheme.primaryPurple,
+                    surface: AppTheme.cardDark2,
+                  )
+                : const ColorScheme.light(primary: AppTheme.primaryPurple),
+            dialogTheme: DialogThemeData(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(22),
+              ),
+            ),
           ),
           child: child!,
         );
@@ -4416,13 +6483,24 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
         builder: (ctx, child) {
           return Theme(
             data: Theme.of(ctx).copyWith(
-              colorScheme: dark ? const ColorScheme.dark(primary: AppTheme.primaryPurple, surface: AppTheme.cardDark2) : const ColorScheme.light(primary: AppTheme.primaryPurple),
+              colorScheme: dark
+                  ? const ColorScheme.dark(
+                      primary: AppTheme.primaryPurple,
+                      surface: AppTheme.cardDark2,
+                    )
+                  : const ColorScheme.light(primary: AppTheme.primaryPurple),
             ),
             child: child!,
           );
         },
       );
-      final full = DateTime(picked.year, picked.month, picked.day, t?.hour ?? 9, t?.minute ?? 0);
+      final full = DateTime(
+        picked.year,
+        picked.month,
+        picked.day,
+        t?.hour ?? 9,
+        t?.minute ?? 0,
+      );
       onSave(full);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -4430,8 +6508,17 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppTheme.success,
           duration: const Duration(milliseconds: 900),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          content: Text('Tanggal ${full.day} ${_monthId(full.month)} ${full.year} disimpan ✓', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          content: Text(
+            'Tanggal ${full.day} ${_monthId(full.month)} ${full.year} disimpan ✓',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
         ),
       );
     }
@@ -4488,7 +6575,9 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
     int tempStars = 5;
     final ctrl = TextEditingController();
     final displayName = widget.user.name;
-    final firstLetter = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
+    final firstLetter = displayName.isNotEmpty
+        ? displayName[0].toUpperCase()
+        : 'U';
     final city = 'Kota Anda';
     await showModalBottomSheet(
       context: context,
@@ -4504,20 +6593,53 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
               child: Container(
                 decoration: BoxDecoration(
                   color: dark ? AppTheme.cardBg : Colors.white,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
+                  ),
                 ),
                 padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Center(child: Container(width: 44, height: 5, decoration: BoxDecoration(color: dark ? AppTheme.cardDark2 : Colors.grey.shade300, borderRadius: BorderRadius.circular(3)))),
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: dark
+                              ? AppTheme.cardDark2
+                              : Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 18),
                     Row(
                       children: [
-                        Container(width: 36, height: 36, decoration: BoxDecoration(gradient: AppTheme.primaryGradient, borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.edit_note_rounded, size: 17, color: Colors.white)),
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.primaryGradient,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.edit_note_rounded,
+                            size: 17,
+                            color: Colors.white,
+                          ),
+                        ),
                         const SizedBox(width: 10),
-                        const Expanded(child: Text('Tulis Ulasan Anda', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900))),
+                        const Expanded(
+                          child: Text(
+                            'Tulis Ulasan Anda',
+                            style: TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -4526,36 +6648,83 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                       decoration: BoxDecoration(
                         color: dark ? AppTheme.cardDark2 : Colors.grey.shade50,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: dark ? AppTheme.inputBorder : Colors.grey.shade200),
+                        border: Border.all(
+                          color: dark
+                              ? AppTheme.inputBorder
+                              : Colors.grey.shade200,
+                        ),
                       ),
                       child: Row(
                         children: [
                           CircleAvatar(
                             radius: 18,
                             backgroundColor: AppTheme.primaryPurple,
-                            child: Text(firstLetter, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
+                            child: Text(
+                              firstLetter,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13,
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(displayName, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: dark ? Colors.white : AppTheme.textDark)),
+                                Text(
+                                  displayName,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: dark
+                                        ? Colors.white
+                                        : AppTheme.textDark,
+                                  ),
+                                ),
                                 const SizedBox(height: 1),
-                                Text('$city • Terverifikasi', style: TextStyle(fontSize: 10, color: dark ? AppTheme.textMuted : Colors.grey.shade500)),
+                                Text(
+                                  '$city • Terverifikasi',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: dark
+                                        ? AppTheme.textMuted
+                                        : Colors.grey.shade500,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                            decoration: BoxDecoration(color: AppTheme.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(7)),
-                            child: const Text('Terbeli', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: AppTheme.success)),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.success.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                            child: const Text(
+                              'Terbeli',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.success,
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 14),
-                    const Text('Beri rating Anda', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+                    const Text(
+                      'Beri rating Anda',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: List.generate(5, (i) {
@@ -4567,12 +6736,27 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 180),
                               curve: Curves.easeOutBack,
-                              transform: Matrix4.identity()..scale(filled ? 1.08 : 1.0),
+                              transform: Matrix4.identity()
+                                ..scale(filled ? 1.08 : 1.0),
                               child: Icon(
-                                filled ? Icons.star_rounded : Icons.star_border_rounded,
+                                filled
+                                    ? Icons.star_rounded
+                                    : Icons.star_border_rounded,
                                 size: 32,
-                                color: filled ? Colors.amber.shade600 : Colors.grey.shade400,
-                                shadows: filled ? [BoxShadow(color: Colors.amber.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 2))] : null,
+                                color: filled
+                                    ? Colors.amber.shade600
+                                    : Colors.grey.shade400,
+                                shadows: filled
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.amber.withValues(
+                                            alpha: 0.35,
+                                          ),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null,
                               ),
                             ),
                           ),
@@ -4581,11 +6765,22 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      tempStars == 1 ? 'Sangat Buruk' :
-                      tempStars == 2 ? 'Buruk' :
-                      tempStars == 3 ? 'Cukup' :
-                      tempStars == 4 ? 'Bagus' : 'Luar Biasa!',
-                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: tempStars >= 4 ? Colors.amber.shade700 : Colors.grey.shade500),
+                      tempStars == 1
+                          ? 'Sangat Buruk'
+                          : tempStars == 2
+                          ? 'Buruk'
+                          : tempStars == 3
+                          ? 'Cukup'
+                          : tempStars == 4
+                          ? 'Bagus'
+                          : 'Luar Biasa!',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: tempStars >= 4
+                            ? Colors.amber.shade700
+                            : Colors.grey.shade500,
+                      ),
                     ),
                     const SizedBox(height: 14),
                     TextField(
@@ -4593,25 +6788,50 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                       maxLines: 4,
                       autofocus: false,
                       decoration: InputDecoration(
-                        hintText: 'Ceritakan pengalaman Anda menggunakan layanan ini...',
-                        hintStyle: TextStyle(fontSize: 11.5, color: Colors.grey.shade500),
+                        hintText:
+                            'Ceritakan pengalaman Anda menggunakan layanan ini...',
+                        hintStyle: TextStyle(
+                          fontSize: 11.5,
+                          color: Colors.grey.shade500,
+                        ),
                         filled: true,
-                        fillColor: dark ? AppTheme.cardDark2 : Colors.grey.shade50,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        fillColor: dark
+                            ? AppTheme.cardDark2
+                            : Colors.grey.shade50,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: dark ? AppTheme.inputBorder : Colors.grey.shade200),
+                          borderSide: BorderSide(
+                            color: dark
+                                ? AppTheme.inputBorder
+                                : Colors.grey.shade200,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: AppTheme.primaryPurple, width: 2),
+                          borderSide: const BorderSide(
+                            color: AppTheme.primaryPurple,
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 6),
                     AnimatedBuilder(
                       animation: ctrl,
-                      builder: (_, _) => Text('${ctrl.text.length}/500 karakter', style: TextStyle(fontSize: 9.5, color: ctrl.text.length > 450 ? Colors.orange.shade700 : Colors.grey.shade500, fontWeight: FontWeight.w700)),
+                      builder: (_, _) => Text(
+                        '${ctrl.text.length}/500 karakter',
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          color: ctrl.text.length > 450
+                              ? Colors.orange.shade700
+                              : Colors.grey.shade500,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -4619,7 +6839,13 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                         Expanded(
                           child: TextButton(
                             onPressed: () => Navigator.pop(ctx),
-                            child: Text('Batal', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.grey.shade600)),
+                            child: Text(
+                              'Batal',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -4633,15 +6859,32 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                   SnackBar(
                                     behavior: SnackBarBehavior.floating,
                                     backgroundColor: Colors.orange.shade700,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
                                     content: const Row(
                                       children: [
-                                        Icon(Icons.warning_amber_rounded, color: Colors.white, size: 17),
+                                        Icon(
+                                          Icons.warning_amber_rounded,
+                                          color: Colors.white,
+                                          size: 17,
+                                        ),
                                         SizedBox(width: 8),
-                                        Expanded(child: Text('Ulasan minimal 10 karakter ya.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12))),
+                                        Expanded(
+                                          child: Text(
+                                            'Ulasan minimal 10 karakter ya.',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
                                       ],
                                     ),
-                                    duration: const Duration(milliseconds: 1500),
+                                    duration: const Duration(
+                                      milliseconds: 1500,
+                                    ),
                                   ),
                                 );
                                 return;
@@ -4662,20 +6905,48 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                 SnackBar(
                                   behavior: SnackBarBehavior.floating,
                                   backgroundColor: Colors.green.shade600,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
                                   content: Row(
                                     children: [
-                                      const Icon(Icons.verified_rounded, color: Colors.white, size: 17),
+                                      const Icon(
+                                        Icons.verified_rounded,
+                                        color: Colors.white,
+                                        size: 17,
+                                      ),
                                       const SizedBox(width: 8),
-                                      Expanded(child: Text('Ulasan $tempStars bintang terkirim. Terima kasih! 🙏', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12))),
+                                      Expanded(
+                                        child: Text(
+                                          'Ulasan $tempStars bintang terkirim. Terima kasih! 🙏',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   ),
                                   duration: const Duration(seconds: 2),
                                 ),
                               );
                             },
-                            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryPurple, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), padding: const EdgeInsets.symmetric(vertical: 13)),
-                            child: const Text('Kirim Ulasan', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryPurple,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                            ),
+                            child: const Text(
+                              'Kirim Ulasan',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12.5,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -4699,42 +6970,42 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
       vsync: this,
       duration: const Duration(milliseconds: 700),
     );
-    _fadeAnim =
-        Tween<double>(begin: 0, end: 1).animate(_animCtrl);
+    _fadeAnim = Tween<double>(begin: 0, end: 1).animate(_animCtrl);
     _slideAnim = Tween<Offset>(
       begin: const Offset(0, 0.25),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animCtrl,
-      curve: Curves.easeOutBack,
-    ));
+    ).animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutBack));
     if (widget.item == null) {
       final title = widget.data.title;
       final now = DateTime.now();
       if (title == 'Portofolio Edit') {
         _formName = 'Color Grading Sinematik Short Movie';
-        _formDesc = 'Paket color grading sinematik untuk short movie 3-5 menit. Menggunakan referensi tone film indie dengan kontras hangat, skin tone natural, dan highlight lembut. Cocok untuk film pendek, skripsi, atau campaign branding lokal.';
+        _formDesc =
+            'Paket color grading sinematik untuk short movie 3-5 menit. Menggunakan referensi tone film indie dengan kontras hangat, skin tone natural, dan highlight lembut. Cocok untuk film pendek, skripsi, atau campaign branding lokal.';
         _formTag = 'Premium';
         _formPrice = '850000';
         _formIcon = Icons.palette_outlined;
         _formDate = DateTime(now.year, now.month, now.day, 9, 30);
       } else if (title == 'Antrian Kerja') {
         _formName = 'Editing Reels Toko Online Hijab';
-        _formDesc = 'Pesanan editing 6 reels promosi untuk toko online hijab segi empat. Durasi 25-30 detik per video, termasuk text overlay, backsound library, dan transisi dinamis. Client: Larasati Boutique Bandung.';
+        _formDesc =
+            'Pesanan editing 6 reels promosi untuk toko online hijab segi empat. Durasi 25-30 detik per video, termasuk text overlay, backsound library, dan transisi dinamis. Client: Larasati Boutique Bandung.';
         _formTag = 'Trending';
         _formPrice = '420000';
         _formIcon = Icons.movie_outlined;
         _formDate = DateTime(now.year, now.month, now.day + 1, 13, 0);
       } else if (title == 'Daftar Harga') {
         _formName = 'Paket Retouch Foto Prewedding';
-        _formDesc = 'Paket retouch 50 foto prewedding. Termasuk skin smoothing natural (tidak over), body shaping proporsional, color correction, background cleaning, dan 2x revisi bebas. Sudah termasuk file HD & file siap cetak 24R.';
+        _formDesc =
+            'Paket retouch 50 foto prewedding. Termasuk skin smoothing natural (tidak over), body shaping proporsional, color correction, background cleaning, dan 2x revisi bebas. Sudah termasuk file HD & file siap cetak 24R.';
         _formTag = 'Unggulan';
         _formPrice = '1650000';
         _formIcon = Icons.photo_camera_outlined;
         _formDate = DateTime(now.year, now.month, now.day - 2, 10, 15);
       } else if (title == 'Spesialisasi') {
         _formName = 'Motion Graphics Logo Reveal';
-        _formDesc = 'Spesialis pembuatan animasi logo reveal durasi 8-12 detik dengan style 3D glassmorphism, particle effect, dan audio SFX premium. Sudah termasuk 3 opsi konsep dan 4x revisi untuk kepuasan klien.';
+        _formDesc =
+            'Spesialis pembuatan animasi logo reveal durasi 8-12 detik dengan style 3D glassmorphism, particle effect, dan audio SFX premium. Sudah termasuk 3 opsi konsep dan 4x revisi untuk kepuasan klien.';
         _formTag = 'Limited';
         _formPrice = '750000';
         _formIcon = Icons.design_services_outlined;
@@ -4814,8 +7085,9 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                   borderRadius: BorderRadius.circular(15),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: AppTheme.primaryPurple
-                                          .withValues(alpha: 0.28),
+                                      color: AppTheme.primaryPurple.withValues(
+                                        alpha: 0.28,
+                                      ),
                                       blurRadius: 12,
                                       offset: const Offset(0, 5),
                                     ),
@@ -4832,8 +7104,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       isNew
@@ -4852,7 +7123,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                       isNew
                                           ? 'Tambah item baru ke ${widget.data.title}'
                                           : (item?.subtitle ??
-                                              widget.data.subtitle),
+                                                widget.data.subtitle),
                                       style: TextStyle(
                                         fontSize: 11.5,
                                         color: isDark
@@ -4885,21 +7156,23 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                         ),
                         if (item != null && item.value != null)
                           Padding(
-                            padding:
-                                const EdgeInsets.fromLTRB(20, 4, 20, 10),
+                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
                             child: Container(
                               padding: const EdgeInsets.all(18),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
                                     AppTheme.deepPurple.withValues(alpha: 0.08),
-                                    AppTheme.lightPurple.withValues(alpha: 0.08),
+                                    AppTheme.lightPurple.withValues(
+                                      alpha: 0.08,
+                                    ),
                                   ],
                                 ),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: AppTheme.primaryPurple
-                                      .withValues(alpha: 0.15),
+                                  color: AppTheme.primaryPurple.withValues(
+                                    alpha: 0.15,
+                                  ),
                                 ),
                               ),
                               child: Row(
@@ -4909,8 +7182,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                     height: 44,
                                     decoration: BoxDecoration(
                                       gradient: AppTheme.primaryGradient,
-                                      borderRadius:
-                                          BorderRadius.circular(14),
+                                      borderRadius: BorderRadius.circular(14),
                                     ),
                                     child: const Icon(
                                       Icons.sell_rounded,
@@ -4947,11 +7219,12 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                   if (item.tag != null)
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 6),
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
                                       decoration: BoxDecoration(
                                         gradient: AppTheme.primaryGradient,
-                                        borderRadius:
-                                            BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(12),
                                         boxShadow: AppTheme.cardShadowLight,
                                       ),
                                       child: Text(
@@ -4968,8 +7241,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                             ),
                           ),
                         Padding(
-                          padding:
-                              const EdgeInsets.fromLTRB(20, 6, 20, 0),
+                          padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
                           child: Container(
                             height: 44,
                             decoration: BoxDecoration(
@@ -4987,8 +7259,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                 boxShadow: AppTheme.cardShadowLight,
                               ),
                               indicatorSize: TabBarIndicatorSize.tab,
-                              indicatorPadding:
-                                  const EdgeInsets.all(5),
+                              indicatorPadding: const EdgeInsets.all(5),
                               labelColor: Colors.white,
                               unselectedLabelColor: isDark
                                   ? AppTheme.textMuted
@@ -5009,17 +7280,18 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                             duration: const Duration(milliseconds: 300),
                             child: _tab == 0
                                 ? _buildInfoTab(
-                                    context, scrollCtrl, isDark, isNew)
-                                : _buildReviewTab(
-                                    context, scrollCtrl, isDark),
+                                    context,
+                                    scrollCtrl,
+                                    isDark,
+                                    isNew,
+                                  )
+                                : _buildReviewTab(context, scrollCtrl, isDark),
                           ),
                         ),
                         Container(
                           padding: const EdgeInsets.fromLTRB(20, 12, 20, 22),
                           decoration: BoxDecoration(
-                            color: isDark
-                                ? AppTheme.cardBg
-                                : Colors.white,
+                            color: isDark ? AppTheme.cardBg : Colors.white,
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withValues(alpha: 0.06),
@@ -5037,84 +7309,138 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                   child: OutlinedButton.icon(
                                     onPressed: () {
                                       final item = widget.item;
-                                      final title = item?.title ?? widget.data.title;
+                                      final title =
+                                          item?.title ?? widget.data.title;
                                       final wasSaved = _itemSaved;
                                       setState(() => _itemSaved = !_itemSaved);
                                       if (!wasSaved) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           SnackBar(
                                             behavior: SnackBarBehavior.floating,
-                                            backgroundColor: AppTheme.primaryPurple,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                            backgroundColor:
+                                                AppTheme.primaryPurple,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
+                                            ),
                                             content: Row(
                                               children: [
-                                                const Icon(Icons.bookmark_added_rounded, color: Colors.white, size: 18),
+                                                const Icon(
+                                                  Icons.bookmark_added_rounded,
+                                                  color: Colors.white,
+                                                  size: 18,
+                                                ),
                                                 const SizedBox(width: 10),
-                                                Expanded(child: Text('"$title" tersimpan di koleksi Anda', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13))),
+                                                Expanded(
+                                                  child: Text(
+                                                    '"$title" tersimpan di koleksi Anda',
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                ),
                                               ],
                                             ),
-                                            duration: const Duration(seconds: 3),
+                                            duration: const Duration(
+                                              seconds: 3,
+                                            ),
                                             action: SnackBarAction(
                                               label: 'Urungkan',
                                               textColor: Colors.white,
                                               onPressed: () {
-                                                setState(() => _itemSaved = false);
+                                                setState(
+                                                  () => _itemSaved = false,
+                                                );
                                               },
                                             ),
                                           ),
                                         );
                                       } else {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           SnackBar(
                                             behavior: SnackBarBehavior.floating,
-                                            backgroundColor: Colors.grey.shade800,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                            backgroundColor:
+                                                Colors.grey.shade800,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
+                                            ),
                                             content: Row(
                                               children: [
-                                                const Icon(Icons.bookmark_remove_outlined, color: Colors.white, size: 18),
+                                                const Icon(
+                                                  Icons
+                                                      .bookmark_remove_outlined,
+                                                  color: Colors.white,
+                                                  size: 18,
+                                                ),
                                                 const SizedBox(width: 10),
-                                                Expanded(child: Text('"$title" dihapus dari koleksi tersimpan', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13))),
+                                                Expanded(
+                                                  child: Text(
+                                                    '"$title" dihapus dari koleksi tersimpan',
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                ),
                                               ],
                                             ),
-                                            duration: const Duration(milliseconds: 1400),
+                                            duration: const Duration(
+                                              milliseconds: 1400,
+                                            ),
                                           ),
                                         );
                                       }
                                     },
                                     style: OutlinedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(
-                                          vertical: 15),
+                                        vertical: 15,
+                                      ),
                                       side: BorderSide(
                                         color: _itemSaved
                                             ? AppTheme.primaryPurple
                                             : (isDark
-                                                ? AppTheme.inputBorder
-                                                : Colors.grey.shade300),
+                                                  ? AppTheme.inputBorder
+                                                  : Colors.grey.shade300),
                                         width: _itemSaved ? 1.5 : 1.0,
                                       ),
                                       backgroundColor: _itemSaved
-                                          ? AppTheme.primaryPurple.withValues(alpha: 0.06)
+                                          ? AppTheme.primaryPurple.withValues(
+                                              alpha: 0.06,
+                                            )
                                           : null,
                                       shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(16),
+                                        borderRadius: BorderRadius.circular(16),
                                       ),
                                     ),
                                     icon: Icon(
-                                        _itemSaved
-                                            ? Icons.bookmark_rounded
-                                            : Icons.bookmark_border_rounded,
-                                        size: 16,
+                                      _itemSaved
+                                          ? Icons.bookmark_rounded
+                                          : Icons.bookmark_border_rounded,
+                                      size: 16,
+                                      color: _itemSaved
+                                          ? AppTheme.primaryPurple
+                                          : null,
+                                    ),
+                                    label: Text(
+                                      'Simpan',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 12,
                                         color: _itemSaved
                                             ? AppTheme.primaryPurple
-                                            : null),
-                                    label: Text('Simpan',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 12,
-                                            color: _itemSaved
-                                                ? AppTheme.primaryPurple
-                                                : null)),
+                                            : null,
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 10),
@@ -5123,38 +7449,129 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                   child: OutlinedButton.icon(
                                     onPressed: () {
                                       final item = widget.item;
-                                      final shareTitle = item?.title ?? widget.data.title;
-                                      final shareDesc = item?.subtitle ?? widget.data.subtitle;
+                                      final shareTitle =
+                                          item?.title ?? widget.data.title;
+                                      final shareDesc =
+                                          item?.subtitle ??
+                                          widget.data.subtitle;
                                       showModalBottomSheet(
                                         context: context,
                                         backgroundColor: Colors.transparent,
                                         builder: (ctx) => Container(
                                           decoration: BoxDecoration(
-                                            color: isDark ? AppTheme.cardBg : Colors.white,
-                                            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                                            color: isDark
+                                                ? AppTheme.cardBg
+                                                : Colors.white,
+                                            borderRadius:
+                                                const BorderRadius.vertical(
+                                                  top: Radius.circular(28),
+                                                ),
                                           ),
-                                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                                          padding: const EdgeInsets.fromLTRB(
+                                            20,
+                                            16,
+                                            20,
+                                            28,
+                                          ),
                                           child: Column(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Container(width: 44, height: 5, decoration: BoxDecoration(color: isDark ? AppTheme.cardDark2 : Colors.grey.shade300, borderRadius: BorderRadius.circular(3))),
+                                              Container(
+                                                width: 44,
+                                                height: 5,
+                                                decoration: BoxDecoration(
+                                                  color: isDark
+                                                      ? AppTheme.cardDark2
+                                                      : Colors.grey.shade300,
+                                                  borderRadius:
+                                                      BorderRadius.circular(3),
+                                                ),
+                                              ),
                                               const SizedBox(height: 18),
-                                              Text('Bagikan $shareTitle', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: isDark ? Colors.white : AppTheme.textDark)),
+                                              Text(
+                                                'Bagikan $shareTitle',
+                                                style: TextStyle(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: isDark
+                                                      ? Colors.white
+                                                      : AppTheme.textDark,
+                                                ),
+                                              ),
                                               const SizedBox(height: 4),
-                                              Text(shareDesc, style: TextStyle(fontSize: 11.5, color: isDark ? AppTheme.textMuted : Colors.grey.shade600), textAlign: TextAlign.center),
+                                              Text(
+                                                shareDesc,
+                                                style: TextStyle(
+                                                  fontSize: 11.5,
+                                                  color: isDark
+                                                      ? AppTheme.textMuted
+                                                      : Colors.grey.shade600,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
                                               const SizedBox(height: 20),
                                               Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceEvenly,
                                                 children: [
-                                                  _buildShareTile(Icons.sms_rounded, 'WhatsApp', const Color(0xFF25D366), () => Navigator.pop(context)),
-                                                  _buildShareTile(Icons.send_rounded, 'Telegram', const Color(0xFF229ED9), () => Navigator.pop(context)),
-                                                  _buildShareTile(Icons.email_outlined, 'Email', const Color(0xFFEA4335), () => Navigator.pop(context)),
-                                                  _buildShareTile(Icons.link_rounded, 'Salin Link', AppTheme.primaryPurple, () {
-                                                    Navigator.pop(context);
-                                                    ScaffoldMessenger.of(ctx).showSnackBar(
-                                                      SnackBar(behavior: SnackBarBehavior.floating, content: const Text('Link disalin ke clipboard', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)), backgroundColor: AppTheme.primaryPurple, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                                                    );
-                                                  }),
+                                                  _buildShareTile(
+                                                    Icons.sms_rounded,
+                                                    'WhatsApp',
+                                                    const Color(0xFF25D366),
+                                                    () =>
+                                                        Navigator.pop(context),
+                                                  ),
+                                                  _buildShareTile(
+                                                    Icons.send_rounded,
+                                                    'Telegram',
+                                                    const Color(0xFF229ED9),
+                                                    () =>
+                                                        Navigator.pop(context),
+                                                  ),
+                                                  _buildShareTile(
+                                                    Icons.email_outlined,
+                                                    'Email',
+                                                    const Color(0xFFEA4335),
+                                                    () =>
+                                                        Navigator.pop(context),
+                                                  ),
+                                                  _buildShareTile(
+                                                    Icons.link_rounded,
+                                                    'Salin Link',
+                                                    AppTheme.primaryPurple,
+                                                    () {
+                                                      Navigator.pop(context);
+                                                      ScaffoldMessenger.of(
+                                                        ctx,
+                                                      ).showSnackBar(
+                                                        SnackBar(
+                                                          behavior:
+                                                              SnackBarBehavior
+                                                                  .floating,
+                                                          content: const Text(
+                                                            'Link disalin ke clipboard',
+                                                            style: TextStyle(
+                                                              color:
+                                                                  Colors.white,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w700,
+                                                            ),
+                                                          ),
+                                                          backgroundColor:
+                                                              AppTheme
+                                                                  .primaryPurple,
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  14,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
+                                                  ),
                                                 ],
                                               ),
                                               const SizedBox(height: 12),
@@ -5165,24 +7582,28 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                     },
                                     style: OutlinedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(
-                                          vertical: 15),
+                                        vertical: 15,
+                                      ),
                                       side: BorderSide(
                                         color: AppTheme.primaryPurple
                                             .withValues(alpha: 0.4),
                                       ),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(16),
+                                        borderRadius: BorderRadius.circular(16),
                                       ),
                                     ),
                                     icon: const Icon(
-                                        Icons.share_outlined, size: 16),
-                                    label: Text('Bagikan',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 12,
-                                            color:
-                                                AppTheme.primaryPurple)),
+                                      Icons.share_outlined,
+                                      size: 16,
+                                    ),
+                                    label: Text(
+                                      'Bagikan',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 12,
+                                        color: AppTheme.primaryPurple,
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 10),
@@ -5191,16 +7612,22 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                   child: Container(
                                     decoration: BoxDecoration(
                                       gradient: _itemSubmitted && !isNew
-                                          ? LinearGradient(colors: [Color(0xFF0EA5E9), Color(0xFF3B82F6)])
+                                          ? LinearGradient(
+                                              colors: [
+                                                Color(0xFF0EA5E9),
+                                                Color(0xFF3B82F6),
+                                              ],
+                                            )
                                           : AppTheme.primaryGradient,
-                                      borderRadius:
-                                          BorderRadius.circular(16),
+                                      borderRadius: BorderRadius.circular(16),
                                       boxShadow: [
                                         BoxShadow(
                                           color: _itemSubmitted && !isNew
-                                              ? Colors.blue.withValues(alpha: 0.35)
+                                              ? Colors.blue.withValues(
+                                                  alpha: 0.35,
+                                                )
                                               : AppTheme.primaryPurple
-                                                  .withValues(alpha: 0.4),
+                                                    .withValues(alpha: 0.4),
                                           blurRadius: 16,
                                           offset: const Offset(0, 6),
                                         ),
@@ -5209,38 +7636,79 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                     child: Material(
                                       color: Colors.transparent,
                                       child: InkWell(
-                                        borderRadius:
-                                            BorderRadius.circular(16),
+                                        borderRadius: BorderRadius.circular(16),
                                         onTap: () {
                                           final item = widget.item;
-                                          final actionName = isNew ? 'Buat Baru' : widget.actionLabel;
-                                          final targetName = item?.title ?? widget.data.title;
+                                          final actionName = isNew
+                                              ? 'Buat Baru'
+                                              : widget.actionLabel;
+                                          final targetName =
+                                              item?.title ?? widget.data.title;
                                           if (isNew) {
                                             String fmtIDR(String raw) {
-                                              final n = int.tryParse(raw.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+                                              final n =
+                                                  int.tryParse(
+                                                    raw.replaceAll(
+                                                      RegExp(r'[^0-9]'),
+                                                      '',
+                                                    ),
+                                                  ) ??
+                                                  0;
                                               if (n == 0) return raw;
                                               final s = n.toString();
                                               String out = '';
-                                              for (int i = 0; i < s.length; i++) {
-                                                if (i > 0 && (s.length - i) % 3 == 0) out += '.';
+                                              for (
+                                                int i = 0;
+                                                i < s.length;
+                                                i++
+                                              ) {
+                                                if (i > 0 &&
+                                                    (s.length - i) % 3 == 0)
+                                                  out += '.';
                                                 out += s[i];
                                               }
                                               return 'Rp $out';
                                             }
+
                                             if (_formName.trim().isEmpty) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
                                                 SnackBar(
-                                                  behavior: SnackBarBehavior.floating,
-                                                  backgroundColor: Colors.orange.shade700,
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                                  behavior:
+                                                      SnackBarBehavior.floating,
+                                                  backgroundColor:
+                                                      Colors.orange.shade700,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          14,
+                                                        ),
+                                                  ),
                                                   content: const Row(
                                                     children: [
-                                                      Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
+                                                      Icon(
+                                                        Icons
+                                                            .warning_amber_rounded,
+                                                        color: Colors.white,
+                                                        size: 18,
+                                                      ),
                                                       SizedBox(width: 10),
-                                                      Expanded(child: Text('Nama item belum diisi. Klik kolom "Nama item" untuk mengisi.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
+                                                      Expanded(
+                                                        child: Text(
+                                                          'Nama item belum diisi. Klik kolom "Nama item" untuk mengisi.',
+                                                          style: TextStyle(
+                                                            color: Colors.white,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                          ),
+                                                        ),
+                                                      ),
                                                     ],
                                                   ),
-                                                  duration: const Duration(milliseconds: 1800),
+                                                  duration: const Duration(
+                                                    milliseconds: 1800,
+                                                  ),
                                                 ),
                                               );
                                               return;
@@ -5248,80 +7716,265 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                             showDialog(
                                               context: context,
                                               builder: (dctx) => AlertDialog(
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(22),
+                                                ),
                                                 title: Row(
                                                   children: [
                                                     Container(
-                                                      width: 40, height: 40,
-                                                      decoration: BoxDecoration(gradient: AppTheme.primaryGradient, borderRadius: BorderRadius.circular(12)),
-                                                      child: Icon(Icons.add_task_rounded, color: Colors.white, size: 20),
+                                                      width: 40,
+                                                      height: 40,
+                                                      decoration: BoxDecoration(
+                                                        gradient: AppTheme
+                                                            .primaryGradient,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
+                                                      ),
+                                                      child: Icon(
+                                                        Icons.add_task_rounded,
+                                                        color: Colors.white,
+                                                        size: 20,
+                                                      ),
                                                     ),
                                                     const SizedBox(width: 12),
-                                                    Expanded(child: Text('Konfirmasi $actionName', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900))),
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Konfirmasi $actionName',
+                                                        style: const TextStyle(
+                                                          fontSize: 15,
+                                                          fontWeight:
+                                                              FontWeight.w900,
+                                                        ),
+                                                      ),
+                                                    ),
                                                   ],
                                                 ),
                                                 content: Column(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
-                                                    Text('Item berikut akan ditambahkan ke ${widget.data.title}:', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                                                    Text(
+                                                      'Item berikut akan ditambahkan ke ${widget.data.title}:',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors
+                                                            .grey
+                                                            .shade600,
+                                                      ),
+                                                    ),
                                                     const SizedBox(height: 12),
                                                     Container(
-                                                      padding: const EdgeInsets.all(12),
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                            12,
+                                                          ),
                                                       decoration: BoxDecoration(
-                                                        color: Colors.grey.shade50,
-                                                        borderRadius: BorderRadius.circular(14),
-                                                        border: Border.all(color: Colors.grey.shade200),
+                                                        color:
+                                                            Colors.grey.shade50,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              14,
+                                                            ),
+                                                        border: Border.all(
+                                                          color: Colors
+                                                              .grey
+                                                              .shade200,
+                                                        ),
                                                       ),
                                                       child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
                                                         children: [
                                                           Row(
                                                             children: [
                                                               Container(
-                                                                width: 30, height: 30,
-                                                                decoration: BoxDecoration(gradient: AppTheme.primaryGradient, borderRadius: BorderRadius.circular(10)),
-                                                                child: Icon(_formIcon ?? Icons.edit_outlined, size: 15, color: Colors.white),
+                                                                width: 30,
+                                                                height: 30,
+                                                                decoration: BoxDecoration(
+                                                                  gradient: AppTheme
+                                                                      .primaryGradient,
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                        10,
+                                                                      ),
+                                                                ),
+                                                                child: Icon(
+                                                                  _formIcon ??
+                                                                      Icons
+                                                                          .edit_outlined,
+                                                                  size: 15,
+                                                                  color: Colors
+                                                                      .white,
+                                                                ),
                                                               ),
-                                                              const SizedBox(width: 8),
+                                                              const SizedBox(
+                                                                width: 8,
+                                                              ),
                                                               Expanded(
-                                                                child: Text(_formName.trim(), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                                                                child: Text(
+                                                                  _formName
+                                                                      .trim(),
+                                                                  style: const TextStyle(
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w800,
+                                                                    fontSize:
+                                                                        13,
+                                                                  ),
+                                                                ),
                                                               ),
-                                                              if (_formTag.isNotEmpty)
+                                                              if (_formTag
+                                                                  .isNotEmpty)
                                                                 Container(
-                                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                                                  decoration: BoxDecoration(color: AppTheme.primaryPurple.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                                                                  child: Text(_formTag, style: TextStyle(fontSize: 9.5, color: AppTheme.primaryPurple, fontWeight: FontWeight.w800)),
+                                                                  padding:
+                                                                      const EdgeInsets.symmetric(
+                                                                        horizontal:
+                                                                            8,
+                                                                        vertical:
+                                                                            3,
+                                                                      ),
+                                                                  decoration: BoxDecoration(
+                                                                    color: AppTheme
+                                                                        .primaryPurple
+                                                                        .withValues(
+                                                                          alpha:
+                                                                              0.1,
+                                                                        ),
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                          8,
+                                                                        ),
+                                                                  ),
+                                                                  child: Text(
+                                                                    _formTag,
+                                                                    style: TextStyle(
+                                                                      fontSize:
+                                                                          9.5,
+                                                                      color: AppTheme
+                                                                          .primaryPurple,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w800,
+                                                                    ),
+                                                                  ),
                                                                 ),
                                                             ],
                                                           ),
-                                                          if (_formDesc.isNotEmpty) ...[
-                                                            const SizedBox(height: 6),
-                                                            Text(_formDesc.trim().length > 110 ? '${_formDesc.trim().substring(0, 110)}...' : _formDesc.trim(), style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600, height: 1.4)),
+                                                          if (_formDesc
+                                                              .isNotEmpty) ...[
+                                                            const SizedBox(
+                                                              height: 6,
+                                                            ),
+                                                            Text(
+                                                              _formDesc
+                                                                          .trim()
+                                                                          .length >
+                                                                      110
+                                                                  ? '${_formDesc.trim().substring(0, 110)}...'
+                                                                  : _formDesc
+                                                                        .trim(),
+                                                              style: TextStyle(
+                                                                fontSize: 10.5,
+                                                                color: Colors
+                                                                    .grey
+                                                                    .shade600,
+                                                                height: 1.4,
+                                                              ),
+                                                            ),
                                                           ],
-                                                          if (_formPrice.isNotEmpty || _formDate != null) ...[
-                                                            const SizedBox(height: 8),
-                                                            Divider(color: Colors.grey.shade200, height: 1),
-                                                            const SizedBox(height: 8),
+                                                          if (_formPrice
+                                                                  .isNotEmpty ||
+                                                              _formDate !=
+                                                                  null) ...[
+                                                            const SizedBox(
+                                                              height: 8,
+                                                            ),
+                                                            Divider(
+                                                              color: Colors
+                                                                  .grey
+                                                                  .shade200,
+                                                              height: 1,
+                                                            ),
+                                                            const SizedBox(
+                                                              height: 8,
+                                                            ),
                                                             Row(
                                                               children: [
-                                                                if (_formPrice.isNotEmpty)
-                                                                  Expanded(child: Row(
-                                                                    children: [
-                                                                      Icon(Icons.sell_outlined, size: 13, color: Colors.green.shade700),
-                                                                      const SizedBox(width: 4),
-                                                                      Text(fmtIDR(_formPrice), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.green.shade700)),
-                                                                    ],
-                                                                  )),
-                                                                if (_formDate != null)
-                                                                  Expanded(child: Row(
-                                                                    mainAxisAlignment: MainAxisAlignment.end,
-                                                                    children: [
-                                                                      Icon(Icons.event_rounded, size: 13, color: Colors.grey.shade700),
-                                                                      const SizedBox(width: 4),
-                                                                      Text('${_formDate!.day} ${_monthId(_formDate!.month)} ${_formDate!.year}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.grey.shade700)),
-                                                                    ],
-                                                                  )),
+                                                                if (_formPrice
+                                                                    .isNotEmpty)
+                                                                  Expanded(
+                                                                    child: Row(
+                                                                      children: [
+                                                                        Icon(
+                                                                          Icons
+                                                                              .sell_outlined,
+                                                                          size:
+                                                                              13,
+                                                                          color: Colors
+                                                                              .green
+                                                                              .shade700,
+                                                                        ),
+                                                                        const SizedBox(
+                                                                          width:
+                                                                              4,
+                                                                        ),
+                                                                        Text(
+                                                                          fmtIDR(
+                                                                            _formPrice,
+                                                                          ),
+                                                                          style: TextStyle(
+                                                                            fontSize:
+                                                                                11,
+                                                                            fontWeight:
+                                                                                FontWeight.w800,
+                                                                            color:
+                                                                                Colors.green.shade700,
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ),
+                                                                if (_formDate !=
+                                                                    null)
+                                                                  Expanded(
+                                                                    child: Row(
+                                                                      mainAxisAlignment:
+                                                                          MainAxisAlignment
+                                                                              .end,
+                                                                      children: [
+                                                                        Icon(
+                                                                          Icons
+                                                                              .event_rounded,
+                                                                          size:
+                                                                              13,
+                                                                          color: Colors
+                                                                              .grey
+                                                                              .shade700,
+                                                                        ),
+                                                                        const SizedBox(
+                                                                          width:
+                                                                              4,
+                                                                        ),
+                                                                        Text(
+                                                                          '${_formDate!.day} ${_monthId(_formDate!.month)} ${_formDate!.year}',
+                                                                          style: TextStyle(
+                                                                            fontSize:
+                                                                                11,
+                                                                            fontWeight:
+                                                                                FontWeight.w700,
+                                                                            color:
+                                                                                Colors.grey.shade700,
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ),
                                                               ],
                                                             ),
                                                           ],
@@ -5331,69 +7984,179 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                   ],
                                                 ),
                                                 actions: [
-                                                  TextButton(onPressed: () => Navigator.pop(dctx), child: Text('Batal', style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w700))),
+                                                  TextButton(
+                                                    onPressed: () =>
+                                                        Navigator.pop(dctx),
+                                                    child: Text(
+                                                      'Batal',
+                                                      style: TextStyle(
+                                                        color: Colors
+                                                            .grey
+                                                            .shade600,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                      ),
+                                                    ),
+                                                  ),
                                                   ElevatedButton(
                                                     onPressed: () {
-                                                      final finalName = _formName.trim();
-                                                      final finalDesc = _formDesc.trim().isNotEmpty ? _formDesc.trim() : 'Item baru di ${widget.data.title}';
-                                                      final finalTag = _formTag.isNotEmpty ? _formTag : 'Baru';
-                                                      final finalValue = _formPrice.isNotEmpty ? fmtIDR(_formPrice) : (_formDate != null ? '${_formDate!.day} ${_monthId(_formDate!.month)} ${_formDate!.year}' : '-');
-                                                      final finalIcon = _formIcon ?? Icons.edit_outlined;
-                                                      final finalGrad = widget.data.gradient;
-                                                      final newItem = CreatorServiceItem(
-                                                        title: finalName,
-                                                        subtitle: finalDesc,
-                                                        icon: finalIcon,
-                                                        tag: finalTag,
-                                                        value: finalValue,
-                                                        active: true,
-                                                        gradient: finalGrad,
+                                                      final finalName =
+                                                          _formName.trim();
+                                                      final finalDesc =
+                                                          _formDesc
+                                                              .trim()
+                                                              .isNotEmpty
+                                                          ? _formDesc.trim()
+                                                          : 'Item baru di ${widget.data.title}';
+                                                      final finalTag =
+                                                          _formTag.isNotEmpty
+                                                          ? _formTag
+                                                          : 'Baru';
+                                                      final finalValue =
+                                                          _formPrice.isNotEmpty
+                                                          ? fmtIDR(_formPrice)
+                                                          : (_formDate != null
+                                                                ? '${_formDate!.day} ${_monthId(_formDate!.month)} ${_formDate!.year}'
+                                                                : '-');
+                                                      final finalIcon =
+                                                          _formIcon ??
+                                                          Icons.edit_outlined;
+                                                      final finalGrad =
+                                                          widget.data.gradient;
+                                                      final newItem =
+                                                          CreatorServiceItem(
+                                                            title: finalName,
+                                                            subtitle: finalDesc,
+                                                            icon: finalIcon,
+                                                            tag: finalTag,
+                                                            value: finalValue,
+                                                            active: true,
+                                                            gradient: finalGrad,
+                                                          );
+                                                      widget.onAddItem?.call(
+                                                        newItem,
                                                       );
-                                                      widget.onAddItem?.call(newItem);
                                                       Navigator.pop(dctx);
                                                       Navigator.pop(context);
-                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
                                                         SnackBar(
-                                                          behavior: SnackBarBehavior.floating,
-                                                          backgroundColor: Colors.green.shade600,
-                                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                                          behavior:
+                                                              SnackBarBehavior
+                                                                  .floating,
+                                                          backgroundColor:
+                                                              Colors
+                                                                  .green
+                                                                  .shade600,
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  14,
+                                                                ),
+                                                          ),
                                                           content: Row(
                                                             children: [
-                                                              Icon(Icons.add_task_rounded, color: Colors.white, size: 18),
-                                                              const SizedBox(width: 10),
-                                                              Expanded(child: Text('"$finalName" berhasil ditambahkan ke ${widget.data.title} 🎉', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
+                                                              Icon(
+                                                                Icons
+                                                                    .add_task_rounded,
+                                                                color: Colors
+                                                                    .white,
+                                                                size: 18,
+                                                              ),
+                                                              const SizedBox(
+                                                                width: 10,
+                                                              ),
+                                                              Expanded(
+                                                                child: Text(
+                                                                  '"$finalName" berhasil ditambahkan ke ${widget.data.title} 🎉',
+                                                                  style: const TextStyle(
+                                                                    color: Colors
+                                                                        .white,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w700,
+                                                                  ),
+                                                                ),
+                                                              ),
                                                             ],
                                                           ),
-                                                          duration: const Duration(seconds: 2),
+                                                          duration:
+                                                              const Duration(
+                                                                seconds: 2,
+                                                              ),
                                                         ),
                                                       );
                                                     },
                                                     style: ElevatedButton.styleFrom(
-                                                      backgroundColor: AppTheme.primaryPurple,
-                                                      foregroundColor: Colors.white,
-                                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                                                      backgroundColor: AppTheme
+                                                          .primaryPurple,
+                                                      foregroundColor:
+                                                          Colors.white,
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
+                                                      ),
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 18,
+                                                            vertical: 10,
+                                                          ),
                                                     ),
-                                                    child: Text(actionName, style: const TextStyle(fontWeight: FontWeight.w800)),
+                                                    child: Text(
+                                                      actionName,
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                      ),
+                                                    ),
                                                   ),
                                                 ],
                                               ),
                                             );
                                           } else {
                                             if (_itemSubmitted) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
                                                 SnackBar(
-                                                  behavior: SnackBarBehavior.floating,
-                                                  backgroundColor: Colors.blue.shade700,
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                                  behavior:
+                                                      SnackBarBehavior.floating,
+                                                  backgroundColor:
+                                                      Colors.blue.shade700,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          14,
+                                                        ),
+                                                  ),
                                                   content: const Row(
                                                     children: [
-                                                      Icon(Icons.info_outline_rounded, color: Colors.white, size: 17),
+                                                      Icon(
+                                                        Icons
+                                                            .info_outline_rounded,
+                                                        color: Colors.white,
+                                                        size: 17,
+                                                      ),
                                                       SizedBox(width: 8),
-                                                      Expanded(child: Text('Item sudah diajukan sebelumnya. Menunggu proses review.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12))),
+                                                      Expanded(
+                                                        child: Text(
+                                                          'Item sudah diajukan sebelumnya. Menunggu proses review.',
+                                                          style: TextStyle(
+                                                            color: Colors.white,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            fontSize: 12,
+                                                          ),
+                                                        ),
+                                                      ),
                                                     ],
                                                   ),
-                                                  duration: const Duration(milliseconds: 1800),
+                                                  duration: const Duration(
+                                                    milliseconds: 1800,
+                                                  ),
                                                 ),
                                               );
                                               return;
@@ -5401,49 +8164,142 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                             showDialog(
                                               context: context,
                                               builder: (dctx) => AlertDialog(
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(22),
+                                                ),
                                                 title: Row(
                                                   children: [
                                                     Container(
-                                                      width: 40, height: 40,
-                                                      decoration: BoxDecoration(gradient: AppTheme.primaryGradient, borderRadius: BorderRadius.circular(12)),
-                                                      child: Icon(Icons.rocket_launch_rounded, color: Colors.white, size: 20),
+                                                      width: 40,
+                                                      height: 40,
+                                                      decoration: BoxDecoration(
+                                                        gradient: AppTheme
+                                                            .primaryGradient,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
+                                                      ),
+                                                      child: Icon(
+                                                        Icons
+                                                            .rocket_launch_rounded,
+                                                        color: Colors.white,
+                                                        size: 20,
+                                                      ),
                                                     ),
                                                     const SizedBox(width: 12),
-                                                    Expanded(child: Text('Konfirmasi $actionName', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900))),
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Konfirmasi $actionName',
+                                                        style: const TextStyle(
+                                                          fontSize: 15,
+                                                          fontWeight:
+                                                              FontWeight.w900,
+                                                        ),
+                                                      ),
+                                                    ),
                                                   ],
                                                 ),
                                                 content: Column(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
-                                                    Text('Anda akan $actionName untuk item berikut:', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                                                    Text(
+                                                      'Anda akan $actionName untuk item berikut:',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors
+                                                            .grey
+                                                            .shade600,
+                                                      ),
+                                                    ),
                                                     const SizedBox(height: 12),
                                                     Container(
-                                                      padding: const EdgeInsets.all(12),
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                            12,
+                                                          ),
                                                       decoration: BoxDecoration(
-                                                        color: Colors.grey.shade50,
-                                                        borderRadius: BorderRadius.circular(14),
-                                                        border: Border.all(color: Colors.grey.shade200),
+                                                        color:
+                                                            Colors.grey.shade50,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              14,
+                                                            ),
+                                                        border: Border.all(
+                                                          color: Colors
+                                                              .grey
+                                                              .shade200,
+                                                        ),
                                                       ),
                                                       child: Row(
                                                         children: [
                                                           Container(
-                                                            width: 34, height: 34,
+                                                            width: 34,
+                                                            height: 34,
                                                             decoration: BoxDecoration(
-                                                              gradient: LinearGradient(colors: widget.data.gradient),
-                                                              borderRadius: BorderRadius.circular(10),
+                                                              gradient:
+                                                                  LinearGradient(
+                                                                    colors: widget
+                                                                        .data
+                                                                        .gradient,
+                                                                  ),
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    10,
+                                                                  ),
                                                             ),
-                                                            child: Icon(item?.icon ?? Icons.edit_outlined, size: 16, color: Colors.white),
+                                                            child: Icon(
+                                                              item?.icon ??
+                                                                  Icons
+                                                                      .edit_outlined,
+                                                              size: 16,
+                                                              color:
+                                                                  Colors.white,
+                                                            ),
                                                           ),
-                                                          const SizedBox(width: 10),
+                                                          const SizedBox(
+                                                            width: 10,
+                                                          ),
                                                           Expanded(
                                                             child: Column(
-                                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                                              crossAxisAlignment:
+                                                                  CrossAxisAlignment
+                                                                      .start,
                                                               children: [
-                                                                Text(targetName, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800)),
-                                                                const SizedBox(height: 2),
-                                                                Text(item?.subtitle ?? widget.data.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600)),
+                                                                Text(
+                                                                  targetName,
+                                                                  style: const TextStyle(
+                                                                    fontSize:
+                                                                        12.5,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w800,
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(
+                                                                  height: 2,
+                                                                ),
+                                                                Text(
+                                                                  item?.subtitle ??
+                                                                      widget
+                                                                          .data
+                                                                          .subtitle,
+                                                                  maxLines: 1,
+                                                                  overflow:
+                                                                      TextOverflow
+                                                                          .ellipsis,
+                                                                  style: TextStyle(
+                                                                    fontSize:
+                                                                        10.5,
+                                                                    color: Colors
+                                                                        .grey
+                                                                        .shade600,
+                                                                  ),
+                                                                ),
                                                               ],
                                                             ),
                                                           ),
@@ -5453,52 +8309,157 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                     const SizedBox(height: 14),
                                                     Row(
                                                       children: [
-                                                        Icon(Icons.schedule_rounded, size: 13, color: Colors.grey.shade600),
-                                                        const SizedBox(width: 5),
-                                                        Text('Estimasi review: 1-2 hari kerja', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.grey.shade600)),
+                                                        Icon(
+                                                          Icons
+                                                              .schedule_rounded,
+                                                          size: 13,
+                                                          color: Colors
+                                                              .grey
+                                                              .shade600,
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 5,
+                                                        ),
+                                                        Text(
+                                                          'Estimasi review: 1-2 hari kerja',
+                                                          style: TextStyle(
+                                                            fontSize: 10.5,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            color: Colors
+                                                                .grey
+                                                                .shade600,
+                                                          ),
+                                                        ),
                                                       ],
                                                     ),
                                                     const SizedBox(height: 4),
                                                     Row(
                                                       children: [
-                                                        Icon(Icons.verified_user_outlined, size: 13, color: AppTheme.primaryPurple),
-                                                        const SizedBox(width: 5),
-                                                        Expanded(child: Text('Setelah disetujui, item akan tampil di halaman publik.', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppTheme.primaryPurple))),
+                                                        Icon(
+                                                          Icons
+                                                              .verified_user_outlined,
+                                                          size: 13,
+                                                          color: AppTheme
+                                                              .primaryPurple,
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 5,
+                                                        ),
+                                                        Expanded(
+                                                          child: Text(
+                                                            'Setelah disetujui, item akan tampil di halaman publik.',
+                                                            style: TextStyle(
+                                                              fontSize: 10.5,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w700,
+                                                              color: AppTheme
+                                                                  .primaryPurple,
+                                                            ),
+                                                          ),
+                                                        ),
                                                       ],
                                                     ),
                                                   ],
                                                 ),
                                                 actions: [
-                                                  TextButton(onPressed: () => Navigator.pop(dctx), child: Text('Batal', style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w700))),
+                                                  TextButton(
+                                                    onPressed: () =>
+                                                        Navigator.pop(dctx),
+                                                    child: Text(
+                                                      'Batal',
+                                                      style: TextStyle(
+                                                        color: Colors
+                                                            .grey
+                                                            .shade600,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                      ),
+                                                    ),
+                                                  ),
                                                   ElevatedButton(
                                                     onPressed: () {
                                                       setState(() {
                                                         _itemSubmitted = true;
                                                       });
                                                       Navigator.pop(dctx);
-                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
                                                         SnackBar(
-                                                          behavior: SnackBarBehavior.floating,
-                                                          backgroundColor: Colors.green.shade600,
-                                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                                          behavior:
+                                                              SnackBarBehavior
+                                                                  .floating,
+                                                          backgroundColor:
+                                                              Colors
+                                                                  .green
+                                                                  .shade600,
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  14,
+                                                                ),
+                                                          ),
                                                           content: Row(
                                                             children: [
-                                                              Icon(Icons.local_post_office_rounded, color: Colors.white, size: 17),
-                                                              const SizedBox(width: 8),
-                                                              Expanded(child: Text('"$targetName" berhasil diajukan 📤 Menunggu review tim.', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12))),
+                                                              Icon(
+                                                                Icons
+                                                                    .local_post_office_rounded,
+                                                                color: Colors
+                                                                    .white,
+                                                                size: 17,
+                                                              ),
+                                                              const SizedBox(
+                                                                width: 8,
+                                                              ),
+                                                              Expanded(
+                                                                child: Text(
+                                                                  '"$targetName" berhasil diajukan 📤 Menunggu review tim.',
+                                                                  style: const TextStyle(
+                                                                    color: Colors
+                                                                        .white,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w700,
+                                                                    fontSize:
+                                                                        12,
+                                                                  ),
+                                                                ),
+                                                              ),
                                                             ],
                                                           ),
-                                                          duration: const Duration(seconds: 2),
+                                                          duration:
+                                                              const Duration(
+                                                                seconds: 2,
+                                                              ),
                                                         ),
                                                       );
                                                     },
                                                     style: ElevatedButton.styleFrom(
-                                                      backgroundColor: AppTheme.primaryPurple,
-                                                      foregroundColor: Colors.white,
-                                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                                                      backgroundColor: AppTheme
+                                                          .primaryPurple,
+                                                      foregroundColor:
+                                                          Colors.white,
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
+                                                      ),
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 18,
+                                                            vertical: 10,
+                                                          ),
                                                     ),
-                                                    child: Text(actionName, style: const TextStyle(fontWeight: FontWeight.w800)),
+                                                    child: Text(
+                                                      actionName,
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                      ),
+                                                    ),
                                                   ),
                                                 ],
                                               ),
@@ -5506,22 +8467,22 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                           }
                                         },
                                         child: Padding(
-                                          padding: const EdgeInsets
-                                              .symmetric(vertical: 15),
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 15,
+                                          ),
                                           child: Center(
                                             child: Row(
-                                              mainAxisSize:
-                                                  MainAxisSize.min,
+                                              mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Icon(
                                                   isNew
                                                       ? Icons
-                                                          .add_circle_outline_rounded
+                                                            .add_circle_outline_rounded
                                                       : (_itemSubmitted
-                                                          ? Icons
-                                                              .schedule_send_rounded
-                                                          : Icons
-                                                              .rocket_launch_rounded),
+                                                            ? Icons
+                                                                  .schedule_send_rounded
+                                                            : Icons
+                                                                  .rocket_launch_rounded),
                                                   size: 16,
                                                   color: Colors.white,
                                                 ),
@@ -5530,13 +8491,13 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                   isNew
                                                       ? 'Buat Baru'
                                                       : (_itemSubmitted
-                                                          ? 'Menunggu Review'
-                                                          : widget.actionLabel),
+                                                            ? 'Menunggu Review'
+                                                            : widget
+                                                                  .actionLabel),
                                                   style: const TextStyle(
                                                     color: Colors.white,
                                                     fontSize: 12.5,
-                                                    fontWeight:
-                                                        FontWeight.w900,
+                                                    fontWeight: FontWeight.w900,
                                                     letterSpacing: 0.2,
                                                   ),
                                                 ),
@@ -5564,26 +8525,46 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
     );
   }
 
-  Widget _buildShareTile(IconData icon, String label, Color color, VoidCallback onTap) {
+  Widget _buildShareTile(
+    IconData icon,
+    String label,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 52, height: 52,
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
             child: Icon(icon, size: 22, color: color),
           ),
           const SizedBox(height: 6),
-          Text(label, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.grey.shade700)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey.shade700,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoTab(BuildContext context,
-      ScrollController scrollCtrl, bool isDark, bool isNew) {
+  Widget _buildInfoTab(
+    BuildContext context,
+    ScrollController scrollCtrl,
+    bool isDark,
+    bool isNew,
+  ) {
     final item = widget.item;
     final user = widget.user;
     final now = DateTime.now();
@@ -5601,22 +8582,99 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
       }
       return 'Rp $out';
     }
+
     final detailValues = isNew
         ? <(String, IconData, String, String)>[
-            ('Nama item', Icons.drive_file_rename_outline, _formName.isEmpty ? 'Klik untuk mengisi nama item/layanan' : _formName, _formName.isNotEmpty ? 'Siap' : 'Wajib'),
-            ('Deskripsi singkat', Icons.description_outlined, _formDesc.isEmpty ? 'Klik untuk menulis deskripsi (min. 30 kata)' : _formDesc, _formDesc.length > 60 ? '${_formDesc.length} karakter' : (_formDesc.isNotEmpty ? 'Draft' : 'Opsional')),
-            ('Kategori / Tag', Icons.label_outline_rounded, _formTag.isEmpty ? 'Klik untuk memilih tag kategori' : 'Tag aktif: $_formTag', _formTag.isNotEmpty ? _formTag : 'Pilih'),
-            ('Nilai / Harga', Icons.price_change_outlined, _formPrice.isEmpty ? 'Klik untuk memasukkan nilai harga' : fmtPrice(_formPrice), _formPrice.isNotEmpty ? fmtPrice(_formPrice).replaceAll('Rp ', 'Rp ') : ''),
-            ('Thumbnail / Icon', Icons.image_outlined, _formIcon == null ? 'Klik untuk memilih icon thumbnail' : 'Icon terpilih', _formIcon != null ? 'Terpilih' : ''),
-            ('Tanggal dibuat', Icons.event_available_rounded, _formDate == null ? 'Klik untuk memilih tanggal & waktu' : '${_formDate!.day} ${_monthId(_formDate!.month)} ${_formDate!.year} • ${_formDate!.hour.toString().padLeft(2,'0')}:${_formDate!.minute.toString().padLeft(2,'0')} WIB', _formDate != null ? 'Terjadwal' : ''),
+            (
+              'Nama item',
+              Icons.drive_file_rename_outline,
+              _formName.isEmpty
+                  ? 'Klik untuk mengisi nama item/layanan'
+                  : _formName,
+              _formName.isNotEmpty ? 'Siap' : 'Wajib',
+            ),
+            (
+              'Deskripsi singkat',
+              Icons.description_outlined,
+              _formDesc.isEmpty
+                  ? 'Klik untuk menulis deskripsi (min. 30 kata)'
+                  : _formDesc,
+              _formDesc.length > 60
+                  ? '${_formDesc.length} karakter'
+                  : (_formDesc.isNotEmpty ? 'Draft' : 'Opsional'),
+            ),
+            (
+              'Kategori / Tag',
+              Icons.label_outline_rounded,
+              _formTag.isEmpty
+                  ? 'Klik untuk memilih tag kategori'
+                  : 'Tag aktif: $_formTag',
+              _formTag.isNotEmpty ? _formTag : 'Pilih',
+            ),
+            (
+              'Nilai / Harga',
+              Icons.price_change_outlined,
+              _formPrice.isEmpty
+                  ? 'Klik untuk memasukkan nilai harga'
+                  : fmtPrice(_formPrice),
+              _formPrice.isNotEmpty
+                  ? fmtPrice(_formPrice).replaceAll('Rp ', 'Rp ')
+                  : '',
+            ),
+            (
+              'Thumbnail / Icon',
+              Icons.image_outlined,
+              _formIcon == null
+                  ? 'Klik untuk memilih icon thumbnail'
+                  : 'Icon terpilih',
+              _formIcon != null ? 'Terpilih' : '',
+            ),
+            (
+              'Tanggal dibuat',
+              Icons.event_available_rounded,
+              _formDate == null
+                  ? 'Klik untuk memilih tanggal & waktu'
+                  : '${_formDate!.day} ${_monthId(_formDate!.month)} ${_formDate!.year} • ${_formDate!.hour.toString().padLeft(2, '0')}:${_formDate!.minute.toString().padLeft(2, '0')} WIB',
+              _formDate != null ? 'Terjadwal' : '',
+            ),
           ]
         : [
-            ('Detail Lengkap', Icons.info_outline_rounded, item?.subtitle ?? '-', ''),
-            ('Dibuat pada', Icons.calendar_today_outlined, '${createdDate.day} ${_monthId(createdDate.month)} ${createdDate.year} • 09:12 WIB', user.name),
-            ('Terakhir diperbarui', Icons.update_outlined, '${updatedDate.day} ${_monthId(updatedDate.month)} ${updatedDate.year} • ${updatedDate.hour.toString().padLeft(2,'0')}:${(updatedDate.minute).toString().padLeft(2,'0')} WIB', user.name),
-            ('Riwayat perubahan', Icons.history_outlined, '4 revisi • terakhir oleh ${user.name}', 'Lihat Riwayat'),
-            ('Lampiran & File', Icons.attach_file_outlined, item?.value ?? '-', '${item != null ? _guessFileCount(item.title) : 0} File'),
-            ('Kolaborator', Icons.people_outline, '${user.name}, Tim Kreavana', '2 Orang'),
+            (
+              'Detail Lengkap',
+              Icons.info_outline_rounded,
+              item?.subtitle ?? '-',
+              '',
+            ),
+            (
+              'Dibuat pada',
+              Icons.calendar_today_outlined,
+              '${createdDate.day} ${_monthId(createdDate.month)} ${createdDate.year} • 09:12 WIB',
+              user.name,
+            ),
+            (
+              'Terakhir diperbarui',
+              Icons.update_outlined,
+              '${updatedDate.day} ${_monthId(updatedDate.month)} ${updatedDate.year} • ${updatedDate.hour.toString().padLeft(2, '0')}:${(updatedDate.minute).toString().padLeft(2, '0')} WIB',
+              user.name,
+            ),
+            (
+              'Riwayat perubahan',
+              Icons.history_outlined,
+              '4 revisi • terakhir oleh ${user.name}',
+              'Lihat Riwayat',
+            ),
+            (
+              'Lampiran & File',
+              Icons.attach_file_outlined,
+              item?.value ?? '-',
+              '${item != null ? _guessFileCount(item.title) : 0} File',
+            ),
+            (
+              'Kolaborator',
+              Icons.people_outline,
+              '${user.name}, Tim Kreavana',
+              '2 Orang',
+            ),
           ];
     return ListView(
       controller: scrollCtrl,
@@ -5638,9 +8696,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
               color: isDark ? AppTheme.cardDark2 : Colors.grey.shade50,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: isDark
-                    ? AppTheme.inputBorder
-                    : Colors.grey.shade200,
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
               ),
             ),
             child: Text(
@@ -5648,8 +8704,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
               style: TextStyle(
                 fontSize: 12,
                 height: 1.5,
-                color:
-                    isDark ? AppTheme.textMuted : Colors.grey.shade700,
+                color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
               ),
             ),
           ),
@@ -5689,9 +8744,17 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                         backgroundColor: AppTheme.primaryPurple,
-                        content: const Text('Riwayat revisi sedang dimuat...', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                        content: const Text(
+                          'Riwayat revisi sedang dimuat...',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                         duration: const Duration(milliseconds: 1200),
                       ),
                     );
@@ -5699,9 +8762,17 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                         backgroundColor: AppTheme.primaryPurple,
-                        content: Text('Membuka lampiran ${f.$1}...', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                        content: Text(
+                          'Membuka lampiran ${f.$1}...',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                         duration: const Duration(milliseconds: 1200),
                       ),
                     );
@@ -5709,9 +8780,17 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                         backgroundColor: AppTheme.primaryPurple,
-                        content: Text('${f.$1} disalin ke clipboard ✓', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                        content: Text(
+                          '${f.$1} disalin ke clipboard ✓',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                         duration: const Duration(milliseconds: 1200),
                       ),
                     );
@@ -5725,9 +8804,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                   color: isDark ? AppTheme.cardDark2 : Colors.white,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: isDark
-                        ? AppTheme.inputBorder
-                        : Colors.grey.shade200,
+                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
                   ),
                 ),
                 child: Row(
@@ -5744,8 +8821,11 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(f.$2,
-                          size: 16, color: AppTheme.primaryPurple),
+                      child: Icon(
+                        f.$2,
+                        size: 16,
+                        color: AppTheme.primaryPurple,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -5757,9 +8837,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w800,
-                              color: isDark
-                                  ? Colors.white
-                                  : AppTheme.textDark,
+                              color: isDark ? Colors.white : AppTheme.textDark,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -5777,12 +8855,24 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                           if (f.$4.isNotEmpty) ...[
                             const SizedBox(height: 3),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
-                                color: AppTheme.primaryPurple.withValues(alpha: 0.08),
+                                color: AppTheme.primaryPurple.withValues(
+                                  alpha: 0.08,
+                                ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Text(f.$4, style: TextStyle(fontSize: 9.5, color: AppTheme.primaryPurple, fontWeight: FontWeight.w800)),
+                              child: Text(
+                                f.$4,
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  color: AppTheme.primaryPurple,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
                             ),
                           ],
                         ],
@@ -5791,9 +8881,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                     Icon(
                       Icons.chevron_right_rounded,
                       size: 18,
-                      color: isDark
-                          ? AppTheme.textMuted
-                          : Colors.grey.shade400,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
                     ),
                   ],
                 ),
@@ -5811,18 +8899,46 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
   }
 
   String _monthId(int m) {
-    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
     return months[(m - 1).clamp(0, 11)];
   }
 
-  Widget _buildReviewTab(BuildContext context,
-      ScrollController scrollCtrl, bool isDark) {
+  Widget _buildReviewTab(
+    BuildContext context,
+    ScrollController scrollCtrl,
+    bool isDark,
+  ) {
     final user = widget.user;
-    final List<({String name, String city, String text, int stars, String date, bool verified, int likes})> baseReviews = [
+    final List<
+      ({
+        String name,
+        String city,
+        String text,
+        int stars,
+        String date,
+        bool verified,
+        int likes,
+      })
+    >
+    baseReviews = [
       (
         name: 'Siti Aisyah Putri',
         city: 'Jakarta Selatan',
-        text: 'Hasil editan video sangat memuaskan! Color grading-nya sinematik banget, sesuai dengan referensi yang saya berikan. Komunikatif dan revisi cepat. Recommended buat yang butuh edit video profesional!',
+        text:
+            'Hasil editan video sangat memuaskan! Color grading-nya sinematik banget, sesuai dengan referensi yang saya berikan. Komunikatif dan revisi cepat. Recommended buat yang butuh edit video profesional!',
         stars: 5,
         date: '2 hari lalu',
         verified: true,
@@ -5831,7 +8947,8 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
       (
         name: 'Budi Pratama',
         city: 'Bandung',
-        text: 'Retouch foto prewedding hasilnya natural, tidak over-edit. Kulit terlihat nyata tapi tetap bersih. Pengiriman tepat waktu bahkan lebih cepat dari deadline. Harga worth it untuk kualitas begini.',
+        text:
+            'Retouch foto prewedding hasilnya natural, tidak over-edit. Kulit terlihat nyata tapi tetap bersih. Pengiriman tepat waktu bahkan lebih cepat dari deadline. Harga worth it untuk kualitas begini.',
         stars: 5,
         date: '5 hari lalu',
         verified: true,
@@ -5840,7 +8957,8 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
       (
         name: 'Dewi Lestari',
         city: 'Surabaya',
-        text: 'Motion graphics untuk logo perusahaan saya sangat bagus, smooth dan elegan. Cuma satu revisi kecil dan langsung jadi. Komunikasi via WA cepat, nggak bikin nunggu.',
+        text:
+            'Motion graphics untuk logo perusahaan saya sangat bagus, smooth dan elegan. Cuma satu revisi kecil dan langsung jadi. Komunikasi via WA cepat, nggak bikin nunggu.',
         stars: 4,
         date: '1 minggu lalu',
         verified: true,
@@ -5849,7 +8967,8 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
       (
         name: 'Rizky Ramadhani',
         city: 'Yogyakarta',
-        text: 'Pengerjaan foto produk untuk katalog UMKM saya rapi banget. Background bersih, warna produk akurat. Sudah jadi langganan sampai 3 batch. Paket hemat benar-benar hemat.',
+        text:
+            'Pengerjaan foto produk untuk katalog UMKM saya rapi banget. Background bersih, warna produk akurat. Sudah jadi langganan sampai 3 batch. Paket hemat benar-benar hemat.',
         stars: 5,
         date: '2 minggu lalu',
         verified: false,
@@ -5857,7 +8976,9 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
       ),
     ];
     final reviews = [..._customReviews, ...baseReviews];
-    final totalReviewsBase = user.followersCount > 0 ? (user.followersCount ~/ 2).clamp(24, 248) : 124;
+    final totalReviewsBase = user.followersCount > 0
+        ? (user.followersCount ~/ 2).clamp(24, 248)
+        : 124;
     final totalReviews = totalReviewsBase + _customReviews.length;
     var fiveStar = (totalReviewsBase * 0.72).round();
     var fourStar = (totalReviewsBase * 0.18).round();
@@ -5878,7 +8999,13 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
       }
     }
     final rating = totalReviews > 0
-        ? ((5 * fiveStar + 4 * fourStar + 3 * threeStar + 2 * twoStar + 1 * oneStar) / totalReviews).toStringAsFixed(1)
+        ? ((5 * fiveStar +
+                      4 * fourStar +
+                      3 * threeStar +
+                      2 * twoStar +
+                      1 * oneStar) /
+                  totalReviews)
+              .toStringAsFixed(1)
         : '4.9';
     final filterLabels = const ['Semua', '5 Bintang', 'Dengan Foto', 'Terbaru'];
     return ListView(
@@ -5962,8 +9089,16 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
               Expanded(
                 child: Column(
                   children: List.generate(5, (i) {
-                    final counts = [fiveStar, fourStar, threeStar, twoStar, oneStar];
-                    final pct = totalReviews > 0 ? counts[i] / totalReviews : 0.0;
+                    final counts = [
+                      fiveStar,
+                      fourStar,
+                      threeStar,
+                      twoStar,
+                      oneStar,
+                    ];
+                    final pct = totalReviews > 0
+                        ? counts[i] / totalReviews
+                        : 0.0;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Row(
@@ -5996,8 +9131,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                       height: 6,
                                       decoration: BoxDecoration(
                                         gradient: AppTheme.primaryGradient,
-                                        borderRadius:
-                                            BorderRadius.circular(3),
+                                        borderRadius: BorderRadius.circular(3),
                                       ),
                                     ),
                                   ),
@@ -6006,7 +9140,16 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                             ),
                           ),
                           const SizedBox(width: 4),
-                          Text('${counts[i]}', style: TextStyle(fontSize: 9, color: isDark ? AppTheme.textMuted : Colors.grey.shade500, fontWeight: FontWeight.w600)),
+                          Text(
+                            '${counts[i]}',
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: isDark
+                                  ? AppTheme.textMuted
+                                  : Colors.grey.shade500,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ],
                       ),
                     );
@@ -6028,18 +9171,40 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeOutCubic,
-                padding: EdgeInsets.symmetric(horizontal: _selectedFilterReview == i ? 16 : 12, vertical: 8),
+                padding: EdgeInsets.symmetric(
+                  horizontal: _selectedFilterReview == i ? 16 : 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  gradient: _selectedFilterReview == i ? AppTheme.primaryGradient : null,
-                  color: _selectedFilterReview == i ? null : (isDark ? AppTheme.cardDark2 : Colors.white),
+                  gradient: _selectedFilterReview == i
+                      ? AppTheme.primaryGradient
+                      : null,
+                  color: _selectedFilterReview == i
+                      ? null
+                      : (isDark ? AppTheme.cardDark2 : Colors.white),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _selectedFilterReview == i ? Colors.transparent : (isDark ? AppTheme.inputBorder : Colors.grey.shade200)),
-                  boxShadow: _selectedFilterReview == i ? AppTheme.cardShadowLight : null,
+                  border: Border.all(
+                    color: _selectedFilterReview == i
+                        ? Colors.transparent
+                        : (isDark
+                              ? AppTheme.inputBorder
+                              : Colors.grey.shade200),
+                  ),
+                  boxShadow: _selectedFilterReview == i
+                      ? AppTheme.cardShadowLight
+                      : null,
                 ),
                 child: Center(
-                  child: Text(filterLabels[i],
-                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800,
-                      color: _selectedFilterReview == i ? Colors.white : (isDark ? Colors.white : AppTheme.textDark))),
+                  child: Text(
+                    filterLabels[i],
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      color: _selectedFilterReview == i
+                          ? Colors.white
+                          : (isDark ? Colors.white : AppTheme.textDark),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -6058,12 +9223,22 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                 ),
               ),
             ),
+            // Hiding review button until backend exposes can_review eligibility
+            /*
             TextButton.icon(
               onPressed: _showWriteReviewSheet,
               icon: const Icon(Icons.edit_note_rounded, size: 14),
-              label: const Text('Tulis Ulasan', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800)),
-              style: TextButton.styleFrom(foregroundColor: AppTheme.primaryPurple, padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+              label: const Text(
+                'Tulis Ulasan',
+                style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800),
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: AppTheme.primaryPurple,
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+              ),
             ),
+            */
           ],
         ),
         const SizedBox(height: 10),
@@ -6084,9 +9259,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
               color: isDark ? AppTheme.cardDark2 : Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isDark
-                    ? AppTheme.inputBorder
-                    : Colors.grey.shade200,
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
               ),
             ),
             child: Column(
@@ -6095,16 +9268,27 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                 Row(
                   children: [
                     Container(
-                      width: 32, height: 32,
-                      decoration: BoxDecoration(shape: BoxShape.circle,
-                        gradient: LinearGradient(colors: grad)),
-                      child: Center(child: Text(r.name[0], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12))),
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(colors: grad),
+                      ),
+                      child: Center(
+                        child: Text(
+                          r.name[0],
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
@@ -6121,13 +9305,35 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                               if (r.verified) ...[
                                 const SizedBox(width: 6),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(color: AppTheme.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
-                                  child: Row(mainAxisSize: MainAxisSize.min, children: const [
-                                    Icon(Icons.verified_rounded, size: 9, color: AppTheme.success),
-                                    SizedBox(width: 3),
-                                    Text('Terbeli', style: TextStyle(fontSize: 8.5, color: AppTheme.success, fontWeight: FontWeight.w800)),
-                                  ]),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.success.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Icon(
+                                        Icons.verified_rounded,
+                                        size: 9,
+                                        color: AppTheme.success,
+                                      ),
+                                      SizedBox(width: 3),
+                                      Text(
+                                        'Terbeli',
+                                        style: TextStyle(
+                                          fontSize: 8.5,
+                                          color: AppTheme.success,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ],
@@ -6135,7 +9341,13 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                           const SizedBox(height: 1),
                           Row(
                             children: [
-                              Icon(Icons.location_on_rounded, size: 9, color: isDark ? AppTheme.textMuted : Colors.grey.shade500),
+                              Icon(
+                                Icons.location_on_rounded,
+                                size: 9,
+                                color: isDark
+                                    ? AppTheme.textMuted
+                                    : Colors.grey.shade500,
+                              ),
                               const SizedBox(width: 2),
                               Text(
                                 '${r.city} • ${r.date}',
@@ -6155,8 +9367,13 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                       children: List.generate(5, (i) {
                         return Padding(
                           padding: const EdgeInsets.only(left: 1),
-                          child: Icon(i < r.stars ? Icons.star_rounded : Icons.star_border_rounded,
-                              size: 12, color: const Color(0xFFF59E0B)),
+                          child: Icon(
+                            i < r.stars
+                                ? Icons.star_rounded
+                                : Icons.star_border_rounded,
+                            size: 12,
+                            color: const Color(0xFFF59E0B),
+                          ),
                         );
                       }),
                     ),
@@ -6168,8 +9385,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                   style: TextStyle(
                     fontSize: 11.5,
                     height: 1.45,
-                    color:
-                        isDark ? AppTheme.textMuted : Colors.grey.shade700,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -6187,15 +9403,39 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                         });
                       },
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(liked ? Icons.thumb_up_rounded : Icons.thumb_up_outlined,
-                            size: 13, color: liked ? AppTheme.primaryPurple : (isDark ? AppTheme.textMuted : Colors.grey.shade500)),
-                          const SizedBox(width: 5),
-                          Text('${r.likes + (liked ? 1 : 0)} Membantu',
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
-                              color: liked ? AppTheme.primaryPurple : (isDark ? AppTheme.textMuted : Colors.grey.shade500))),
-                        ]),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              liked
+                                  ? Icons.thumb_up_rounded
+                                  : Icons.thumb_up_outlined,
+                              size: 13,
+                              color: liked
+                                  ? AppTheme.primaryPurple
+                                  : (isDark
+                                        ? AppTheme.textMuted
+                                        : Colors.grey.shade500),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              '${r.likes + (liked ? 1 : 0)} Membantu',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: liked
+                                    ? AppTheme.primaryPurple
+                                    : (isDark
+                                          ? AppTheme.textMuted
+                                          : Colors.grey.shade500),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -6203,20 +9443,50 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                       borderRadius: BorderRadius.circular(8),
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(behavior: SnackBarBehavior.floating,
+                          SnackBar(
+                            behavior: SnackBarBehavior.floating,
                             backgroundColor: AppTheme.primaryPurple,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            content: Text('Membalas ulasan dari ${r.name.split(' ')[0]}...',
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            content: Text(
+                              'Membalas ulasan dari ${r.name.split(' ')[0]}...',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
                         );
                       },
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.chat_bubble_outline_rounded, size: 13, color: isDark ? AppTheme.textMuted : Colors.grey.shade500),
-                          const SizedBox(width: 5),
-                          Text('Balas', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: isDark ? AppTheme.textMuted : Colors.grey.shade500)),
-                        ]),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.chat_bubble_outline_rounded,
+                              size: 13,
+                              color: isDark
+                                  ? AppTheme.textMuted
+                                  : Colors.grey.shade500,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              'Balas',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: isDark
+                                    ? AppTheme.textMuted
+                                    : Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const Spacer(),
@@ -6224,13 +9494,29 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                       borderRadius: BorderRadius.circular(8),
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(behavior: SnackBarBehavior.floating,
+                          const SnackBar(
+                            behavior: SnackBarBehavior.floating,
                             backgroundColor: Color(0xFFDC2626),
-                            content: Text('Ulasan dilaporkan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
+                            content: Text(
+                              'Ulasan dilaporkan',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
                         );
                       },
-                      child: Padding(padding: const EdgeInsets.all(6),
-                        child: Icon(Icons.more_horiz_rounded, size: 14, color: isDark ? AppTheme.textMuted : Colors.grey.shade400)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Icon(
+                          Icons.more_horiz_rounded,
+                          size: 14,
+                          color: isDark
+                              ? AppTheme.textMuted
+                              : Colors.grey.shade400,
+                        ),
+                      ),
                     ),
                   ],
                 ),

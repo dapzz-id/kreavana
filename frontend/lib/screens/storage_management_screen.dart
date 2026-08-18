@@ -7,7 +7,8 @@ class StorageManagementScreen extends StatefulWidget {
   const StorageManagementScreen({super.key});
 
   @override
-  State<StorageManagementScreen> createState() => _StorageManagementScreenState();
+  State<StorageManagementScreen> createState() =>
+      _StorageManagementScreenState();
 }
 
 class _StorageManagementScreenState extends State<StorageManagementScreen> {
@@ -22,8 +23,22 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
   String _selectedSort = 'Terbaru';
 
   final List<String> _types = ['Semua', 'Foto', 'Video', 'Audio', 'Dokumen'];
-  final List<String> _categories = ['Semua', 'Upload Saya', 'Purchased Asset', 'Chat Attachment', 'Portfolio', 'Marketplace'];
-  final List<String> _sorts = ['Terbaru', 'Terlama', 'A-Z', 'Z-A', 'Ukuran terbesar', 'Ukuran terkecil'];
+  final List<String> _categories = [
+    'Semua',
+    'Upload Saya',
+    'Purchased Asset',
+    'Chat Attachment',
+    'Portfolio',
+    'Marketplace',
+  ];
+  final List<String> _sorts = [
+    'Terbaru',
+    'Terlama',
+    'A-Z',
+    'Z-A',
+    'Ukuran terbesar',
+    'Ukuran terkecil',
+  ];
 
   @override
   void initState() {
@@ -45,15 +60,19 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
         if (res.containsKey('files') && res['files']['data'] != null) {
           _files = res['files']['data'];
         } else {
-           _files = [];
+          _files = [];
         }
-        _usedStorageBytes = res['used_storage_bytes'] ?? user?.usedStorageBytes ?? 0;
-        _storageLimitBytes = res['storage_limit_bytes'] ?? user?.storageLimitBytes ?? 0;
+        _usedStorageBytes =
+            res['used_storage_bytes'] ?? user?.usedStorageBytes ?? 0;
+        _storageLimitBytes =
+            res['storage_limit_bytes'] ?? user?.storageLimitBytes ?? 0;
         _isLoading = false;
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
         setState(() => _isLoading = false);
       }
     }
@@ -68,7 +87,9 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Apakah Anda yakin ingin menghapus file ini? Fitur yang menggunakan file ini akan menampilkan "Media telah dihapus".'),
+            const Text(
+              'Apakah Anda yakin ingin menghapus file ini? Fitur yang menggunakan file ini akan menampilkan "Media telah dihapus".',
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: reasonController,
@@ -98,12 +119,16 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
     try {
       await StorageService.deleteFile(id, reason: reasonController.text);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('File berhasil dihapus')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('File berhasil dihapus')));
         _loadStorageData();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menghapus file: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal menghapus file: $e')));
       }
     }
   }
@@ -112,12 +137,16 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
     try {
       await StorageService.retryPurchasedClone(id);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('File berhasil disimpan ke storage.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('File berhasil disimpan ke storage.')),
+        );
         _loadStorageData();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal retry: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal retry: $e')));
       }
     }
   }
@@ -125,7 +154,8 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    if (bytes < 1024 * 1024 * 1024)
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
 
@@ -139,13 +169,12 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
       return const Scaffold(body: Center(child: Text('Gagal memuat data')));
     }
 
-    final percentage = _storageLimitBytes > 0 ? (_usedStorageBytes / _storageLimitBytes) : 0.0;
+    final percentage = _storageLimitBytes > 0
+        ? (_usedStorageBytes / _storageLimitBytes)
+        : 0.0;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manajemen Storage'),
-        elevation: 1,
-      ),
+      appBar: AppBar(title: const Text('Manajemen Storage'), elevation: 1),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -167,7 +196,10 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('${_formatBytes(_usedStorageBytes)} terpakai', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  '${_formatBytes(_usedStorageBytes)} terpakai',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 Text('${_formatBytes(_storageLimitBytes)} total'),
               ],
             ),
@@ -178,7 +210,9 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
                 children: [
                   DropdownButton<String>(
                     value: _selectedType,
-                    items: _types.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                    items: _types
+                        .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                        .toList(),
                     onChanged: (v) {
                       setState(() => _selectedType = v!);
                       _loadStorageData();
@@ -187,7 +221,9 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
                   const SizedBox(width: 8),
                   DropdownButton<String>(
                     value: _selectedCategory,
-                    items: _categories.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                    items: _categories
+                        .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                        .toList(),
                     onChanged: (v) {
                       setState(() => _selectedCategory = v!);
                       _loadStorageData();
@@ -196,7 +232,9 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
                   const SizedBox(width: 8),
                   DropdownButton<String>(
                     value: _selectedSort,
-                    items: _sorts.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                    items: _sorts
+                        .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                        .toList(),
                     onChanged: (v) {
                       setState(() => _selectedSort = v!);
                       _loadStorageData();
@@ -207,9 +245,9 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: _isLoading 
-                ? const Center(child: CircularProgressIndicator())
-                : _files.isEmpty
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _files.isEmpty
                   ? const Center(child: Text('Belum ada file yang diunggah.'))
                   : ListView.builder(
                       itemCount: _files.length,
@@ -221,25 +259,42 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
                           margin: const EdgeInsets.only(bottom: 8),
                           color: isPending ? Colors.grey.shade100 : null,
                           child: ListTile(
-                            leading: Icon(isPending ? Icons.warning : Icons.insert_drive_file, color: isPending ? Colors.orange : null),
-                            title: Text(file['original_name'] ?? 'Unknown File', maxLines: 1, overflow: TextOverflow.ellipsis),
+                            leading: Icon(
+                              isPending
+                                  ? Icons.warning
+                                  : Icons.insert_drive_file,
+                              color: isPending ? Colors.orange : null,
+                            ),
+                            title: Text(
+                              file['original_name'] ?? 'Unknown File',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('${file['category'] ?? '-'} • ${_formatBytes(file['size'] ?? 0)}'),
+                                Text(
+                                  '${file['category'] ?? '-'} • ${_formatBytes(file['size'] ?? 0)}',
+                                ),
                                 if (isPending)
-                                  const Text('Status: Storage penuh', style: TextStyle(color: Colors.red)),
+                                  const Text(
+                                    'Status: Storage penuh',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
                               ],
                             ),
-                            trailing: isPending 
-                              ? TextButton(
-                                  onPressed: () => _retryClone(file['id']),
-                                  child: const Text('Simpan ke Storage Saya'),
-                                )
-                              : IconButton(
-                                  icon: const Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () => _deleteFile(file['id']),
-                                ),
+                            trailing: isPending
+                                ? TextButton(
+                                    onPressed: () => _retryClone(file['id']),
+                                    child: const Text('Simpan ke Storage Saya'),
+                                  )
+                                : IconButton(
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.red,
+                                    ),
+                                    onPressed: () => _deleteFile(file['id']),
+                                  ),
                           ),
                         );
                       },

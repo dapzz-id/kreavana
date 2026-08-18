@@ -16,21 +16,11 @@ class MarketplacePurchaseTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function getAuthHeaders(User $user)
-    {
-        $token = JWTAuth::fromUser($user);
-        $payload = JWTAuth::setToken($token)->getPayload();
-        $jti = $payload->get('jti');
-        if ($jti) {
-            \App\Services\JtiService::store($jti, 3600);
-        }
-        return ['Authorization' => "Bearer $token"];
-    }
-
+    
     public function test_successful_purchase_deducts_balance_and_awards_bonus()
     {
-        $creator = User::factory()->create(['role' => 'creator', 'balance' => 0]);
-        $buyer = User::factory()->create(['balance' => 150000]); // Buyer has enough balance
+        $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator, 'balance' => 0]);
+        $buyer = User::factory()->create(['balance' => 150000, 'wallet_pin' => \Illuminate\Support\Facades\Hash::make('1234')]); // Buyer has enough balance
 
         $item = MarketplaceItem::create([
             'user_id' => $creator->id,
@@ -39,9 +29,11 @@ class MarketplacePurchaseTest extends TestCase
             'category' => 'Fotografi',
             'type' => 'paid',
             'price' => 100000,
+            'status' => 'published',
+            'is_active' => true,
         ]);
 
-        $response = $this->withHeaders($this->getAuthHeaders($buyer))->postJson("/api/marketplace/{$item->id}/purchase");
+        $response = $this->withHeaders($this->getAuthHeaders($buyer))->postJson("/api/marketplace/{$item->id}/purchase", ['pin' => '1234']);
 
         $response->assertStatus(200);
 
@@ -85,8 +77,8 @@ class MarketplacePurchaseTest extends TestCase
 
     public function test_insufficient_balance_is_rejected()
     {
-        $creator = User::factory()->create(['role' => 'creator', 'balance' => 0]);
-        $buyer = User::factory()->create(['balance' => 50000]); // Insufficient balance
+        $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator, 'balance' => 0]);
+        $buyer = User::factory()->create(['balance' => 50000, 'wallet_pin' => \Illuminate\Support\Facades\Hash::make('1234')]); // Insufficient balance
 
         $item = MarketplaceItem::create([
             'user_id' => $creator->id,
@@ -95,9 +87,11 @@ class MarketplacePurchaseTest extends TestCase
             'category' => 'Fotografi',
             'type' => 'paid',
             'price' => 100000,
+            'status' => 'published',
+            'is_active' => true,
         ]);
 
-        $response = $this->withHeaders($this->getAuthHeaders($buyer))->postJson("/api/marketplace/{$item->id}/purchase");
+        $response = $this->withHeaders($this->getAuthHeaders($buyer))->postJson("/api/marketplace/{$item->id}/purchase", ['pin' => '1234']);
 
         $response->assertStatus(400);
         $response->assertJsonFragment(['message' => 'Saldo tidak mencukupi untuk melakukan pembelian ini.']);
@@ -112,8 +106,8 @@ class MarketplacePurchaseTest extends TestCase
 
     public function test_repeated_payment_gives_no_duplicate_bonus()
     {
-        $creator = User::factory()->create(['role' => 'creator', 'balance' => 0]);
-        $buyer = User::factory()->create(['balance' => 200000]);
+        $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator, 'balance' => 0]);
+        $buyer = User::factory()->create(['balance' => 200000, 'wallet_pin' => \Illuminate\Support\Facades\Hash::make('1234')]);
 
         $item = MarketplaceItem::create([
             'user_id' => $creator->id,
@@ -122,13 +116,15 @@ class MarketplacePurchaseTest extends TestCase
             'category' => 'Fotografi',
             'type' => 'paid',
             'price' => 100000,
+            'status' => 'published',
+            'is_active' => true,
         ]);
 
         // First purchase
-        $this->withHeaders($this->getAuthHeaders($buyer))->postJson("/api/marketplace/{$item->id}/purchase");
+        $this->withHeaders($this->getAuthHeaders($buyer))->postJson("/api/marketplace/{$item->id}/purchase", ['pin' => '1234']);
 
         // Second purchase
-        $response = $this->withHeaders($this->getAuthHeaders($buyer))->postJson("/api/marketplace/{$item->id}/purchase");
+        $response = $this->withHeaders($this->getAuthHeaders($buyer))->postJson("/api/marketplace/{$item->id}/purchase", ['pin' => '1234']);
 
         $response->assertStatus(400); // Bad Request because already purchased
 
@@ -141,7 +137,7 @@ class MarketplacePurchaseTest extends TestCase
 
     public function test_cannot_purchase_own_item()
     {
-        $creator = User::factory()->create(['role' => 'creator', 'balance' => 200000]);
+        $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator, 'balance' => 200000, 'wallet_pin' => \Illuminate\Support\Facades\Hash::make('1234')]);
 
         $item = MarketplaceItem::create([
             'user_id' => $creator->id,
@@ -150,9 +146,11 @@ class MarketplacePurchaseTest extends TestCase
             'category' => 'Fotografi',
             'type' => 'paid',
             'price' => 100000,
+            'status' => 'published',
+            'is_active' => true,
         ]);
 
-        $response = $this->withHeaders($this->getAuthHeaders($creator))->postJson("/api/marketplace/{$item->id}/purchase");
+        $response = $this->withHeaders($this->getAuthHeaders($creator))->postJson("/api/marketplace/{$item->id}/purchase", ['pin' => '1234']);
 
         $response->assertStatus(400);
         $response->assertJsonFragment(['message' => 'Anda tidak bisa membeli karya Anda sendiri.']);
@@ -162,8 +160,8 @@ class MarketplacePurchaseTest extends TestCase
     
     public function test_client_cannot_manipulate_price()
     {
-        $creator = User::factory()->create(['role' => 'creator', 'balance' => 0]);
-        $buyer = User::factory()->create(['balance' => 50000]); // Less than 100k, but trying to buy for 1k
+        $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator, 'balance' => 0]);
+        $buyer = User::factory()->create(['balance' => 50000, 'wallet_pin' => \Illuminate\Support\Facades\Hash::make('1234')]); // Less than 100k, but trying to buy for 1k
 
         $item = MarketplaceItem::create([
             'user_id' => $creator->id,
@@ -172,10 +170,13 @@ class MarketplacePurchaseTest extends TestCase
             'category' => 'Fotografi',
             'type' => 'paid',
             'price' => 100000,
+            'status' => 'published',
+            'is_active' => true,
         ]);
 
         // Attempting to send manipulated data
         $response = $this->withHeaders($this->getAuthHeaders($buyer))->postJson("/api/marketplace/{$item->id}/purchase", [
+            'pin' => '1234',
             'price' => 1000,
             'amount' => 1000,
             'fee' => 0,
@@ -190,10 +191,10 @@ class MarketplacePurchaseTest extends TestCase
 
     public function test_subscription_multiplier_is_applied()
     {
-        $creator = User::factory()->create(['role' => 'creator', 'balance' => 0]);
+        $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator, 'balance' => 0]);
         $creator->subscriptions()->create(['tier' => 'super', 'expires_at' => now()->addDays(30)]); // 5.0x multiplier
         
-        $buyer = User::factory()->create(['balance' => 150000]);
+        $buyer = User::factory()->create(['balance' => 150000, 'wallet_pin' => \Illuminate\Support\Facades\Hash::make('1234')]);
 
         $item = MarketplaceItem::create([
             'user_id' => $creator->id,
@@ -202,9 +203,11 @@ class MarketplacePurchaseTest extends TestCase
             'category' => 'Fotografi',
             'type' => 'paid',
             'price' => 100000,
+            'status' => 'published',
+            'is_active' => true,
         ]);
 
-        $response = $this->withHeaders($this->getAuthHeaders($buyer))->postJson("/api/marketplace/{$item->id}/purchase");
+        $response = $this->withHeaders($this->getAuthHeaders($buyer))->postJson("/api/marketplace/{$item->id}/purchase", ['pin' => '1234']);
 
         $response->assertStatus(200);
 
@@ -214,8 +217,8 @@ class MarketplacePurchaseTest extends TestCase
 
     public function test_transaction_rolls_back_on_error()
     {
-        $creator = User::factory()->create(['role' => 'creator', 'balance' => 0]);
-        $buyer = User::factory()->create(['balance' => 150000]);
+        $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator, 'balance' => 0]);
+        $buyer = User::factory()->create(['balance' => 150000, 'wallet_pin' => \Illuminate\Support\Facades\Hash::make('1234')]);
 
         $item = MarketplaceItem::create([
             'user_id' => $creator->id,
@@ -224,6 +227,8 @@ class MarketplacePurchaseTest extends TestCase
             'category' => 'Fotografi',
             'type' => 'paid',
             'price' => 100000,
+            'status' => 'published',
+            'is_active' => true,
         ]);
 
         // Force a failure in the transaction by using Model events
@@ -231,7 +236,7 @@ class MarketplacePurchaseTest extends TestCase
             throw new \Exception("Simulated Failure");
         });
 
-        $response = $this->withHeaders($this->getAuthHeaders($buyer))->postJson("/api/marketplace/{$item->id}/purchase");
+        $response = $this->withHeaders($this->getAuthHeaders($buyer))->postJson("/api/marketplace/{$item->id}/purchase", ['pin' => '1234']);
 
         $response->assertStatus(500);
 
@@ -246,8 +251,8 @@ class MarketplacePurchaseTest extends TestCase
 
     public function test_concurrent_requests_do_not_double_spend()
     {
-        $creator = User::factory()->create(['role' => 'creator', 'balance' => 0]);
-        $buyer = User::factory()->create(['balance' => 150000]);
+        $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator, 'balance' => 0]);
+        $buyer = User::factory()->create(['balance' => 150000, 'wallet_pin' => \Illuminate\Support\Facades\Hash::make('1234')]);
 
         $item1 = MarketplaceItem::create([
             'user_id' => $creator->id,
@@ -256,6 +261,8 @@ class MarketplacePurchaseTest extends TestCase
             'category' => 'Fotografi',
             'type' => 'paid',
             'price' => 100000,
+            'status' => 'published',
+            'is_active' => true,
         ]);
         
         $item2 = MarketplaceItem::create([
@@ -265,6 +272,8 @@ class MarketplacePurchaseTest extends TestCase
             'category' => 'Fotografi',
             'type' => 'paid',
             'price' => 80000,
+            'status' => 'published',
+            'is_active' => true,
         ]);
 
         // Standard Laravel tests run synchronously in one PHP process.
@@ -274,10 +283,10 @@ class MarketplacePurchaseTest extends TestCase
         // that DB state is securely transitioned. If two processes ran simultaneously, 
         // the lockForUpdate() would serialize them, having the exact same effect.
         
-        $response1 = $this->withHeaders($this->getAuthHeaders($buyer))->postJson("/api/marketplace/{$item1->id}/purchase");
+        $response1 = $this->withHeaders($this->getAuthHeaders($buyer))->postJson("/api/marketplace/{$item1->id}/purchase", ['pin' => '1234']);
         $response1->assertStatus(200);
         
-        $response2 = $this->withHeaders($this->getAuthHeaders($buyer))->postJson("/api/marketplace/{$item2->id}/purchase");
+        $response2 = $this->withHeaders($this->getAuthHeaders($buyer))->postJson("/api/marketplace/{$item2->id}/purchase", ['pin' => '1234']);
         $response2->assertStatus(400); // 50,000 balance left, needs 80,000
 
         $this->assertEquals(50000, $buyer->fresh()->balance);

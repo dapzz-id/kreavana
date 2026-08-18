@@ -30,7 +30,9 @@ class WalletTransactionModel {
       id: json['id']?.toString(),
       userId: json['user_id']?.toString() ?? '',
       type: json['type'] ?? '',
-      amount: json['amount'] != null ? double.parse(json['amount'].toString()) : 0.0,
+      amount: json['amount'] != null
+          ? double.parse(json['amount'].toString())
+          : 0.0,
       fee: json['fee'] != null ? double.parse(json['fee'].toString()) : 0.0,
       paymentMethod: json['payment_method'] ?? '',
       paymentProvider: json['payment_provider'],

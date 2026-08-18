@@ -36,7 +36,23 @@ class AppServiceProvider extends ServiceProvider
     {
         \Carbon\Carbon::setLocale(config('app.locale', 'id'));
         $this->validateAuthConfiguration();
+        $this->validateTurnstileConfiguration();
         $this->configureRateLimiters();
+    }
+
+    private function validateTurnstileConfiguration(): void
+    {
+        if (! app()->environment('production')) {
+            return;
+        }
+
+        if (empty(config('turnstile.site_key'))) {
+            throw new RuntimeException('Production requires TURNSTILE_SITE_KEY.');
+        }
+
+        if (empty(config('turnstile.secret_key'))) {
+            throw new RuntimeException('Production requires TURNSTILE_SECRET_KEY.');
+        }
     }
 
     private function validateAuthConfiguration(): void

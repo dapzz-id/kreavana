@@ -9,5 +9,8 @@ class PipHandlerImpl implements PipHandler {
   Future<void> enterPipMode({(int, int) aspectRatio = (16, 9)}) async {}
 
   @override
-  Future<void> setAutoPipMode({(int, int) aspectRatio = (16, 9), bool autoEnter = true}) async {}
+  Future<void> setAutoPipMode({
+    (int, int) aspectRatio = (16, 9),
+    bool autoEnter = true,
+  }) async {}
 }

@@ -48,8 +48,6 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
     _loadLocations();
   }
 
-
-
   void _zoomIn() {
     final targetZoom = (_mapController.camera.zoom + 1.0).clamp(3.0, 18.0);
     _mapController.move(_mapController.camera.center, targetZoom);
@@ -82,9 +80,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
 
   List<OpportunityModel> get _filtered {
     if (_selectedCategory == 'all') return _locations;
-    return _locations
-        .where((l) => l.subRoleSlug == _selectedCategory)
-        .toList();
+    return _locations.where((l) => l.subRoleSlug == _selectedCategory).toList();
   }
 
   Color _markerColor(String? subRole) {
@@ -223,16 +219,15 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                     checkmarkColor: color,
                     labelStyle: TextStyle(
                       fontSize: isMobile ? 11 : 12,
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                       color: isSelected
                           ? color
                           : (isDark ? Colors.white70 : Colors.black87),
                     ),
                     onSelected: (_) {
-                      setState(
-                        () => _selectedCategory = cat['slug'] as String,
-                      );
+                      setState(() => _selectedCategory = cat['slug'] as String);
                     },
                   ),
                 );
@@ -329,12 +324,10 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                             markers: filtered
                                 .where(
                                   (l) =>
-                                      l.latitude != null &&
-                                      l.longitude != null,
+                                      l.latitude != null && l.longitude != null,
                                 )
                                 .map((loc) {
-                                  final color =
-                                      _markerColor(loc.subRoleSlug);
+                                  final color = _markerColor(loc.subRoleSlug);
                                   final markerWidth = isMobile ? 90.0 : 120.0;
                                   final markerHeight = isMobile ? 50.0 : 65.0;
                                   return Marker(
@@ -561,14 +554,18 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
           ),
         ],
       ),
-      floatingActionButton: (widget.user.role == 'creator' || widget.user.isCreator)
+      floatingActionButton:
+          (widget.user.role == 'creator' || widget.user.isCreator)
           ? FloatingActionButton.extended(
               onPressed: () => _showAddLocationDialog(context),
               backgroundColor: Colors.teal.shade600,
               icon: const Icon(Icons.add_location_alt, color: Colors.white),
               label: const Text(
                 'Tambah Lokasi',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             )
           : null,
@@ -582,7 +579,9 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
     final titleController = TextEditingController();
     final descController = TextEditingController();
     final addressController = TextEditingController();
-    final phoneController = TextEditingController(text: widget.user.phone ?? '');
+    final phoneController = TextEditingController(
+      text: widget.user.phone ?? '',
+    );
     final latController = TextEditingController();
     final lngController = TextEditingController();
     String selectedSubRole = 'mc';
@@ -612,7 +611,9 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
           builder: (_, scrollController) => Container(
             decoration: BoxDecoration(
               color: isDark ? AppTheme.cardBg : Colors.white,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
             ),
             child: ListView(
               controller: scrollController,
@@ -643,7 +644,10 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                 ),
                 const SizedBox(height: 20),
                 // Sub-role
-                const Text('Posisi / Sub-Role Anda', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'Posisi / Sub-Role Anda',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -655,10 +659,13 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                       selected: isSelected,
                       selectedColor: Colors.teal.withValues(alpha: 0.2),
                       labelStyle: TextStyle(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                         color: isSelected ? Colors.teal.shade700 : null,
                       ),
-                      onSelected: (_) => setModalState(() => selectedSubRole = sr['slug']!),
+                      onSelected: (_) =>
+                          setModalState(() => selectedSubRole = sr['slug']!),
                     );
                   }).toList(),
                 ),
@@ -669,7 +676,9 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                   decoration: InputDecoration(
                     labelText: 'Judul / Nama Layanan',
                     hintText: 'Contoh: Andi - MC Wedding & Corporate',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -679,8 +688,11 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                   maxLines: 3,
                   decoration: InputDecoration(
                     labelText: 'Deskripsi Layanan',
-                    hintText: 'Jelaskan keahlian, pengalaman, dan jasa yang Anda tawarkan...',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    hintText:
+                        'Jelaskan keahlian, pengalaman, dan jasa yang Anda tawarkan...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -693,7 +705,9 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                     labelText: 'Nomor Telepon / WhatsApp Kontak',
                     hintText: 'Contoh: 081234567890',
                     prefixIcon: const Icon(Icons.phone),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -703,7 +717,9 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                   decoration: InputDecoration(
                     labelText: 'Alamat / Lokasi',
                     hintText: 'Contoh: Kuningan, Jakarta Selatan',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -713,11 +729,16 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                     Expanded(
                       child: TextField(
                         controller: latController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                          signed: true,
+                        ),
                         decoration: InputDecoration(
                           labelText: 'Latitude',
                           hintText: '-6.2088',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
@@ -725,11 +746,16 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                     Expanded(
                       child: TextField(
                         controller: lngController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                          signed: true,
+                        ),
                         decoration: InputDecoration(
                           labelText: 'Longitude',
                           hintText: '106.8456',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
@@ -737,12 +763,17 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                 ),
                 const SizedBox(height: 16),
                 // Category
-                const Text('Kategori Kreator', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'Kategori Kreator',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: _categories.where((c) => c['slug'] != 'all').map((cat) {
+                  children: _categories.where((c) => c['slug'] != 'all').map((
+                    cat,
+                  ) {
                     final isSelected = selectedCategory == cat['slug'];
                     final color = cat['color'] as Color;
                     return ChoiceChip(
@@ -750,10 +781,14 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                       selected: isSelected,
                       selectedColor: color.withValues(alpha: 0.2),
                       labelStyle: TextStyle(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                         color: isSelected ? color : null,
                       ),
-                      onSelected: (_) => setModalState(() => selectedCategory = cat['slug'] as String),
+                      onSelected: (_) => setModalState(
+                        () => selectedCategory = cat['slug'] as String,
+                      ),
                     );
                   }).toList(),
                 ),
@@ -763,7 +798,10 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                     final title = titleController.text.trim();
                     if (title.isEmpty) {
                       ScaffoldMessenger.of(ctx).showSnackBar(
-                        const SnackBar(content: Text('Judul wajib diisi!'), backgroundColor: Colors.red),
+                        const SnackBar(
+                          content: Text('Judul wajib diisi!'),
+                          backgroundColor: Colors.red,
+                        ),
                       );
                       return;
                     }
@@ -775,17 +813,25 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                       title: title,
                       subRoleSlug: selectedSubRole,
                       type: 'location',
-                      description: descController.text.trim().isEmpty ? null : descController.text.trim(),
-                      location: addressController.text.trim().isEmpty ? 'Indonesia' : addressController.text.trim(),
+                      description: descController.text.trim().isEmpty
+                          ? null
+                          : descController.text.trim(),
+                      location: addressController.text.trim().isEmpty
+                          ? 'Indonesia'
+                          : addressController.text.trim(),
                       latitude: lat,
                       longitude: lng,
                       locationCategory: selectedCategory,
-                      address: addressController.text.trim().isEmpty ? null : addressController.text.trim(),
+                      address: addressController.text.trim().isEmpty
+                          ? null
+                          : addressController.text.trim(),
                       poster: OpportunityPoster(
                         id: widget.user.id,
                         name: widget.user.name,
                         username: widget.user.username,
-                        phone: phoneInput.isNotEmpty ? phoneInput : widget.user.phone,
+                        phone: phoneInput.isNotEmpty
+                            ? phoneInput
+                            : widget.user.phone,
                       ),
                     );
 
@@ -793,7 +839,9 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(result['message'] ?? 'Lokasi berhasil ditambahkan!'),
+                          content: Text(
+                            result['message'] ?? 'Lokasi berhasil ditambahkan!',
+                          ),
                           backgroundColor: Colors.teal.shade700,
                           behavior: SnackBarBehavior.floating,
                         ),
@@ -804,7 +852,10 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                   icon: const Icon(Icons.check_circle, color: Colors.white),
                   label: const Text(
                     'Simpan & Tampilkan di Peta',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.teal.shade600,

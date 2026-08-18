@@ -45,8 +45,9 @@ class GoogleAuthService {
       provider.addScope('profile');
 
       // signInWithPopup membuka jendela popup login Google
-      final userCredential =
-          await FirebaseAuth.instance.signInWithPopup(provider);
+      final userCredential = await FirebaseAuth.instance.signInWithPopup(
+        provider,
+      );
 
       final firebaseUser = userCredential.user;
 
@@ -69,7 +70,8 @@ class GoogleAuthService {
         provider: 'google',
         idToken: idToken,
         email: firebaseUser.email ?? '',
-        name: firebaseUser.displayName ??
+        name:
+            firebaseUser.displayName ??
             (firebaseUser.email ?? '').split('@').first,
         photoUrl: firebaseUser.photoURL,
       );
@@ -165,8 +167,8 @@ class GoogleAuthService {
     }
 
     try {
-      final GoogleSignInAccount? googleUser =
-          await _googleSignIn.signInSilently();
+      final GoogleSignInAccount? googleUser = await _googleSignIn
+          .signInSilently();
 
       if (googleUser == null) {
         return {'success': false, 'message': 'Tidak ada session Google.'};

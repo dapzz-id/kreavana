@@ -69,8 +69,9 @@ class _ContactsScreenState extends State<ContactsScreen> {
       final results = await ChatService.searchUsers(value.trim());
       if (mounted) {
         setState(() {
-          _searchResults =
-              results.map((r) => Map<String, dynamic>.from(r)).toList();
+          _searchResults = results
+              .map((r) => Map<String, dynamic>.from(r))
+              .toList();
           _searching = false;
         });
       }
@@ -106,7 +107,9 @@ class _ContactsScreenState extends State<ContactsScreen> {
         return;
       }
 
-      final chat = Map<String, dynamic>.from(chatData is Map ? chatData : result);
+      final chat = Map<String, dynamic>.from(
+        chatData is Map ? chatData : result,
+      );
       chat['username'] = contact['username'] ?? chat['username'];
       chat['phone'] = contact['phone'];
       chat['avatar_url'] = ApiService.resolveAssetUrl(contact['avatar_url']);
@@ -116,9 +119,8 @@ class _ContactsScreenState extends State<ContactsScreen> {
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => Scaffold(
-            body: ChatDetailSection(chat: chat, isMobile: true),
-          ),
+          builder: (_) =>
+              Scaffold(body: ChatDetailSection(chat: chat, isMobile: true)),
         ),
       );
     } catch (e) {
@@ -137,7 +139,9 @@ class _ContactsScreenState extends State<ContactsScreen> {
         receiverId,
         video,
         remoteUserName: contact['name'] ?? 'User',
-        remoteAvatarUrl: ApiService.resolveAssetUrl(contact['avatar_url'] ?? ''),
+        remoteAvatarUrl: ApiService.resolveAssetUrl(
+          contact['avatar_url'] ?? '',
+        ),
       );
       if (!mounted) return;
       await Navigator.push(
@@ -146,7 +150,9 @@ class _ContactsScreenState extends State<ContactsScreen> {
           builder: (_) => CallScreen(
             callService: callService,
             remoteUserName: contact['name'] ?? 'User',
-            remoteAvatarUrl: ApiService.resolveAssetUrl(contact['avatar_url'] ?? ''),
+            remoteAvatarUrl: ApiService.resolveAssetUrl(
+              contact['avatar_url'] ?? '',
+            ),
           ),
         ),
       );
@@ -209,7 +215,9 @@ class _ContactsScreenState extends State<ContactsScreen> {
               ),
               elevation: const WidgetStatePropertyAll(0),
               backgroundColor: WidgetStatePropertyAll(
-                theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.5,
+                ),
               ),
               onChanged: _onSearch,
             ),
@@ -224,7 +232,10 @@ class _ContactsScreenState extends State<ContactsScreen> {
               children: [
                 _buildFilterChip('Semua', Icons.people_alt_rounded),
                 const SizedBox(width: 8),
-                _buildFilterChip('Official', Icons.admin_panel_settings_rounded),
+                _buildFilterChip(
+                  'Official',
+                  Icons.admin_panel_settings_rounded,
+                ),
                 const SizedBox(width: 8),
                 _buildFilterChip('Kreator', Icons.brush_rounded),
                 const SizedBox(width: 8),
@@ -280,10 +291,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (_loading) {
-      return const AppLoadingState(
-        message: 'Memuat kontak...',
-        child: null,
-      );
+      return const AppLoadingState(message: 'Memuat kontak...', child: null);
     }
 
     if (_query.isNotEmpty) {
@@ -429,7 +437,9 @@ class _ContactCard extends StatelessWidget {
     final name = (contact['name'] ?? 'User').toString();
     final username = (contact['username'] ?? '').toString();
     final phone = contact['phone']?.toString() ?? '';
-    final avatarUrl = ApiService.resolveAssetUrl(contact['avatar_url']?.toString() ?? '');
+    final avatarUrl = ApiService.resolveAssetUrl(
+      contact['avatar_url']?.toString() ?? '',
+    );
     final hasPhone = phone.isNotEmpty;
 
     return Pressable(
@@ -449,11 +459,7 @@ class _ContactCard extends StatelessWidget {
         child: Row(
           children: [
             // ── Avatar ──
-            _Avatar(
-              name: name,
-              avatarUrl: avatarUrl,
-              roleColor: _roleColor,
-            ),
+            _Avatar(name: name, avatarUrl: avatarUrl, roleColor: _roleColor),
             const SizedBox(width: 12),
 
             // ── Info ──
@@ -616,9 +622,7 @@ class _Avatar extends StatelessWidget {
             : NetworkImage(
                 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(name)}&background=7C3AED&color=fff&size=128',
               ),
-        child: avatarUrl.isNotEmpty
-            ? null
-            : null,
+        child: avatarUrl.isNotEmpty ? null : null,
       ),
     );
   }

@@ -7,18 +7,25 @@ import 'package:kreavana/app/theme.dart';
 
 void main() {
   group('Skeleton UI Tests', () {
-    Widget buildTestWidget({required Widget child, Brightness brightness = Brightness.light}) {
+    Widget buildTestWidget({
+      required Widget child,
+      Brightness brightness = Brightness.light,
+    }) {
       return MaterialApp(
-        theme: brightness == Brightness.light ? AppTheme.lightTheme : AppTheme.darkTheme,
+        theme: brightness == Brightness.light
+            ? AppTheme.lightTheme
+            : AppTheme.darkTheme,
         home: Scaffold(body: child),
       );
     }
 
     testWidgets('SkeletonBox renders correctly in Light Mode', (tester) async {
-      await tester.pumpWidget(buildTestWidget(
-        child: const SkeletonBox(width: 100, height: 50),
-        brightness: Brightness.light,
-      ));
+      await tester.pumpWidget(
+        buildTestWidget(
+          child: const SkeletonBox(width: 100, height: 50),
+          brightness: Brightness.light,
+        ),
+      );
 
       final containerFinder = find.byType(Container);
       expect(containerFinder, findsOneWidget);
@@ -29,10 +36,12 @@ void main() {
     });
 
     testWidgets('SkeletonBox renders correctly in Dark Mode', (tester) async {
-      await tester.pumpWidget(buildTestWidget(
-        child: const SkeletonBox(width: 100, height: 50),
-        brightness: Brightness.dark,
-      ));
+      await tester.pumpWidget(
+        buildTestWidget(
+          child: const SkeletonBox(width: 100, height: 50),
+          brightness: Brightness.dark,
+        ),
+      );
 
       final containerFinder = find.byType(Container);
       expect(containerFinder, findsOneWidget);
@@ -43,9 +52,9 @@ void main() {
     });
 
     testWidgets('SkeletonList renders correct number of items', (tester) async {
-      await tester.pumpWidget(buildTestWidget(
-        child: const SkeletonList(itemCount: 3),
-      ));
+      await tester.pumpWidget(
+        buildTestWidget(child: const SkeletonList(itemCount: 3)),
+      );
 
       // Each list item has 1 circle and 2 lines = 3 SkeletonBoxes per item
       expect(find.byType(SkeletonBox), findsNWidgets(9));
@@ -53,16 +62,18 @@ void main() {
     });
 
     testWidgets('SkeletonGrid renders correct number of items', (tester) async {
-      await tester.pumpWidget(buildTestWidget(
-        child: const SkeletonGrid(itemCount: 4),
-      ));
+      await tester.pumpWidget(
+        buildTestWidget(child: const SkeletonGrid(itemCount: 4)),
+      );
 
       // Each grid item has 2 text lines (SkeletonBox), image is a plain container
       expect(find.byType(SkeletonBox), findsNWidgets(8));
       expect(find.byType(SkeletonAnimator), findsOneWidget);
     });
 
-    testWidgets('State transition: loading -> content -> empty', (tester) async {
+    testWidgets('State transition: loading -> content -> empty', (
+      tester,
+    ) async {
       Widget buildState(int stateIndex) {
         return buildTestWidget(
           child: Builder(
@@ -71,8 +82,8 @@ void main() {
               if (stateIndex == 1) return const Text('Real Content');
               if (stateIndex == 2) return const Text('Empty State');
               return const Text('Error State');
-            }
-          )
+            },
+          ),
         );
       }
 
@@ -90,7 +101,7 @@ void main() {
       await tester.pumpWidget(buildState(2));
       expect(find.text('Real Content'), findsNothing);
       expect(find.text('Empty State'), findsOneWidget);
-      
+
       // Error State
       await tester.pumpWidget(buildState(3));
       expect(find.text('Empty State'), findsNothing);

@@ -16,12 +16,15 @@ class MarketplaceService {
       'per_page': perPage.toString(),
     };
     final normalizedCategory = (category ?? '').trim();
-    if (normalizedCategory.isNotEmpty && normalizedCategory.toLowerCase() != 'semua') {
+    if (normalizedCategory.isNotEmpty &&
+        normalizedCategory.toLowerCase() != 'semua') {
       params['category'] = normalizedCategory;
     }
     if (search != null && search.isNotEmpty) params['search'] = search;
 
-    final qs = params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&');
+    final qs = params.entries
+        .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
+        .join('&');
     final result = await ApiService.get('marketplace?$qs');
     return result;
   }
@@ -34,8 +37,18 @@ class MarketplaceService {
     return await ApiService.get('marketplace/categories');
   }
 
-  static Future<Map<String, dynamic>> getCategory(String? category, String? search, String sort, int page) async {
-    return await getItems(category: category, search: search, sort: sort, page: page);
+  static Future<Map<String, dynamic>> getCategory(
+    String? category,
+    String? search,
+    String sort,
+    int page,
+  ) async {
+    return await getItems(
+      category: category,
+      search: search,
+      sort: sort,
+      page: page,
+    );
   }
 
   static Future<Map<String, dynamic>> getItem(String id) async {
@@ -62,15 +75,19 @@ class MarketplaceService {
       for (var i = 0; i < media.length; i++) {
         final file = media[i];
         if (file.bytes != null) {
-          formData.files.add(MapEntry(
-            'media[]',
-            MultipartFile.fromBytes(file.bytes!, filename: file.name),
-          ));
+          formData.files.add(
+            MapEntry(
+              'media[]',
+              MultipartFile.fromBytes(file.bytes!, filename: file.name),
+            ),
+          );
         } else if (file.path != null) {
-          formData.files.add(MapEntry(
-            'media[]',
-            await MultipartFile.fromFile(file.path!, filename: file.name),
-          ));
+          formData.files.add(
+            MapEntry(
+              'media[]',
+              await MultipartFile.fromFile(file.path!, filename: file.name),
+            ),
+          );
         }
       }
     }
@@ -89,9 +106,10 @@ class MarketplaceService {
     });
   }
 
-  static Future<Map<String, dynamic>> purchaseItem(String id, {required String pin}) async {
-    return await ApiService.post('marketplace/$id/purchase', {
-      'pin': pin,
-    });
+  static Future<Map<String, dynamic>> purchaseItem(
+    String id, {
+    required String pin,
+  }) async {
+    return await ApiService.post('marketplace/$id/purchase', {'pin': pin});
   }
 }

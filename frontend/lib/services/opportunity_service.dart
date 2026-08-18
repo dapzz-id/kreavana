@@ -31,8 +31,13 @@ class OpportunityService {
   static Future<void> _saveLocalLocations() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final encodedList = _userCreatedLocations.map((item) => item.toJson()).toList();
-      await prefs.setString('user_created_map_locations', jsonEncode(encodedList));
+      final encodedList = _userCreatedLocations
+          .map((item) => item.toJson())
+          .toList();
+      await prefs.setString(
+        'user_created_map_locations',
+        jsonEncode(encodedList),
+      );
     } catch (_) {}
   }
 
@@ -49,7 +54,10 @@ class OpportunityService {
       queryParams['type'] = type;
     }
 
-    final result = await ApiService.get('opportunities', queryParams: queryParams);
+    final result = await ApiService.get(
+      'opportunities',
+      queryParams: queryParams,
+    );
 
     if (result['status'] == true && result['data'] != null) {
       final list = (result['data'] as List)
@@ -69,11 +77,14 @@ class OpportunityService {
 
     List<OpportunityModel> remoteList = [];
     try {
-      final result = await ApiService.get('opportunities/map', queryParams: {
-        'sub_role_slug': subRole,
-      });
+      final result = await ApiService.get(
+        'opportunities/map',
+        queryParams: {'sub_role_slug': subRole},
+      );
 
-      if (result['status'] == true && result['data'] != null && (result['data'] as List).isNotEmpty) {
+      if (result['status'] == true &&
+          result['data'] != null &&
+          (result['data'] as List).isNotEmpty) {
         remoteList = (result['data'] as List)
             .map((item) => OpportunityModel.fromJson(item))
             .toList();
@@ -183,12 +194,14 @@ class OpportunityService {
       deadline: deadline,
       budgetRange: budgetRange,
       status: 'open',
-      poster: poster ?? OpportunityPoster(
-        id: '2',
-        name: 'Kreator Kreavana',
-        username: 'kreator_demo',
-        phone: '081299998888',
-      ),
+      poster:
+          poster ??
+          OpportunityPoster(
+            id: '2',
+            name: 'Kreator Kreavana',
+            username: 'kreator_demo',
+            phone: '081299998888',
+          ),
     );
 
     await _loadLocalLocations();
@@ -207,7 +220,8 @@ class OpportunityService {
       OpportunityModel(
         id: '101',
         title: 'Andra - MC & Host Event Formal/Informal',
-        description: 'Siap memandu acara pernikahan, launching brand, gala dinner, dan seminar. Memiliki jam terbang tinggi 5+ tahun.',
+        description:
+            'Siap memandu acara pernikahan, launching brand, gala dinner, dan seminar. Memiliki jam terbang tinggi 5+ tahun.',
         subRoleSlug: 'mc',
         type: 'location',
         location: 'Jakarta Selatan',
@@ -227,7 +241,8 @@ class OpportunityService {
       OpportunityModel(
         id: '102',
         title: 'Budi Studio - Videografer Cinematic & Drone',
-        description: 'Penyedia jasa shooting iklan, video klip, dokumenter alam & aerial drone 4K.',
+        description:
+            'Penyedia jasa shooting iklan, video klip, dokumenter alam & aerial drone 4K.',
         subRoleSlug: 'videografer',
         type: 'location',
         location: 'Denpasar Bali',
@@ -247,7 +262,8 @@ class OpportunityService {
       OpportunityModel(
         id: '103',
         title: 'Chika Photography - Studio Portrait & Fashion',
-        description: 'Fotografer profesional untuklookbook produk, fashion studio, dan prewedding outdoor Lembang.',
+        description:
+            'Fotografer profesional untuklookbook produk, fashion studio, dan prewedding outdoor Lembang.',
         subRoleSlug: 'fotografer',
         type: 'location',
         location: 'Bandung Barat',
@@ -267,7 +283,8 @@ class OpportunityService {
       OpportunityModel(
         id: '104',
         title: 'Dian Travel & Food Content Creator',
-        description: 'Menerima kolaborasi review tempat wisata, culinary review, dan endorsement sosial media.',
+        description:
+            'Menerima kolaborasi review tempat wisata, culinary review, dan endorsement sosial media.',
         subRoleSlug: 'content_creator',
         type: 'location',
         location: 'Yogyakarta',
@@ -287,7 +304,8 @@ class OpportunityService {
       OpportunityModel(
         id: '105',
         title: 'Eko 3D Animation & Motion Graphic Studio',
-        description: 'Jasa pembuatan animasi 2D/3D, karakter 3D, bumper video, dan efek VFX visual.',
+        description:
+            'Jasa pembuatan animasi 2D/3D, karakter 3D, bumper video, dan efek VFX visual.',
         subRoleSlug: 'animator',
         type: 'location',
         location: 'Surabaya',
@@ -307,7 +325,8 @@ class OpportunityService {
       OpportunityModel(
         id: '106',
         title: 'Fiona Model & Talent Event Medan',
-        description: 'Model runway, photoshoot brand baju, commercial talent, dan presenter booth pameran.',
+        description:
+            'Model runway, photoshoot brand baju, commercial talent, dan presenter booth pameran.',
         subRoleSlug: 'talent',
         type: 'location',
         location: 'Medan',
@@ -327,7 +346,8 @@ class OpportunityService {
       OpportunityModel(
         id: '107',
         title: 'Gitaris & Audio Music Producer Makassar',
-        description: 'Composer jingle iklan, sound designer, mixing & mastering audio serta live session musician.',
+        description:
+            'Composer jingle iklan, sound designer, mixing & mastering audio serta live session musician.',
         subRoleSlug: 'musisi',
         type: 'location',
         location: 'Makassar',

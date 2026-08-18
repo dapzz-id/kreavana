@@ -36,7 +36,8 @@ class BadgeService extends ChangeNotifier {
   Future<void> fetchCounts() async {
     try {
       final res = await ApiService.get('unread-count');
-      if ((res['success'] == true || res['status'] == true) && res['data'] != null) {
+      if ((res['success'] == true || res['status'] == true) &&
+          res['data'] != null) {
         final data = res['data'];
         final newNotif = data['unread_notifications'] ?? 0;
         final newChat = data['unread_messages'] ?? 0;

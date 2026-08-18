@@ -49,7 +49,10 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
 
     final price = double.tryParse(_hargaCtrl.text.trim()) ?? 0;
     if (_type == 'paid' && price <= 0) {
-      AppSnackbar.error(context, 'Harga harus lebih dari 0 untuk tipe berbayar.');
+      AppSnackbar.error(
+        context,
+        'Harga harus lebih dari 0 untuk tipe berbayar.',
+      );
       return;
     }
     if (_media.isEmpty) {
@@ -141,9 +144,7 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           height: 1.5,
-                          color: isDark
-                              ? Colors.white70
-                              : Colors.grey.shade600,
+                          color: isDark ? Colors.white70 : Colors.grey.shade600,
                         ),
                       ),
                     ),
@@ -178,13 +179,23 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Tipe Karya', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isDark ? Colors.white70 : Colors.grey.shade600)),
+                  Text(
+                    'Tipe Karya',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: isDark ? Colors.white70 : Colors.grey.shade600,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
                         child: RadioListTile<String>(
-                          title: const Text('Berbayar', style: TextStyle(fontSize: 14)),
+                          title: const Text(
+                            'Berbayar',
+                            style: TextStyle(fontSize: 14),
+                          ),
                           value: 'paid',
                           groupValue: _type,
                           onChanged: (v) => setState(() => _type = v!),
@@ -194,7 +205,10 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
                       ),
                       Expanded(
                         child: RadioListTile<String>(
-                          title: const Text('Gratis', style: TextStyle(fontSize: 14)),
+                          title: const Text(
+                            'Gratis',
+                            style: TextStyle(fontSize: 14),
+                          ),
                           value: 'free',
                           groupValue: _type,
                           onChanged: (v) => setState(() => _type = v!),
@@ -216,9 +230,11 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
                   keyboardType: TextInputType.number,
                   textInputAction: TextInputAction.next,
                   validator: (val) {
-                    if (val == null || val.trim().isEmpty) return 'Harga wajib diisi';
+                    if (val == null || val.trim().isEmpty)
+                      return 'Harga wajib diisi';
                     final num = double.tryParse(val.trim());
-                    if (num == null || num <= 0) return 'Format harga tidak valid';
+                    if (num == null || num <= 0)
+                      return 'Format harga tidak valid';
                     return null;
                   },
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -241,7 +257,14 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Foto / Video', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isDark ? Colors.white70 : Colors.grey.shade600)),
+                    Text(
+                      'Foto / Video',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: isDark ? Colors.white70 : Colors.grey.shade600,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     ElevatedButton.icon(
                       onPressed: () async {
@@ -258,7 +281,9 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
                       icon: const Icon(Icons.upload_file),
                       label: const Text('Pilih File (Bisa lebih dari 1)'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.1),
+                        backgroundColor: AppTheme.primaryPurple.withValues(
+                          alpha: 0.1,
+                        ),
                         foregroundColor: AppTheme.primaryPurple,
                         elevation: 0,
                       ),
@@ -268,15 +293,22 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: _media.map((f) => Chip(
-                          label: Text(f.name, style: const TextStyle(fontSize: 12)),
-                          deleteIcon: const Icon(Icons.close, size: 16),
-                          onDeleted: () {
-                            setState(() {
-                              _media.remove(f);
-                            });
-                          },
-                        )).toList(),
+                        children: _media
+                            .map(
+                              (f) => Chip(
+                                label: Text(
+                                  f.name,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                deleteIcon: const Icon(Icons.close, size: 16),
+                                onDeleted: () {
+                                  setState(() {
+                                    _media.remove(f);
+                                  });
+                                },
+                              ),
+                            )
+                            .toList(),
                       ),
                     ],
                   ],
@@ -378,9 +410,7 @@ class _KategoriPicker extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                     color: isSelected
                         ? Colors.white
-                        : (isDark
-                            ? AppTheme.textWhite
-                            : AppTheme.textDark),
+                        : (isDark ? AppTheme.textWhite : AppTheme.textDark),
                   ),
                 ),
               ),
@@ -468,13 +498,17 @@ class _AnimatedTextAreaState extends State<_AnimatedTextArea> {
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppTheme.radiusMD),
               borderSide: BorderSide(
-                color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
+                color: isDark
+                    ? AppTheme.inputBorder
+                    : AppTheme.inputBorderLight,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppTheme.radiusMD),
               borderSide: BorderSide(
-                color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
+                color: isDark
+                    ? AppTheme.inputBorder
+                    : AppTheme.inputBorderLight,
               ),
             ),
             focusedBorder: OutlineInputBorder(

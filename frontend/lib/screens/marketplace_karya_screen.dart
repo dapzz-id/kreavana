@@ -8,6 +8,7 @@ import '../widgets/app_empty_state.dart';
 import 'marketplace_detail_screen.dart';
 import 'jual_karya_screen.dart';
 import '../widgets/skeleton/skeleton_base.dart';
+
 class MarketplaceKaryaScreen extends StatefulWidget {
   final UserModel? user;
   final ValueChanged<UserModel>? onUserUpdated;
@@ -32,7 +33,14 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
   int _currentPage = 1;
   bool _hasMore = true;
 
-  static const _allCategories = ['Semua', 'Fotografi', 'Videografi', 'Desain', 'Konten', 'Branding'];
+  static const _allCategories = [
+    'Semua',
+    'Fotografi',
+    'Videografi',
+    'Desain',
+    'Konten',
+    'Branding',
+  ];
 
   @override
   void initState() {
@@ -45,13 +53,15 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
   void dispose() {
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
-    
+
     super.dispose();
   }
 
   void _onScroll() {
-    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200 &&
-        !_isLoadingMore && _hasMore) {
+    if (_scrollCtrl.position.pixels >=
+            _scrollCtrl.position.maxScrollExtent - 200 &&
+        !_isLoadingMore &&
+        _hasMore) {
       _loadMore();
     }
   }
@@ -62,7 +72,12 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
       final results = await Future.wait([
         MarketplaceService.getFeatured(),
         MarketplaceService.getCategories(),
-        MarketplaceService.getCategory(_selectedCategory, _searchCtrl.text, _sortBy, 1),
+        MarketplaceService.getCategory(
+          _selectedCategory,
+          _searchCtrl.text,
+          _sortBy,
+          1,
+        ),
       ]);
 
       if (mounted) {
@@ -96,9 +111,15 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
       _items = [];
     });
     try {
-      final selectedCategory = _selectedCategory.toLowerCase() == 'semua' ? null : _selectedCategory;
+      final selectedCategory = _selectedCategory.toLowerCase() == 'semua'
+          ? null
+          : _selectedCategory;
       final result = await MarketplaceService.getCategory(
-          selectedCategory, _searchCtrl.text, _sortBy, 1);
+        selectedCategory,
+        _searchCtrl.text,
+        _sortBy,
+        1,
+      );
       if (mounted) _parseItems(result);
     } catch (_) {}
   }
@@ -109,7 +130,11 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
     _currentPage++;
     try {
       final result = await MarketplaceService.getCategory(
-          _selectedCategory, _searchCtrl.text, _sortBy, _currentPage);
+        _selectedCategory,
+        _searchCtrl.text,
+        _sortBy,
+        _currentPage,
+      );
       if (mounted) {
         _parseItems(result);
         setState(() => _isLoadingMore = false);
@@ -122,8 +147,12 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
   void _parseItems(Map<String, dynamic> result) {
     if (result['status'] == true && result['data'] != null) {
       final data = result['data'];
-      final List<dynamic> itemList = data is Map ? (data['data'] ?? []) : (data is List ? data : []);
-      final newItems = itemList.map((e) => MarketplaceItem.fromJson(e)).toList();
+      final List<dynamic> itemList = data is Map
+          ? (data['data'] ?? [])
+          : (data is List ? data : []);
+      final newItems = itemList
+          .map((e) => MarketplaceItem.fromJson(e))
+          .toList();
       setState(() {
         if (_currentPage == 1) {
           _items = newItems;
@@ -153,9 +182,12 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
   }
 
   void _openDetail(MarketplaceItem item) {
-    Navigator.push(context, MaterialPageRoute(
-      builder: (_) => MarketplaceDetailScreen(itemId: item.id),
-    ));
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MarketplaceDetailScreen(itemId: item.id),
+      ),
+    );
   }
 
   Future<void> _openJualKarya() async {
@@ -181,24 +213,26 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
           bottom: MediaQuery.of(context).size.width < 800 ? 90 : 0,
         ),
         child: (widget.user != null && widget.user!.isCreator)
-          ? FloatingActionButton.extended(
-              heroTag: 'jual_karya',
-              onPressed: _openJualKarya,
-              backgroundColor: AppTheme.primaryPurple,
-              foregroundColor: Colors.white,
-              elevation: 4,
-              icon: const Icon(Icons.add_rounded),
-              label: const Text(
-                'Jual Karya',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-            )
-          : null,
+            ? FloatingActionButton.extended(
+                heroTag: 'jual_karya',
+                onPressed: _openJualKarya,
+                backgroundColor: AppTheme.primaryPurple,
+                foregroundColor: Colors.white,
+                elevation: 4,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text(
+                  'Jual Karya',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              )
+            : null,
       ),
       appBar: AppBar(
         toolbarHeight: 75,
-        title: const Text('Marketplace Karya',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Marketplace Karya',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(0),
           child: Container(
@@ -206,7 +240,10 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
               'Temukan kreator lokal terbaik dan karya yang siap membantu kebutuhan promosi bisnismu.',
-              style: TextStyle(fontSize: 13, color: isDark ? AppTheme.textMuted : Colors.grey.shade700),
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
+              ),
             ),
           ),
         ),
@@ -220,18 +257,30 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                 controller: _scrollCtrl,
                 slivers: [
                   SliverPadding(
-                    padding: EdgeInsets.fromLTRB(isWide ? 32 : 16, 20, isWide ? 32 : 16, 0),
-                    sliver: SliverList.list(children: [
-                      _buildSearchBar(isDark),
-                      const SizedBox(height: 14),
-                      _buildCategoryChips(isDark),
-                      const SizedBox(height: 10),
-                      _buildSortBar(isDark),
-                    ]),
+                    padding: EdgeInsets.fromLTRB(
+                      isWide ? 32 : 16,
+                      20,
+                      isWide ? 32 : 16,
+                      0,
+                    ),
+                    sliver: SliverList.list(
+                      children: [
+                        _buildSearchBar(isDark),
+                        const SizedBox(height: 14),
+                        _buildCategoryChips(isDark),
+                        const SizedBox(height: 10),
+                        _buildSortBar(isDark),
+                      ],
+                    ),
                   ),
                   if (_featured.isNotEmpty) ...[
                     SliverPadding(
-                      padding: EdgeInsets.fromLTRB(isWide ? 32 : 16, 20, isWide ? 32 : 16, 0),
+                      padding: EdgeInsets.fromLTRB(
+                        isWide ? 32 : 16,
+                        20,
+                        isWide ? 32 : 16,
+                        0,
+                      ),
                       sliver: SliverToBoxAdapter(
                         child: AnimatedEntrance(
                           child: Row(
@@ -241,7 +290,10 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                                 height: 20,
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
-                                    colors: [AppTheme.primaryPurple, AppTheme.lightPurple],
+                                    colors: [
+                                      AppTheme.primaryPurple,
+                                      AppTheme.lightPurple,
+                                    ],
                                     begin: Alignment.topCenter,
                                     end: Alignment.bottomCenter,
                                   ),
@@ -249,9 +301,16 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                                 ),
                               ),
                               const SizedBox(width: 10),
-                              Text('Rekomendasi Karya',
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
-                                      color: isDark ? AppTheme.textWhite : AppTheme.textDark)),
+                              Text(
+                                'Rekomendasi Karya',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark
+                                      ? AppTheme.textWhite
+                                      : AppTheme.textDark,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -264,17 +323,26 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                           height: 240,
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
-                            padding: EdgeInsets.symmetric(horizontal: isWide ? 32 : 16),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isWide ? 32 : 16,
+                            ),
                             itemCount: _featured.length,
-                            separatorBuilder: (_, _) => const SizedBox(width: 14),
-                            itemBuilder: (ctx, i) => _buildFeaturedCard(_featured[i], isDark, i),
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(width: 14),
+                            itemBuilder: (ctx, i) =>
+                                _buildFeaturedCard(_featured[i], isDark, i),
                           ),
                         ),
                       ),
                     ),
                   ],
                   SliverPadding(
-                    padding: EdgeInsets.fromLTRB(isWide ? 32 : 16, 24, isWide ? 32 : 16, 0),
+                    padding: EdgeInsets.fromLTRB(
+                      isWide ? 32 : 16,
+                      24,
+                      isWide ? 32 : 16,
+                      0,
+                    ),
                     sliver: SliverToBoxAdapter(
                       child: AnimatedEntrance(
                         child: Row(
@@ -287,7 +355,10 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                                   height: 20,
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
-                                      colors: [AppTheme.primaryPurple, AppTheme.lightPurple],
+                                      colors: [
+                                        AppTheme.primaryPurple,
+                                        AppTheme.lightPurple,
+                                      ],
                                       begin: Alignment.topCenter,
                                       end: Alignment.bottomCenter,
                                     ),
@@ -295,21 +366,37 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                                   ),
                                 ),
                                 const SizedBox(width: 10),
-                                Text('Semua Karya',
-                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
-                                        color: isDark ? AppTheme.textWhite : AppTheme.textDark)),
+                                Text(
+                                  'Semua Karya',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark
+                                        ? AppTheme.textWhite
+                                        : AppTheme.textDark,
+                                  ),
+                                ),
                               ],
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 5,
+                              ),
                               decoration: BoxDecoration(
-                                color: AppTheme.primaryPurple.withValues(alpha: isDark ? 0.15 : 0.1),
+                                color: AppTheme.primaryPurple.withValues(
+                                  alpha: isDark ? 0.15 : 0.1,
+                                ),
                                 borderRadius: BorderRadius.circular(20),
                               ),
-                              child: Text('${_items.length} karya',
-                                  style: const TextStyle(
-                                    fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.primaryPurple,
-                                  )),
+                              child: Text(
+                                '${_items.length} karya',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primaryPurple,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -333,7 +420,12 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                     )
                   else
                     SliverPadding(
-                      padding: EdgeInsets.fromLTRB(isWide ? 32 : 16, 14, isWide ? 32 : 16, 20),
+                      padding: EdgeInsets.fromLTRB(
+                        isWide ? 32 : 16,
+                        14,
+                        isWide ? 32 : 16,
+                        20,
+                      ),
                       sliver: SliverGrid(
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: isWide ? 4 : 2,
@@ -353,9 +445,14 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                       sliver: SliverToBoxAdapter(
                         child: Center(
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryPurple.withValues(alpha: 0.08),
+                              color: AppTheme.primaryPurple.withValues(
+                                alpha: 0.08,
+                              ),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: const Row(
@@ -364,11 +461,18 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                                 SizedBox(
                                   width: 18,
                                   height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 ),
                                 SizedBox(width: 12),
-                                Text('Memuat lainnya...',
-                                    style: TextStyle(fontSize: 13, color: AppTheme.textMuted)),
+                                Text(
+                                  'Memuat lainnya...',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppTheme.textMuted,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -385,52 +489,62 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
   Widget _buildSkeletonLoading(bool isDark, bool isWide) {
     return SkeletonAnimator(
       child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(isWide ? 32 : 16, 20, isWide ? 32 : 16, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _shimmerBox(isDark, 52, radius: 18),
-              const SizedBox(height: 14),
-              SizedBox(
-                height: 40,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: 6,
-                  separatorBuilder: (_, _) => const SizedBox(width: 8),
-                  itemBuilder: (_, i) => _shimmerBox(isDark, 40, width: 80, radius: 12),
-                ),
+        padding: EdgeInsets.fromLTRB(isWide ? 32 : 16, 20, isWide ? 32 : 16, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _shimmerBox(isDark, 52, radius: 18),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 40,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: 6,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (_, i) =>
+                    _shimmerBox(isDark, 40, width: 80, radius: 12),
               ),
-              const SizedBox(height: 24),
-              _shimmerBox(isDark, 20, width: 160),
-              const SizedBox(height: 14),
-              SizedBox(
-                height: 240,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: 3,
-                  separatorBuilder: (_, _) => const SizedBox(width: 14),
-                  itemBuilder: (_, i) => _shimmerBox(isDark, 240, width: 250, radius: 22),
-                ),
+            ),
+            const SizedBox(height: 24),
+            _shimmerBox(isDark, 20, width: 160),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 240,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: 3,
+                separatorBuilder: (_, _) => const SizedBox(width: 14),
+                itemBuilder: (_, i) =>
+                    _shimmerBox(isDark, 240, width: 250, radius: 22),
               ),
-              const SizedBox(height: 24),
-              _shimmerBox(isDark, 20, width: 120),
-              const SizedBox(height: 14),
-              GridView.count(
-                crossAxisCount: isWide ? 4 : 2,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 0.62,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                children: List.generate(6, (_) => _shimmerBox(isDark, double.infinity, radius: 18)),
+            ),
+            const SizedBox(height: 24),
+            _shimmerBox(isDark, 20, width: 120),
+            const SizedBox(height: 14),
+            GridView.count(
+              crossAxisCount: isWide ? 4 : 2,
+              crossAxisSpacing: 14,
+              mainAxisSpacing: 14,
+              childAspectRatio: 0.62,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: List.generate(
+                6,
+                (_) => _shimmerBox(isDark, double.infinity, radius: 18),
               ),
-            ],
-          ),
-        )
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _shimmerBox(bool isDark, double height, {double? width, double radius = 14}) {
+  Widget _shimmerBox(
+    bool isDark,
+    double height, {
+    double? width,
+    double radius = 14,
+  }) {
     return SkeletonBox(
       width: width ?? double.infinity,
       height: height,
@@ -476,7 +590,10 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                   isDense: true,
                   hintText: 'Cari karya kreator, layanan, atau kategori...',
                   hintStyle: const TextStyle(color: AppTheme.textMuted),
-                  prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.textMuted),
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    color: AppTheme.textMuted,
+                  ),
                   filled: true,
                   fillColor: Colors.transparent,
                   contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -497,7 +614,11 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.search_rounded, color: Colors.white, size: 20),
+                child: const Icon(
+                  Icons.search_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
             ),
             const SizedBox(width: 4),
@@ -527,18 +648,31 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                 curve: AppMotion.easeOut,
                 padding: const EdgeInsets.symmetric(horizontal: 18),
                 decoration: BoxDecoration(
-                  gradient: selected ? const LinearGradient(
-                    colors: [AppTheme.primaryPurple, AppTheme.lightPurple],
-                  ) : null,
-                  color: selected ? null : (isDark ? AppTheme.inputDark : AppTheme.inputLight),
+                  gradient: selected
+                      ? const LinearGradient(
+                          colors: [
+                            AppTheme.primaryPurple,
+                            AppTheme.lightPurple,
+                          ],
+                        )
+                      : null,
+                  color: selected
+                      ? null
+                      : (isDark ? AppTheme.inputDark : AppTheme.inputLight),
                   borderRadius: BorderRadius.circular(12),
-                  border: selected ? null : Border.all(
-                    color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
-                  ),
+                  border: selected
+                      ? null
+                      : Border.all(
+                          color: isDark
+                              ? AppTheme.inputBorder
+                              : AppTheme.inputBorderLight,
+                        ),
                   boxShadow: selected
                       ? [
                           BoxShadow(
-                            color: AppTheme.primaryPurple.withValues(alpha: 0.3),
+                            color: AppTheme.primaryPurple.withValues(
+                              alpha: 0.3,
+                            ),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -549,17 +683,23 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (selected) ...[
-                      const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                      const Icon(
+                        Icons.check_rounded,
+                        size: 16,
+                        color: Colors.white,
+                      ),
                       const SizedBox(width: 5),
                     ],
-                    Text(cat,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                          color: selected
-                              ? Colors.white
-                              : (isDark ? AppTheme.textWhite : AppTheme.textDark),
-                        )),
+                    Text(
+                      cat,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: selected
+                            ? Colors.white
+                            : (isDark ? AppTheme.textWhite : AppTheme.textDark),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -586,7 +726,10 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
           children: [
             Icon(Icons.sort_rounded, size: 18, color: AppTheme.textMuted),
             const SizedBox(width: 6),
-            Text('Urutkan:', style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+            Text(
+              'Urutkan:',
+              style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+            ),
             const SizedBox(width: 8),
             ...options.entries.map((e) {
               final selected = e.key == _sortBy;
@@ -596,21 +739,35 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   margin: const EdgeInsets.only(right: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: selected
-                        ? AppTheme.primaryPurple.withValues(alpha: isDark ? 0.2 : 0.12)
+                        ? AppTheme.primaryPurple.withValues(
+                            alpha: isDark ? 0.2 : 0.12,
+                          )
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(10),
-                    border: selected ? Border.all(
-                      color: AppTheme.primaryPurple.withValues(alpha: 0.3),
-                    ) : null,
+                    border: selected
+                        ? Border.all(
+                            color: AppTheme.primaryPurple.withValues(
+                              alpha: 0.3,
+                            ),
+                          )
+                        : null,
                   ),
-                  child: Text(e.value, style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    color: selected ? AppTheme.primaryPurple : AppTheme.textMuted,
-                  )),
+                  child: Text(
+                    e.value,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      color: selected
+                          ? AppTheme.primaryPurple
+                          : AppTheme.textMuted,
+                    ),
+                  ),
                 ),
               );
             }),
@@ -632,8 +789,12 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
             decoration: BoxDecoration(
               color: isDark ? AppTheme.cardBg : Colors.white,
               borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
-              boxShadow: isDark ? AppTheme.cardShadowDark : AppTheme.cardShadowLight,
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+              ),
+              boxShadow: isDark
+                  ? AppTheme.cardShadowDark
+                  : AppTheme.cardShadowLight,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -644,7 +805,10 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                       gradient: LinearGradient(
                         colors: isDark
                             ? [const Color(0xFF2D1B69), const Color(0xFF1E1B2E)]
-                            : [const Color(0xFFEDE9FE), const Color(0xFFDDD6FE)],
+                            : [
+                                const Color(0xFFEDE9FE),
+                                const Color(0xFFDDD6FE),
+                              ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -656,35 +820,55 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                     child: Stack(
                       children: [
                         Positioned(
-                          right: 12, top: 12,
+                          right: 12,
+                          top: 12,
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryPurple.withValues(alpha: isDark ? 0.2 : 0.15),
+                              color: AppTheme.primaryPurple.withValues(
+                                alpha: isDark ? 0.2 : 0.15,
+                              ),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.favorite_border, size: 16, color: AppTheme.primaryPurple),
+                            child: const Icon(
+                              Icons.favorite_border,
+                              size: 16,
+                              color: AppTheme.primaryPurple,
+                            ),
                           ),
                         ),
                         Positioned(
-                          left: 12, top: 12,
+                          left: 12,
+                          top: 12,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryPurple.withValues(alpha: 0.15),
+                              color: AppTheme.primaryPurple.withValues(
+                                alpha: 0.15,
+                              ),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Text(item.category,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppTheme.primaryPurple,
-                                )),
+                            child: Text(
+                              item.category,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.primaryPurple,
+                              ),
+                            ),
                           ),
                         ),
                         Center(
-                          child: Icon(_categoryIcon(item.category),
-                              size: 42, color: AppTheme.primaryPurple.withValues(alpha: isDark ? 0.6 : 0.5)),
+                          child: Icon(
+                            _categoryIcon(item.category),
+                            size: 42,
+                            color: AppTheme.primaryPurple.withValues(
+                              alpha: isDark ? 0.6 : 0.5,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -695,23 +879,50 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(item.title,
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis),
+                      Text(
+                        item.title,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       const SizedBox(height: 6),
-                      Text(item.creator?.name ?? '',
-                          style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMuted : Colors.grey.shade600)),
+                      Text(
+                        item.creator?.name ?? '',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? AppTheme.textMuted
+                              : Colors.grey.shade600,
+                        ),
+                      ),
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          Icon(Icons.star_rounded, size: 14, color: Colors.amber.shade600),
+                          Icon(
+                            Icons.star_rounded,
+                            size: 14,
+                            color: Colors.amber.shade600,
+                          ),
                           const SizedBox(width: 4),
-                          Text(item.rating.toStringAsFixed(1),
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                          Text(
+                            item.rating.toStringAsFixed(1),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                           const Spacer(),
-                          Text(item.formattedPrice,
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.primaryPurple)),
+                          Text(
+                            item.formattedPrice,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryPurple,
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -737,8 +948,12 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
             decoration: BoxDecoration(
               color: isDark ? AppTheme.cardBg : Colors.white,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade200),
-              boxShadow: isDark ? AppTheme.cardShadowDark : AppTheme.cardShadowLight,
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+              ),
+              boxShadow: isDark
+                  ? AppTheme.cardShadowDark
+                  : AppTheme.cardShadowLight,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -751,7 +966,10 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                       gradient: LinearGradient(
                         colors: isDark
                             ? [const Color(0xFF2D1B69), const Color(0xFF1E1B2E)]
-                            : [const Color(0xFFEDE9FE), const Color(0xFFDDD6FE)],
+                            : [
+                                const Color(0xFFEDE9FE),
+                                const Color(0xFFDDD6FE),
+                              ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -763,35 +981,55 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                     child: Stack(
                       children: [
                         Positioned(
-                          left: 10, top: 10,
+                          left: 10,
+                          top: 10,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryPurple.withValues(alpha: isDark ? 0.2 : 0.15),
+                              color: AppTheme.primaryPurple.withValues(
+                                alpha: isDark ? 0.2 : 0.15,
+                              ),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Text(item.category,
-                                style: const TextStyle(
-                                  color: AppTheme.primaryPurple,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                )),
+                            child: Text(
+                              item.category,
+                              style: const TextStyle(
+                                color: AppTheme.primaryPurple,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
                         ),
                         Positioned(
-                          right: 10, top: 10,
+                          right: 10,
+                          top: 10,
                           child: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryPurple.withValues(alpha: isDark ? 0.2 : 0.15),
+                              color: AppTheme.primaryPurple.withValues(
+                                alpha: isDark ? 0.2 : 0.15,
+                              ),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.favorite_border, size: 12, color: AppTheme.primaryPurple),
+                            child: const Icon(
+                              Icons.favorite_border,
+                              size: 12,
+                              color: AppTheme.primaryPurple,
+                            ),
                           ),
                         ),
                         Center(
-                          child: Icon(_categoryIcon(item.category),
-                              size: 32, color: AppTheme.primaryPurple.withValues(alpha: isDark ? 0.6 : 0.5)),
+                          child: Icon(
+                            _categoryIcon(item.category),
+                            size: 32,
+                            color: AppTheme.primaryPurple.withValues(
+                              alpha: isDark ? 0.6 : 0.5,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -804,35 +1042,63 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(item.title,
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis),
+                        Text(
+                          item.title,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         const SizedBox(height: 4),
-                        Text(item.creator?.name ?? '',
-                            style: TextStyle(fontSize: 11, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
+                        Text(
+                          item.creator?.name ?? '',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark
+                                ? AppTheme.textMuted
+                                : Colors.grey.shade600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         const Spacer(),
                         Row(
                           children: [
-                            Icon(Icons.star_rounded, size: 12, color: Colors.amber.shade600),
+                            Icon(
+                              Icons.star_rounded,
+                              size: 12,
+                              color: Colors.amber.shade600,
+                            ),
                             const SizedBox(width: 3),
-                            Text(item.rating.toStringAsFixed(1),
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                            Text(
+                              item.rating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                             const Spacer(),
-                            Text(item.formattedPrice,
-                                style: const TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.primaryPurple,
-                                )),
+                            Text(
+                              item.formattedPrice,
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryPurple,
+                              ),
+                            ),
                           ],
                         ),
                         if (item.orderCount > 0) ...[
                           const SizedBox(height: 4),
-                          Text('${item.orderCount} pesanan',
-                              style: const TextStyle(fontSize: 10, color: AppTheme.textMuted)),
+                          Text(
+                            '${item.orderCount} pesanan',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
                         ],
                       ],
                     ),
@@ -848,12 +1114,18 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
 
   IconData _categoryIcon(String cat) {
     switch (cat) {
-      case 'Fotografi': return Icons.camera_alt_rounded;
-      case 'Videografi': return Icons.videocam_rounded;
-      case 'Desain': return Icons.palette_rounded;
-      case 'Konten': return Icons.edit_note_rounded;
-      case 'Branding': return Icons.branding_watermark_rounded;
-      default: return Icons.palette_rounded;
+      case 'Fotografi':
+        return Icons.camera_alt_rounded;
+      case 'Videografi':
+        return Icons.videocam_rounded;
+      case 'Desain':
+        return Icons.palette_rounded;
+      case 'Konten':
+        return Icons.edit_note_rounded;
+      case 'Branding':
+        return Icons.branding_watermark_rounded;
+      default:
+        return Icons.palette_rounded;
     }
   }
 }

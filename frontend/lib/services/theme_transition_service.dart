@@ -63,12 +63,13 @@ class ThemeTransitionService {
         prefs.setString('theme_mode', toDark ? 'dark' : 'light');
       });
 
-      SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness:
-            toDark ? Brightness.light : Brightness.dark,
-        statusBarBrightness: toDark ? Brightness.dark : Brightness.light,
-      ));
+      SystemChrome.setSystemUIOverlayStyle(
+        SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: toDark ? Brightness.light : Brightness.dark,
+          statusBarBrightness: toDark ? Brightness.dark : Brightness.light,
+        ),
+      );
     });
 
     await completer.future;
@@ -79,10 +80,7 @@ class _ThemeFadeOverlay extends StatefulWidget {
   final Color color;
   final VoidCallback onComplete;
 
-  const _ThemeFadeOverlay({
-    required this.color,
-    required this.onComplete,
-  });
+  const _ThemeFadeOverlay({required this.color, required this.onComplete});
 
   @override
   State<_ThemeFadeOverlay> createState() => _ThemeFadeOverlayState();
@@ -102,9 +100,10 @@ class _ThemeFadeOverlayState extends State<_ThemeFadeOverlay>
     );
 
     // Fade out the old theme screen overlay to reveal the new theme
-    _opacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
+    _opacityAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
@@ -127,9 +126,7 @@ class _ThemeFadeOverlayState extends State<_ThemeFadeOverlay>
     return IgnorePointer(
       child: FadeTransition(
         opacity: _opacityAnimation,
-        child: SizedBox.expand(
-          child: ColoredBox(color: widget.color),
-        ),
+        child: SizedBox.expand(child: ColoredBox(color: widget.color)),
       ),
     );
   }

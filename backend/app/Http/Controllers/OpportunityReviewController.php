@@ -55,7 +55,7 @@ class OpportunityReviewController extends Controller
                 'comment' => $request->comment,
             ]);
 
-            if ($review->rating >= 4.0) {
+            if ($review->rating > 4.0) {
                 CreatorPerformanceEvent::firstOrCreate(
                     [
                         'user_id' => $review->creator_id,

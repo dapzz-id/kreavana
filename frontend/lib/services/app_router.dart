@@ -59,7 +59,11 @@ const _adminRouteIndexMap = {
 };
 
 /// Route-route yang tidak memerlukan autentikasi.
-const _publicRoutes = [AppRoutes.login, AppRoutes.register, AppRoutes.verifyEmail];
+const _publicRoutes = [
+  AppRoutes.login,
+  AppRoutes.register,
+  AppRoutes.verifyEmail,
+];
 
 /// GoRouter instance global aplikasi.
 final GoRouter appRouter = GoRouter(
@@ -107,7 +111,9 @@ final GoRouter appRouter = GoRouter(
         final extra = state.extra;
         if (extra == null) return AppRoutes.login;
         if (extra is String && extra.isEmpty) return AppRoutes.login;
-        if (extra is Map && (extra['email'] == null || (extra['email'] as String).isEmpty)) return AppRoutes.login;
+        if (extra is Map &&
+            (extra['email'] == null || (extra['email'] as String).isEmpty))
+          return AppRoutes.login;
         if (extra is! String && extra is! Map) return AppRoutes.login;
         return null;
       },
@@ -129,13 +135,10 @@ final GoRouter appRouter = GoRouter(
         path: path,
         builder: (context, state) {
           final user = currentUserNotifier.value!;
-          final initialIndex = user.isAdmin 
+          final initialIndex = user.isAdmin
               ? (_adminRouteIndexMap[path] ?? 0)
               : (_routeIndexMap[path] ?? 0);
-          return MainNavigation(
-            initialUser: user,
-            initialIndex: initialIndex,
-          );
+          return MainNavigation(initialUser: user, initialIndex: initialIndex);
         },
       ),
     ),
@@ -143,8 +146,9 @@ final GoRouter appRouter = GoRouter(
     // ── Root redirect ────────────────────────────────────────────────────
     GoRoute(
       path: '/',
-      redirect: (_, _) =>
-          currentUserNotifier.value != null ? AppRoutes.beranda : AppRoutes.login,
+      redirect: (_, _) => currentUserNotifier.value != null
+          ? AppRoutes.beranda
+          : AppRoutes.login,
     ),
   ],
 );
