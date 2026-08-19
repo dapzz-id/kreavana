@@ -16,43 +16,7 @@ class LaporanScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final reports = [
-      {
-        'title': 'Ringkasan Pengeluaran',
-        'subtitle': 'Total pengeluaran bulan ini',
-        'value': 'Rp 12.750.000',
-        'icon': Icons.account_balance_wallet_outlined,
-        'color': const Color(0xFF3B82F6),
-      },
-      {
-        'title': 'Proyek Aktif',
-        'subtitle': 'Proyek yang sedang berjalan',
-        'value': '6 Proyek',
-        'icon': Icons.folder_open,
-        'color': const Color(0xFF10B981),
-      },
-      {
-        'title': 'Proposal Terkirim',
-        'subtitle': 'Total proposal bulan ini',
-        'value': '12 Proposal',
-        'icon': Icons.mail_outline,
-        'color': const Color(0xFF7C3AED),
-      },
-      {
-        'title': 'Rating Kreator',
-        'subtitle': 'Rata-rata rating dari kreator',
-        'value': '4.8 / 5.0',
-        'icon': Icons.star_outline,
-        'color': const Color(0xFFF59E0B),
-      },
-      {
-        'title': 'Transaksi Selesai',
-        'subtitle': 'Pembayaran berhasil',
-        'value': '18 Transaksi',
-        'icon': Icons.check_circle_outline,
-        'color': const Color(0xFF14B8A6),
-      },
-    ];
+    final List<Map<String, dynamic>> reports = [];
 
     final content = Scaffold(
       appBar: AppBar(

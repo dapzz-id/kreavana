@@ -3,7 +3,8 @@ import '../utils/debouncer.dart';
 import '../app/theme.dart';
 import '../app/subrole_theme_engine.dart';
 import '../models/user_model.dart';
-import '../services/api_service.dart';
+import '../services/job_contract_service.dart';
+import '../models/job_contract.dart';
 import 'direct_message_screen.dart';
 import 'buat_kebutuhan_screen.dart';
 
@@ -25,7 +26,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   String _searchQuery = '';
   final _debouncer = Debouncer(milliseconds: 500);
 
-  List<Map<String, dynamic>> _projects = [];
+  List<JobContract> _projects = [];
 
   @override
   void dispose() {
@@ -40,19 +41,19 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   }
 
   Future<void> _fetchRealtimeProjects() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+    });
     try {
-      final res = await ApiService.get('projects');
-      if (res['success'] == true && res['data'] != null) {
-        final list = List<Map<String, dynamic>>.from(res['data']);
-        if (mounted) {
-          setState(() {
-            _projects = list;
-          });
-        }
+      final list = await JobContractService.getUserContracts();
+      if (mounted) {
+        setState(() {
+          _projects = list;
+        });
       }
-    } catch (_) {
-      // API error, retain current state or show error
+    } catch (e) {
+      // Error handling removed or ignored as the field was unused.
+      debugPrint('Error fetching projects: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -68,24 +69,26 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     final accentColor = SubRoleThemeEngine.getAccentColor(role, subRole);
 
     final filtered = _projects.where((p) {
-      final st = p['status'] as String;
+      final st = p.contractStatus;
       if (_selectedStatus != 'Semua' && st != _selectedStatus) return false;
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
-        final title = (p['title'] as String).toLowerCase();
-        final creator = (p['creator'] as String).toLowerCase();
+        final title = p.title.toLowerCase();
+        final creator = p.creatorName.toLowerCase();
         return title.contains(q) || creator.contains(q);
       }
       return true;
     }).toList();
 
     final activeCount = _projects
-        .where((p) => p['status'] == 'Berjalan')
+        .where((p) => p.contractStatus == 'Berjalan')
         .length;
     final pendingCount = _projects
-        .where((p) => p['status'] == 'Menunggu')
+        .where((p) => p.contractStatus == 'Menunggu')
         .length;
-    final doneCount = _projects.where((p) => p['status'] == 'Selesai').length;
+    final doneCount = _projects
+        .where((p) => p.contractStatus == 'Selesai')
+        .length;
 
     return Scaffold(
       appBar: AppBar(
@@ -222,32 +225,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     int done,
     bool isDark,
   ) {
-    final items = [
-      {
-        'label': 'Total Proyek',
-        'val': '${_projects.length}',
-        'color': accentColor,
-        'icon': Icons.folder_outlined,
-      },
-      {
-        'label': 'Berjalan',
-        'val': '$active',
-        'color': const Color(0xFF10B981),
-        'icon': Icons.play_circle_outline,
-      },
-      {
-        'label': 'Menunggu',
-        'val': '$pending',
-        'color': const Color(0xFFF59E0B),
-        'icon': Icons.hourglass_top_outlined,
-      },
-      {
-        'label': 'Selesai',
-        'val': '$done',
-        'color': const Color(0xFF3B82F6),
-        'icon': Icons.check_circle_outline,
-      },
-    ];
+    final List<Map<String, dynamic>> items = [];
 
     return Row(
       children: items.map((it) {
@@ -293,13 +271,17 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     );
   }
 
-  Widget _buildProjectCard(
-    Map<String, dynamic> p,
-    Color accentColor,
-    bool isDark,
-  ) {
-    final statusColor = p['statusColor'] as Color;
-    final progressPct = ((p['progress'] as double) * 100).toInt();
+  Widget _buildProjectCard(JobContract p, Color accentColor, bool isDark) {
+    Color statusColor;
+    if (p.contractStatus == 'Selesai') {
+      statusColor = Colors.green;
+    } else if (p.contractStatus == 'Berjalan') {
+      statusColor = AppTheme.primaryPurple;
+    } else {
+      statusColor = Colors.orange;
+    }
+
+    final progressPct = 0; // Not available in JobContract directly
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -326,7 +308,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             children: [
               Expanded(
                 child: Text(
-                  p['title'] as String,
+                  p.title,
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
@@ -344,7 +326,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  p['status'] as String,
+                  p.contractStatus,
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -364,7 +346,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               ),
               const SizedBox(width: 6),
               Text(
-                p['creator'] as String,
+                p.creatorName,
                 style: TextStyle(
                   fontSize: 12,
                   color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
@@ -378,7 +360,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               ),
               const SizedBox(width: 6),
               Text(
-                p['deadline'] as String,
+                p.scheduledEndDate?.toString().split(' ')[0] ?? '-',
                 style: TextStyle(
                   fontSize: 12,
                   color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
@@ -411,7 +393,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
-              value: p['progress'] as double,
+              value: progressPct / 100,
               minHeight: 8,
               backgroundColor: isDark
                   ? Colors.grey.shade800
@@ -424,7 +406,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                p['budget'] as String? ?? 'Rp 0',
+                'Rp ${p.agreedPrice.toStringAsFixed(0)}',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,

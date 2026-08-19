@@ -236,43 +236,7 @@ class _TourismDashboardScreenState extends State<TourismDashboardScreen> {
   }
 
   Widget _buildMetricCards(bool isDark) {
-    final metrics = [
-      {
-        'label': 'Spot Konten Aktif',
-        'value': '24',
-        'sub': 'Dalam promosi aktif',
-        'icon': Icons.image_outlined,
-        'color': _tourTeal,
-      },
-      {
-        'label': 'Paket Wisata Aktif',
-        'value': '8',
-        'sub': 'Tersedia untuk tamu',
-        'icon': Icons.card_travel_outlined,
-        'color': _tourBlue,
-      },
-      {
-        'label': 'Kreator / Vendor Cocok',
-        'value': '39',
-        'sub': 'Siap diajak kolaborasi',
-        'icon': Icons.people_outline,
-        'color': const Color(0xFF10B981),
-      },
-      {
-        'label': 'Total Booking',
-        'value': '186',
-        'sub': 'Selama 6 bulan terakhir',
-        'icon': Icons.confirmation_number_outlined,
-        'color': const Color(0xFFF59E0B),
-      },
-      {
-        'label': 'Estimasi Pendapatan',
-        'value': 'Rp 148.500.000',
-        'sub': 'Estimasi 6 bulan terakhir',
-        'icon': Icons.monetization_on_outlined,
-        'color': const Color(0xFFEC4899),
-      },
-    ];
+    final metrics = [];
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -500,12 +464,7 @@ class _TourismDashboardScreenState extends State<TourismDashboardScreen> {
   }
 
   Widget _buildRecentProgramsCard(bool isDark) {
-    final programs = [
-      {'title': 'Video Profil Desa Wisata', 'status': 'Dipublikasikan'},
-      {'title': 'Festival Alam Ciwado', 'status': 'Berjalan'},
-      {'title': 'Trip Fotografi Sunrise', 'status': 'Akan Datang'},
-      {'title': 'Kampanye Reels Destinasi', 'status': 'Selesai'},
-    ];
+    final List<Map<String, dynamic>> programs = [];
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -673,16 +632,7 @@ class _TourismDashboardScreenState extends State<TourismDashboardScreen> {
   }
 
   Widget _buildTopVendorsCard(bool isDark) {
-    final vendors = [
-      {'name': 'Kreasi Studio', 'cat': 'Video & Fotografi', 'rating': '4.9'},
-      {'name': 'DroneVista', 'cat': 'Drone & Aerial', 'rating': '4.8'},
-      {
-        'name': 'TravelStory ID',
-        'cat': 'Travel & Content Creator',
-        'rating': '4.8',
-      },
-      {'name': 'EventPro Organizer', 'cat': 'Event Organizer', 'rating': '4.7'},
-    ];
+    final List<Map<String, dynamic>> vendors = [];
 
     return Container(
       padding: const EdgeInsets.all(20),

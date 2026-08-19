@@ -1,0 +1,150 @@
+--- features/dashboard/screens/agency_dashboard_screen.dart ---
+Count: 1
+
+--- features/dashboard/screens/community_dashboard_screen.dart ---
+Count: 3
+
+--- features/dashboard/screens/company_dashboard_screen.dart ---
+Count: 3
+
+--- features/dashboard/screens/creator_animator_dashboard_screen.dart ---
+Count: 1
+
+--- features/dashboard/screens/creator_content_dashboard_screen.dart ---
+Count: 4
+
+--- features/dashboard/screens/creator_desainer_dashboard_screen.dart ---
+Count: 4
+
+--- features/dashboard/screens/creator_drone_dashboard_screen.dart ---
+Count: 4
+
+--- features/dashboard/screens/creator_editor_dashboard_screen.dart ---
+Count: 4
+
+--- features/dashboard/screens/creator_fotografer_dashboard_screen.dart ---
+Count: 4
+
+--- features/dashboard/screens/creator_general_dashboard_screen.dart ---
+Count: 4
+
+--- features/dashboard/screens/creator_mua_dashboard_screen.dart ---
+Count: 4
+
+--- features/dashboard/screens/creator_talent_dashboard_screen.dart ---
+Count: 4
+
+--- features/dashboard/screens/creator_videografer_dashboard_screen.dart ---
+Count: 4
+
+--- features/dashboard/screens/eo_dashboard_screen.dart ---
+Count: 3
+
+--- features/dashboard/screens/govt_dashboard_screen.dart ---
+Count: 6
+
+--- features/dashboard/screens/individual_dashboard_screen.dart ---
+Count: 3
+
+--- features/dashboard/screens/school_dashboard_screen.dart ---
+Count: 3
+
+--- features/dashboard/screens/tourism_dashboard_screen.dart ---
+Count: 3
+
+--- features/dashboard/screens/umkm_dashboard_screen.dart ---
+Count: 2
+
+--- features/dashboard/screens/wo_dashboard_screen.dart ---
+Count: 3
+
+--- screens/buat_kebutuhan_screen.dart ---
+Count: 2
+
+--- screens/creator_calendar_screen.dart ---
+Count: 1
+
+--- screens/creator_service_screen.dart ---
+Count: 1
+
+--- screens/direct_message_screen.dart ---
+Count: 1
+
+--- screens/dokumen_instansi_screen.dart ---
+Count: 1
+
+--- screens/explore_screen.dart ---
+Count: 1
+
+--- screens/help_screen.dart ---
+Count: 1
+
+--- screens/kolaborasi_screen.dart ---
+Count: 2
+
+--- screens/laporan_screen.dart ---
+Count: 1
+
+--- screens/marketplace_detail_screen.dart ---
+Count: 1
+
+--- screens/marketplace_karya_screen.dart ---
+Count: 2
+
+--- screens/mitra_komunitas_screen.dart ---
+Count: 1
+
+--- screens/monitoring_evaluasi_screen.dart ---
+Count: 1
+
+--- screens/peluang_lokasi_screen.dart ---
+Count: 1
+
+--- screens/pengumuman_publik_screen.dart ---
+Count: 1
+
+--- screens/privacy_policy_screen.dart ---
+Count: 1
+
+--- screens/proyek_saya_screen.dart ---
+Count: 1
+
+--- screens/realisasi_anggaran_screen.dart ---
+Count: 1
+
+--- screens/storage_history_screen.dart ---
+Count: 1
+
+--- screens/tender_kolaborasi_screen.dart ---
+Count: 1
+
+--- screens/tim_hak_akses_screen.dart ---
+Count: 1
+
+--- screens/topup_screen.dart ---
+Count: 2
+
+--- screens/ulasan_reputasi_screen.dart ---
+Count: 2
+
+--- screens/withdraw_screen.dart ---
+Count: 2
+
+--- services/admin_service.dart ---
+Count: 3
+
+--- services/chat_service.dart ---
+Count: 1
+
+--- services/portfolio_service.dart ---
+Count: 1
+
+--- services/recommendation_service.dart ---
+Count: 2
+
+--- services/subscription_service.dart ---
+Count: 2
+
+--- widgets/creator_application_card.dart ---
+Count: 1
+

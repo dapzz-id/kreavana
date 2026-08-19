@@ -15,6 +15,8 @@ class MarketplaceItem {
   final String status;
   final bool isFollowing;
   final bool hasPurchased;
+  final bool hasReviewed;
+  final bool canReview;
   final String? createdAt;
   final MarketplaceCreator? creator;
   final List<MarketplaceReview>? reviews;
@@ -37,6 +39,8 @@ class MarketplaceItem {
     this.status = 'published',
     this.isFollowing = false,
     this.hasPurchased = false,
+    this.hasReviewed = false,
+    this.canReview = false,
     this.createdAt,
     this.creator,
     this.reviews,
@@ -63,6 +67,8 @@ class MarketplaceItem {
       status: json['status'] ?? 'published',
       isFollowing: json['is_following'] ?? false,
       hasPurchased: json['has_purchased'] ?? false,
+      hasReviewed: json['has_reviewed'] == true,
+      canReview: json['can_review'] == true,
       createdAt: json['created_at'],
       creator: json['user'] != null
           ? MarketplaceCreator.fromJson(json['user'])

@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             CreatorServiceSeeder::class,
             CreatorScheduleSeeder::class,
             JobContractSeeder::class,
+            MarketplaceSeeder::class,
             ChatSeeder::class,
             RemainingTablesSeeder::class,
             OpportunityLocationSeeder::class,

@@ -29,7 +29,6 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
   final GlobalKey _themeBtnKey = GlobalKey();
 
   static const Color _woPink = Color(0xFFA855F7);
-  static const Color _woLight = Color(0xFFC084FC);
 
   @override
   Widget build(BuildContext context) {
@@ -236,43 +235,7 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
   }
 
   Widget _buildMetricCards(bool isDark) {
-    final metrics = [
-      {
-        'label': 'Total Proyek',
-        'value': '18',
-        'sub': '12 akan datang',
-        'icon': Icons.calendar_today_outlined,
-        'color': _woLight,
-      },
-      {
-        'label': 'Proyek Aktif',
-        'value': '6',
-        'sub': 'Sedang berjalan',
-        'icon': Icons.play_circle_fill,
-        'color': const Color(0xFF10B981),
-      },
-      {
-        'label': 'Total Nilai Proyek',
-        'value': 'Rp 256.750.000',
-        'sub': 'Semua waktu',
-        'icon': Icons.account_balance_wallet_outlined,
-        'color': const Color(0xFF3B82F6),
-      },
-      {
-        'label': 'Pending Pembayaran',
-        'value': 'Rp 42.300.000',
-        'sub': '5 invoice',
-        'icon': Icons.receipt,
-        'color': const Color(0xFFF59E0B),
-      },
-      {
-        'label': 'Vendor Favorit',
-        'value': '24',
-        'sub': 'Vendor tersimpan',
-        'icon': Icons.favorite,
-        'color': const Color(0xFFEC4899),
-      },
-    ];
+    final metrics = [];
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -487,26 +450,7 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
   }
 
   Widget _buildActiveProjectsCard(bool isDark) {
-    final projects = [
-      {
-        'title': 'Wedding Sarah & Dika',
-        'date': '20 Juli 2025',
-        'progress': 0.75,
-        'status': 'Persiapan Akhir',
-      },
-      {
-        'title': 'Wedding Aulia & Reza',
-        'date': '12 Juli 2025',
-        'progress': 0.60,
-        'status': 'Sedang Berjalan',
-      },
-      {
-        'title': 'Wedding Nadia & Faisal',
-        'date': '5 Agustus 2025',
-        'progress': 0.40,
-        'status': 'Persiapan',
-      },
-    ];
+    final List<Map<String, dynamic>> projects = [];
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -685,13 +629,7 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
   }
 
   Widget _buildTopVendorsCard(bool isDark) {
-    final vendors = [
-      {'name': 'Decor & Dream', 'cat': 'Dekorasi', 'rating': '4.9'},
-      {'name': 'Lighting Pro', 'cat': 'Lighting', 'rating': '4.8'},
-      {'name': 'Harmoni Catering', 'cat': 'Catering', 'rating': '4.8'},
-      {'name': 'Makeup Artist Studio', 'cat': 'MUA', 'rating': '4.9'},
-      {'name': 'MC & Entertainment', 'cat': 'MC & Hiburan', 'rating': '4.7'},
-    ];
+    final List<Map<String, dynamic>> vendors = [];
 
     return Container(
       padding: const EdgeInsets.all(20),

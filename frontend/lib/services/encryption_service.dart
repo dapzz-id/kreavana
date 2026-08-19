@@ -11,6 +11,7 @@ import 'dart:math';
 import 'package:rsa_encrypt/rsa_encrypt.dart';
 import 'package:uuid/uuid.dart';
 import '../services/api_service.dart';
+import 'package:flutter/foundation.dart' hide Key;
 
 class EncryptionService {
   static final EncryptionService _instance = EncryptionService._internal();
@@ -45,8 +46,12 @@ class EncryptionService {
     }
 
     if (privKeyString != null && pubKeyString != null) {
-      _privateKey = _parsePrivateKeyFromPem(privKeyString);
-      _publicKey = _parsePublicKeyFromPem(pubKeyString);
+      final keys = await compute(_parseKeysIsolate, {
+        'private': privKeyString,
+        'public': pubKeyString,
+      });
+      _privateKey = keys['private'] as RSAPrivateKey;
+      _publicKey = keys['public'] as RSAPublicKey;
     } else {
       await generateNewKeyPair();
     }
@@ -72,13 +77,14 @@ class EncryptionService {
   }
 
   Future<void> generateNewKeyPair() async {
-    // Generate RSA key pair using pointycastle
-    final pair = _generateRSAKeyPair();
-    _publicKey = pair.publicKey as RSAPublicKey;
-    _privateKey = pair.privateKey as RSAPrivateKey;
+    // Generate RSA key pair using compute to avoid blocking main thread
+    final result = await compute(_generateRSAKeyPairIsolate, null);
 
-    final pubPem = _encodePublicKeyToPem(_publicKey!);
-    final privPem = _encodePrivateKeyToPem(_privateKey!);
+    final pubPem = result['public']!;
+    final privPem = result['private']!;
+
+    _publicKey = _parsePublicKeyFromPem(pubPem);
+    _privateKey = _parsePrivateKeyFromPem(privPem);
 
     await _secureStorage.write(key: _privateKeyStorageKey, value: privPem);
     await _secureStorage.write(key: _publicKeyStorageKey, value: pubPem);
@@ -186,21 +192,37 @@ class EncryptionService {
     return RsaKeyHelper().encodePrivateKeyToPemPKCS1(key);
   }
 
-  crypto.AsymmetricKeyPair<crypto.PublicKey, crypto.PrivateKey>
-  _generateRSAKeyPair() {
-    final secureRandom = FortunaRandom();
-    final random = Random.secure();
-    final seeds = List<int>.generate(32, (_) => random.nextInt(256));
-    secureRandom.seed(crypto.KeyParameter(Uint8List.fromList(seeds)));
+}
 
-    final keyGen = RSAKeyGenerator()
-      ..init(
-        crypto.ParametersWithRandom(
-          RSAKeyGeneratorParameters(BigInt.parse('65537'), 2048, 64),
-          secureRandom,
-        ),
-      );
+Map<String, String> _generateRSAKeyPairIsolate(dynamic _) {
+  final secureRandom = FortunaRandom();
+  final random = Random.secure();
+  final seeds = List<int>.generate(32, (_) => random.nextInt(256));
+  secureRandom.seed(crypto.KeyParameter(Uint8List.fromList(seeds)));
 
-    return keyGen.generateKeyPair();
-  }
+  final keyGen = RSAKeyGenerator()
+    ..init(
+      crypto.ParametersWithRandom(
+        RSAKeyGeneratorParameters(BigInt.parse('65537'), 2048, 64),
+        secureRandom,
+      ),
+    );
+
+  final pair = keyGen.generateKeyPair();
+  final pub = pair.publicKey as RSAPublicKey;
+  final priv = pair.privateKey as RSAPrivateKey;
+
+  return {
+    'public': RsaKeyHelper().encodePublicKeyToPemPKCS1(pub),
+    'private': RsaKeyHelper().encodePrivateKeyToPemPKCS1(priv),
+  };
+}
+
+Map<String, dynamic> _parseKeysIsolate(Map<String, String> data) {
+  final privPem = data['private']!;
+  final pubPem = data['public']!;
+  return {
+    'private': RSAKeyParser().parse(privPem) as RSAPrivateKey,
+    'public': RSAKeyParser().parse(pubPem) as RSAPublicKey,
+  };
 }

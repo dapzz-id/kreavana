@@ -29,7 +29,6 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
   final GlobalKey _themeBtnKey = GlobalKey();
 
   static const Color _eoPurple = Color(0xFF6366F1);
-  static const Color _eoLight = Color(0xFF818CF8);
 
   @override
   Widget build(BuildContext context) {
@@ -236,43 +235,7 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
   }
 
   Widget _buildMetricCards(bool isDark) {
-    final metrics = [
-      {
-        'label': 'Total Event',
-        'value': '24',
-        'sub': '12 akan datang',
-        'icon': Icons.event,
-        'color': _eoLight,
-      },
-      {
-        'label': 'Event Aktif',
-        'value': '5',
-        'sub': 'Sedang berjalan',
-        'icon': Icons.play_circle_fill,
-        'color': const Color(0xFF10B981),
-      },
-      {
-        'label': 'Total Nilai Proyek',
-        'value': 'Rp 285.750.000',
-        'sub': 'Semua waktu',
-        'icon': Icons.monetization_on,
-        'color': const Color(0xFF3B82F6),
-      },
-      {
-        'label': 'Pending Pembayaran',
-        'value': 'Rp 38.500.000',
-        'sub': '4 invoice',
-        'icon': Icons.receipt,
-        'color': const Color(0xFFF59E0B),
-      },
-      {
-        'label': 'Vendor Favorit',
-        'value': '18',
-        'sub': 'Vendor tersimpan',
-        'icon': Icons.star,
-        'color': const Color(0xFFEC4899),
-      },
-    ];
+    final metrics = [];
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -487,26 +450,7 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
   }
 
   Widget _buildActiveEventsCard(bool isDark) {
-    final events = [
-      {
-        'title': 'Tech Conference 2025',
-        'type': 'Konferensi',
-        'progress': 0.75,
-        'status': 'Sedang Berjalan',
-      },
-      {
-        'title': 'Product Launch XYZ',
-        'type': 'Launching',
-        'progress': 0.45,
-        'status': 'Dalam Persiapan',
-      },
-      {
-        'title': 'Corporate Gathering 2025',
-        'type': 'Gathering',
-        'progress': 0.30,
-        'status': 'Dalam Persiapan',
-      },
-    ];
+    final List<Map<String, dynamic>> events = [];
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -675,17 +619,7 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
   }
 
   Widget _buildTopVendorsCard(bool isDark) {
-    final vendors = [
-      {'name': 'Kreasi Studio', 'cat': 'Dekorasi & Stage', 'rating': '4.9'},
-      {'name': 'Lighting Pro', 'cat': 'Lighting & Sound', 'rating': '4.8'},
-      {'name': 'Grand Catering', 'cat': 'Catering', 'rating': '4.7'},
-      {
-        'name': 'MediaFrame',
-        'cat': 'Dokumentasi Foto & Video',
-        'rating': '4.9',
-      },
-      {'name': 'MC Professional', 'cat': 'MC & Entertainment', 'rating': '4.8'},
-    ];
+    final List<Map<String, dynamic>> vendors = [];
 
     return Container(
       padding: const EdgeInsets.all(20),

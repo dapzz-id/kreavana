@@ -17,44 +17,7 @@ class _TenderKolaborasiScreenState extends State<TenderKolaborasiScreen> {
   String _selectedFilter = 'Semua';
   final _filters = ['Semua', 'Terbuka', 'Dalam Review', 'Selesai'];
 
-  final _tenders = [
-    {
-      'title': 'Pengadaan Jasa Dokumentasi Festival Budaya 2025',
-      'vendor': 'CV Kreasi Nusantara',
-      'status': 'Terbuka',
-      'status_color': Color(0xFF10B981),
-      'budget': 'Rp 45.000.000',
-      'deadline': '15 Agustus 2025',
-      'category': 'Dokumentasi',
-    },
-    {
-      'title': 'Pembuatan Video Profil Dinas Kominfo',
-      'vendor': 'PT Media Digital',
-      'status': 'Dalam Review',
-      'status_color': Color(0xFFF59E0B),
-      'budget': 'Rp 75.000.000',
-      'deadline': '20 Juli 2025',
-      'category': 'Videografi',
-    },
-    {
-      'title': 'Desain Grafis Materi Sosialisasi',
-      'vendor': 'Studio Desain Kreatif',
-      'status': 'Terbuka',
-      'status_color': Color(0xFF10B981),
-      'budget': 'Rp 15.000.000',
-      'deadline': '10 Agustus 2025',
-      'category': 'Desain',
-    },
-    {
-      'title': 'Pengelolaan Media Sosial Instansi',
-      'vendor': 'Tim Kreasi Studio',
-      'status': 'Selesai',
-      'status_color': Color(0xFF6B7280),
-      'budget': 'Rp 120.000.000/tahun',
-      'deadline': '30 Juni 2025',
-      'category': 'Media Sosial',
-    },
-  ];
+  final List<Map<String, dynamic>> _tenders = [];
 
   @override
   Widget build(BuildContext context) {

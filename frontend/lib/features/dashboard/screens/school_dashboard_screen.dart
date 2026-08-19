@@ -236,43 +236,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
   }
 
   Widget _buildMetricCards(bool isDark) {
-    final metrics = [
-      {
-        'label': 'Total Proyek',
-        'value': '16',
-        'sub': '8 aktif, 8 selesai',
-        'icon': Icons.folder_outlined,
-        'color': _schoolBlue,
-      },
-      {
-        'label': 'Proyek Aktif',
-        'value': '8',
-        'sub': 'Sedang berjalan',
-        'icon': Icons.play_circle_fill,
-        'color': _schoolGreen,
-      },
-      {
-        'label': 'Siswa Terlibat',
-        'value': '125',
-        'sub': 'Dalam berbagai proyek',
-        'icon': Icons.groups_outlined,
-        'color': const Color(0xFF3B82F6),
-      },
-      {
-        'label': 'Total Pembayaran',
-        'value': 'Rp 52.450.000',
-        'sub': 'Semua waktu',
-        'icon': Icons.account_balance_wallet_outlined,
-        'color': const Color(0xFFF59E0B),
-      },
-      {
-        'label': 'Mitra & Vendor',
-        'value': '24',
-        'sub': 'Tersedia di jaringan',
-        'icon': Icons.handshake_outlined,
-        'color': const Color(0xFFEC4899),
-      },
-    ];
+    final metrics = [];
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -504,28 +468,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
   }
 
   Widget _buildRecentProjectsCard(bool isDark) {
-    final projects = [
-      {
-        'title': 'Video Profil Sekolah 2025',
-        'type': 'Video Company Profile',
-        'status': 'Aktif',
-      },
-      {
-        'title': 'Lomba Film Pendek Siswa',
-        'type': 'Kompetisi',
-        'status': 'Berjalan',
-      },
-      {
-        'title': 'Workshop Fotografi Dasar',
-        'type': 'Edukasi & Workshop',
-        'status': 'Persiapan',
-      },
-      {
-        'title': 'Konten Media Sosial Sekolah',
-        'type': 'Produksi Konten',
-        'status': 'Aktif',
-      },
-    ];
+    final List<Map<String, dynamic>> projects = [];
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -708,16 +651,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
   }
 
   Widget _buildFavoriteVendorsCard(bool isDark) {
-    final vendors = [
-      {'name': 'Kreasi Studio', 'cat': 'Video & Fotografi', 'rating': '4.9'},
-      {'name': 'DesignLab', 'cat': 'Desain Grafis & Branding', 'rating': '4.8'},
-      {'name': 'EduWorkshop ID', 'cat': 'Edukasi & Pelatihan', 'rating': '4.8'},
-      {
-        'name': 'Content Creativa',
-        'cat': 'Konten & Media Sosial',
-        'rating': '4.7',
-      },
-    ];
+    final List<Map<String, dynamic>> vendors = [];
 
     return Container(
       padding: const EdgeInsets.all(20),

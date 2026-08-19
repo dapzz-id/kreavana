@@ -29,7 +29,6 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
   final GlobalKey _themeBtnKey = GlobalKey();
 
   static const Color _commPurple = Color(0xFF6D28D9);
-  static const Color _commLight = Color(0xFF8B5CF6);
 
   @override
   Widget build(BuildContext context) {
@@ -236,43 +235,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
   }
 
   Widget _buildMetricCards(bool isDark) {
-    final metrics = [
-      {
-        'label': 'Total Anggota',
-        'value': '356',
-        'sub': '+28 anggota baru',
-        'icon': Icons.groups_outlined,
-        'color': _commLight,
-      },
-      {
-        'label': 'Kegiatan Aktif',
-        'value': '7',
-        'sub': '3 akan datang',
-        'icon': Icons.event_available,
-        'color': const Color(0xFF10B981),
-      },
-      {
-        'label': 'Proyek Berjalan',
-        'value': '5',
-        'sub': '2 tahap eksekusi',
-        'icon': Icons.work_outline,
-        'color': const Color(0xFF3B82F6),
-      },
-      {
-        'label': 'Dana Komunitas',
-        'value': 'Rp 12.750.000',
-        'sub': 'Saldo tersedia',
-        'icon': Icons.account_balance_wallet_outlined,
-        'color': const Color(0xFFF59E0B),
-      },
-      {
-        'label': 'Mitra & Sponsor',
-        'value': '18',
-        'sub': '10 aktif bekerja sama',
-        'icon': Icons.handshake_outlined,
-        'color': const Color(0xFFEC4899),
-      },
-    ];
+    final metrics = [];
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -546,28 +509,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
   }
 
   Widget _buildUpcomingEventsCard(bool isDark) {
-    final events = [
-      {
-        'title': 'Hunting Foto Sunrise Bromo',
-        'date': '25 - 27 Juni 2025',
-        'participants': '32 peserta',
-      },
-      {
-        'title': 'Workshop Photography Basic',
-        'date': '5 Juli 2025',
-        'participants': '20 peserta',
-      },
-      {
-        'title': 'Pameran Karya Anggota 2025',
-        'date': '18 - 20 Juli 2025',
-        'participants': '45 peserta',
-      },
-      {
-        'title': 'Photo Walk Kota Tua Jakarta',
-        'date': '27 Juli 2025',
-        'participants': '15 peserta',
-      },
-    ];
+    final List<Map<String, dynamic>> events = [];
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -729,12 +671,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
   }
 
   Widget _buildActiveMembersCard(bool isDark) {
-    final members = [
-      {'name': 'Raka Pratama', 'role': 'Admin'},
-      {'name': 'Maria Putri', 'role': 'Moderator'},
-      {'name': 'Dimas Ardiansyah', 'role': 'Anggota'},
-      {'name': 'Fajar Nugroho', 'role': 'Anggota'},
-    ];
+    final List<Map<String, dynamic>> members = [];
 
     return Container(
       padding: const EdgeInsets.all(20),

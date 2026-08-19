@@ -10,15 +10,24 @@ class ScheduleResult<T> {
 }
 
 class ScheduleService {
-  static Future<ScheduleResult<List<CreatorCapacitySchedule>>> getCreatorCalendar() async {
+  static Future<ScheduleResult<List<CreatorCapacitySchedule>>>
+  getCreatorCalendar() async {
     try {
       final response = await ApiService.get('profile/calendar');
       if (response['status'] == true && response['data'] != null) {
         final data = response['data'] as List<dynamic>;
-        final schedules = data.map((e) => CreatorCapacitySchedule.fromJson(e as Map<String, dynamic>)).toList();
+        final schedules = data
+            .map(
+              (e) =>
+                  CreatorCapacitySchedule.fromJson(e as Map<String, dynamic>),
+            )
+            .toList();
         return ScheduleResult(success: true, data: schedules);
       }
-      return ScheduleResult(success: false, message: response['message']?.toString() ?? 'Gagal memuat jadwal.');
+      return ScheduleResult(
+        success: false,
+        message: response['message']?.toString() ?? 'Gagal memuat jadwal.',
+      );
     } catch (e) {
       return ScheduleResult(success: false, message: e.toString());
     }
@@ -39,22 +48,39 @@ class ScheduleService {
       });
 
       if (response['status'] == true && response['data'] != null) {
-        final schedule = CreatorCapacitySchedule.fromJson(response['data'] as Map<String, dynamic>);
-        return ScheduleResult(success: true, data: schedule, message: response['message']?.toString());
+        final schedule = CreatorCapacitySchedule.fromJson(
+          response['data'] as Map<String, dynamic>,
+        );
+        return ScheduleResult(
+          success: true,
+          data: schedule,
+          message: response['message']?.toString(),
+        );
       }
-      return ScheduleResult(success: false, message: response['message']?.toString() ?? 'Gagal menyimpan jadwal.');
+      return ScheduleResult(
+        success: false,
+        message: response['message']?.toString() ?? 'Gagal menyimpan jadwal.',
+      );
     } catch (e) {
       return ScheduleResult(success: false, message: e.toString());
     }
   }
 
-  static Future<ScheduleResult<void>> deleteCalendarOverride(String date) async {
+  static Future<ScheduleResult<void>> deleteCalendarOverride(
+    String date,
+  ) async {
     try {
       final response = await ApiService.delete('profile/calendar/$date');
       if (response['status'] == true) {
-        return ScheduleResult(success: true, message: response['message']?.toString());
+        return ScheduleResult(
+          success: true,
+          message: response['message']?.toString(),
+        );
       }
-      return ScheduleResult(success: false, message: response['message']?.toString() ?? 'Gagal menghapus jadwal.');
+      return ScheduleResult(
+        success: false,
+        message: response['message']?.toString() ?? 'Gagal menghapus jadwal.',
+      );
     } catch (e) {
       return ScheduleResult(success: false, message: e.toString());
     }
@@ -68,39 +94,44 @@ class ScheduleService {
     try {
       final response = await ApiService.get(
         'creators/$creatorId/availability',
-        queryParams: {
-          'start_date': startDate,
-          'end_date': endDate,
-        },
+        queryParams: {'start_date': startDate, 'end_date': endDate},
       );
 
       if (response['status'] == true && response['data'] != null) {
-        final data = AvailabilityRange.fromJson(response['data'] as Map<String, dynamic>);
+        final data = AvailabilityRange.fromJson(
+          response['data'] as Map<String, dynamic>,
+        );
         return ScheduleResult(success: true, data: data);
       }
-      return ScheduleResult(success: false, message: response['message']?.toString() ?? 'Gagal memuat ketersediaan.');
+      return ScheduleResult(
+        success: false,
+        message:
+            response['message']?.toString() ?? 'Gagal memuat ketersediaan.',
+      );
     } catch (e) {
       return ScheduleResult(success: false, message: e.toString());
     }
   }
 
-  static Future<ScheduleResult<AvailabilityDetail>> getCreatorAvailabilityForDate(
-    String creatorId,
-    String date,
-  ) async {
+  static Future<ScheduleResult<AvailabilityDetail>>
+  getCreatorAvailabilityForDate(String creatorId, String date) async {
     try {
       final response = await ApiService.get(
         'creators/$creatorId/availability',
-        queryParams: {
-          'date': date,
-        },
+        queryParams: {'date': date},
       );
 
       if (response['status'] == true && response['data'] != null) {
-        final data = AvailabilityDetail.fromJson(response['data'] as Map<String, dynamic>);
+        final data = AvailabilityDetail.fromJson(
+          response['data'] as Map<String, dynamic>,
+        );
         return ScheduleResult(success: true, data: data);
       }
-      return ScheduleResult(success: false, message: response['message']?.toString() ?? 'Gagal memuat ketersediaan.');
+      return ScheduleResult(
+        success: false,
+        message:
+            response['message']?.toString() ?? 'Gagal memuat ketersediaan.',
+      );
     } catch (e) {
       return ScheduleResult(success: false, message: e.toString());
     }

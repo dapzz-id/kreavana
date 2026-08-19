@@ -14,43 +14,7 @@ class TimHakAksesScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final tim = [
-      {
-        'name': 'Budi Santoso',
-        'role': 'Administrator',
-        'email': 'budi@kominfo.go.id',
-        'role_color': Color(0xFFEF4444),
-        'isOnline': true,
-      },
-      {
-        'name': 'Siti Rahayu',
-        'role': 'Editor',
-        'email': 'siti@kominfo.go.id',
-        'role_color': Color(0xFF3B82F6),
-        'isOnline': true,
-      },
-      {
-        'name': 'Ahmad Fauzi',
-        'role': 'Viewer',
-        'email': 'ahmad@kominfo.go.id',
-        'role_color': Color(0xFF10B981),
-        'isOnline': false,
-      },
-      {
-        'name': 'Dewi Lestari',
-        'role': 'Editor',
-        'email': 'dewi@kominfo.go.id',
-        'role_color': Color(0xFF3B82F6),
-        'isOnline': true,
-      },
-      {
-        'name': 'Rizky Pratama',
-        'role': 'Viewer',
-        'email': 'rizky@kominfo.go.id',
-        'role_color': Color(0xFF10B981),
-        'isOnline': false,
-      },
-    ];
+    final List<Map<String, dynamic>> tim = [];
 
     final content = Scaffold(
       appBar: AppBar(

@@ -365,36 +365,24 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
               'change': 'Realtime API',
             };
           }).toList()
-        : [
-            {
-              'title': 'Project Aktif',
-              'value': '3 Katalog',
-              'icon': Icons.inventory_2_outlined,
-              'change': '+1 bulan ini',
-            },
-            {
-              'title': 'Kreator Terhubung',
-              'value': '8 Vendor',
-              'icon': Icons.people_outline,
-              'change': 'Rating avg 4.9',
-            },
-            {
-              'title': 'Total Investasi',
-              'value': 'Rp 4.250.000',
-              'icon': Icons.account_balance_wallet_outlined,
-              'change': 'Escrow Terjamin',
-            },
-            {
-              'title': 'Aset Selesai',
-              'value': '142 File HD',
-              'icon': Icons.cloud_download_outlined,
-              'change': 'Siap Pakai',
-            },
-          ];
+        : [];
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
+
+        if (metrics.isEmpty)
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardBg : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _accentColor.withValues(alpha: 0.2)),
+            ),
+            child: const Center(child: Text('Data belum tersedia.')),
+          );
+
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -499,26 +487,7 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
   }
 
   Widget _buildPackagesSection(bool isDark) {
-    final packages = [
-      {
-        'title': 'Paket Foto Katalog Minimarket',
-        'price': 'Rp 750.000',
-        'desc': '20 Foto Clean Background White + Lighting Studio',
-        'tag': 'Populer',
-      },
-      {
-        'title': 'Paket Video Reels IG/TikTok',
-        'price': 'Rp 1.200.000',
-        'desc': '3 Short Video 1080p dengan VO Model & Musik Trending',
-        'tag': 'Best Value',
-      },
-      {
-        'title': 'Paket Redesain Kemasan / Stiker',
-        'price': 'Rp 950.000',
-        'desc': 'Vector Master AI/PSD Siap Cetak + Mockup 3D',
-        'tag': 'Desain',
-      },
-    ];
+    final List<Map<String, dynamic>> packages = [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -684,20 +653,7 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
   }
 
   Widget _buildActiveProjectsSection(bool isDark) {
-    final active = [
-      {
-        'name': 'Foto Makanan Keripik Pedas Bude',
-        'status': 'Proses Editing (80%)',
-        'vendor': 'Aruna Studio',
-        'deadline': 'Besok, 18:00',
-      },
-      {
-        'name': 'Desain Stiker Botol Minuman Herbal',
-        'status': 'Revisi Mockup',
-        'vendor': 'Nusantara Graphix',
-        'deadline': '10 Ags 2026',
-      },
-    ];
+    final List<Map<String, dynamic>> active = [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

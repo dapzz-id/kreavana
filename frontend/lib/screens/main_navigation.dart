@@ -27,6 +27,7 @@ import 'proyek_saya_screen.dart';
 import 'agenda_screen.dart';
 import 'kolaborasi_screen.dart';
 import 'marketplace_karya_screen.dart';
+import 'peluang_proyek_screen.dart';
 import 'ulasan_reputasi_screen.dart';
 import 'laporan_screen.dart';
 import 'pengaturan_screen.dart';
@@ -155,7 +156,7 @@ class _MainNavigationState extends State<MainNavigation> {
     bool isCollapsed = false,
     bool isMobileDrawer = false,
   }) {
-    final screensCount = _currentUser.isAdmin ? 5 : 12;
+    final screensCount = _currentUser.isAdmin ? 5 : 13;
     final activeIndex = _currentIndex >= screensCount ? 0 : _currentIndex;
     final isSelected = activeIndex == index;
     final activeColor = SubRoleThemeEngine.getAccentColorForUser(_currentUser);
@@ -332,6 +333,7 @@ class _MainNavigationState extends State<MainNavigation> {
     9: AppRoutes.profil,
     10: AppRoutes.notifikasi,
     11: AppRoutes.pesan,
+    12: AppRoutes.peluangProyek,
   };
 
   static const _adminIndexRouteMap = {
@@ -475,10 +477,10 @@ class _MainNavigationState extends State<MainNavigation> {
       ),
       if (includeMarketplace)
         _buildSidebarItem(
-          icon: Icons.storefront_outlined,
-          activeIcon: Icons.storefront,
-          label: 'Marketplace Karya',
-          index: 3,
+          icon: Icons.work_outline,
+          activeIcon: Icons.work,
+          label: 'Job Seek',
+          index: 12,
           theme: theme,
           isDark: isDark,
           isCollapsed: isCollapsed,
@@ -1483,6 +1485,7 @@ class _MainNavigationState extends State<MainNavigation> {
             ), // 9
             NotificationsScreen(userId: _currentUser.id ?? ''), // 10
             const DirectMessageScreen(), // 11
+            PeluangProyekScreen(user: _currentUser), // 12
           ];
 
     final activeIndex = _currentIndex >= screens.length ? 0 : _currentIndex;
@@ -1648,6 +1651,7 @@ class _MainNavigationState extends State<MainNavigation> {
             ),
           ],
         ),
+        floatingActionButton: const KreavanaAiFloatingWidget(),
       );
     } else {
       // ─── Mobile Layout ─────────────────────────────────────────────────
@@ -1666,6 +1670,7 @@ class _MainNavigationState extends State<MainNavigation> {
           bottom: false,
           child: IndexedStack(index: activeIndex, children: screens),
         ),
+        floatingActionButton: const KreavanaAiFloatingWidget(),
         bottomNavigationBar: CustomBottomNavBar(
           currentIndex: mobileBottomNavIndex,
           onTap: (navIndex) {
@@ -1733,6 +1738,6 @@ class _MainNavigationState extends State<MainNavigation> {
       );
     }
 
-    return Stack(children: [scaffoldWidget, const KreavanaAiFloatingWidget()]);
+    return scaffoldWidget;
   }
 }

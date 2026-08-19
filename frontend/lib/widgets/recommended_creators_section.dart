@@ -352,7 +352,10 @@ class _RecommendedCreatorsSectionState
                               hint: const Text('Kategori'),
                               value: _selectedCategory,
                               icon: const Icon(Icons.arrow_drop_down, size: 20),
-                              style: TextStyle(fontSize: 13, color: isDark ? Colors.white : Colors.black87),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
                               onChanged: (String? newValue) {
                                 setState(() => _selectedCategory = newValue);
                                 _fetchRecommendations(isRefresh: true);

@@ -22,18 +22,9 @@ class _TopUpScreenState extends State<TopUpScreen> {
 
   final List<double> _quickAmounts = [20000, 50000, 100000, 200000, 500000];
 
-  final List<Map<String, String>> _banks = [
-    {'name': 'BCA', 'code': 'bca'},
-    {'name': 'Mandiri', 'code': 'mandiri'},
-    {'name': 'BNI', 'code': 'bni'},
-    {'name': 'BRI', 'code': 'bri'},
-  ];
+  final List<Map<String, String>> _banks = [];
 
-  final List<Map<String, String>> _ewallets = [
-    {'name': 'GoPay', 'code': 'gopay'},
-    {'name': 'OVO', 'code': 'ovo'},
-    {'name': 'DANA', 'code': 'dana'},
-  ];
+  final List<Map<String, String>> _ewallets = [];
 
   @override
   void dispose() {

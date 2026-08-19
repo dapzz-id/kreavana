@@ -27,18 +27,9 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
 
   final List<double> _quickAmounts = [50000, 100000, 200000, 500000, 1000000];
 
-  final List<Map<String, String>> _banks = [
-    {'name': 'BCA', 'code': 'bca'},
-    {'name': 'Mandiri', 'code': 'mandiri'},
-    {'name': 'BNI', 'code': 'bni'},
-    {'name': 'BRI', 'code': 'bri'},
-  ];
+  final List<Map<String, String>> _banks = [];
 
-  final List<Map<String, String>> _ewallets = [
-    {'name': 'GoPay', 'code': 'gopay'},
-    {'name': 'OVO', 'code': 'ovo'},
-    {'name': 'DANA', 'code': 'dana'},
-  ];
+  final List<Map<String, String>> _ewallets = [];
 
   double _amount = 0.0;
   double _tax = 0.0;

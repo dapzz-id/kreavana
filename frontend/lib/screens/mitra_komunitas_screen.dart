@@ -14,38 +14,7 @@ class MitraKomunitasScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final mitra = [
-      {
-        'name': 'Komunitas Kreator Indonesia',
-        'members': '2.450',
-        'category': 'Komunitas',
-        'color': Color(0xFFEC4899),
-      },
-      {
-        'name': 'Asosiasi Videografer Nasional',
-        'members': '1.230',
-        'category': 'Asosiasi',
-        'color': Color(0xFF3B82F6),
-      },
-      {
-        'name': 'Jejaring UMKM Digital',
-        'members': '5.680',
-        'category': 'UMKM',
-        'color': Color(0xFF10B981),
-      },
-      {
-        'name': 'Forum Desainer Indonesia',
-        'members': '3.120',
-        'category': 'Komunitas',
-        'color': Color(0xFF8B5CF6),
-      },
-      {
-        'name': 'Koperasi Kreator Nusantara',
-        'members': '890',
-        'category': 'Koperasi',
-        'color': Color(0xFFF59E0B),
-      },
-    ];
+    final List<Map<String, dynamic>> mitra = [];
 
     final content = Scaffold(
       appBar: AppBar(

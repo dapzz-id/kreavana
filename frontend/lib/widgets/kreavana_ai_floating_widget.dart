@@ -13,145 +13,62 @@ class KreavanaAiFloatingWidget extends StatefulWidget {
 }
 
 class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
-  bool _isOpen = false;
-  double? _left;
-  double? _top;
-
   void _toggleWidget() {
-    setState(() {
-      _isOpen = !_isOpen;
-    });
+    final isDesktop = MediaQuery.of(context).size.width >= 768;
+    if (isDesktop) {
+      showDialog(
+        context: context,
+        builder: (ctx) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(24),
+          child: _BlackboxAiPanel(
+            isDesktop: true,
+            onClose: () => Navigator.pop(ctx),
+          ),
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: _BlackboxAiPanel(
+            isDesktop: false,
+            onClose: () => Navigator.pop(ctx),
+          ),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final isDesktop = mediaQuery.size.width >= 768;
-
-    final safeBottom = mediaQuery.padding.bottom;
-    // Assume BottomNavigationBar is present on mobile (height ~56)
-    final navBarHeight = isDesktop ? 0.0 : kBottomNavigationBarHeight;
-    final baseBottomOffset = safeBottom + navBarHeight;
-
-    final defaultLeft = mediaQuery.size.width - (isDesktop ? 180.0 : 150.0);
-    final defaultTop = mediaQuery.size.height - baseBottomOffset - (isDesktop ? 80.0 : 70.0);
-
-    final currentLeft = (_left ?? defaultLeft).clamp(
-      10.0,
-      mediaQuery.size.width - 140.0,
-    );
-    final currentTop = (_top ?? defaultTop).clamp(
-      10.0,
-      mediaQuery.size.height - 60.0 - baseBottomOffset,
-    );
-
-    final panelLeft = (currentLeft - (isDesktop ? 260.0 : 180.0)).clamp(
-      10.0,
-      mediaQuery.size.width - (isDesktop ? 440.0 : mediaQuery.size.width * 0.9),
-    );
-    final panelTop = (currentTop - (isDesktop ? 580.0 : 500.0)).clamp(
-      10.0,
-      mediaQuery.size.height - (isDesktop ? 620.0 : 540.0),
-    );
-
-    return Stack(
-      children: [
-        if (_isOpen)
-          Positioned(
-            left: panelLeft,
-            top: panelTop,
-            child: Material(
-              color: Colors.transparent,
-              elevation: 16,
-              borderRadius: BorderRadius.circular(24),
-              child: _BlackboxAiPanel(
-                isDesktop: isDesktop,
-                onClose: _toggleWidget,
-              ),
-            ),
-          ),
-
-        // Floating Launcher Button (Zero-delay Draggable)
-        Positioned(
-          left: currentLeft,
-          top: currentTop,
-          child: GestureDetector(
-            onPanStart: (_) {
-              _left = currentLeft;
-              _top = currentTop;
-            },
-            onPanUpdate: (details) {
-              setState(() {
-                _left = (_left! + details.delta.dx).clamp(
-                  10.0,
-                  mediaQuery.size.width - 140.0,
-                );
-                _top = (_top! + details.delta.dy).clamp(
-                  10.0,
-                  mediaQuery.size.height - 60.0,
-                );
-              });
-            },
-            child: Material(
-              elevation: 10,
-              borderRadius: BorderRadius.circular(30),
-              color: AppTheme.primaryPurple,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(30),
-                onTap: _toggleWidget,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(30),
-                    gradient: AppTheme.primaryGradient,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryPurple.withValues(alpha: 0.4),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (_isOpen)
-                        const Icon(
-                          Icons.close_rounded,
-                          color: Colors.white,
-                          size: 22,
-                        )
-                      else
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: Image.asset(
-                            'assets/brandlogo.png',
-                            width: 22,
-                            height: 22,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _isOpen ? 'Tutup' : 'Kreavana AI',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
+    return FloatingActionButton.extended(
+      onPressed: _toggleWidget,
+      backgroundColor: AppTheme.primaryPurple,
+      elevation: 6,
+      icon: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: Image.asset(
+          'assets/brandlogo.png',
+          width: 22,
+          height: 22,
+          fit: BoxFit.contain,
         ),
-      ],
+      ),
+      label: const Text(
+        'Kreavana AI',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+          letterSpacing: -0.2,
+        ),
+      ),
     );
   }
 }

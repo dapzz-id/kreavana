@@ -74,62 +74,62 @@ class _CreatorAnimatorDashboardScreenState
               onRefresh: _fetchRealtimeData,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-            isDesktop ? 24 : 16,
-            16,
-            isDesktop ? 24 : 16,
-            110,
-          ),
-          child: isDesktop
-              ? Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 7,
-                      child: Column(
+                padding: EdgeInsets.fromLTRB(
+                  isDesktop ? 24 : 16,
+                  16,
+                  isDesktop ? 24 : 16,
+                  110,
+                ),
+                child: isDesktop
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 7,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildHeroBanner(isDark),
+                                const SizedBox(height: 24),
+                                _buildMetricsRow(isDark),
+                                const SizedBox(height: 24),
+                                _buildRenderQueueSection(isDark),
+                                const SizedBox(height: 24),
+                                _buildShowreelSection(isDark),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 24),
+                          Expanded(
+                            flex: 3,
+                            child: SubRoleRightSidebar(
+                              user: widget.user,
+                              onUserUpdated: widget.onUserUpdated,
+                              isDark: isDark,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildHeroBanner(isDark),
                           const SizedBox(height: 24),
                           _buildMetricsRow(isDark),
                           const SizedBox(height: 24),
+                          SubRoleRightSidebar(
+                            user: widget.user,
+                            onUserUpdated: widget.onUserUpdated,
+                            isDark: isDark,
+                          ),
+                          const SizedBox(height: 24),
                           _buildRenderQueueSection(isDark),
                           const SizedBox(height: 24),
                           _buildShowreelSection(isDark),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 24),
-                    Expanded(
-                      flex: 3,
-                      child: SubRoleRightSidebar(
-                        user: widget.user,
-                        onUserUpdated: widget.onUserUpdated,
-                        isDark: isDark,
-                      ),
-                    ),
-                  ],
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeroBanner(isDark),
-                    const SizedBox(height: 24),
-                    _buildMetricsRow(isDark),
-                    const SizedBox(height: 24),
-                    SubRoleRightSidebar(
-                      user: widget.user,
-                      onUserUpdated: widget.onUserUpdated,
-                      isDark: isDark,
-                    ),
-                    const SizedBox(height: 24),
-                    _buildRenderQueueSection(isDark),
-                    const SizedBox(height: 24),
-                    _buildShowreelSection(isDark),
-                  ],
-                ),
-        ),
-      ),
+              ),
+            ),
     );
   }
 
@@ -420,28 +420,24 @@ class _CreatorAnimatorDashboardScreenState
               'icon': Icons.tune_rounded,
             };
           }).toList()
-        : [
-            {
-              'title': 'Proyek 3D Aktif',
-              'val': '2 Proyek',
-              'icon': Icons.view_in_ar,
-            },
-            {
-              'title': 'Status Render',
-              'val': '85% Frame Complete',
-              'icon': Icons.tune,
-            },
-            {'title': 'Rating Klien', 'val': '4.95 / 5.0', 'icon': Icons.star},
-            {
-              'title': 'Pendapatan Escrow',
-              'val': 'Rp 18.500.000',
-              'icon': Icons.account_balance_wallet,
-            },
-          ];
+        : [];
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
+
+        if (metrics.isEmpty)
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardBg : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _accentColor.withValues(alpha: 0.2)),
+            ),
+            child: const Center(child: Text('Data belum tersedia.')),
+          );
+
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -514,20 +510,7 @@ class _CreatorAnimatorDashboardScreenState
   }
 
   Widget _buildRenderQueueSection(bool isDark) {
-    final jobs = [
-      {
-        'title': 'Animasi Mascot 3D Iklan Minuman',
-        'client': 'PT Nusantara Beverage',
-        'milestone': 'Stage 2: Rigging & Lighting',
-        'progress': 0.75,
-      },
-      {
-        'title': 'Motion Graphic Explainer App',
-        'client': 'Fintech Go',
-        'milestone': 'Stage 3: Render 4K Delivery',
-        'progress': 0.95,
-      },
-    ];
+    final List<Map<String, dynamic>> jobs = [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

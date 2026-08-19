@@ -33,7 +33,6 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
   final GlobalKey _themeBtnKey = GlobalKey();
 
   Color get _brandBlue => SubRoleThemeEngine.getAccentColor('user', 'company');
-  Color get _brandLight => _brandBlue.withValues(alpha: 0.7);
   Map<String, List<Map<String, String>>> _allSubRoleStats = {};
 
   @override
@@ -413,43 +412,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
   }
 
   Widget _buildMetricCards(bool isDark) {
-    final metrics = [
-      {
-        'label': 'Total Proyek',
-        'value': '12',
-        'sub': '8 aktif, 4 selesai',
-        'icon': Icons.folder_outlined,
-        'color': _brandLight,
-      },
-      {
-        'label': 'Pekerjaan Aktif',
-        'value': '8',
-        'sub': 'Sedang berjalan',
-        'icon': Icons.play_circle_outline,
-        'color': const Color(0xFF10B981),
-      },
-      {
-        'label': 'Total Pembayaran',
-        'value': 'Rp 45.750.000',
-        'sub': 'Semua waktu',
-        'icon': Icons.account_balance_wallet_outlined,
-        'color': const Color(0xFF3B82F6),
-      },
-      {
-        'label': 'Menunggu Pembayaran',
-        'value': 'Rp 7.250.000',
-        'sub': '3 invoice',
-        'icon': Icons.receipt_long_outlined,
-        'color': const Color(0xFFF59E0B),
-      },
-      {
-        'label': 'Kreator Favorit',
-        'value': '15',
-        'sub': 'Kreator tersimpan',
-        'icon': Icons.favorite_border,
-        'color': const Color(0xFFEF4444),
-      },
-    ];
+    final metrics = [];
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -714,32 +677,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
   }
 
   Widget _buildActiveProjectsCard(bool isDark) {
-    final projects = [
-      {
-        'title': 'Video Company Profile',
-        'creator': 'Kreasi Studio',
-        'progress': 0.60,
-        'status': 'Sedang Dikerjakan',
-      },
-      {
-        'title': 'Desain Kemasan Produk',
-        'creator': 'DesignLab',
-        'progress': 0.40,
-        'status': 'Sedang Dikerjakan',
-      },
-      {
-        'title': 'Event Gathering 2025',
-        'creator': 'EventPro Organizer',
-        'progress': 0.75,
-        'status': 'Dalam Proses',
-      },
-      {
-        'title': 'Konten Media Sosial',
-        'creator': 'Content Creativa',
-        'progress': 0.30,
-        'status': 'Review',
-      },
-    ];
+    final List<Map<String, dynamic>> projects = [];
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -918,12 +856,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
   }
 
   Widget _buildFavoriteCreatorsCard(bool isDark) {
-    final creators = [
-      {'name': 'Kreasi Studio', 'cat': 'Video & Fotografi', 'rating': '4.9'},
-      {'name': 'DesignLab', 'cat': 'Desain & Branding', 'rating': '4.8'},
-      {'name': 'Content Creativa', 'cat': 'Content Creator', 'rating': '4.9'},
-      {'name': 'EventPro Organizer', 'cat': 'Event Organizer', 'rating': '4.7'},
-    ];
+    final List<Map<String, dynamic>> creators = [];
 
     return Container(
       padding: const EdgeInsets.all(20),

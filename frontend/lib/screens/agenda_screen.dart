@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../app/subrole_theme_engine.dart';
 import '../models/user_model.dart';
-import '../services/api_service.dart';
+import '../services/job_contract_service.dart';
 
 import '../widgets/skeleton/skeleton_list.dart';
 
@@ -22,68 +22,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   String _selectedFilter = 'Semua';
   String _searchQuery = '';
 
-  List<Map<String, dynamic>> _agendaList = [
-    {
-      'id': '1',
-      'title': 'Meeting Briefing Proyek Foto Katalog',
-      'date': '24',
-      'month': 'Mei',
-      'time': '09:00 - 10:00 WIB',
-      'type': 'Online',
-      'typeColor': const Color(0xFF3B82F6),
-      'icon': Icons.videocam_outlined,
-      'location': 'Google Meet / Room Kreavana',
-      'organizer': 'Aruna Studio',
-    },
-    {
-      'id': '2',
-      'title': 'Review Draft Desain Poster Campaign',
-      'date': '25',
-      'month': 'Mei',
-      'time': '14:00 - 15:00 WIB',
-      'type': 'Online',
-      'typeColor': const Color(0xFF3B82F6),
-      'icon': Icons.videocam_outlined,
-      'location': 'Virtual Room',
-      'organizer': 'Graphix Studio',
-    },
-    {
-      'id': '3',
-      'title': 'Shooting Day - Video Promosi Instagram',
-      'date': '27',
-      'month': 'Mei',
-      'time': '08:00 - 17:00 WIB',
-      'type': 'Offline',
-      'typeColor': const Color(0xFFF97316),
-      'icon': Icons.location_on_outlined,
-      'location': 'Studio 8, Jakarta Selatan',
-      'organizer': 'Frame Story',
-    },
-    {
-      'id': '4',
-      'title': 'Deadline Penyerahan Hasil Akhir Video',
-      'date': '29',
-      'month': 'Mei',
-      'time': '23:59 WIB',
-      'type': 'Deadline',
-      'typeColor': const Color(0xFFEF4444),
-      'icon': Icons.alarm_outlined,
-      'location': 'Upload via Kreavana Workspace',
-      'organizer': 'Internal System',
-    },
-    {
-      'id': '5',
-      'title': 'Konsultasi Desain Banner & Marketing',
-      'date': '02',
-      'month': 'Jun',
-      'time': '10:00 - 11:00 WIB',
-      'type': 'Online',
-      'typeColor': const Color(0xFF3B82F6),
-      'icon': Icons.videocam_outlined,
-      'location': 'Call Room',
-      'organizer': 'Dinas Kominfo Partner',
-    },
-  ];
+  List<Map<String, dynamic>> _agendaList = [];
 
   @override
   void initState() {
@@ -94,17 +33,47 @@ class _AgendaScreenState extends State<AgendaScreen> {
   Future<void> _fetchRealtimeAgenda() async {
     setState(() => _isLoading = true);
     try {
-      final res = await ApiService.get('/agenda');
-      if (res['status'] == true && res['data'] != null) {
-        final list = List<Map<String, dynamic>>.from(res['data']);
-        if (mounted) {
-          setState(() {
-            _agendaList = list;
+      final contracts = await JobContractService.getUserContracts();
+      final List<Map<String, dynamic>> list = [];
+      for (final c in contracts) {
+        if (c.deadline != null) {
+          final dt = c.deadline!;
+          final months = [
+            'Jan',
+            'Feb',
+            'Mar',
+            'Apr',
+            'Mei',
+            'Jun',
+            'Jul',
+            'Agu',
+            'Sep',
+            'Okt',
+            'Nov',
+            'Des',
+          ];
+          final monthStr = months[dt.month - 1];
+          list.add({
+            'id': c.id,
+            'title': c.title,
+            'date': dt.day.toString().padLeft(2, '0'),
+            'month': monthStr,
+            'time': '23:59 WIB', // Placeholder
+            'type': 'Deadline',
+            'typeColor': const Color(0xFFEF4444),
+            'icon': Icons.alarm_outlined,
+            'location': 'Kreavana Workspace',
+            'organizer': c.creatorName,
           });
         }
       }
+      if (mounted) {
+        setState(() {
+          _agendaList = list;
+        });
+      }
     } catch (_) {
-      // Keep rich fallback data
+      // API error
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

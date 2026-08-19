@@ -93,12 +93,16 @@ class RecommendationService {
 
   static Future<List<String>> getServiceCategories() async {
     try {
-      final response = await DioClient.instance.dio.get('/creators/recommendations/categories');
+      final response = await DioClient.instance.dio.get(
+        '/creators/recommendations/categories',
+      );
       if (response.statusCode == 200 && response.data['status'] == true) {
         final List<dynamic> rawData = response.data['data'] ?? [];
         return rawData.map((e) => e.toString()).toList();
       } else {
-        throw Exception(response.data['message'] ?? 'Failed to fetch categories');
+        throw Exception(
+          response.data['message'] ?? 'Failed to fetch categories',
+        );
       }
     } catch (e) {
       throw Exception('Failed to connect to recommendation service: $e');

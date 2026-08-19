@@ -14,44 +14,7 @@ class PengumumanPublikScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final pengumuman = [
-      {
-        'title': 'Peluang Kolaborasi Terbuka!',
-        'description':
-            'Instansi membuka peluang kolaborasi untuk program "Inovasi Layanan Publik 2025". Ayo berkolaborasi dan ciptakan dampak positif bersama!',
-        'date': '18 Juli 2025',
-        'type': 'Kolaborasi',
-        'type_color': Color(0xFF3B82F6),
-        'icon': Icons.campaign_outlined,
-      },
-      {
-        'title': 'Lomba Konten Promosi Daerah',
-        'description':
-            'Dibuka pendaftaran lomba konten promosi daerah tingkat nasional. Daftarkan karya terbaik Anda dan menangkan total hadiah Rp 50 Juta!',
-        'date': '10 Juli 2025',
-        'type': 'Lomba',
-        'type_color': Color(0xFFEF4444),
-        'icon': Icons.emoji_events_outlined,
-      },
-      {
-        'title': 'Pelatihan Digital Marketing Gratis',
-        'description':
-            'Diskominfo mengadakan pelatihan digital marketing untuk pelaku UMKM. Kuota terbatas, daftar sekarang!',
-        'date': '5 Juli 2025',
-        'type': 'Pelatihan',
-        'type_color': Color(0xFF10B981),
-        'icon': Icons.school_outlined,
-      },
-      {
-        'title': 'Pengumuman Hasil Tender Q2',
-        'description':
-            'Daftar pemenang tender pengadaan jasa kreatif Q2 2025 telah diumumkan. Silakan cek hasilnya di portal tender.',
-        'date': '1 Juli 2025',
-        'type': 'Pengumuman',
-        'type_color': Color(0xFFF59E0B),
-        'icon': Icons.info_outline,
-      },
-    ];
+    final List<Map<String, dynamic>> pengumuman = [];
 
     final content = Scaffold(
       appBar: AppBar(

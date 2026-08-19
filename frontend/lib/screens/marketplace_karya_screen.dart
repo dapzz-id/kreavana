@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../app/app_animations.dart';
@@ -42,19 +43,30 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
     'Branding',
   ];
 
+  Timer? _debounce;
+
   @override
   void initState() {
     super.initState();
     _loadAll();
     _scrollCtrl.addListener(_onScroll);
+    _searchCtrl.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
+    _searchCtrl.removeListener(_onSearchChanged);
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
-
+    _debounce?.cancel();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) _onSearch();
+    });
   }
 
   void _onScroll() {

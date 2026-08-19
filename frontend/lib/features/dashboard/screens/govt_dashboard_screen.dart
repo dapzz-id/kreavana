@@ -430,48 +430,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
 
   // ── 5 Metric Cards ────────────────────────────────────────────────────────
   Widget _buildMetricCards(bool isDark) {
-    final metrics = [
-      {
-        'label': 'Total Program & Kegiatan',
-        'value': '28',
-        'sub': '12 akan datang, 16 berjalan',
-        'icon': Icons.folder_outlined,
-        'color': _govLight,
-        'nav': 'Lihat Semua Program',
-      },
-      {
-        'label': 'Kegiatan Aktif',
-        'value': '16',
-        'sub': 'Sedang berjalan',
-        'icon': Icons.play_circle_outline,
-        'color': const Color(0xFF10B981),
-        'nav': 'Lihat Semua Kegiatan',
-      },
-      {
-        'label': 'Kreator & Vendor Terdaftar',
-        'value': '1.245',
-        'sub': 'Tersebar di jaringan',
-        'icon': Icons.people_outline,
-        'color': const Color(0xFF8B5CF6),
-        'nav': 'Cari Vendor',
-      },
-      {
-        'label': 'Total Anggaran',
-        'value': 'Rp 12.850.000.000',
-        'sub': 'Tahun Anggaran 2025',
-        'icon': Icons.monetization_on_outlined,
-        'color': const Color(0xFFF59E0B),
-        'nav': 'Rincian Anggaran',
-      },
-      {
-        'label': 'Realisasi Anggaran',
-        'value': 'Rp 6.240.000.000',
-        'sub': '48.5% dari total anggaran',
-        'icon': Icons.bar_chart,
-        'color': _govBlue,
-        'nav': 'Rincian Anggaran',
-      },
-    ];
+    final metrics = [];
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -800,33 +759,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
 
   // ── Donut Chart: Program Berdasarkan Kategori ─────────────────────────────
   Widget _buildDonutChartCard(bool isDark) {
-    final categories = [
-      {
-        'name': 'Publikasi & Informasi',
-        'percent': 35.7,
-        'count': 10,
-        'color': _govLight,
-      },
-      {
-        'name': 'Edukasi & Sosialisasi',
-        'percent': 25.0,
-        'count': 7,
-        'color': const Color(0xFF10B981),
-      },
-      {
-        'name': 'Ekonomi Kreatif',
-        'percent': 17.9,
-        'count': 5,
-        'color': const Color(0xFFF59E0B),
-      },
-      {
-        'name': 'Event & Pariwisata',
-        'percent': 14.3,
-        'count': 4,
-        'color': const Color(0xFFEF4444),
-      },
-      {'name': 'Lainnya', 'percent': 7.1, 'count': 2, 'color': Colors.grey},
-    ];
+    final List<Map<String, dynamic>> categories = [];
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -867,7 +800,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
             child: Column(
               children: [
                 const Text(
-                  '28',
+                  '0',
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 Text(
@@ -930,36 +863,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
 
   // ── Recent Programs List ──────────────────────────────────────────────────
   Widget _buildRecentProgramsCard(bool isDark) {
-    final programs = [
-      {
-        'title': 'Festival Kreativitas Pemuda 2025',
-        'status': 'Berjalan',
-        'status_color': const Color(0xFF10B981),
-        'date': '20 - 22 Juni 2025',
-        'icon': Icons.celebration_outlined,
-      },
-      {
-        'title': 'Sosialisasi Literasi Digital Desa',
-        'status': 'Berjalan',
-        'status_color': const Color(0xFF10B981),
-        'date': '15 Juni 2025',
-        'icon': Icons.wifi_outlined,
-      },
-      {
-        'title': 'Lomba Konten Promosi Daerah',
-        'status': 'Dalam Review',
-        'status_color': const Color(0xFFF59E0B),
-        'date': '10 Juni 2025',
-        'icon': Icons.photo_camera_outlined,
-      },
-      {
-        'title': 'Pelatihan Fotografi Dasar',
-        'status': 'Akan Datang',
-        'status_color': _govLight,
-        'date': '5 Juni 2025',
-        'icon': Icons.school_outlined,
-      },
-    ];
+    final List<Map<String, dynamic>> programs = [];
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1141,43 +1045,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
 
   // ── Aktivitas Terbaru ─────────────────────────────────────────────────────
   Widget _buildActivityCard(bool isDark) {
-    final activities = [
-      {
-        'title': 'Program "Festival Kreativitas Pemuda 2025" dipublikasikan',
-        'subtitle': 'Peluang & Program',
-        'time': '2 jam lalu',
-        'icon': Icons.public_outlined,
-        'color': _govLight,
-      },
-      {
-        'title': 'Vendor Kreasi Studio mengajukan penawaran',
-        'subtitle': 'Festival Kreativitas Pemuda 2025',
-        'time': '4 jam lalu',
-        'icon': Icons.receipt_long_outlined,
-        'color': const Color(0xFF8B5CF6),
-      },
-      {
-        'title': 'Pembayaran termin ke-1 telah disetujui',
-        'subtitle': 'Pelatihan Fotografi Dasar',
-        'time': '1 hari lalu',
-        'icon': Icons.check_circle_outline,
-        'color': const Color(0xFF10B981),
-      },
-      {
-        'title': 'Laporan kegiatan Sosialisasi Literasi Digital Desa diunggah',
-        'subtitle': 'Sosialisasi Literasi Digital Desa',
-        'time': '1 hari lalu',
-        'icon': Icons.upload_file_outlined,
-        'color': const Color(0xFFF59E0B),
-      },
-      {
-        'title': 'Pengumuman Lomba Konten Promosi Daerah diterbitkan',
-        'subtitle': 'Pengumuman Publik',
-        'time': '2 hari lalu',
-        'icon': Icons.campaign_outlined,
-        'color': _govBlue,
-      },
-    ];
+    final List<Map<String, dynamic>> activities = [];
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1295,43 +1163,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
 
   // ── Kreator & Vendor Terbaik ──────────────────────────────────────────────
   Widget _buildVendorLeaderboardCard(bool isDark) {
-    final vendors = [
-      {
-        'rank': 1,
-        'name': 'Kreasi Studio',
-        'category': 'Video & Fotografi',
-        'rating': '4.9',
-        'color': const Color(0xFFF59E0B),
-      },
-      {
-        'rank': 2,
-        'name': 'EventPro Organizer',
-        'category': 'Event Organizer',
-        'rating': '4.8',
-        'color': const Color(0xFF6B7280),
-      },
-      {
-        'rank': 3,
-        'name': 'DesignLab',
-        'category': 'Desain & Branding',
-        'rating': '4.8',
-        'color': const Color(0xFFD97706),
-      },
-      {
-        'rank': 4,
-        'name': 'MediaKreatif ID',
-        'category': 'Konten & Media Sosial',
-        'rating': '4.7',
-        'color': isDark ? Colors.grey.shade600 : Colors.grey.shade400,
-      },
-      {
-        'rank': 5,
-        'name': 'DroneVista',
-        'category': 'Drone Pilot',
-        'rating': '4.7',
-        'color': isDark ? Colors.grey.shade600 : Colors.grey.shade400,
-      },
-    ];
+    final List<Map<String, dynamic>> vendors = [];
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1474,38 +1306,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
 
   // ── Realisasi Anggaran ────────────────────────────────────────────────────
   Widget _buildAnggaranCard(bool isDark) {
-    final breakdown = [
-      {
-        'name': 'Publikasi & Informasi',
-        'amount': 'Rp 2.350.000.000',
-        'percent': 52,
-        'color': _govLight,
-      },
-      {
-        'name': 'Edukasi & Sosialisasi',
-        'amount': 'Rp 1.620.000.000',
-        'percent': 45,
-        'color': const Color(0xFF10B981),
-      },
-      {
-        'name': 'Ekonomi Kreatif',
-        'amount': 'Rp 1.100.000.000',
-        'percent': 46,
-        'color': const Color(0xFFF59E0B),
-      },
-      {
-        'name': 'Event & Pariwisata',
-        'amount': 'Rp 820.000.000',
-        'percent': 44,
-        'color': const Color(0xFFEF4444),
-      },
-      {
-        'name': 'Lainnya',
-        'amount': 'Rp 350.000.000',
-        'percent': 35,
-        'color': Colors.grey,
-      },
-    ];
+    final List<Map<String, dynamic>> breakdown = [];
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1541,7 +1342,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            '48.5%',
+            '0%',
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -1550,7 +1351,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Rp 6.240.000.000 / Rp 12.850.000.000',
+            'Rp 0 / Rp 0',
             style: TextStyle(
               fontSize: 11,
               color: isDark ? AppTheme.textMuted : Colors.grey.shade600,

@@ -100,21 +100,25 @@ class _DashboardScreenState extends State<DashboardScreen>
   Future<void> _loadDashboardData() async {
     try {
       final roleType = widget.user.role;
-      final res = await ApiService.get('client-dashboard/overview?role_type=$roleType');
-      
+      final res = await ApiService.get(
+        'client-dashboard/overview?role_type=$roleType',
+      );
+
       if (mounted) {
         setState(() {
           if (res['success'] == true && res['data'] != null) {
             final data = res['data'];
+            final summary = data['summary'] ?? {};
             _overviewSummary = {
-              'active_needs': data['active_needs']?.toString() ?? '0',
-              'proposals_count': data['proposals_count']?.toString() ?? '0',
-              'running_projects': data['running_projects']?.toString() ?? '0',
-              'estimated_expenses': data['estimated_expenses']?.toString() ?? 'Rp0',
-              'monthly_income': data['monthly_income']?.toString() ?? 'Rp0',
+              'active_needs': summary['active_needs']?.toString() ?? '0',
+              'proposals_count': summary['proposals_count']?.toString() ?? '0',
+              'running_projects': summary['running_projects']?.toString() ?? '0',
+              'estimated_expenses':
+                  summary['estimated_expenses']?.toString() ?? 'Rp0',
+              'monthly_income': summary['monthly_income']?.toString() ?? 'Rp0',
             };
           } else {
-             _overviewSummary = {
+            _overviewSummary = {
               'active_needs': '0',
               'proposals_count': '0',
               'running_projects': '0',
@@ -122,30 +126,30 @@ class _DashboardScreenState extends State<DashboardScreen>
               'monthly_income': 'Rp0',
             };
           }
-          
+
+          _vendorRecommendations = List<Map<String, dynamic>>.from(data['vendor_recommendations'] ?? []);
+          _projectNeeds = List<Map<String, dynamic>>.from(data['project_needs'] ?? []);
+          _agenda = List<Map<String, dynamic>>.from(data['agenda'] ?? []);
+          _projectAssets = List<Map<String, dynamic>>.from(data['project_assets'] ?? []);
+        });
+        _statsAnimController.forward(from: 0);
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _overviewSummary = {
+            'active_needs': '0',
+            'proposals_count': '0',
+            'running_projects': '0',
+            'estimated_expenses': 'Rp0',
+            'monthly_income': 'Rp0',
+          };
           _vendorRecommendations = [];
           _projectNeeds = [];
           _agenda = [];
           _projectAssets = [];
         });
-        _statsAnimController.forward(from: 0);
       }
-    } catch (_) {
-        if (mounted) {
-            setState(() {
-              _overviewSummary = {
-                  'active_needs': '0',
-                  'proposals_count': '0',
-                  'running_projects': '0',
-                  'estimated_expenses': 'Rp0',
-                  'monthly_income': 'Rp0',
-              };
-              _vendorRecommendations = [];
-              _projectNeeds = [];
-              _agenda = [];
-              _projectAssets = [];
-            });
-        }
     }
   }
 
@@ -1010,35 +1014,20 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildProjectNeedsSection(bool isDark) {
-    final needs = _projectNeeds.isNotEmpty
-        ? _projectNeeds
-        : [
-            {
-              'title': 'Brief campaign skincare',
-              'status': 'Berjalan',
-              'status_color': '#10B981',
-              'description': 'Brand Kosmetik',
-            },
-            {
-              'title': 'Draft script reels',
-              'status': 'Diproses',
-              'status_color': '#F59E0B',
-              'description': 'Campaign Herbal',
-            },
-            {
-              'title': 'Review caption promosi',
-              'status': 'Menunggu',
-              'status_color': '#3B82F6',
-              'description': 'Produk Fashion',
-            },
-          ];
     return _SectionCard(
       title: _isCreator ? 'Proyek & Aktivitas' : 'Kebutuhan & Proyek',
       onViewAll: () => _navigateTo('Lihat Semua Proyek'),
       isDark: isDark,
-      child: Column(
-        children: needs.map((need) => _buildNeedItem(need, isDark)).toList(),
-      ),
+      child: _projectNeeds.isEmpty
+          ? AppEmptyState(
+              icon: Icons.folder_open_outlined,
+              title: 'Belum ada proyek',
+              subtitle: 'Kebutuhan atau proyek akan muncul di sini',
+              iconSize: 48,
+            )
+          : Column(
+              children: _projectNeeds.map((need) => _buildNeedItem(need, isDark)).toList(),
+            ),
     );
   }
 
@@ -1117,42 +1106,21 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildAgendaSection(bool isDark) {
-    final agenda = _agenda.isNotEmpty
-        ? _agenda
-        : [
-            {
-              'title': 'Meeting brief campaign',
-              'date': '24',
-              'month': 'Mei',
-              'time': '10:00 - 11:00',
-              'type': 'Hari ini',
-              'type_color': '#7C3AED',
-            },
-            {
-              'title': 'Shooting konten produk',
-              'date': '25',
-              'month': 'Mei',
-              'time': '13:00 - 16:00',
-              'type': 'Besok',
-              'type_color': '#3B82F6',
-            },
-            {
-              'title': 'Posting campaign',
-              'date': '29',
-              'month': 'Mei',
-              'time': '16:00',
-              'type': '4 hari lagi',
-              'type_color': '#F97316',
-            },
-          ];
     return _SectionCard(
       title: _isCreator ? 'Agenda / Kalender' : 'Agenda & Jadwal',
       onViewAll: () => _navigateTo('Lihat Kalender'),
       viewAllLabel: 'Kalender',
       isDark: isDark,
-      child: Column(
-        children: agenda.map((item) => _buildAgendaItem(item, isDark)).toList(),
-      ),
+      child: _agenda.isEmpty
+          ? AppEmptyState(
+              icon: Icons.calendar_today_outlined,
+              title: 'Belum ada agenda',
+              subtitle: 'Jadwal Anda masih kosong',
+              iconSize: 48,
+            )
+          : Column(
+              children: _agenda.map((item) => _buildAgendaItem(item, isDark)).toList(),
+            ),
     );
   }
 
@@ -1259,9 +1227,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       child: assets.isEmpty
           ? const Padding(
               padding: EdgeInsets.all(16.0),
-              child: Center(
-                child: Text('Belum ada karya atau aset proyek.'),
-              ),
+              child: Center(child: Text('Belum ada karya atau aset proyek.')),
             )
           : GridView.builder(
               shrinkWrap: true,

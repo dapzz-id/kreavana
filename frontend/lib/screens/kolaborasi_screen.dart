@@ -22,52 +22,7 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
   String _selectedStatus = 'Semua';
   String _searchQuery = '';
 
-  List<Map<String, dynamic>> _collabs = [
-    {
-      'id': '1',
-      'name': 'Aruna Studio',
-      'role': 'Fotografer',
-      'project': 'Foto Katalog Produk Summer Collection 2026',
-      'status': 'Aktif',
-      'statusColor': const Color(0xFF10B981),
-      'avatar': Icons.camera_alt_outlined,
-      'date': 'Mei 2026 - Juni 2026',
-      'membersCount': 4,
-    },
-    {
-      'id': '2',
-      'name': 'Frame Story',
-      'role': 'Videografer',
-      'project': 'Video Commercial Launching Brand',
-      'status': 'Menunggu',
-      'statusColor': const Color(0xFFF59E0B),
-      'avatar': Icons.videocam_outlined,
-      'date': 'Juni 2026',
-      'membersCount': 2,
-    },
-    {
-      'id': '3',
-      'name': 'Graphix Studio',
-      'role': 'Desainer Grafis',
-      'project': 'Desain Poster & Identity Brand Campaign',
-      'status': 'Selesai',
-      'statusColor': const Color(0xFF3B82F6),
-      'avatar': Icons.palette_outlined,
-      'date': 'April 2026',
-      'membersCount': 3,
-    },
-    {
-      'id': '4',
-      'name': 'MediaKreatif ID',
-      'role': 'Content Strategist',
-      'project': 'Manajemen Konten Media Sosial Bulanan',
-      'status': 'Aktif',
-      'statusColor': const Color(0xFF10B981),
-      'avatar': Icons.movie_creation_outlined,
-      'date': 'Mei 2026 - Des 2026',
-      'membersCount': 5,
-    },
-  ];
+  List<Map<String, dynamic>> _collabs = [];
 
   @override
   void initState() {
@@ -240,32 +195,7 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
     int done,
     bool isDark,
   ) {
-    final items = [
-      {
-        'label': 'Total Tim',
-        'val': '${_collabs.length}',
-        'color': accentColor,
-        'icon': Icons.groups_outlined,
-      },
-      {
-        'label': 'Aktif',
-        'val': '$active',
-        'color': const Color(0xFF10B981),
-        'icon': Icons.play_circle_outline,
-      },
-      {
-        'label': 'Menunggu',
-        'val': '$pending',
-        'color': const Color(0xFFF59E0B),
-        'icon': Icons.pending_actions_outlined,
-      },
-      {
-        'label': 'Selesai',
-        'val': '$done',
-        'color': const Color(0xFF3B82F6),
-        'icon': Icons.task_alt_outlined,
-      },
-    ];
+    final List<Map<String, dynamic>> items = [];
 
     return Row(
       children: items.map((it) {
