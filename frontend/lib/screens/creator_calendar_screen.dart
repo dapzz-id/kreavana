@@ -43,9 +43,13 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
   }
 
   Future<void> _showScheduleDialog([CreatorCapacitySchedule? schedule]) async {
-    DateTime? selectedDate = schedule != null ? DateTime.parse(schedule.date) : null;
+    DateTime? selectedDate = schedule != null
+        ? DateTime.parse(schedule.date)
+        : null;
     bool isUnavailable = schedule?.isUnavailable ?? false;
-    final maxCapacityCtrl = TextEditingController(text: schedule?.maxCapacity?.toString() ?? '');
+    final maxCapacityCtrl = TextEditingController(
+      text: schedule?.maxCapacity?.toString() ?? '',
+    );
     final notesCtrl = TextEditingController(text: schedule?.notes ?? '');
 
     await showDialog(
@@ -57,7 +61,11 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
               backgroundColor: AppTheme.cardLight,
               title: Text(
                 schedule == null ? 'Tambah Jadwal' : 'Edit Jadwal',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textDark,
+                ),
               ),
               content: SingleChildScrollView(
                 child: Column(
@@ -91,7 +99,9 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
                             Text(
                               selectedDate == null
                                   ? 'Pilih Tanggal'
-                                  : DateFormat('yyyy-MM-dd').format(selectedDate!),
+                                  : DateFormat(
+                                      'yyyy-MM-dd',
+                                    ).format(selectedDate!),
                               style: TextStyle(
                                 fontSize: 14,
                                 color: selectedDate == null
@@ -99,7 +109,11 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
                                     : AppTheme.textDark,
                               ),
                             ),
-                            const Icon(Icons.calendar_today, color: AppTheme.primaryPurple, size: 20),
+                            const Icon(
+                              Icons.calendar_today,
+                              color: AppTheme.primaryPurple,
+                              size: 20,
+                            ),
                           ],
                         ),
                       ),
@@ -118,7 +132,13 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
                           },
                         ),
                         const Expanded(
-                          child: Text('Tandai sebagai Tidak Tersedia', style: TextStyle(fontSize: 14, color: AppTheme.textDark)),
+                          child: Text(
+                            'Tandai sebagai Tidak Tersedia',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppTheme.textDark,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -127,20 +147,30 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
                       TextField(
                         controller: maxCapacityCtrl,
                         keyboardType: TextInputType.number,
-                        style: const TextStyle(fontSize: 14, color: AppTheme.textDark),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.textDark,
+                        ),
                         decoration: InputDecoration(
                           labelText: 'Kapasitas Maksimal (Opsional)',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       ),
                     ],
                     const SizedBox(height: 16),
                     TextField(
                       controller: notesCtrl,
-                      style: const TextStyle(fontSize: 14, color: AppTheme.textDark),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.textDark,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'Catatan (Opsional)',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                       maxLines: 2,
                     ),
@@ -150,10 +180,15 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Batal', style: TextStyle(color: AppTheme.textMuted)),
+                  child: const Text(
+                    'Batal',
+                    style: TextStyle(color: AppTheme.textMuted),
+                  ),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryPurple),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryPurple,
+                  ),
                   onPressed: () async {
                     if (selectedDate == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -162,13 +197,17 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
                       return;
                     }
                     Navigator.pop(ctx);
-                    
+
                     setState(() => _isLoading = true);
-                    final dateStr = DateFormat('yyyy-MM-dd').format(selectedDate!);
+                    final dateStr = DateFormat(
+                      'yyyy-MM-dd',
+                    ).format(selectedDate!);
                     final res = await ScheduleService.saveCalendarOverride(
                       date: dateStr,
                       isUnavailable: isUnavailable,
-                      maxCapacity: isUnavailable ? null : int.tryParse(maxCapacityCtrl.text),
+                      maxCapacity: isUnavailable
+                          ? null
+                          : int.tryParse(maxCapacityCtrl.text),
                       notes: notesCtrl.text.isEmpty ? null : notesCtrl.text,
                     );
 
@@ -178,7 +217,9 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
                       setState(() => _isLoading = false);
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(res.message ?? 'Gagal menyimpan')),
+                          SnackBar(
+                            content: Text(res.message ?? 'Gagal menyimpan'),
+                          ),
                         );
                       }
                     }
@@ -198,12 +239,25 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.cardLight,
-        title: const Text('Hapus Jadwal', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
-        content: Text('Yakin ingin menghapus override jadwal tanggal $date?', style: const TextStyle(fontSize: 14, color: AppTheme.textDark)),
+        title: const Text(
+          'Hapus Jadwal',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textDark,
+          ),
+        ),
+        content: Text(
+          'Yakin ingin menghapus override jadwal tanggal $date?',
+          style: const TextStyle(fontSize: 14, color: AppTheme.textDark),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal', style: TextStyle(color: AppTheme.textMuted)),
+            child: const Text(
+              'Batal',
+              style: TextStyle(color: AppTheme.textMuted),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -234,7 +288,14 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
     return Scaffold(
       backgroundColor: AppTheme.surfaceLight,
       appBar: AppBar(
-        title: const Text('Jadwal & Ketersediaan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
+        title: const Text(
+          'Jadwal & Ketersediaan',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textDark,
+          ),
+        ),
         backgroundColor: AppTheme.cardLight,
         elevation: 0,
       ),
@@ -246,81 +307,112 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(_error!, style: const TextStyle(fontSize: 14, color: AppTheme.error)),
-                      const SizedBox(height: 16),
-                      ElevatedButton(onPressed: _loadSchedules, child: const Text('Coba Lagi')),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _error!,
+                    style: const TextStyle(fontSize: 14, color: AppTheme.error),
                   ),
-                )
-              : _schedules.isEmpty
-                  ? const AppEmptyState(
-                      icon: Icons.calendar_today,
-                      title: 'Belum Ada Jadwal Khusus',
-                      subtitle: 'Tambahkan override jadwal jika Anda ingin mengatur hari libur atau kapasitas maksimal harian.',
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _schedules.length,
-                      itemBuilder: (context, index) {
-                        final s = _schedules[index];
-                        return Card(
-                          color: AppTheme.cardLight,
-                          margin: const EdgeInsets.only(bottom: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.all(16),
-                            title: Text(
-                              s.date,
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadSchedules,
+                    child: const Text('Coba Lagi'),
+                  ),
+                ],
+              ),
+            )
+          : _schedules.isEmpty
+          ? const AppEmptyState(
+              icon: Icons.calendar_today,
+              title: 'Belum Ada Jadwal Khusus',
+              subtitle:
+                  'Tambahkan override jadwal jika Anda ingin mengatur hari libur atau kapasitas maksimal harian.',
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _schedules.length,
+              itemBuilder: (context, index) {
+                final s = _schedules[index];
+                return Card(
+                  color: AppTheme.cardLight,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    title: Text(
+                      s.date,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textDark,
+                      ),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 4),
+                        if (s.isUnavailable)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
                             ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 4),
-                                if (s.isUnavailable)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.error.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Text(
-                                      'Tidak Tersedia',
-                                      style: TextStyle(fontSize: 12, color: AppTheme.error),
-                                    ),
-                                  )
-                                else
-                                  Text(
-                                    'Kapasitas: ${s.maxCapacity ?? 'Tidak terbatas'}',
-                                    style: const TextStyle(fontSize: 14, color: AppTheme.textMuted),
-                                  ),
-                                if (s.notes != null && s.notes!.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  Text('Catatan: ${s.notes}', style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
-                                ],
-                              ],
+                            decoration: BoxDecoration(
+                              color: AppTheme.error.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
                             ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit, color: AppTheme.primaryPurple),
-                                  onPressed: () => _showScheduleDialog(s),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete, color: AppTheme.error),
-                                  onPressed: () => _deleteSchedule(s.date),
-                                ),
-                              ],
+                            child: const Text(
+                              'Tidak Tersedia',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.error,
+                              ),
+                            ),
+                          )
+                        else
+                          Text(
+                            'Kapasitas: ${s.maxCapacity ?? 'Tidak terbatas'}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppTheme.textMuted,
                             ),
                           ),
-                        );
-                      },
+                        if (s.notes != null && s.notes!.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Catatan: ${s.notes}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.edit,
+                            color: AppTheme.primaryPurple,
+                          ),
+                          onPressed: () => _showScheduleDialog(s),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: AppTheme.error),
+                          onPressed: () => _deleteSchedule(s.date),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }

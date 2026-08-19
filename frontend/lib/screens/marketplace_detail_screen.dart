@@ -214,6 +214,9 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
     final isDark = theme.brightness == Brightness.dark;
     final heroHeight = 320.0;
     final parallaxOffset = (_scrollOffset * 0.4).clamp(0.0, heroHeight);
+    
+    final canReview = _item?.canReview ?? false;
+    final hasReviewed = _item?.hasReviewed ?? false;
 
     return Scaffold(
       backgroundColor: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
@@ -234,8 +237,7 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                       _buildStatsSection(isDark),
                       _buildDescriptionSection(isDark),
                       _buildReviewSection(isDark),
-                      // Hiding review form until backend exposes can_review eligibility
-                      if (false) _buildWriteReviewSection(isDark),
+                      if (canReview) _buildWriteReviewSection(isDark),
                       const SizedBox(height: 120),
                     ],
                   ),
@@ -902,7 +904,7 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Tulis Ulasan',
+                _item?.hasReviewed == true ? 'Edit Ulasan' : 'Tulis Ulasan',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,

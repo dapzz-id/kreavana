@@ -30,7 +30,6 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
   final GlobalKey _themeBtnKey = GlobalKey();
 
   static const Color _indivPurple = Color(0xFF7C3AED);
-  static const Color _indivLight = Color(0xFFA78BFA);
 
   @override
   Widget build(BuildContext context) {
@@ -237,50 +236,7 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
   }
 
   Widget _buildMetricCards(bool isDark) {
-    final metrics = [
-      {
-        'label': 'Permintaan Aktif',
-        'value': '3',
-        'sub': 'Sedang diproses',
-        'icon': Icons.folder_open,
-        'color': _indivLight,
-      },
-      {
-        'label': 'Proyek / Event',
-        'value': '5',
-        'sub': 'Berlangsung',
-        'icon': Icons.event,
-        'color': const Color(0xFF10B981),
-      },
-      {
-        'label': 'Selesai',
-        'value': '12',
-        'sub': 'Proyek selesai',
-        'icon': Icons.check_circle_outline,
-        'color': const Color(0xFF3B82F6),
-      },
-      {
-        'label': 'Total Pengeluaran',
-        'value': 'Rp 8.750.000',
-        'sub': 'Semua transaksi',
-        'icon': Icons.account_balance_wallet_outlined,
-        'color': const Color(0xFFF59E0B),
-      },
-      {
-        'label': 'Favorit',
-        'value': '18',
-        'sub': 'Kreator tersimpan',
-        'icon': Icons.favorite_border,
-        'color': const Color(0xFFEC4899),
-      },
-      {
-        'label': 'Poin Kreavana',
-        'value': '650',
-        'sub': 'Gold Member',
-        'icon': Icons.stars,
-        'color': Colors.amber.shade600,
-      },
-    ];
+    final metrics = [];
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -515,32 +471,7 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
   }
 
   Widget _buildRecentRequestsCard(bool isDark) {
-    final requests = [
-      {
-        'title': 'Fotografi Pernikahan',
-        'date': '18 Mei 2025',
-        'price': 'Rp 3.500.000',
-        'status': 'Sedang Diproses',
-      },
-      {
-        'title': 'Dekorasi Ulang Tahun',
-        'date': '10 Mei 2025',
-        'price': 'Rp 1.250.000',
-        'status': 'Menunggu Penawaran',
-      },
-      {
-        'title': 'Foto Wisuda',
-        'date': '3 Mei 2025',
-        'price': 'Rp 800.000',
-        'status': 'Selesai',
-      },
-      {
-        'title': 'Desain Konten Instagram',
-        'date': '28 Apr 2025',
-        'price': 'Rp 450.000',
-        'status': 'Selesai',
-      },
-    ];
+    final List<Map<String, dynamic>> requests = [];
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -714,17 +645,7 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
   }
 
   Widget _buildFavoriteCreatorsCard(bool isDark) {
-    final creators = [
-      {'name': 'Kreasi Studio', 'cat': 'Foto & Video', 'rating': '4.9'},
-      {'name': 'DesignLab', 'cat': 'Desain Grafis & Konten', 'rating': '4.8'},
-      {'name': 'EventPro Organizer', 'cat': 'Event Organizer', 'rating': '4.8'},
-      {
-        'name': 'DecorLine Studio',
-        'cat': 'Dekorasi & Stylist',
-        'rating': '4.7',
-      },
-      {'name': 'Makeup Artist Pro', 'cat': 'Make Up & Beauty', 'rating': '4.7'},
-    ];
+    final List<Map<String, dynamic>> creators = [];
 
     return Container(
       padding: const EdgeInsets.all(20),

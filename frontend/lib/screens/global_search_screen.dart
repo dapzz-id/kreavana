@@ -82,7 +82,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
 
   void _onSearchChanged() {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 350), () {
+    _debounce = Timer(const Duration(milliseconds: 500), () {
       final query = _searchController.text.trim();
       if (query.length >= 2) {
         _performSearch(query);

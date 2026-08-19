@@ -14,38 +14,7 @@ class MonitoringEvaluasiScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final programs = [
-      {
-        'title': 'Festival Kreativitas Pemuda 2025',
-        'progress': 0.72,
-        'status': 'Berjalan',
-        'color': Color(0xFF10B981),
-      },
-      {
-        'title': 'Sosialisasi Literasi Digital',
-        'progress': 0.85,
-        'status': 'Berjalan',
-        'color': Color(0xFF10B981),
-      },
-      {
-        'title': 'Lomba Konten Promosi Daerah',
-        'progress': 0.45,
-        'status': 'Dalam Review',
-        'color': Color(0xFFF59E0B),
-      },
-      {
-        'title': 'Pelatihan Fotografi Dasar',
-        'progress': 0.15,
-        'status': 'Akan Datang',
-        'color': Color(0xFF3B82F6),
-      },
-      {
-        'title': 'Pengelolaan Media Sosial',
-        'progress': 0.95,
-        'status': 'Hampir Selesai',
-        'color': Color(0xFF10B981),
-      },
-    ];
+    final List<Map<String, dynamic>> programs = [];
 
     final content = Scaffold(
       appBar: AppBar(

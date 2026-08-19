@@ -1,0 +1,2208 @@
+========================================================================
+FRONTEND DUMMY/MOCK DATA AUDIT RESULTS
+========================================================================
+
+FORMAT:
+- FILE: <path>
+- LOKASI DATA: <line & snippet>
+- TIPE DATA: [Business Data | UI Config | Unknown]
+- SUMBER API PENGGANTI: <API Endpoint / Empty State>
+- TINDAKAN: [Remove | Replace with API | Use Empty State | Keep]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/agency_dashboard_screen.dart
+LOKASI DATA: Line 435 | subRolesList = [ { ...
+
+TIPE DATA:
+[UI Config / Enum]
+
+SUMBER API PENGGANTI:
+N/A
+
+VERIFICATION:
+Static role mapping configuration.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/agency_dashboard_screen.dart
+LOKASI DATA: Line 460 | campaigns = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/community_dashboard_screen.dart
+LOKASI DATA: Line 239 | metrics = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/community_dashboard_screen.dart
+LOKASI DATA: Line 549 | events = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/community_dashboard_screen.dart
+LOKASI DATA: Line 732 | members = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/company_dashboard_screen.dart
+LOKASI DATA: Line 132 | subRolesList = [ { ...
+
+TIPE DATA:
+[UI Config / Enum]
+
+SUMBER API PENGGANTI:
+N/A
+
+VERIFICATION:
+Static role mapping configuration.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/company_dashboard_screen.dart
+LOKASI DATA: Line 416 | metrics = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/company_dashboard_screen.dart
+LOKASI DATA: Line 717 | projects = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/company_dashboard_screen.dart
+LOKASI DATA: Line 921 | creators = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_animator_dashboard_screen.dart
+LOKASI DATA: Line 517 | jobs = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_content_dashboard_screen.dart
+LOKASI DATA: Line 454 | metrics = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_content_dashboard_screen.dart
+LOKASI DATA: Line 585 | recs = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_content_dashboard_screen.dart
+LOKASI DATA: Line 734 | items = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_content_dashboard_screen.dart
+LOKASI DATA: Line 828 | agendas = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_desainer_dashboard_screen.dart
+LOKASI DATA: Line 454 | metrics = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_desainer_dashboard_screen.dart
+LOKASI DATA: Line 585 | recs = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_desainer_dashboard_screen.dart
+LOKASI DATA: Line 734 | items = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_desainer_dashboard_screen.dart
+LOKASI DATA: Line 828 | agendas = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_drone_dashboard_screen.dart
+LOKASI DATA: Line 454 | metrics = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_drone_dashboard_screen.dart
+LOKASI DATA: Line 585 | recs = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_drone_dashboard_screen.dart
+LOKASI DATA: Line 734 | items = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_drone_dashboard_screen.dart
+LOKASI DATA: Line 828 | agendas = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_editor_dashboard_screen.dart
+LOKASI DATA: Line 454 | metrics = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_editor_dashboard_screen.dart
+LOKASI DATA: Line 585 | recs = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_editor_dashboard_screen.dart
+LOKASI DATA: Line 734 | items = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_editor_dashboard_screen.dart
+LOKASI DATA: Line 828 | agendas = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_fotografer_dashboard_screen.dart
+LOKASI DATA: Line 454 | metrics = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_fotografer_dashboard_screen.dart
+LOKASI DATA: Line 585 | recs = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_fotografer_dashboard_screen.dart
+LOKASI DATA: Line 734 | items = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_fotografer_dashboard_screen.dart
+LOKASI DATA: Line 828 | agendas = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_general_dashboard_screen.dart
+LOKASI DATA: Line 448 | metrics = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_general_dashboard_screen.dart
+LOKASI DATA: Line 579 | recs = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_general_dashboard_screen.dart
+LOKASI DATA: Line 728 | items = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_general_dashboard_screen.dart
+LOKASI DATA: Line 822 | agendas = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_mua_dashboard_screen.dart
+LOKASI DATA: Line 453 | metrics = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_mua_dashboard_screen.dart
+LOKASI DATA: Line 584 | recs = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_mua_dashboard_screen.dart
+LOKASI DATA: Line 733 | items = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_mua_dashboard_screen.dart
+LOKASI DATA: Line 827 | agendas = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_talent_dashboard_screen.dart
+LOKASI DATA: Line 454 | metrics = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_talent_dashboard_screen.dart
+LOKASI DATA: Line 585 | recs = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_talent_dashboard_screen.dart
+LOKASI DATA: Line 734 | items = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_talent_dashboard_screen.dart
+LOKASI DATA: Line 828 | agendas = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_videografer_dashboard_screen.dart
+LOKASI DATA: Line 454 | metrics = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_videografer_dashboard_screen.dart
+LOKASI DATA: Line 585 | recs = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_videografer_dashboard_screen.dart
+LOKASI DATA: Line 734 | items = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/creator_videografer_dashboard_screen.dart
+LOKASI DATA: Line 828 | agendas = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/eo_dashboard_screen.dart
+LOKASI DATA: Line 239 | metrics = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/eo_dashboard_screen.dart
+LOKASI DATA: Line 490 | events = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/eo_dashboard_screen.dart
+LOKASI DATA: Line 678 | vendors = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/govt_dashboard_screen.dart
+LOKASI DATA: Line 135 | subRolesList = [ { ...
+
+TIPE DATA:
+[UI Config / Enum]
+
+SUMBER API PENGGANTI:
+N/A
+
+VERIFICATION:
+Static role mapping configuration.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/govt_dashboard_screen.dart
+LOKASI DATA: Line 433 | metrics = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/govt_dashboard_screen.dart
+LOKASI DATA: Line 803 | categories = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/govt_dashboard_screen.dart
+LOKASI DATA: Line 933 | programs = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/govt_dashboard_screen.dart
+LOKASI DATA: Line 1144 | activities = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/govt_dashboard_screen.dart
+LOKASI DATA: Line 1298 | vendors = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/govt_dashboard_screen.dart
+LOKASI DATA: Line 1477 | breakdown = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/individual_dashboard_screen.dart
+LOKASI DATA: Line 240 | metrics = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/individual_dashboard_screen.dart
+LOKASI DATA: Line 518 | requests = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/individual_dashboard_screen.dart
+LOKASI DATA: Line 717 | creators = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/school_dashboard_screen.dart
+LOKASI DATA: Line 239 | metrics = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/school_dashboard_screen.dart
+LOKASI DATA: Line 507 | projects = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/school_dashboard_screen.dart
+LOKASI DATA: Line 711 | vendors = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/tourism_dashboard_screen.dart
+LOKASI DATA: Line 239 | metrics = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/tourism_dashboard_screen.dart
+LOKASI DATA: Line 503 | programs = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/tourism_dashboard_screen.dart
+LOKASI DATA: Line 676 | vendors = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/umkm_dashboard_screen.dart
+LOKASI DATA: Line 477 | subRolesList = [ { ...
+
+TIPE DATA:
+[UI Config / Enum]
+
+SUMBER API PENGGANTI:
+N/A
+
+VERIFICATION:
+Static role mapping configuration.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/umkm_dashboard_screen.dart
+LOKASI DATA: Line 502 | packages = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/umkm_dashboard_screen.dart
+LOKASI DATA: Line 687 | active = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/wo_dashboard_screen.dart
+LOKASI DATA: Line 239 | metrics = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/wo_dashboard_screen.dart
+LOKASI DATA: Line 490 | projects = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: features/dashboard/screens/wo_dashboard_screen.dart
+LOKASI DATA: Line 688 | vendors = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+DashboardService / Empty State
+
+VERIFICATION:
+Hardcoded dashboard metrics, projects, creators, activities, etc. representing backend records.
+
+TINDAKAN:
+[Replace with API / Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/buat_kebutuhan_screen.dart
+LOKASI DATA: Line 38 | _kategoriItems = [ { ...
+
+TIPE DATA:
+[UI Config / Enum]
+
+SUMBER API PENGGANTI:
+N/A
+
+VERIFICATION:
+Static dropdown choices for form.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/buat_kebutuhan_screen.dart
+LOKASI DATA: Line 69 | _deadlineItems = [ { ...
+
+TIPE DATA:
+[UI Config / Enum]
+
+SUMBER API PENGGANTI:
+N/A
+
+VERIFICATION:
+Static dropdown choices for form.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/creator_calendar_screen.dart
+LOKASI DATA: Line 37 | _schedules = res.data ?? [];
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/creator_service_screen.dart
+LOKASI DATA: Line 314 | final extras = _extraItems[base.key] ?? const [];
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/direct_message_screen.dart
+LOKASI DATA: Line 1146 | final messageKeys = msg['message_keys'] as List<dynamic>? ?? [];
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/dokumen_instansi_screen.dart
+LOKASI DATA: Line 17 | dokumen = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+Relevant Backend API
+
+VERIFICATION:
+Fabricated business records array initialized in UI.
+
+TINDAKAN:
+[Use Empty State / Replace with API]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/explore_screen.dart
+LOKASI DATA: Line 33 | _filterOptions = [ { ...
+
+TIPE DATA:
+[UI Config / Enum]
+
+SUMBER API PENGGANTI:
+N/A
+
+VERIFICATION:
+Static filter configuration for search.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/help_screen.dart
+LOKASI DATA: Line 15 | _faqs = [ { ...
+
+TIPE DATA:
+[UI Config / Static Content]
+
+SUMBER API PENGGANTI:
+N/A
+
+VERIFICATION:
+Static application FAQ content. Not dynamic business data.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/kolaborasi_screen.dart
+LOKASI DATA: Line 25 | _collabs = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+Relevant Backend API
+
+VERIFICATION:
+Fabricated business records array initialized in UI.
+
+TINDAKAN:
+[Use Empty State / Replace with API]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/kolaborasi_screen.dart
+LOKASI DATA: Line 243 | items = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+Relevant Backend API
+
+VERIFICATION:
+Fabricated business records array initialized in UI.
+
+TINDAKAN:
+[Use Empty State / Replace with API]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/laporan_screen.dart
+LOKASI DATA: Line 19 | reports = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+Relevant Backend API
+
+VERIFICATION:
+Fabricated business records array initialized in UI.
+
+TINDAKAN:
+[Use Empty State / Replace with API]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/marketplace_detail_screen.dart
+LOKASI DATA: Line 831 | final reviews = _item!.reviews ?? [];
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/marketplace_karya_screen.dart
+LOKASI DATA: Line 91 | _featured = (data is List ? data : data['data'] ?? [])
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/marketplace_karya_screen.dart
+LOKASI DATA: Line 151 | ? (data['data'] ?? [])
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/mitra_komunitas_screen.dart
+LOKASI DATA: Line 17 | mitra = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+Relevant Backend API
+
+VERIFICATION:
+Fabricated business records array initialized in UI.
+
+TINDAKAN:
+[Use Empty State / Replace with API]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/monitoring_evaluasi_screen.dart
+LOKASI DATA: Line 17 | programs = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+Unknown
+
+VERIFICATION:
+Appears to be hardcoded business data.
+
+TINDAKAN:
+[Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/peluang_lokasi_screen.dart
+LOKASI DATA: Line 32 | _categories = [ { ...
+
+TIPE DATA:
+[UI Config / Enum]
+
+SUMBER API PENGGANTI:
+N/A
+
+VERIFICATION:
+Static filter configuration options.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/peluang_lokasi_screen.dart
+LOKASI DATA: Line 590 | subRoles = [ { ...
+TIPE DATA: UI Config / Enum
+SUMBER API PENGGANTI: N/A
+TINDAKAN: Keep
+------------------------------------------------------------------------
+FILE: screens/pengumuman_publik_screen.dart
+LOKASI DATA: Line 17 | pengumuman = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+Relevant Backend API
+
+VERIFICATION:
+Fabricated business records array initialized in UI.
+
+TINDAKAN:
+[Use Empty State / Replace with API]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/privacy_policy_screen.dart
+LOKASI DATA: Line 7 | _sections = [ { ...
+
+TIPE DATA:
+[UI Config / Static Content]
+
+SUMBER API PENGGANTI:
+N/A
+
+VERIFICATION:
+Static application legal content.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/proyek_saya_screen.dart
+LOKASI DATA: Line 232 | items = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+Relevant Backend API
+
+VERIFICATION:
+Fabricated business records array initialized in UI.
+
+TINDAKAN:
+[Use Empty State / Replace with API]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/realisasi_anggaran_screen.dart
+LOKASI DATA: Line 17 | data = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+Relevant Backend API
+
+VERIFICATION:
+Fabricated business records array initialized in UI.
+
+TINDAKAN:
+[Use Empty State / Replace with API]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/storage_history_screen.dart
+LOKASI DATA: Line 33 | _files = response['files']?['data'] ?? [];
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/tender_kolaborasi_screen.dart
+LOKASI DATA: Line 20 | _tenders = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+Relevant Backend API
+
+VERIFICATION:
+Fabricated business records array initialized in UI.
+
+TINDAKAN:
+[Use Empty State / Replace with API]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/tim_hak_akses_screen.dart
+LOKASI DATA: Line 17 | tim = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+Relevant Backend API
+
+VERIFICATION:
+Fabricated business records array initialized in UI.
+
+TINDAKAN:
+[Use Empty State / Replace with API]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/topup_screen.dart
+LOKASI DATA: Line 25 | _banks = [ { ...
+
+TIPE DATA:
+[UI Config / Static Config]
+
+SUMBER API PENGGANTI:
+N/A
+
+VERIFICATION:
+Fixed payment method configuration for UI.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/topup_screen.dart
+LOKASI DATA: Line 32 | _ewallets = [ { ...
+
+TIPE DATA:
+[UI Config / Static Config]
+
+SUMBER API PENGGANTI:
+N/A
+
+VERIFICATION:
+Fixed payment method configuration for UI.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/ulasan_reputasi_screen.dart
+LOKASI DATA: Line 24 | _reviews = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+Relevant Backend API
+
+VERIFICATION:
+Fabricated business records array initialized in UI.
+
+TINDAKAN:
+[Use Empty State / Replace with API]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/ulasan_reputasi_screen.dart
+LOKASI DATA: Line 246 | breakdown = [ { ...
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+Relevant Backend API
+
+VERIFICATION:
+Fabricated business records array initialized in UI.
+
+TINDAKAN:
+[Use Empty State / Replace with API]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/withdraw_screen.dart
+LOKASI DATA: Line 30 | _banks = [ { ...
+
+TIPE DATA:
+[UI Config / Static Config]
+
+SUMBER API PENGGANTI:
+N/A
+
+VERIFICATION:
+Fixed payment method configuration for UI.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: screens/withdraw_screen.dart
+LOKASI DATA: Line 37 | _ewallets = [ { ...
+
+TIPE DATA:
+[UI Config / Static Config]
+
+SUMBER API PENGGANTI:
+N/A
+
+VERIFICATION:
+Fixed payment method configuration for UI.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: services/admin_service.dart
+LOKASI DATA: Line 16 | final List<dynamic> list = response['data'] ?? [];
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: services/admin_service.dart
+LOKASI DATA: Line 57 | return List<Map<String, dynamic>>.from(response['data'] ?? []);
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: services/admin_service.dart
+LOKASI DATA: Line 69 | return List<Map<String, dynamic>>.from(response['data'] ?? []);
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: services/chat_service.dart
+LOKASI DATA: Line 313 | if (cleanQ.isEmpty) return [];
+
+TIPE DATA:
+[Business Data]
+
+SUMBER API PENGGANTI:
+Unknown
+
+VERIFICATION:
+Appears to be hardcoded business data.
+
+TINDAKAN:
+[Use Empty State]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: services/portfolio_service.dart
+LOKASI DATA: Line 42 | final List items = data['data'] ?? [];
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: services/profile_service.dart
+LOKASI DATA: Line 58 | userSubRoles: List<String>.from(userData['user_subRoles'] ?? const []),
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: services/recommendation_service.dart
+LOKASI DATA: Line 57 | final List<dynamic> rawData = response.data['data'] ?? [];
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: services/recommendation_service.dart
+LOKASI DATA: Line 98 | final List<dynamic> rawData = response.data['data'] ?? [];
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: services/subscription_service.dart
+LOKASI DATA: Line 29 | features: List<String>.from(json['features'] ?? []),
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: services/subscription_service.dart
+LOKASI DATA: Line 42 | final List<dynamic> data = response['data'] ?? [];
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: widgets/creator_application_card.dart
+LOKASI DATA: Line 73 | _categories = [ { ...
+
+TIPE DATA:
+[UI Config / Enum]
+
+SUMBER API PENGGANTI:
+N/A
+
+VERIFICATION:
+Static category options for application.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: widgets/dashboard_stats_charts.dart
+LOKASI DATA: Line 47 | widget.allSubRoleStats[slug] ?? [];
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: widgets/dashboard_stats_charts.dart
+LOKASI DATA: Line 286 | final stats = allSubRoleStats[slug] ?? [];
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: widgets/dashboard_stats_charts.dart
+LOKASI DATA: Line 542 | allSubRoleStats[slug] ?? [];
+
+TIPE DATA:
+[API Data]
+
+SUMBER API PENGGANTI:
+Existing API Endpoint
+
+VERIFICATION:
+Valid empty list fallback for API response parsing. No fabricated business records introduced.
+
+TINDAKAN:
+[Keep]
+
+STATUS:
+[VERIFIED]
+
+------------------------------------------------------------------------
+FILE: widgets/recommended_creators_section.dart
+LOKASI DATA: Line 40 | _subRoleOptions = [ { ...
+TIPE DATA: UI Config / Enum
+SUMBER API PENGGANTI: N/A
+TINDAKAN: Keep

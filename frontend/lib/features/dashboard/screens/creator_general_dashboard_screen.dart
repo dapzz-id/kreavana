@@ -35,7 +35,6 @@ class _CreatorGeneralDashboardScreenState
     extends State<CreatorGeneralDashboardScreen> {
   final GlobalKey _themeBtnKey = GlobalKey();
 
-  static const Color _creatorBlue = Color(0xFF3B82F6);
   static const Color _creatorPurple = Color(0xFF6366F1);
   static const Color _primaryColor = _creatorPurple;
 
@@ -445,36 +444,7 @@ class _CreatorGeneralDashboardScreenState
   }
 
   Widget _buildMetricCards(bool isDark) {
-    final metrics = [
-      {
-        'label': 'Peluang Cocok',
-        'value': '24',
-        'sub': '↑ 12 dari minggu lalu',
-        'icon': Icons.explore_outlined,
-        'color': _creatorPurple,
-      },
-      {
-        'label': 'Proyek Aktif',
-        'value': '7',
-        'sub': '↑ 2 dari minggu lalu',
-        'icon': Icons.folder_outlined,
-        'color': const Color(0xFF10B981),
-      },
-      {
-        'label': 'Skor Reputasi',
-        'value': '92/100',
-        'sub': 'Sangat Baik',
-        'icon': Icons.star_outline,
-        'color': const Color(0xFFF59E0B),
-      },
-      {
-        'label': 'Pendapatan Bulan Ini',
-        'value': 'Rp12.450.000',
-        'sub': '↑ 18% dari bulan lalu',
-        'icon': Icons.account_balance_wallet_outlined,
-        'color': _creatorBlue,
-      },
-    ];
+    final metrics = [];
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -576,32 +546,7 @@ class _CreatorGeneralDashboardScreenState
   }
 
   Widget _buildRecommendationsSection(bool isDark) {
-    final recs = [
-      {
-        'title': 'Festival Budaya Nusantara 2024',
-        'type': 'EVENT',
-        'price': 'Rp8.000.000',
-        'color': Colors.purple,
-      },
-      {
-        'title': 'Video Promosi Produk Kreatif',
-        'type': 'PROYEK',
-        'price': 'Rp5.000.000',
-        'color': Colors.blue,
-      },
-      {
-        'title': 'Kolaborasi Konten Travel Series',
-        'type': 'KOLABORASI',
-        'price': 'Kesepakatan Bersama',
-        'color': Colors.teal,
-      },
-      {
-        'title': 'Komunitas Fotografi Indonesia',
-        'type': 'KOMUNITAS',
-        'price': 'Gratis',
-        'color': Colors.orange,
-      },
-    ];
+    final List<Map<String, dynamic>> recs = [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -725,28 +670,7 @@ class _CreatorGeneralDashboardScreenState
   }
 
   Widget _buildProjectsAndActivity(bool isDark) {
-    final items = [
-      {
-        'title': 'Video Company Profile',
-        'client': 'PT Kreasi Muda',
-        'status': 'Baru',
-      },
-      {
-        'title': 'Desain Poster Event',
-        'client': 'Event Musik Jakarta',
-        'status': 'Diproses',
-      },
-      {
-        'title': 'Workshop Fotografi',
-        'client': 'Komunitas Kamera ID',
-        'status': 'Deadline',
-      },
-      {
-        'title': 'Konten Instagram Series',
-        'client': 'Brand Lokal',
-        'status': 'Selesai',
-      },
-    ];
+    final List<Map<String, dynamic>> items = [];
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -819,12 +743,7 @@ class _CreatorGeneralDashboardScreenState
   }
 
   Widget _buildAgendaCalendar(bool isDark) {
-    final agendas = [
-      {'date': '24 JUN', 'title': 'Briefing Proyek Video Promosi'},
-      {'date': '25 SAB', 'title': 'Workshop Fotografi Street'},
-      {'date': '27 SEN', 'title': 'Review Desain Poster Event'},
-      {'date': '29 RAB', 'title': 'Deadline Konten Instagram'},
-    ];
+    final List<Map<String, dynamic>> agendas = [];
 
     return Container(
       padding: const EdgeInsets.all(16),

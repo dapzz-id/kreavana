@@ -14,43 +14,7 @@ class RealisasiAnggaranScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final data = [
-      {
-        'name': 'Publikasi & Informasi',
-        'pagu': 'Rp 4.500.000.000',
-        'realisasi': 'Rp 2.350.000.000',
-        'percent': 52,
-        'color': Color(0xFF3B82F6),
-      },
-      {
-        'name': 'Edukasi & Sosialisasi',
-        'pagu': 'Rp 3.600.000.000',
-        'realisasi': 'Rp 1.620.000.000',
-        'percent': 45,
-        'color': Color(0xFF10B981),
-      },
-      {
-        'name': 'Ekonomi Kreatif',
-        'pagu': 'Rp 2.400.000.000',
-        'realisasi': 'Rp 1.100.000.000',
-        'percent': 46,
-        'color': Color(0xFFF59E0B),
-      },
-      {
-        'name': 'Event & Pariwisata',
-        'pagu': 'Rp 1.850.000.000',
-        'realisasi': 'Rp 820.000.000',
-        'percent': 44,
-        'color': Color(0xFFEF4444),
-      },
-      {
-        'name': 'Lainnya',
-        'pagu': 'Rp 500.000.000',
-        'realisasi': 'Rp 350.000.000',
-        'percent': 70,
-        'color': Colors.grey,
-      },
-    ];
+    final List<Map<String, dynamic>> data = [];
 
     final content = Scaffold(
       appBar: AppBar(

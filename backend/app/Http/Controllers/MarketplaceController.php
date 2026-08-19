@@ -112,7 +112,24 @@ class MarketplaceController extends Controller
             }
         }
 
+        $hasReviewed = false;
+        $canReview = false;
+
+        if ($user) {
+            $hasReviewed = \App\Models\MarketplaceReview::where('user_id', $user->id)
+                ->where('marketplace_item_id', $item->id)
+                ->exists();
+
+            if ($item->type === 'paid') {
+                $canReview = $hasPurchased;
+            } else {
+                $canReview = true;
+            }
+        }
+
         $data['has_purchased'] = $hasPurchased;
+        $data['has_reviewed'] = $hasReviewed;
+        $data['can_review'] = $canReview;
 
         return response()->json([
             'status' => true,

@@ -21,60 +21,7 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
   String _selectedFilter = 'Semua';
   String _searchQuery = '';
 
-  List<Map<String, dynamic>> _reviews = [
-    {
-      'id': '1',
-      'name': 'Rina Sari',
-      'role': 'Klien UMKM',
-      'project': 'Foto Katalog Produk Premium',
-      'rating': 5.0,
-      'comment':
-          'Hasil fotonya luar biasa! Produk jadi terlihat sangat premium dan profesional. Komunikasi lancar dan pengerjaan sesuai tenggat waktu.',
-      'date': '20 Mei 2026',
-      'avatar': Icons.person,
-      'verified': true,
-      'helpfulCount': 14,
-    },
-    {
-      'id': '2',
-      'name': 'Budi Santoso',
-      'role': 'Agency Director',
-      'project': 'Video Promosi Instagram & TikTok',
-      'rating': 4.8,
-      'comment':
-          'Video yang dihasilkan sangat kreatif dan sesuai brand guideline kami. Color grading ciamik dan audio jernih. Recommended!',
-      'date': '18 Mei 2026',
-      'avatar': Icons.person,
-      'verified': true,
-      'helpfulCount': 9,
-    },
-    {
-      'id': '3',
-      'name': 'Maya Putri',
-      'role': 'Brand Manager',
-      'project': 'Desain Poster Campaign Digital',
-      'rating': 4.9,
-      'comment':
-          'Desainnya modern, bersih, dan eye-catching. Komunikasi selama proyek berjalan sangat baik dan responsif terhadap revisi.',
-      'date': '15 Mei 2026',
-      'avatar': Icons.person,
-      'verified': true,
-      'helpfulCount': 21,
-    },
-    {
-      'id': '4',
-      'name': 'Dicky Prasetyo',
-      'role': 'EO Coordinator',
-      'project': 'Dokumentasi Video Offline Festival',
-      'rating': 5.0,
-      'comment':
-          'Sangat memuaskan! Tim datang tepat waktu di venue, membawa peralatan lengkap, dan hasil liputan cinematic luar biasa.',
-      'date': '10 Mei 2026',
-      'avatar': Icons.person,
-      'verified': true,
-      'helpfulCount': 7,
-    },
-  ];
+  List<Map<String, dynamic>> _reviews = [];
 
   @override
   void initState() {
@@ -243,13 +190,7 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
   }
 
   Widget _buildRatingBreakdown(Color accentColor, bool isDark) {
-    final breakdown = [
-      {'star': '5 ★', 'pct': 0.85, 'count': '20'},
-      {'star': '4 ★', 'pct': 0.12, 'count': '3'},
-      {'star': '3 ★', 'pct': 0.03, 'count': '1'},
-      {'star': '2 ★', 'pct': 0.00, 'count': '0'},
-      {'star': '1 ★', 'pct': 0.00, 'count': '0'},
-    ];
+    final List<Map<String, dynamic>> breakdown = [];
 
     return Container(
       padding: const EdgeInsets.all(18),

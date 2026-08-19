@@ -41,11 +41,26 @@ class OpportunityService {
     } catch (_) {}
   }
 
+  static DateTime? _lastFetchTime;
+  static List<OpportunityModel>? _cachedOpportunities;
+  static String _lastSubRole = '';
+  static String? _lastType;
+
   static Future<List<OpportunityModel>> getOpportunities({
     String subRole = 'all',
     String? type,
     int limit = 50,
+    bool forceRefresh = false,
   }) async {
+    // 2-minute TTL cache
+    if (!forceRefresh && _cachedOpportunities != null && _lastFetchTime != null) {
+      if (subRole == _lastSubRole && type == _lastType) {
+        if (DateTime.now().difference(_lastFetchTime!).inMinutes < 2) {
+          return _cachedOpportunities!;
+        }
+      }
+    }
+
     final queryParams = <String, String>{
       'sub_role_slug': subRole,
       'limit': limit.toString(),
@@ -63,10 +78,16 @@ class OpportunityService {
       final list = (result['data'] as List)
           .map((item) => OpportunityModel.fromJson(item))
           .toList();
-      if (list.isNotEmpty) return list;
+      if (list.isNotEmpty) {
+        _cachedOpportunities = list;
+        _lastFetchTime = DateTime.now();
+        _lastSubRole = subRole;
+        _lastType = type;
+        return list;
+      }
     }
 
-    return _getFallback(subRole, type);
+    return [];
   }
 
   static Future<List<OpportunityModel>> getMapLocations({
@@ -92,7 +113,7 @@ class OpportunityService {
     } catch (_) {}
 
     // Always include fallback dummy data
-    final fallbackList = _getFallback('all', 'location');
+    final List<OpportunityModel> fallbackList = [];
 
     // Merge: user-created first, then remote, then fallback (deduplicate by id)
     final seenIds = <String>{};
@@ -116,8 +137,7 @@ class OpportunityService {
 
     if (subRole != 'all') {
       final filtered = combined.where((o) => o.subRoleSlug == subRole).toList();
-      // If filtering by subRole yields no results, show all
-      return filtered.isNotEmpty ? filtered : combined;
+      return filtered;
     }
     return combined;
   }
@@ -213,166 +233,5 @@ class OpportunityService {
       'message': 'Lokasi kolaborasi berhasil ditambahkan!',
       'data': newModel,
     };
-  }
-
-  static List<OpportunityModel> _getFallback(String subRole, String? type) {
-    final all = [
-      OpportunityModel(
-        id: '101',
-        title: 'Andra - MC & Host Event Formal/Informal',
-        description:
-            'Siap memandu acara pernikahan, launching brand, gala dinner, dan seminar. Memiliki jam terbang tinggi 5+ tahun.',
-        subRoleSlug: 'mc',
-        type: 'location',
-        location: 'Jakarta Selatan',
-        latitude: -6.2088,
-        longitude: 106.8456,
-        locationCategory: 'urban',
-        address: 'Kuningan, Jakarta Selatan',
-        status: 'open',
-        postedBy: '101',
-        poster: OpportunityPoster(
-          id: '101',
-          name: 'Andra Pratama (MC)',
-          username: 'andra_mc',
-          phone: '081234567890',
-        ),
-      ),
-      OpportunityModel(
-        id: '102',
-        title: 'Budi Studio - Videografer Cinematic & Drone',
-        description:
-            'Penyedia jasa shooting iklan, video klip, dokumenter alam & aerial drone 4K.',
-        subRoleSlug: 'videografer',
-        type: 'location',
-        location: 'Denpasar Bali',
-        latitude: -8.6705,
-        longitude: 115.2126,
-        locationCategory: 'nature',
-        address: 'Sanur, Denpasar, Bali',
-        status: 'open',
-        postedBy: '102',
-        poster: OpportunityPoster(
-          id: '102',
-          name: 'Budi Cinematic (Videografer)',
-          username: 'budi_video',
-          phone: '081987654321',
-        ),
-      ),
-      OpportunityModel(
-        id: '103',
-        title: 'Chika Photography - Studio Portrait & Fashion',
-        description:
-            'Fotografer profesional untuklookbook produk, fashion studio, dan prewedding outdoor Lembang.',
-        subRoleSlug: 'fotografer',
-        type: 'location',
-        location: 'Bandung Barat',
-        latitude: -6.8168,
-        longitude: 107.6151,
-        locationCategory: 'tourism',
-        address: 'Jl. Raya Lembang No. 88, Bandung',
-        status: 'open',
-        postedBy: '103',
-        poster: OpportunityPoster(
-          id: '103',
-          name: 'Chika Larasati (Fotografer)',
-          username: 'chika_photo',
-          phone: '085711223344',
-        ),
-      ),
-      OpportunityModel(
-        id: '104',
-        title: 'Dian Travel & Food Content Creator',
-        description:
-            'Menerima kolaborasi review tempat wisata, culinary review, dan endorsement sosial media.',
-        subRoleSlug: 'content_creator',
-        type: 'location',
-        location: 'Yogyakarta',
-        latitude: -7.7956,
-        longitude: 110.3695,
-        locationCategory: 'culture',
-        address: 'Malioboro, Yogyakarta',
-        status: 'open',
-        postedBy: '104',
-        poster: OpportunityPoster(
-          id: '104',
-          name: 'Dian Ayu (Content Creator)',
-          username: 'dian_creator',
-          phone: '081399887766',
-        ),
-      ),
-      OpportunityModel(
-        id: '105',
-        title: 'Eko 3D Animation & Motion Graphic Studio',
-        description:
-            'Jasa pembuatan animasi 2D/3D, karakter 3D, bumper video, dan efek VFX visual.',
-        subRoleSlug: 'animator',
-        type: 'location',
-        location: 'Surabaya',
-        latitude: -7.2575,
-        longitude: 112.7521,
-        locationCategory: 'urban',
-        address: 'Gubeng, Surabaya, Jawa Timur',
-        status: 'open',
-        postedBy: '105',
-        poster: OpportunityPoster(
-          id: '105',
-          name: 'Eko Wijaya (Animator)',
-          username: 'eko_anim',
-          phone: '082144556677',
-        ),
-      ),
-      OpportunityModel(
-        id: '106',
-        title: 'Fiona Model & Talent Event Medan',
-        description:
-            'Model runway, photoshoot brand baju, commercial talent, dan presenter booth pameran.',
-        subRoleSlug: 'talent',
-        type: 'location',
-        location: 'Medan',
-        latitude: 3.5952,
-        longitude: 98.6722,
-        locationCategory: 'hidden_gems',
-        address: 'Medan Baru, Kota Medan',
-        status: 'open',
-        postedBy: '106',
-        poster: OpportunityPoster(
-          id: '106',
-          name: 'Fiona Ristanti (Model/Talent)',
-          username: 'fiona_talent',
-          phone: '081122334455',
-        ),
-      ),
-      OpportunityModel(
-        id: '107',
-        title: 'Gitaris & Audio Music Producer Makassar',
-        description:
-            'Composer jingle iklan, sound designer, mixing & mastering audio serta live session musician.',
-        subRoleSlug: 'musisi',
-        type: 'location',
-        location: 'Makassar',
-        latitude: -5.1477,
-        longitude: 119.4327,
-        locationCategory: 'seasonal',
-        address: 'Losari, Makassar, Sulawesi Selatan',
-        status: 'open',
-        postedBy: '107',
-        poster: OpportunityPoster(
-          id: '107',
-          name: 'Gilang Sound (Musisi)',
-          username: 'gilang_audio',
-          phone: '087855443322',
-        ),
-      ),
-    ];
-
-    var filtered = all;
-    if (type != null) {
-      filtered = filtered.where((o) => o.type == type).toList();
-    }
-    if (subRole != 'all') {
-      filtered = filtered.where((o) => o.subRoleSlug == subRole).toList();
-    }
-    return filtered;
   }
 }

@@ -81,20 +81,46 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
           : RefreshIndicator(
               onRefresh: _fetchRealtimeData,
               child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-            isDesktop ? 24 : 16,
-            16,
-            isDesktop ? 24 : 16,
-            110,
-          ),
-          child: isDesktop
-              ? Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 7,
-                      child: Column(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                  isDesktop ? 24 : 16,
+                  16,
+                  isDesktop ? 24 : 16,
+                  110,
+                ),
+                child: isDesktop
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 7,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildHeroBanner(isDark),
+                                const SizedBox(height: 24),
+                                _buildCampaignMetrics(isDark),
+                                const SizedBox(height: 24),
+                                _buildChartSection(isDark),
+                                const SizedBox(height: 24),
+                                _buildActiveCampaigns(isDark),
+                                const SizedBox(height: 24),
+                                _buildTalentScoutingGrid(isDark),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 24),
+                          Expanded(
+                            flex: 3,
+                            child: SubRoleRightSidebar(
+                              user: widget.user,
+                              onUserUpdated: widget.onUserUpdated,
+                              isDark: isDark,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildHeroBanner(isDark),
@@ -103,45 +129,19 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
                           const SizedBox(height: 24),
                           _buildChartSection(isDark),
                           const SizedBox(height: 24),
+                          SubRoleRightSidebar(
+                            user: widget.user,
+                            onUserUpdated: widget.onUserUpdated,
+                            isDark: isDark,
+                          ),
+                          const SizedBox(height: 24),
                           _buildActiveCampaigns(isDark),
                           const SizedBox(height: 24),
                           _buildTalentScoutingGrid(isDark),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 24),
-                    Expanded(
-                      flex: 3,
-                      child: SubRoleRightSidebar(
-                        user: widget.user,
-                        onUserUpdated: widget.onUserUpdated,
-                        isDark: isDark,
-                      ),
-                    ),
-                  ],
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeroBanner(isDark),
-                    const SizedBox(height: 24),
-                    _buildCampaignMetrics(isDark),
-                    const SizedBox(height: 24),
-                    _buildChartSection(isDark),
-                    const SizedBox(height: 24),
-                    SubRoleRightSidebar(
-                      user: widget.user,
-                      onUserUpdated: widget.onUserUpdated,
-                      isDark: isDark,
-                    ),
-                    const SizedBox(height: 24),
-                    _buildActiveCampaigns(isDark),
-                    const SizedBox(height: 24),
-                    _buildTalentScoutingGrid(isDark),
-                  ],
-                ),
-        ),
-      ),
+              ),
+            ),
     );
   }
 
@@ -334,32 +334,24 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
               'icon': Icons.pie_chart_rounded,
             };
           }).toList()
-        : [
-            {
-              'title': 'Active Campaigns',
-              'val': '5 Brand',
-              'icon': Icons.campaign,
-            },
-            {
-              'title': 'Roster Talent Active',
-              'val': '28 Kreator',
-              'icon': Icons.groups,
-            },
-            {
-              'title': 'Escrow Budget',
-              'val': 'Rp 85.000.000',
-              'icon': Icons.account_balance_wallet,
-            },
-            {
-              'title': 'Media Deliverables',
-              'val': '94% On Time',
-              'icon': Icons.verified,
-            },
-          ];
+        : [];
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
+
+        if (metrics.isEmpty)
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardBg : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _accentColor.withValues(alpha: 0.2)),
+            ),
+            child: const Center(child: Text('Data belum tersedia.')),
+          );
+
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -457,20 +449,7 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
   }
 
   Widget _buildActiveCampaigns(bool isDark) {
-    final campaigns = [
-      {
-        'brand': 'Skincare Campaign Q3',
-        'client': 'Aura Beauty Co.',
-        'budget': 'Rp 35.000.000',
-        'status': 'Production (6 Kreator)',
-      },
-      {
-        'brand': 'Summer Fashion Commercial',
-        'client': 'Urban Threads',
-        'budget': 'Rp 50.000.000',
-        'status': 'Post-Production',
-      },
-    ];
+    final List<Map<String, dynamic>> campaigns = [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -484,77 +463,97 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        Column(
-          children: campaigns.map((c) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isDark ? AppTheme.cardBg : Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-                ),
+        if (campaigns.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardBg : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
               ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: _accentColor.withValues(alpha: 0.12),
-                    child: Icon(
-                      Icons.movie_creation,
-                      color: _accentColor,
-                      size: 20,
-                    ),
+            ),
+            child: Text(
+              'Belum ada data tersedia.',
+              style: TextStyle(
+                color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+              ),
+            ),
+          )
+        else
+          Column(
+            children: campaigns.map((c) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.cardBg : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          c['brand']!,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : AppTheme.textDark,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Client: ${c['client']!} • Budget: ${c['budget']!}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark
-                                ? AppTheme.textMuted
-                                : AppTheme.textMutedLight,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _accentColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      c['status']!,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: _accentColor.withValues(alpha: 0.12),
+                      child: Icon(
+                        Icons.movie_creation,
                         color: _accentColor,
+                        size: 20,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-        ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            c['brand']!,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : AppTheme.textDark,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Client: ${c['client']!} • Budget: ${c['budget']!}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark
+                                  ? AppTheme.textMuted
+                                  : AppTheme.textMutedLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _accentColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        c['status']!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: _accentColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
       ],
     );
   }

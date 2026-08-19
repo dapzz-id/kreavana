@@ -81,14 +81,12 @@ class AdminService {
     double? refundAmount,
   ) async {
     try {
-      final response = await ApiService.post(
-        'disputes/$disputeId/decision-refund',
-        {
-          'decision': decision,
-          'notes': notes,
-          if (refundAmount != null) 'refund_amount': refundAmount,
-        },
-      );
+      final response =
+          await ApiService.post('disputes/$disputeId/decision-refund', {
+            'decision': decision,
+            'notes': notes,
+            if (refundAmount != null) 'refund_amount': refundAmount,
+          });
       return response;
     } catch (e) {
       return {'status': false, 'message': e.toString()};
@@ -103,10 +101,7 @@ class AdminService {
     try {
       final response = await ApiService.post(
         'disputes/$disputeId/decision-cancellation',
-        {
-          'decision': decision,
-          'notes': notes,
-        },
+        {'decision': decision, 'notes': notes},
       );
       return response;
     } catch (e) {

@@ -20,8 +20,13 @@ class CreatorCapacitySchedule {
       id: json['id']?.toString() ?? '',
       creatorId: json['creator_id']?.toString() ?? '',
       date: json['date']?.toString() ?? '',
-      maxCapacity: json['max_capacity'] != null ? int.tryParse(json['max_capacity'].toString()) : null,
-      isUnavailable: json['is_unavailable'] == true || json['is_unavailable'] == 1 || json['is_unavailable'] == '1',
+      maxCapacity: json['max_capacity'] != null
+          ? int.tryParse(json['max_capacity'].toString())
+          : null,
+      isUnavailable:
+          json['is_unavailable'] == true ||
+          json['is_unavailable'] == 1 ||
+          json['is_unavailable'] == '1',
       notes: json['notes']?.toString(),
     );
   }
@@ -41,7 +46,10 @@ class AvailabilityDay {
   factory AvailabilityDay.fromJson(Map<String, dynamic> json) {
     return AvailabilityDay(
       date: json['date']?.toString() ?? '',
-      isWorkingDay: json['is_working_day'] == true || json['is_working_day'] == 1 || json['is_working_day'] == '1',
+      isWorkingDay:
+          json['is_working_day'] == true ||
+          json['is_working_day'] == 1 ||
+          json['is_working_day'] == '1',
       availabilityStatus: json['availability_status']?.toString() ?? 'Unknown',
     );
   }
@@ -62,7 +70,9 @@ class AvailabilityConflict {
     return AvailabilityConflict(
       date: json['date']?.toString() ?? '',
       reason: json['reason']?.toString() ?? '',
-      remainingCapacity: json['remaining_capacity'] != null ? int.tryParse(json['remaining_capacity'].toString()) ?? 0 : 0,
+      remainingCapacity: json['remaining_capacity'] != null
+          ? int.tryParse(json['remaining_capacity'].toString()) ?? 0
+          : 0,
     );
   }
 }
@@ -84,11 +94,26 @@ class AvailabilityRange {
 
   factory AvailabilityRange.fromJson(Map<String, dynamic> json) {
     return AvailabilityRange(
-      available: json['available'] == true || json['available'] == 1 || json['available'] == '1',
-      workingDays: json['working_days'] != null ? int.tryParse(json['working_days'].toString()) ?? 0 : 0,
-      unavailableDays: json['unavailable_days'] != null ? int.tryParse(json['unavailable_days'].toString()) ?? 0 : 0,
-      days: json['days'] != null ? (json['days'] as List).map((e) => AvailabilityDay.fromJson(e)).toList() : [],
-      conflicts: json['conflicts'] != null ? (json['conflicts'] as List).map((e) => AvailabilityConflict.fromJson(e)).toList() : null,
+      available:
+          json['available'] == true ||
+          json['available'] == 1 ||
+          json['available'] == '1',
+      workingDays: json['working_days'] != null
+          ? int.tryParse(json['working_days'].toString()) ?? 0
+          : 0,
+      unavailableDays: json['unavailable_days'] != null
+          ? int.tryParse(json['unavailable_days'].toString()) ?? 0
+          : 0,
+      days: json['days'] != null
+          ? (json['days'] as List)
+                .map((e) => AvailabilityDay.fromJson(e))
+                .toList()
+          : [],
+      conflicts: json['conflicts'] != null
+          ? (json['conflicts'] as List)
+                .map((e) => AvailabilityConflict.fromJson(e))
+                .toList()
+          : null,
     );
   }
 }
@@ -119,12 +144,25 @@ class AvailabilityDetail {
   factory AvailabilityDetail.fromJson(Map<String, dynamic> json) {
     return AvailabilityDetail(
       date: json['date']?.toString() ?? '',
-      isWorkingDay: json['is_working_day'] == true || json['is_working_day'] == 1 || json['is_working_day'] == '1',
-      effectiveCapacity: json['effective_capacity'] != null ? int.tryParse(json['effective_capacity'].toString()) : null,
-      activeWorkCount: json['active_work_count'] != null ? int.tryParse(json['active_work_count'].toString()) ?? 0 : 0,
-      bookingCount: json['booking_count'] != null ? int.tryParse(json['booking_count'].toString()) ?? 0 : 0,
-      usedCapacity: json['used_capacity'] != null ? int.tryParse(json['used_capacity'].toString()) ?? 0 : 0,
-      remainingCapacity: json['remaining_capacity'] != null ? int.tryParse(json['remaining_capacity'].toString()) : null,
+      isWorkingDay:
+          json['is_working_day'] == true ||
+          json['is_working_day'] == 1 ||
+          json['is_working_day'] == '1',
+      effectiveCapacity: json['effective_capacity'] != null
+          ? int.tryParse(json['effective_capacity'].toString())
+          : null,
+      activeWorkCount: json['active_work_count'] != null
+          ? int.tryParse(json['active_work_count'].toString()) ?? 0
+          : 0,
+      bookingCount: json['booking_count'] != null
+          ? int.tryParse(json['booking_count'].toString()) ?? 0
+          : 0,
+      usedCapacity: json['used_capacity'] != null
+          ? int.tryParse(json['used_capacity'].toString()) ?? 0
+          : 0,
+      remainingCapacity: json['remaining_capacity'] != null
+          ? int.tryParse(json['remaining_capacity'].toString())
+          : null,
       availabilityStatus: json['availability_status']?.toString() ?? 'Unknown',
       notes: json['notes']?.toString(),
     );

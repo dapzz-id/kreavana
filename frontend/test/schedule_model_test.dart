@@ -48,8 +48,8 @@ void main() {
             'date': '2026-08-25',
             'reason': 'CAPACITY_FULL',
             'remaining_capacity': 0,
-          }
-        ]
+          },
+        ],
       };
 
       final range = AvailabilityRange.fromJson(json);

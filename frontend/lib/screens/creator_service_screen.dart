@@ -2868,7 +2868,10 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
             SliverToBoxAdapter(child: _buildQuickStatsRow(context, data)),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: CreatorAvailabilityWidget(creatorId: _user.id ?? ''),
               ),
             ),
@@ -9223,8 +9226,6 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                 ),
               ),
             ),
-            // Hiding review button until backend exposes can_review eligibility
-            /*
             TextButton.icon(
               onPressed: _showWriteReviewSheet,
               icon: const Icon(Icons.edit_note_rounded, size: 14),
@@ -9238,7 +9239,6 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                 visualDensity: VisualDensity.compact,
               ),
             ),
-            */
           ],
         ),
         const SizedBox(height: 10),

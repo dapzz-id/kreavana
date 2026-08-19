@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/contract_escrow_service.dart';
+import '../models/job_contract.dart';
 
 class CreateContractDialog extends StatefulWidget {
   final String creatorId;
@@ -60,20 +60,19 @@ class _CreateContractDialogState extends State<CreateContractDialog> {
           0.0;
       final contractId =
           'KONTRAK-${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}';
-      final deadlineStr =
-          '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
 
       final contract = JobContract(
         id: contractId,
         title: _titleController.text.trim(),
         description: _descController.text.trim(),
-        amount: amount,
-        deadline: deadlineStr,
+        agreedPrice: amount,
+        escrowAmount: amount,
+        contractStatus: 'pending',
+        workStatus: 'pending',
+        deadline: _selectedDate,
         terms: _termsController.text.trim(),
         creatorId: widget.creatorId,
-        creatorName: widget.creatorName,
         clientId: widget.clientId,
-        clientName: widget.clientName,
       );
 
       Navigator.pop(context, contract);

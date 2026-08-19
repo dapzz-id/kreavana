@@ -33,6 +33,7 @@ class AppRoutes {
   static const adminVerification = '/verifikasi';
   static const adminResolution = '/resolusi';
   static const verifyEmail = '/verify-email';
+  static const peluangProyek = '/peluang-proyek';
 }
 
 const _routeIndexMap = {
@@ -48,6 +49,7 @@ const _routeIndexMap = {
   AppRoutes.profil: 9,
   AppRoutes.notifikasi: 10,
   AppRoutes.pesan: 11,
+  AppRoutes.peluangProyek: 12,
 };
 
 const _adminRouteIndexMap = {

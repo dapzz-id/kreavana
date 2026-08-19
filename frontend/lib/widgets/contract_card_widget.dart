@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/contract_escrow_service.dart';
+import '../models/job_contract.dart';
 
 class ContractCardWidget extends StatelessWidget {
   final JobContract contract;
@@ -35,13 +36,16 @@ class ContractCardWidget extends StatelessWidget {
     Color statusColor = Colors.grey;
     String statusText = 'Draft';
 
-    if (contract.contractStatus == 'active' && contract.workStatus == 'pending') {
+    if (contract.contractStatus == 'active' &&
+        contract.workStatus == 'pending') {
       statusColor = const Color(0xFF3B82F6);
       statusText = 'Disetujui kedua pihak';
-    } else if (contract.contractStatus == 'active' && contract.workStatus == 'in_progress') {
+    } else if (contract.contractStatus == 'active' &&
+        contract.workStatus == 'in_progress') {
       statusColor = const Color(0xFF10B981);
       statusText = 'Escrow Terisi - Pekerjaan Berlangsung';
-    } else if (contract.contractStatus == 'active' && contract.workStatus == 'submitted') {
+    } else if (contract.contractStatus == 'active' &&
+        contract.workStatus == 'submitted') {
       statusColor = const Color(0xFFF59E0B);
       statusText = 'Hasil Pekerjaan Dikirim';
     } else if (contract.contractStatus == 'completed') {
@@ -143,7 +147,7 @@ class ContractCardWidget extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  contract.description,
+                  contract.description ?? '',
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark ? Colors.white70 : Colors.grey.shade700,
@@ -182,7 +186,7 @@ class ContractCardWidget extends StatelessWidget {
                             style: TextStyle(fontSize: 10, color: Colors.grey),
                           ),
                           Text(
-                            contract.deadline,
+                            contract.deadline?.toIso8601String() ?? '',
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -282,7 +286,8 @@ class ContractCardWidget extends StatelessWidget {
       );
     }
 
-    if (contract.contractStatus == 'active' && contract.workStatus == 'pending') {
+    if (contract.contractStatus == 'active' &&
+        contract.workStatus == 'pending') {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -313,11 +318,15 @@ class ContractCardWidget extends StatelessWidget {
       );
     }
 
-    if (contract.contractStatus == 'active' && contract.workStatus == 'in_progress' ||
-        contract.contractStatus == 'active' && contract.workStatus == 'submitted') {
+    if (contract.contractStatus == 'active' &&
+            contract.workStatus == 'in_progress' ||
+        contract.contractStatus == 'active' &&
+            contract.workStatus == 'submitted') {
       return Column(
         children: [
-          if (isCreator && contract.contractStatus == 'active' && contract.workStatus == 'in_progress')
+          if (isCreator &&
+              contract.contractStatus == 'active' &&
+              contract.workStatus == 'in_progress')
             ElevatedButton.icon(
               onPressed: () {
                 final updated = ContractEscrowService.submitWork(contract);
@@ -335,8 +344,10 @@ class ContractCardWidget extends StatelessWidget {
               ),
             ),
           if (isClient &&
-              (contract.contractStatus == 'active' && contract.workStatus == 'submitted' ||
-                  contract.contractStatus == 'active' && contract.workStatus == 'in_progress'))
+              (contract.contractStatus == 'active' &&
+                      contract.workStatus == 'submitted' ||
+                  contract.contractStatus == 'active' &&
+                      contract.workStatus == 'in_progress'))
             ElevatedButton.icon(
               onPressed: () {
                 final updated = ContractEscrowService.releaseEscrowToCreator(

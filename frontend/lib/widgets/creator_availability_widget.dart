@@ -10,7 +10,8 @@ class CreatorAvailabilityWidget extends StatefulWidget {
   const CreatorAvailabilityWidget({super.key, required this.creatorId});
 
   @override
-  State<CreatorAvailabilityWidget> createState() => _CreatorAvailabilityWidgetState();
+  State<CreatorAvailabilityWidget> createState() =>
+      _CreatorAvailabilityWidgetState();
 }
 
 class _CreatorAvailabilityWidgetState extends State<CreatorAvailabilityWidget> {
@@ -29,7 +30,10 @@ class _CreatorAvailabilityWidgetState extends State<CreatorAvailabilityWidget> {
     });
 
     final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate!);
-    final res = await ScheduleService.getCreatorAvailabilityForDate(widget.creatorId, dateStr);
+    final res = await ScheduleService.getCreatorAvailabilityForDate(
+      widget.creatorId,
+      dateStr,
+    );
 
     if (mounted) {
       setState(() {
@@ -71,7 +75,11 @@ class _CreatorAvailabilityWidgetState extends State<CreatorAvailabilityWidget> {
           children: [
             const Text(
               'Cek Ketersediaan',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
+              ),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -86,7 +94,9 @@ class _CreatorAvailabilityWidgetState extends State<CreatorAvailabilityWidget> {
                   context: context,
                   initialDate: _selectedDate ?? now,
                   firstDate: now,
-                  lastDate: now.add(const Duration(days: 90)), // Check up to 90 days ahead
+                  lastDate: now.add(
+                    const Duration(days: 90),
+                  ), // Check up to 90 days ahead
                 );
                 if (d != null && d != _selectedDate) {
                   setState(() => _selectedDate = d);
@@ -113,7 +123,11 @@ class _CreatorAvailabilityWidgetState extends State<CreatorAvailabilityWidget> {
                             : AppTheme.textDark,
                       ),
                     ),
-                    const Icon(Icons.calendar_today, color: AppTheme.primaryPurple, size: 20),
+                    const Icon(
+                      Icons.calendar_today,
+                      color: AppTheme.primaryPurple,
+                      size: 20,
+                    ),
                   ],
                 ),
               ),
@@ -123,15 +137,24 @@ class _CreatorAvailabilityWidgetState extends State<CreatorAvailabilityWidget> {
               const Center(child: CircularProgressIndicator()),
             ] else if (_error != null) ...[
               const SizedBox(height: 16),
-              Text(_error!, style: const TextStyle(fontSize: 14, color: AppTheme.error)),
+              Text(
+                _error!,
+                style: const TextStyle(fontSize: 14, color: AppTheme.error),
+              ),
             ] else if (_availability != null) ...[
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: _getStatusColor(_availability!.availabilityStatus).withValues(alpha: 0.1),
+                  color: _getStatusColor(
+                    _availability!.availabilityStatus,
+                  ).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: _getStatusColor(_availability!.availabilityStatus).withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: _getStatusColor(
+                      _availability!.availabilityStatus,
+                    ).withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,10 +162,13 @@ class _CreatorAvailabilityWidgetState extends State<CreatorAvailabilityWidget> {
                     Row(
                       children: [
                         Icon(
-                          _availability!.availabilityStatus.toLowerCase() == 'available'
+                          _availability!.availabilityStatus.toLowerCase() ==
+                                  'available'
                               ? Icons.check_circle_outline
                               : Icons.info_outline,
-                          color: _getStatusColor(_availability!.availabilityStatus),
+                          color: _getStatusColor(
+                            _availability!.availabilityStatus,
+                          ),
                           size: 20,
                         ),
                         const SizedBox(width: 8),
@@ -151,7 +177,9 @@ class _CreatorAvailabilityWidgetState extends State<CreatorAvailabilityWidget> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: _getStatusColor(_availability!.availabilityStatus),
+                            color: _getStatusColor(
+                              _availability!.availabilityStatus,
+                            ),
                           ),
                         ),
                       ],
@@ -160,23 +188,38 @@ class _CreatorAvailabilityWidgetState extends State<CreatorAvailabilityWidget> {
                     if (!_availability!.isWorkingDay)
                       const Text(
                         'Kreator tidak bekerja atau sedang libur pada tanggal ini.',
-                        style: TextStyle(fontSize: 14, color: AppTheme.textDark),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.textDark,
+                        ),
                       )
-                    else if (_availability!.availabilityStatus.toLowerCase() == 'full')
+                    else if (_availability!.availabilityStatus.toLowerCase() ==
+                        'full')
                       const Text(
                         'Jadwal kreator sudah penuh pada tanggal ini.',
-                        style: TextStyle(fontSize: 14, color: AppTheme.textDark),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.textDark,
+                        ),
                       )
                     else
                       const Text(
                         'Kreator tersedia untuk menerima pekerjaan baru.',
-                        style: TextStyle(fontSize: 14, color: AppTheme.textDark),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.textDark,
+                        ),
                       ),
-                    if (_availability!.notes != null && _availability!.notes!.isNotEmpty) ...[
+                    if (_availability!.notes != null &&
+                        _availability!.notes!.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(
                         'Catatan: ${_availability!.notes}',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, fontStyle: FontStyle.italic),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textMuted,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     ],
                   ],

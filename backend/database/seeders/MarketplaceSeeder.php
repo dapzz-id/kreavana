@@ -14,16 +14,16 @@ class MarketplaceSeeder extends Seeder
         if ($users->isEmpty()) return;
 
         $items = [
-            ['title' => 'Paket Foto Produk Premium', 'cat' => 'Fotografi', 'price' => 1500000, 'rating' => 4.9, 'orders' => 48],
-            ['title' => 'Video Profil Usaha 1 Menit', 'cat' => 'Videografi', 'price' => 3000000, 'rating' => 4.8, 'orders' => 32],
-            ['title' => 'Paket Desain Logo & Branding', 'cat' => 'Desain', 'price' => 2000000, 'rating' => 4.9, 'orders' => 56],
-            ['title' => 'Konten Sosial Media 30 Hari', 'cat' => 'Konten', 'price' => 4500000, 'rating' => 4.7, 'orders' => 21],
-            ['title' => 'Brand Identity Lengkap', 'cat' => 'Branding', 'price' => 5000000, 'rating' => 4.6, 'orders' => 15],
-            ['title' => 'Foto Produk UMKM', 'cat' => 'Fotografi', 'price' => 800000, 'rating' => 4.8, 'orders' => 67],
-            ['title' => 'Video Tutorial YouTube', 'cat' => 'Videografi', 'price' => 2500000, 'rating' => 4.5, 'orders' => 12],
-            ['title' => 'Desain Feed Instagram', 'cat' => 'Desain', 'price' => 1200000, 'rating' => 4.7, 'orders' => 89],
-            ['title' => 'Copywriting Landing Page', 'cat' => 'Konten', 'price' => 1800000, 'rating' => 4.4, 'orders' => 23],
-            ['title' => 'Rebranding Toko Online', 'cat' => 'Branding', 'price' => 3500000, 'rating' => 4.8, 'orders' => 9],
+            ['title' => 'Lightroom Presets Wedding Vol 1', 'cat' => 'Fotografi', 'price' => 150000, 'rating' => 4.9, 'orders' => 48],
+            ['title' => 'Template Notion Freelancer Dashboard', 'cat' => 'Desain', 'price' => 300000, 'rating' => 4.8, 'orders' => 32],
+            ['title' => 'E-Book: Mastery Digital Marketing 2026', 'cat' => 'Konten', 'price' => 200000, 'rating' => 4.9, 'orders' => 56],
+            ['title' => 'Bundle 50+ Social Media Templates Canva', 'cat' => 'Desain', 'price' => 450000, 'rating' => 4.7, 'orders' => 21],
+            ['title' => 'Logo Asset & Icon Pack Minimalist', 'cat' => 'Desain', 'price' => 500000, 'rating' => 4.6, 'orders' => 15],
+            ['title' => 'Cinematic LUTs for Premiere Pro', 'cat' => 'Videografi', 'price' => 800000, 'rating' => 4.8, 'orders' => 67],
+            ['title' => 'Source Code E-Commerce Flutter App', 'cat' => 'Konten', 'price' => 2500000, 'rating' => 4.5, 'orders' => 12],
+            ['title' => 'Pitch Deck Template Pro PowerPoint', 'cat' => 'Desain', 'price' => 120000, 'rating' => 4.7, 'orders' => 89],
+            ['title' => 'Copywriting Prompts Swipe File', 'cat' => 'Konten', 'price' => 180000, 'rating' => 4.4, 'orders' => 23],
+            ['title' => 'Brand Guideline Template PDF', 'cat' => 'Branding', 'price' => 350000, 'rating' => 4.8, 'orders' => 9],
         ];
 
         foreach ($items as $i => $d) {
