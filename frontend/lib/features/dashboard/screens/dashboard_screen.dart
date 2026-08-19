@@ -18,6 +18,7 @@ import '../../../screens/laporan_screen.dart';
 import '../../../screens/peluang_proyek_screen.dart';
 import '../../../services/badge_service.dart';
 import '../../../widgets/ai_recommendation_card.dart';
+import '../../../widgets/app_empty_state.dart';
 import '../../../widgets/opportunity_detail_sheet.dart';
 import '../../../models/opportunity_model.dart';
 import '../../../services/profile_completeness_service.dart';
@@ -106,8 +107,8 @@ class _DashboardScreenState extends State<DashboardScreen>
 
       if (mounted) {
         setState(() {
+          final data = res['data'] ?? {};
           if (res['success'] == true && res['data'] != null) {
-            final data = res['data'];
             final summary = data['summary'] ?? {};
             _overviewSummary = {
               'active_needs': summary['active_needs']?.toString() ?? '0',
