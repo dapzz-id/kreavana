@@ -13,7 +13,7 @@ class MarketplaceItem extends Model
     use HasFactory, HasUuids;
 
     protected $fillable = [
-        'user_id', 'title', 'description', 'category', 'type', 'delivery_type', 'price', 'duration_info',
+        'user_id', 'title', 'description', 'category', 'type', 'price',
         'rating', 'review_count', 'order_count', 'image_url',
         'is_featured', 'is_active', 'status',
     ];

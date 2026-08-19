@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\MarketplaceItem;
+use App\Models\CreatorService;
 use App\Models\MarketplacePurchase;
 use App\Models\MarketplaceReview;
 use App\Models\Opportunity;
@@ -44,13 +45,13 @@ class RecommendationPostProductionAuditTest extends TestCase
             'address' => 'Line',
             'is_default' => true,
         ]);
-        MarketplaceItem::create([
-            'user_id' => $this->creator->id,
+        CreatorService::create([
+            'creator_id' => $this->creator->id,
             'title' => 'Wedding Service',
             'description' => 'Desc',
             'price' => 1000,
-            'delivery_type' => 'service',
-            'status' => 'published',
+            
+            'status' => 'active',
             'category' => 'wedding',
         ]);
     }
@@ -72,37 +73,15 @@ class RecommendationPostProductionAuditTest extends TestCase
             'role' => \App\Enums\RoleType::Creator,
             'is_creator_approved' => false,
         ]);
-        MarketplaceItem::create([
-            'user_id' => $unapproved->id,
+        CreatorService::create([
+            'creator_id' => $unapproved->id,
             'title' => 'Test', 'description' => 'Test', 'price' => 100,
-            'delivery_type' => 'service', 'status' => 'published', 'category' => 'wedding'
+             'status' => 'active', 'category' => 'wedding'
         ]);
 
         $response = $this->getJson('/api/creators/recommendations');
         $ids = collect($response->json('data'))->pluck('id')->toArray();
         $this->assertNotContains($unapproved->id, $ids);
-    }
-
-    public function test_domain_separation_digital_not_service()
-    {
-        $digitalOnly = User::create([
-            'id' => \Illuminate\Support\Str::uuid(),
-            'name' => 'Digital Only',
-            'email' => 'd@example.com',
-            'username' => 'digital_only',
-            'password' => bcrypt('password'),
-            'role' => \App\Enums\RoleType::Creator,
-            'is_creator_approved' => true,
-        ]);
-        MarketplaceItem::create([
-            'user_id' => $digitalOnly->id,
-            'title' => 'Ebook', 'description' => 'Test', 'price' => 100,
-            'delivery_type' => 'digital_download', 'status' => 'published', 'category' => 'ebook'
-        ]);
-
-        $response = $this->getJson('/api/creators/recommendations');
-        $ids = collect($response->json('data'))->pluck('id')->toArray();
-        $this->assertNotContains($digitalOnly->id, $ids);
     }
 
     public function test_performance_rating_exactly_4_ignored()
@@ -113,7 +92,7 @@ class RecommendationPostProductionAuditTest extends TestCase
         $digitalItem = MarketplaceItem::create([
             'user_id' => $this->creator->id,
             'title' => 'Ebook', 'description' => 'Test', 'price' => 100,
-            'delivery_type' => 'digital_download', 'status' => 'published', 'category' => 'ebook'
+            'type' => 'paid', 'status' => 'published', 'category' => 'ebook', 'is_active' => true,
         ]);
         $purchase = MarketplacePurchase::create([
             'marketplace_item_id' => $digitalItem->id,
@@ -154,8 +133,7 @@ class RecommendationPostProductionAuditTest extends TestCase
             'creator_id' => $this->creator->id,
             'client_id' => $this->creator->id,
             'title' => 'Job Title',
-            'description' => 'Job Desc',
-            'amount' => 1000,
+            'agreed_price' => 1000,
             'work_status' => 'in_progress',
         ]);
         OpportunityReview::create([

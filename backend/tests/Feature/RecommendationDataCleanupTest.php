@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\MarketplaceItem;
+use App\Models\CreatorService;
 use App\Models\JobContract;
 use App\Models\MarketplacePurchase;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -34,37 +35,23 @@ class RecommendationDataCleanupTest extends TestCase
     {
         $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator]);
 
-        $publishedService = MarketplaceItem::create([
-            'user_id' => $creator->id,
+        $publishedService = CreatorService::create([
+            'creator_id' => $creator->id,
             'title' => 'Published Service',
             'category' => 'Fotografi',
-            'delivery_type' => 'service',
-            'status' => 'published',
+            'status' => 'active',
             'price' => 1000,
-            'is_active' => true,
         ]);
 
-        $draftService = MarketplaceItem::create([
-            'user_id' => $creator->id,
+        $draftService = CreatorService::create([
+            'creator_id' => $creator->id,
             'title' => 'Draft Service',
             'category' => 'Fotografi',
-            'delivery_type' => 'service',
-            'status' => 'draft',
+            'status' => 'inactive',
             'price' => 1000,
-            'is_active' => false,
         ]);
 
-        $archivedService = MarketplaceItem::create([
-            'user_id' => $creator->id,
-            'title' => 'Archived Service',
-            'category' => 'Fotografi',
-            'delivery_type' => 'service',
-            'status' => 'archived',
-            'price' => 1000,
-            'is_active' => false,
-        ]);
-
-        $activeItems = MarketplaceItem::active()->get();
+        $activeItems = CreatorService::where('status', 'active')->get();
         $this->assertCount(1, $activeItems);
         $this->assertEquals($publishedService->id, $activeItems->first()->id);
     }
@@ -73,30 +60,25 @@ class RecommendationDataCleanupTest extends TestCase
     {
         $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator]);
 
-        $service = MarketplaceItem::create([
-            'user_id' => $creator->id,
+        $service = CreatorService::create([
+            'creator_id' => $creator->id,
             'title' => 'Service Offering',
             'category' => 'Fotografi',
-            'delivery_type' => 'service',
-            'status' => 'published',
+            'status' => 'active',
             'price' => 1000,
-            'is_active' => true,
         ]);
 
         $digital = MarketplaceItem::create([
             'user_id' => $creator->id,
             'title' => 'Digital Template',
             'category' => 'Fotografi',
-            'delivery_type' => 'digital_download',
+            'type' => 'paid',
             'status' => 'published',
             'price' => 1000,
             'is_active' => true,
         ]);
 
-        // Phase 7 must strictly filter this. We emulate the future query here to lock in the rule.
-        $servicesOnly = MarketplaceItem::where('status', 'published')
-            ->where('delivery_type', 'service')
-            ->get();
+        $servicesOnly = CreatorService::where('status', 'active')->get();
 
         $this->assertCount(1, $servicesOnly);
         $this->assertEquals($service->id, $servicesOnly->first()->id);
@@ -165,7 +147,7 @@ class RecommendationDataCleanupTest extends TestCase
             'user_id' => $creator->id,
             'title' => 'Digital Preset',
             'category' => 'Fotografi',
-            'delivery_type' => 'digital_download',
+            'type' => 'paid',
             'status' => 'published',
             'price' => 50000,
             'is_active' => true,
@@ -184,7 +166,7 @@ class RecommendationDataCleanupTest extends TestCase
             ->count();
 
         $successfulDigitalSalesCount = MarketplacePurchase::whereHas('item', function($q) use ($creator) {
-            $q->where('user_id', $creator->id)->where('delivery_type', 'digital_download');
+            $q->where('user_id', $creator->id);
         })->where('status', 'success')->count();
 
         // Domain boundaries mathematically enforce that 1 service + 1 digital sale = 1 of each, not 2 completed jobs.
@@ -197,20 +179,18 @@ class RecommendationDataCleanupTest extends TestCase
         $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator]);
         $client = User::factory()->create();
 
-        $item = MarketplaceItem::create([
-            'user_id' => $creator->id,
+        $item = CreatorService::create([
+            'creator_id' => $creator->id,
             'title' => 'Test Item',
             'category' => 'Fotografi',
-            'delivery_type' => 'service',
-            'status' => 'published',
+            'status' => 'active',
             'price' => 1000,
-            'is_active' => true,
         ]);
 
         $job = JobContract::create([
             'client_id' => $client->id,
             'creator_id' => $creator->id,
-            'marketplace_item_id' => $item->id,
+            'creator_service_id' => $item->id,
             'title' => 'Test Job',
             'contract_status' => 'approved',
             'work_status' => 'completed',
@@ -228,7 +208,7 @@ class RecommendationDataCleanupTest extends TestCase
             'agreed_price' => 1000
         ]);
 
-        $this->assertNull($job->fresh()->marketplaceItem);
+        $this->assertNull($job->fresh()->creatorService);
     }
 
     public function test_client_cannot_spoof_performance_data_in_api()

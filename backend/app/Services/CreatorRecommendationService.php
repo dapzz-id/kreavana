@@ -23,16 +23,14 @@ class CreatorRecommendationService
             ->where('role', \App\Enums\RoleType::Creator)
             ->where('is_creator_approved', true);
 
-        // Eager load marketplace items to avoid N+1 when retrieving categories
-        $query->with(['marketplaceItems' => function ($q) {
-            $q->where('delivery_type', 'service')
-              ->where('status', 'published');
+        // Eager load creator services to avoid N+1 when retrieving categories
+        $query->with(['creatorServices' => function ($q) {
+            $q->where('status', 'active');
         }]);
 
         // 1. Service Catalog Filter (Mandatory)
-        $query->whereHas('marketplaceItems', function ($q) use ($filters) {
-            $q->where('delivery_type', 'service')
-              ->where('status', 'published');
+        $query->whereHas('creatorServices', function ($q) use ($filters) {
+            $q->where('status', 'active');
 
             if (!empty($filters['category'])) {
                 $q->where('category', $filters['category']);
@@ -53,12 +51,9 @@ class CreatorRecommendationService
         }
 
         // Add counts for ranking
-        // Positive Marketplace Reviews (Digital Downloads + Rating > 4)
+        // Positive Marketplace Reviews (Marketplace Items + Rating > 4)
         $query->withCount(['marketplaceReviews as positive_marketplace_reviews_count' => function ($q) {
-            $q->where('marketplace_reviews.rating', '>', 4)
-              ->whereHas('item', function ($sq) {
-                  $sq->where('delivery_type', 'digital_download');
-              });
+            $q->where('marketplace_reviews.rating', '>', 4);
             // We assume MarketplaceReview only exists for successful purchases.
         }]);
 

@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\MarketplaceItem;
+use App\Models\CreatorService;
 use App\Models\JobContract;
 use App\Models\OpportunityReview;
 use App\Models\UserAddress;
@@ -30,13 +31,13 @@ class RecommendationFinalHardeningTest extends TestCase
             'sub_role' => 'event_organizer',
             'performance_boost' => 10,
         ]);
-        MarketplaceItem::create([
-            'user_id' => $this->creator1->id,
+        CreatorService::create([
+            'creator_id' => $this->creator1->id,
             'title' => 'Wedding Service',
             'description' => 'Desc',
             'price' => 1000,
-            'delivery_type' => 'service',
-            'status' => 'published',
+            
+            'status' => 'active',
             'category' => 'wedding',
         ]);
         UserAddress::create([
@@ -63,13 +64,13 @@ class RecommendationFinalHardeningTest extends TestCase
             'sub_role' => 'mc',
             'performance_boost' => 5,
         ]);
-        MarketplaceItem::create([
-            'user_id' => $this->creator2->id,
+        CreatorService::create([
+            'creator_id' => $this->creator2->id,
             'title' => 'MC Service',
             'description' => 'Desc',
             'price' => 1000,
-            'delivery_type' => 'service',
-            'status' => 'published',
+            
+            'status' => 'active',
             'category' => 'corporate',
         ]);
         UserAddress::create([
@@ -88,26 +89,15 @@ class RecommendationFinalHardeningTest extends TestCase
     public function test_categories_endpoint_returns_unique_published_service_categories()
     {
         // Should ignore draft
-        MarketplaceItem::create([
-            'user_id' => $this->creator1->id,
+        CreatorService::create([
+            'creator_id' => $this->creator1->id,
             'title' => 'Draft',
             'description' => 'Desc',
             'price' => 1000,
-            'delivery_type' => 'service',
-            'status' => 'draft',
+            
+            'status' => 'inactive',
             'category' => 'ignored_draft',
         ]);
-        // Should ignore digital download
-        MarketplaceItem::create([
-            'user_id' => $this->creator1->id,
-            'title' => 'Digital',
-            'description' => 'Desc',
-            'price' => 1000,
-            'delivery_type' => 'digital_download',
-            'status' => 'published',
-            'category' => 'ignored_digital',
-        ]);
-
         $response = $this->getJson('/api/creators/recommendations/categories');
         $response->assertStatus(200);
         $data = $response->json('data');
@@ -115,7 +105,6 @@ class RecommendationFinalHardeningTest extends TestCase
         $this->assertContains('wedding', $data);
         $this->assertContains('corporate', $data);
         $this->assertNotContains('ignored_draft', $data);
-        $this->assertNotContains('ignored_digital', $data);
     }
 
     public function test_availability_pagination_nullifies_total_and_uses_has_more()

@@ -267,6 +267,13 @@ Route::middleware('auth:api')->group(function () {
         Route::post('{id}/purchase', [MarketplaceController::class, 'purchase']);
     });
 
+    // Creator Services (write operations)
+    Route::prefix('creator-services')->group(function () {
+        Route::post('/', [\App\Http\Controllers\CreatorServiceController::class, 'store']);
+        Route::put('{id}', [\App\Http\Controllers\CreatorServiceController::class, 'update']);
+        Route::delete('{id}', [\App\Http\Controllers\CreatorServiceController::class, 'destroy']);
+    });
+
     // Subscription (authenticated)
     Route::prefix('subscription')->group(function () {
         Route::post('purchase', [SubscriptionController::class, 'purchase']);
@@ -303,6 +310,12 @@ Route::prefix('marketplace')->group(function () {
 // Recommendations (Public Read)
 Route::get('creators/recommendations', [\App\Http\Controllers\RecommendationController::class, 'getCreatorRecommendations']);
 Route::get('creators/recommendations/categories', [\App\Http\Controllers\RecommendationController::class, 'getServiceCategories']);
+
+// Creator Services (public read)
+Route::prefix('creator-services')->group(function () {
+    Route::get('/', [\App\Http\Controllers\CreatorServiceController::class, 'index']);
+    Route::get('{id}', [\App\Http\Controllers\CreatorServiceController::class, 'show']);
+});
 
 // Subscription plans (public — prices are defined server-side, never trust the client)
 Route::prefix('subscription')->group(function () {

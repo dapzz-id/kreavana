@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Models\MarketplaceItem;
+use App\Models\CreatorService;
 use App\Models\JobContract;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -17,12 +18,10 @@ class ProductCatalogTest extends TestCase
         $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator]);
 
         $response = $this->actingAs($creator, 'api')->postJson('/api/marketplace', [
-            'title' => 'Test Service Package',
-            'description' => 'A great service package',
+            'title' => 'Test Digital Asset',
+            'description' => 'A great asset',
             'category' => 'Fotografi',
             'type' => 'paid',
-            'delivery_type' => 'service',
-            'duration_info' => '2 Hari',
             'price' => 500000,
         ]);
 
@@ -30,8 +29,6 @@ class ProductCatalogTest extends TestCase
         
         $item = MarketplaceItem::first();
         $this->assertEquals('draft', $item->status);
-        $this->assertEquals('service', $item->delivery_type);
-        $this->assertEquals('2 Hari', $item->duration_info);
         $this->assertFalse((bool)$item->is_active);
     }
 
@@ -96,59 +93,44 @@ class ProductCatalogTest extends TestCase
         $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator]);
         $client = User::factory()->create(['role' => \App\Enums\RoleType::User]);
         
-        $item = MarketplaceItem::create([
-            'user_id' => $creator->id,
+        $service = CreatorService::create([
+            'creator_id' => $creator->id,
             'title' => 'Wedding MC Package',
             'description' => 'MC for wedding',
             'category' => 'Konten',
-            'type' => 'paid',
-            'delivery_type' => 'service',
             'price' => 5000000,
-            'status' => 'published',
-            'is_active' => true,
+            'status' => 'active',
         ]);
 
         $response = $this->actingAs($client, 'api')->postJson('/api/contracts', [
             'partner_id' => $creator->id,
             'my_role' => 'client',
-            'marketplace_item_id' => $item->id,
+            'creator_service_id' => $service->id,
             'scheduled_start_date' => date('Y-m-d', strtotime('+1 day')),
             'scheduled_end_date' => date('Y-m-d', strtotime('+1 day')),
         ]);
 
         $response->assertStatus(201);
-        $this->assertEquals($item->id, $response->json('data.marketplace_item_id'));
+        $this->assertEquals($service->id, $response->json('data.creator_service_id'));
         $this->assertEquals('Wedding MC Package', $response->json('data.title'));
         $this->assertEquals('MC for wedding', $response->json('data.description'));
         $this->assertEquals('5000000.00', $response->json('data.agreed_price'));
     }
 
-    public function test_job_contract_rejects_draft_or_archived_or_digital_download()
+    public function test_job_contract_rejects_inactive_service()
     {
         $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator]);
         $client = User::factory()->create(['role' => \App\Enums\RoleType::User]);
         
-        $draftItem = MarketplaceItem::create([
-            'user_id' => $creator->id,
-            'title' => 'Draft Service', 'category' => 'Konten', 'type' => 'paid', 'delivery_type' => 'service', 'price' => 500, 'status' => 'draft', 'is_active' => false,
-        ]);
-        
-        $digitalItem = MarketplaceItem::create([
-            'user_id' => $creator->id,
-            'title' => 'Digital Logo', 'category' => 'Desain', 'type' => 'paid', 'delivery_type' => 'digital_download', 'price' => 500, 'status' => 'published', 'is_active' => true,
+        $inactiveService = CreatorService::create([
+            'creator_id' => $creator->id,
+            'title' => 'Draft Service', 'category' => 'Konten', 'price' => 500, 'status' => 'inactive',
         ]);
 
-        // Draft should fail
         $res1 = $this->actingAs($client, 'api')->postJson('/api/contracts', [
-            'partner_id' => $creator->id, 'my_role' => 'client', 'marketplace_item_id' => $draftItem->id, 'scheduled_start_date' => date('Y-m-d'), 'scheduled_end_date' => date('Y-m-d'),
+            'partner_id' => $creator->id, 'my_role' => 'client', 'creator_service_id' => $inactiveService->id, 'scheduled_start_date' => date('Y-m-d'), 'scheduled_end_date' => date('Y-m-d'),
         ]);
-        $res1->assertStatus(400)->assertJsonPath('message', 'Katalog item tidak tersedia (draft/archived).');
-
-        // Digital should fail
-        $res2 = $this->actingAs($client, 'api')->postJson('/api/contracts', [
-            'partner_id' => $creator->id, 'my_role' => 'client', 'marketplace_item_id' => $digitalItem->id, 'scheduled_start_date' => date('Y-m-d'), 'scheduled_end_date' => date('Y-m-d'),
-        ]);
-        $res2->assertStatus(400)->assertJsonPath('message', 'Hanya item dengan tipe layanan (service) yang dapat dijadikan kontrak.');
+        $res1->assertStatus(400)->assertJsonPath('message', 'Layanan tidak tersedia.');
     }
 
     public function test_historical_integrity_of_contract_snapshot()
@@ -156,21 +138,18 @@ class ProductCatalogTest extends TestCase
         $creator = User::factory()->create(['role' => \App\Enums\RoleType::Creator]);
         $client = User::factory()->create(['role' => \App\Enums\RoleType::User]);
         
-        $item = MarketplaceItem::create([
-            'user_id' => $creator->id,
+        $service = CreatorService::create([
+            'creator_id' => $creator->id,
             'title' => 'Pre-Wedding Photo',
             'category' => 'Fotografi',
-            'type' => 'paid',
-            'delivery_type' => 'service',
             'price' => 2000000,
-            'status' => 'published',
-            'is_active' => true,
+            'status' => 'active',
         ]);
 
         $this->actingAs($client, 'api')->postJson('/api/contracts', [
             'partner_id' => $creator->id,
             'my_role' => 'client',
-            'marketplace_item_id' => $item->id,
+            'creator_service_id' => $service->id,
             'scheduled_start_date' => date('Y-m-d', strtotime('+1 day')),
             'scheduled_end_date' => date('Y-m-d', strtotime('+1 day')),
         ]);
@@ -178,8 +157,8 @@ class ProductCatalogTest extends TestCase
         $contract = JobContract::first();
         $this->assertEquals(2000000, $contract->agreed_price);
 
-        // Creator changes the price and title in catalog
-        $this->actingAs($creator, 'api')->putJson("/api/marketplace/{$item->id}", [
+        // Creator changes the price and title in service
+        $this->actingAs($creator, 'api')->putJson("/api/creator-services/{$service->id}", [
             'title' => 'Pre-Wedding Photo (Premium)',
             'price' => 3500000
         ]);
