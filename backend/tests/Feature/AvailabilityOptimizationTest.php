@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\MarketplaceItem;
+use App\Models\CreatorService;
 use App\Models\CreatorCapacitySchedule;
 use Illuminate\Support\Str;
 
@@ -25,14 +26,14 @@ class AvailabilityOptimizationTest extends TestCase
             'id' => Str::uuid(), 'name' => 'C1', 'email' => 'c1@ex.com', 'username' => 'c1', 'password' => bcrypt('123'),
             'role' => \App\Enums\RoleType::Creator, 'is_creator_approved' => true, 'max_work_capacity' => 0
         ]);
-        MarketplaceItem::create(['user_id' => $unavailableCreator->id, 'title' => 'T1', 'description' => 'D', 'price' => 10, 'delivery_type' => 'service', 'status' => 'published', 'category' => 'wedding']);
+        CreatorService::create(['creator_id' => $unavailableCreator->id, 'title' => 'T1', 'description' => 'D', 'price' => 10,  'status' => 'active', 'category' => 'wedding']);
 
         // Creator with 0 capacity BUT has positive override -> SHOULD NOT BE PRE-FILTERED
         $availableCreator = User::create([
             'id' => Str::uuid(), 'name' => 'C2', 'email' => 'c2@ex.com', 'username' => 'c2', 'password' => bcrypt('123'),
             'role' => \App\Enums\RoleType::Creator, 'is_creator_approved' => true, 'max_work_capacity' => 0
         ]);
-        MarketplaceItem::create(['user_id' => $availableCreator->id, 'title' => 'T2', 'description' => 'D', 'price' => 10, 'delivery_type' => 'service', 'status' => 'published', 'category' => 'wedding']);
+        CreatorService::create(['creator_id' => $availableCreator->id, 'title' => 'T2', 'description' => 'D', 'price' => 10,  'status' => 'active', 'category' => 'wedding']);
         CreatorCapacitySchedule::create([
             'creator_id' => $availableCreator->id, 'date' => '2026-10-05', 'max_capacity' => 1, 'is_unavailable' => false
         ]);

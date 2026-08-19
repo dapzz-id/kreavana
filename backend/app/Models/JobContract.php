@@ -15,7 +15,7 @@ class JobContract extends Model
         'client_id',
         'creator_id',
         'opportunity_id',
-        'marketplace_item_id',
+        'creator_service_id',
         'title',
         'description',
         'terms',
@@ -78,8 +78,8 @@ class JobContract extends Model
         return $this->hasMany(JobStatusHistory::class, 'job_contract_id');
     }
 
-    public function marketplaceItem(): BelongsTo
+    public function creatorService(): BelongsTo
     {
-        return $this->belongsTo(MarketplaceItem::class, 'marketplace_item_id');
+        return $this->belongsTo(CreatorService::class, 'creator_service_id');
     }
 }

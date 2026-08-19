@@ -48,20 +48,17 @@ class JobContractService extends BaseService
             throw new Exception('Klien dan Kreator tidak boleh sama.', 400);
         }
 
-        // Handle MarketplaceItem Snapshotting
-        if (!empty($data['marketplace_item_id'])) {
-            $item = MarketplaceItem::find($data['marketplace_item_id']);
+        // Handle CreatorService Snapshotting
+        if (!empty($data['creator_service_id'])) {
+            $item = \App\Models\CreatorService::find($data['creator_service_id']);
             if (!$item) {
-                throw new Exception('Katalog item tidak ditemukan.', 404);
+                throw new Exception('Layanan tidak ditemukan.', 404);
             }
-            if ($item->user_id !== $creatorId) {
-                throw new Exception('Katalog item bukan milik kreator ini.', 400);
+            if ($item->creator_id !== $creatorId) {
+                throw new Exception('Layanan bukan milik kreator ini.', 400);
             }
-            if ($item->status !== 'published') {
-                throw new Exception('Katalog item tidak tersedia (draft/archived).', 400);
-            }
-            if ($item->delivery_type !== 'service') {
-                throw new Exception('Hanya item dengan tipe layanan (service) yang dapat dijadikan kontrak.', 400);
+            if ($item->status !== 'active') {
+                throw new Exception('Layanan tidak tersedia.', 400);
             }
 
             // Snapshot authoritative values
@@ -76,7 +73,7 @@ class JobContractService extends BaseService
                 'client_id' => $clientId,
                 'creator_id' => $creatorId,
                 'opportunity_id' => $data['opportunity_id'] ?? null,
-                'marketplace_item_id' => $data['marketplace_item_id'] ?? null,
+                'creator_service_id' => $data['creator_service_id'] ?? null,
                 'title' => $data['title'],
                 'description' => $data['description'] ?? null,
                 'terms' => $data['terms'] ?? null,

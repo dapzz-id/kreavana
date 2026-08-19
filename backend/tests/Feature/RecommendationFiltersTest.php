@@ -8,6 +8,7 @@ use Tests\TestCase;
 use App\Models\User;
 use App\Models\UserAddress;
 use App\Models\MarketplaceItem;
+use App\Models\CreatorService;
 use App\Models\MarketplacePurchase;
 use App\Models\MarketplaceReview;
 use App\Models\Opportunity;
@@ -35,29 +36,30 @@ class RecommendationFiltersTest extends TestCase
         ], $overrides));
     }
 
-    private function createServiceItem($creator, $status = 'published', $category = 'wedding')
+    private function createServiceItem($creator, $status = 'active', $category = 'wedding')
     {
-        return MarketplaceItem::create([
-            'user_id' => $creator->id,
+        return CreatorService::create([
+            'creator_id' => $creator->id,
             'title' => 'Test Service',
             'description' => 'A service',
             'price' => 1000,
-            'delivery_type' => 'service',
+            
             'status' => $status,
             'category' => $category,
         ]);
     }
 
-    private function createDigitalItem($creator, $status = 'published')
+    private function createDigitalItem($creator, $status = 'active')
     {
         return MarketplaceItem::create([
             'user_id' => $creator->id,
             'title' => 'Test Digital',
             'description' => 'A digital item',
             'price' => 100,
-            'delivery_type' => 'digital_download',
-            'status' => $status,
+            'status' => 'published',
             'category' => 'digital',
+            'type' => 'paid',
+            'is_active' => true,
         ]);
     }
 
@@ -84,19 +86,15 @@ class RecommendationFiltersTest extends TestCase
     {
         // 1. Published service -> included
         $creatorWithPublished = $this->createCreator();
-        $this->createServiceItem($creatorWithPublished, 'published');
+        $this->createServiceItem($creatorWithPublished, 'active');
 
         // 2. Draft service -> excluded
         $creatorWithDraft = $this->createCreator();
-        $this->createServiceItem($creatorWithDraft, 'draft');
+        $this->createServiceItem($creatorWithDraft, 'inactive');
 
         // 3. Archived service -> excluded
         $creatorWithArchived = $this->createCreator();
-        $this->createServiceItem($creatorWithArchived, 'archived');
-
-        // 4. Digital download only -> excluded
-        $creatorWithDigital = $this->createCreator();
-        $this->createDigitalItem($creatorWithDigital);
+        $this->createServiceItem($creatorWithArchived, 'inactive');
 
         // 5. Creator without catalog -> excluded
         $creatorWithoutCatalog = $this->createCreator();
@@ -148,10 +146,10 @@ class RecommendationFiltersTest extends TestCase
     public function test_sub_role_and_category_filter()
     {
         $woCreator = $this->createCreator(['sub_role' => CreatorSubRole::WEDDING_ORGANIZER->value]);
-        $this->createServiceItem($woCreator, 'published', 'wedding');
+        $this->createServiceItem($woCreator, 'active', 'wedding');
 
         $eoCreator = $this->createCreator(['sub_role' => CreatorSubRole::EVENT_ORGANIZER->value]);
-        $this->createServiceItem($eoCreator, 'published', 'corporate');
+        $this->createServiceItem($eoCreator, 'active', 'corporate');
 
         $response = $this->getJson('/api/creators/recommendations?sub_role=wedding_organizer&category=wedding');
         $data = $response->json('data');
@@ -177,7 +175,8 @@ class RecommendationFiltersTest extends TestCase
 
         // Add Marketplace reviews for tie breaking
         $digitalItem2 = $this->createDigitalItem($creator2);
-        MarketplaceReview::create(['marketplace_item_id' => $digitalItem2->id, 'user_id' => $creator1->id, 'rating' => 5, 'comment' => 'Great']);
+        $purchase2 = MarketplacePurchase::create(['marketplace_item_id' => $digitalItem2->id, 'user_id' => $creator1->id, 'amount' => 100, 'status' => 'success', 'order_id' => 'ORD-TEST-1']);
+        MarketplaceReview::create(['marketplace_purchase_id' => $purchase2->id, 'marketplace_item_id' => $digitalItem2->id, 'user_id' => $creator1->id, 'rating' => 5, 'comment' => 'Great']);
 
         $digitalItem3 = $this->createDigitalItem($creator3); // Has same boost, but less marketplace reviews than 2
 

@@ -168,6 +168,11 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(MarketplaceItem::class);
     }
 
+    public function creatorServices()
+    {
+        return $this->hasMany(CreatorService::class, 'creator_id');
+    }
+
     public function jobContractsAsCreator()
     {
         return $this->hasMany(JobContract::class, 'creator_id');

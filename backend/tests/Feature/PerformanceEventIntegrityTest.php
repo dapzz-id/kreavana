@@ -10,6 +10,7 @@ use App\Models\Opportunity;
 use App\Models\OpportunityReview;
 use App\Models\JobContract;
 use App\Models\MarketplaceItem;
+use App\Models\CreatorService;
 use App\Models\MarketplacePurchase;
 use App\Models\MarketplaceReview;
 use App\Models\Subscription;
@@ -33,7 +34,7 @@ class PerformanceEventIntegrityTest extends TestCase
         ]);
 
         CreatorPerformanceEvent::create([
-            'user_id' => $creator->id,
+            'creator_id' => $creator->id,
             'event_type' => 'project_rating',
             'reference_id' => 'ref-1',
             'bonus_percentage' => 1.0,
@@ -43,7 +44,7 @@ class PerformanceEventIntegrityTest extends TestCase
 
         // Attempt duplicate insertion
         CreatorPerformanceEvent::create([
-            'user_id' => $creator->id,
+            'creator_id' => $creator->id,
             'event_type' => 'project_rating',
             'reference_id' => 'ref-1',
             'bonus_percentage' => 1.0,
@@ -56,22 +57,22 @@ class PerformanceEventIntegrityTest extends TestCase
             'id' => Str::uuid(), 'name' => 'C1', 'email' => 'c1@ex.com', 'username' => 'c1', 'password' => bcrypt('1'), 'role' => \App\Enums\RoleType::Creator
         ]);
 
-        CreatorPerformanceEvent::create(['user_id' => $creator->id, 'event_type' => 'marketplace_sale', 'reference_id' => '1', 'bonus_percentage' => 0.5, 'is_active' => true]);
-        CreatorPerformanceEvent::create(['user_id' => $creator->id, 'event_type' => 'project_rating', 'reference_id' => '2', 'bonus_percentage' => 1.0, 'is_active' => true]);
-        CreatorPerformanceEvent::create(['user_id' => $creator->id, 'event_type' => 'marketplace_sale', 'reference_id' => '3', 'bonus_percentage' => 0.5, 'is_active' => false]); // Inactive
+        CreatorPerformanceEvent::create(['creator_id' => $creator->id, 'event_type' => 'marketplace_sale', 'reference_id' => '1', 'bonus_percentage' => 0.5, ]);
+        CreatorPerformanceEvent::create(['creator_id' => $creator->id, 'event_type' => 'project_rating', 'reference_id' => '2', 'bonus_percentage' => 1.0, ]);
+        CreatorPerformanceEvent::create(['creator_id' => $creator->id, 'event_type' => 'marketplace_sale', 'reference_id' => '3', 'bonus_percentage' => 0.5, ]); // Inactive
 
         // 1.5 total active bonus
         $creator->updatePerformanceBoost();
         $this->assertEquals(1.5, $creator->fresh()->performance_boost);
 
         // Add Plus Subscription (1.5x)
-        Subscription::create(['user_id' => $creator->id, 'tier' => 'plus', 'expires_at' => now()->addMonth()]);
+        Subscription::create(['creator_id' => $creator->id, 'tier' => 'plus', 'expires_at' => now()->addMonth()]);
         $creator->updatePerformanceBoost();
         $this->assertEquals(2.25, $creator->fresh()->performance_boost); // 1.5 * 1.5
 
         // Add Super Subscription (5.0x) - active takes precedence
         Subscription::where('user_id', $creator->id)->update(['expires_at' => now()->subDay()]);
-        Subscription::create(['user_id' => $creator->id, 'tier' => 'super', 'expires_at' => now()->addMonth()]);
+        Subscription::create(['creator_id' => $creator->id, 'tier' => 'super', 'expires_at' => now()->addMonth()]);
         
         $creator->updatePerformanceBoost();
         $this->assertEquals(7.5, $creator->fresh()->performance_boost); // 1.5 * 5.0
@@ -190,21 +191,21 @@ class PerformanceEventIntegrityTest extends TestCase
         ]);
         $this->actingAs($client);
 
-        $itemService = MarketplaceItem::create([
-            'id' => Str::uuid(), 'user_id' => $creator->id, 'title' => 'S1', 'delivery_type' => 'service', 'status' => 'published', 'price' => 10, 'category' => 'other', 'description' => 'T'
+        $itemService = CreatorService::create([
+            'id' => Str::uuid(), 'creator_id' => $creator->id, 'title' => 'S1',  'status' => 'active', 'price' => 10, 'category' => 'other', 'description' => 'T'
         ]);
         $purchaseService = MarketplacePurchase::create([
-            'id' => Str::uuid(), 'marketplace_item_id' => $itemService->id, 'user_id' => $client->id, 'amount' => 10, 'status' => 'success'
+            'id' => Str::uuid(), 'marketplace_item_id' => $itemService->id, 'creator_id' => $client->id, 'amount' => 10, 'status' => 'success'
         ]);
-        MarketplaceReview::create(['marketplace_item_id' => $itemService->id, 'user_id' => $client->id, 'rating' => 5, 'review' => 'Good']);
+        MarketplaceReview::create(['marketplace_item_id' => $itemService->id, 'creator_id' => $client->id, 'rating' => 5, 'review' => 'Good']);
 
-        $itemDigital = MarketplaceItem::create([
-            'id' => Str::uuid(), 'user_id' => $creator->id, 'title' => 'D1', 'delivery_type' => 'digital_download', 'status' => 'published', 'price' => 10, 'category' => 'other', 'description' => 'T'
+        $itemDigital = CreatorService::create([
+            'id' => Str::uuid(), 'creator_id' => $creator->id, 'title' => 'D1', 'delivery_type' => 'digital_download', 'status' => 'active', 'price' => 10, 'category' => 'other', 'description' => 'T'
         ]);
         $purchaseDigital = MarketplacePurchase::create([
-            'id' => Str::uuid(), 'marketplace_item_id' => $itemDigital->id, 'user_id' => $client->id, 'amount' => 10, 'status' => 'success'
+            'id' => Str::uuid(), 'marketplace_item_id' => $itemDigital->id, 'creator_id' => $client->id, 'amount' => 10, 'status' => 'success'
         ]);
-        MarketplaceReview::create(['marketplace_item_id' => $itemDigital->id, 'user_id' => $client->id, 'rating' => 5, 'review' => 'Good']);
+        MarketplaceReview::create(['marketplace_item_id' => $itemDigital->id, 'creator_id' => $client->id, 'rating' => 5, 'review' => 'Good']);
 
         $response = $this->getJson('/api/creators/recommendations');
         $data = collect($response->json('data'))->firstWhere('id', $creator->id);

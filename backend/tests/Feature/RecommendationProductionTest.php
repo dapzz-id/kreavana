@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\MarketplaceItem;
+use App\Models\CreatorService;
 use App\Models\UserAddress;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -23,13 +24,13 @@ class RecommendationProductionTest extends TestCase
             'role' => \App\Enums\RoleType::Creator,
             'is_creator_approved' => true,
         ])->each(function ($creator) {
-            MarketplaceItem::create([
-                'user_id' => $creator->id,
+            CreatorService::create([
+                'creator_id' => $creator->id,
                 'title' => 'Test Service',
                 'description' => 'A service',
                 'price' => 1000,
-                'delivery_type' => 'service',
-                'status' => 'published',
+                
+                'status' => 'active',
                 'category' => 'wedding'
             ]);
         });

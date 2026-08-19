@@ -6,15 +6,15 @@ use Illuminate\Database\Seeder;
 use App\Models\User;
 use App\Enums\RoleType;
 use App\Enums\CreatorSubRole;
-use App\Models\MarketplaceItem;
+use App\Models\CreatorService;
 
-class CreatorMarketplaceSeeder extends Seeder
+class CreatorServiceSeeder extends Seeder
 {
     public function run(): void
     {
         $creators = User::where('role', RoleType::Creator->value)->get();
 
-        $marketplaceData = [
+        $serviceData = [
             CreatorSubRole::MC->value => [
                 ['title' => 'Jasa MC Acara Formal', 'category' => 'MC', 'price' => 1000000.00, 'duration' => '1 hari'],
                 ['title' => 'Jasa MC Pernikahan', 'category' => 'MC', 'price' => 1500000.00, 'duration' => '1 hari'],
@@ -51,23 +51,21 @@ class CreatorMarketplaceSeeder extends Seeder
 
         foreach ($creators as $creator) {
             $subRole = $creator->sub_role instanceof \BackedEnum ? $creator->sub_role->value : $creator->sub_role;
-            if (!$subRole || !isset($marketplaceData[$subRole])) continue;
+            if (!$subRole || !isset($serviceData[$subRole])) continue;
 
-            $items = $marketplaceData[$subRole];
+            $items = $serviceData[$subRole];
             foreach ($items as $item) {
-                MarketplaceItem::updateOrCreate(
+                CreatorService::updateOrCreate(
                     [
-                        'user_id' => $creator->id,
+                        'creator_id' => $creator->id,
                         'title' => $item['title'],
                     ],
                     [
                         'description' => 'Layanan profesional untuk ' . $item['title'],
                         'category' => $item['category'],
-                        'type' => 'paid',
-                        'delivery_type' => 'service',
                         'price' => $item['price'],
                         'duration_info' => $item['duration'],
-                        'status' => 'published',
+                        'status' => 'active',
                     ]
                 );
             }

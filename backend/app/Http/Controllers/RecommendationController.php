@@ -68,9 +68,8 @@ class RecommendationController extends Controller
                 'positive_contract_reviews_count' => $creator->positive_contract_reviews_count,
                 'rating' => round($creator->rating, 2),
                 // Expose basic service categories
-                'service_categories' => $creator->marketplaceItems
-                    ->where('delivery_type', 'service')
-                    ->where('status', 'published')
+                'service_categories' => $creator->creatorServices
+                    ->where('status', 'active')
                     ->pluck('category')
                     ->unique()
                     ->values()
@@ -96,8 +95,7 @@ class RecommendationController extends Controller
 
     public function getServiceCategories()
     {
-        $categories = \App\Models\MarketplaceItem::where('delivery_type', 'service')
-            ->where('status', 'published')
+        $categories = \App\Models\CreatorService::where('status', 'active')
             ->pluck('category')
             ->filter()
             ->unique()
