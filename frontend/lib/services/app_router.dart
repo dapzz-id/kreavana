@@ -4,6 +4,8 @@ import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/email_verification_screen.dart';
 import '../screens/main_navigation.dart';
+import '../screens/landing_page_screen.dart';
+import '../models/user_model.dart';
 import 'user_store.dart';
 import 'auth_session_state.dart';
 // navigatorKey didefinisikan di main.dart dan di-share ke GoRouter
@@ -14,6 +16,7 @@ import 'navigator_key.dart';
 /// Di Web, URL di browser akan berubah sesuai tab/halaman yang aktif.
 /// Di Mobile, routing ini tetap bekerja tapi URL tidak terlihat oleh user.
 class AppRoutes {
+  static const landing = '/';
   static const login = '/login';
   static const register = '/register';
   static const beranda = '/beranda';
@@ -60,17 +63,22 @@ const _adminRouteIndexMap = {
   AppRoutes.profil: 4,
 };
 
-/// Route-route yang tidak memerlukan autentikasi.
+/// Route-route yang dapat diakses oleh publik/tamu tanpa login.
 const _publicRoutes = [
+  AppRoutes.landing,
   AppRoutes.login,
   AppRoutes.register,
   AppRoutes.verifyEmail,
+  AppRoutes.beranda,
+  AppRoutes.explore,
+  AppRoutes.peluangProyek,
+  AppRoutes.marketplaceKarya,
 ];
 
 /// GoRouter instance global aplikasi.
 final GoRouter appRouter = GoRouter(
   navigatorKey: navigatorKey,
-  initialLocation: AppRoutes.beranda,
+  initialLocation: AppRoutes.login,
   debugLogDiagnostics: kDebugMode,
   refreshListenable: Listenable.merge([
     currentUserNotifier,
@@ -82,19 +90,33 @@ final GoRouter appRouter = GoRouter(
     final currentPath = state.matchedLocation;
     final isPublic = _publicRoutes.contains(currentPath);
 
-    // Belum login → paksa ke /login (kecuali sudah di halaman public)
+    // Belum login & mencoba akses halaman terlindungi → redirect ke /login
     if ((user == null || isSignedOut) && !isPublic) {
       return AppRoutes.login;
     }
 
-    // Sudah login → jangan biarkan akses /login atau /register
-    if (user != null && !isSignedOut && isPublic) {
+    // Sudah login & membuka halaman login/register → arahkan ke beranda
+    if (user != null && !isSignedOut && (currentPath == AppRoutes.login || currentPath == AppRoutes.register)) {
       return AppRoutes.beranda;
     }
 
     return null; // Tidak ada redirect
   },
   routes: [
+    // ── Public Landing Page ──────────────────────────────────────────────
+    GoRoute(
+      path: AppRoutes.landing,
+      name: 'landing',
+      builder: (context, state) {
+        final user = currentUserNotifier.value;
+        final isSignedOut = authSignedOutNotifier.value;
+        if (user != null && !isSignedOut) {
+          return MainNavigation(initialUser: user, initialIndex: 0);
+        }
+        return const LandingPageScreen();
+      },
+    ),
+
     // ── Auth routes ─────────────────────────────────────────────────────
     GoRoute(
       path: AppRoutes.login,
@@ -114,8 +136,9 @@ final GoRouter appRouter = GoRouter(
         if (extra == null) return AppRoutes.login;
         if (extra is String && extra.isEmpty) return AppRoutes.login;
         if (extra is Map &&
-            (extra['email'] == null || (extra['email'] as String).isEmpty))
+            (extra['email'] == null || (extra['email'] as String).isEmpty)) {
           return AppRoutes.login;
+        }
         if (extra is! String && extra is! Map) return AppRoutes.login;
         return null;
       },
@@ -131,26 +154,18 @@ final GoRouter appRouter = GoRouter(
       },
     ),
 
-    // ── Authenticated routes (semua via MainNavigation) ──────────────────
+    // ── Main routes (mendukung user terautentikasi dan guest browsing) ───
     ...{..._routeIndexMap.keys, ..._adminRouteIndexMap.keys}.map(
       (path) => GoRoute(
         path: path,
         builder: (context, state) {
-          final user = currentUserNotifier.value!;
+          final user = currentUserNotifier.value ?? UserModel.guest();
           final initialIndex = user.isAdmin
               ? (_adminRouteIndexMap[path] ?? 0)
               : (_routeIndexMap[path] ?? 0);
           return MainNavigation(initialUser: user, initialIndex: initialIndex);
         },
       ),
-    ),
-
-    // ── Root redirect ────────────────────────────────────────────────────
-    GoRoute(
-      path: '/',
-      redirect: (_, _) => currentUserNotifier.value != null
-          ? AppRoutes.beranda
-          : AppRoutes.login,
     ),
   ],
 );

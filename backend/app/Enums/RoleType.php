@@ -7,4 +7,5 @@ enum RoleType: string
     case Admin = 'admin';
     case User = 'user';
     case Creator = 'creator';
+    case Marketing = 'marketing';
 }

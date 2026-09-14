@@ -300,6 +300,7 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
         elevation: 0,
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'creator_calendar_fab',
         backgroundColor: AppTheme.primaryPurple,
         onPressed: () => _showScheduleDialog(),
         child: const Icon(Icons.add, color: Colors.white),

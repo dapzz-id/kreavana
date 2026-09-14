@@ -48,6 +48,7 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
   @override
   Widget build(BuildContext context) {
     return FloatingActionButton.extended(
+      heroTag: 'kreavana_ai_fab',
       onPressed: _toggleWidget,
       backgroundColor: AppTheme.primaryPurple,
       elevation: 6,

@@ -123,4 +123,6 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'large_transaction_threshold' => (float) env('LARGE_TRANSACTION_THRESHOLD', 100000000),
+
 ];

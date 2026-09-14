@@ -4,8 +4,7 @@ import '../models/creator_service.dart';
 import '../utils/app_errors.dart';
 
 class CreatorServiceService {
-  static final Dio _dio =
-      DioClient.instance.dio; // Reusing DioClient instance
+  static final Dio _dio = DioClient.instance.dio; // Reusing DioClient instance
 
   /// Fetch all creator services, optionally filtered by creator_id
   static Future<List<CreatorService>> getServices({String? creatorId}) async {

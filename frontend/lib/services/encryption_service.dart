@@ -191,7 +191,6 @@ class EncryptionService {
   String _encodePrivateKeyToPem(RSAPrivateKey key) {
     return RsaKeyHelper().encodePrivateKeyToPemPKCS1(key);
   }
-
 }
 
 Map<String, String> _generateRSAKeyPairIsolate(dynamic _) {

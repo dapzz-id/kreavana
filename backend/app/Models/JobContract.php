@@ -82,4 +82,9 @@ class JobContract extends Model
     {
         return $this->belongsTo(CreatorService::class, 'creator_service_id');
     }
+
+    public function largeTransactionReview(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(LargeTransactionReview::class, 'job_contract_id');
+    }
 }
