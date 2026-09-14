@@ -11,16 +11,35 @@ class OpportunityRepository extends BaseRepository
         parent::__construct($model);
     }
 
-    public function getList(string $subRoleSlug = 'all', ?string $type = null, int $limit = 50)
+    public function getList(string|array $subRole = 'all', ?string $type = null, int $limit = 50, ?string $search = null)
     {
-        $query = $this->model->with('user:id,name,username,phone,email,avatar_url,sub_role');
+        $query = $this->model->with([
+            'user:id,name,username,avatar_url,sub_role',
+            'requirements',
+            'approvedApplications.creator:id,name,username,avatar_url,sub_role',
+        ]);
 
-        if ($subRoleSlug !== 'all') {
-            $query->where('sub_role_slug', $subRoleSlug);
+        $subRoles = is_array($subRole) ? array_filter($subRole) : ($subRole !== 'all' ? [$subRole] : []);
+        if (!empty($subRoles)) {
+            $query->where(function ($q) use ($subRoles) {
+                $q->whereIn('sub_role_slug', $subRoles)
+                  ->orWhereHas('requirements', function ($rq) use ($subRoles) {
+                      $rq->whereIn('sub_role_slug', $subRoles);
+                  });
+            });
         }
 
         if ($type) {
             $query->where('type', $type);
+        }
+
+        if ($search) {
+            $searchTerm = '%' . strtolower($search) . '%';
+            $query->where(function ($q) use ($searchTerm) {
+                $q->whereRaw('LOWER(title) LIKE ?', [$searchTerm])
+                  ->orWhereRaw('LOWER(description) LIKE ?', [$searchTerm])
+                  ->orWhereRaw('LOWER(location) LIKE ?', [$searchTerm]);
+            });
         }
 
         return $query->where('status', 'open')
@@ -41,24 +60,46 @@ class OpportunityRepository extends BaseRepository
             ->count();
     }
 
-    public function getMapLocations(string $subRoleSlug = 'all')
+    public function getMapLocations(string|array $subRole = 'all', ?float $lat = null, ?float $lng = null, ?float $radiusKm = null)
     {
-        $query = $this->model->with('user:id,name,username,phone,email,avatar_url,sub_role')
+        $query = $this->model->with([
+            'user:id,name,username,avatar_url,sub_role',
+            'requirements',
+        ])
             ->where('status', 'open')
             ->where('type', 'location')
             ->whereNotNull('latitude')
             ->whereNotNull('longitude');
 
-        if ($subRoleSlug !== 'all') {
-            $query->where('sub_role_slug', $subRoleSlug);
+        $subRoles = is_array($subRole) ? array_filter($subRole) : ($subRole !== 'all' ? [$subRole] : []);
+        if (!empty($subRoles)) {
+            $query->where(function ($q) use ($subRoles) {
+                $q->whereIn('sub_role_slug', $subRoles)
+                  ->orWhereHas('requirements', function ($rq) use ($subRoles) {
+                      $rq->whereIn('sub_role_slug', $subRoles);
+                  });
+            });
+        }
+
+        if ($lat !== null && $lng !== null && $radiusKm !== null && $radiusKm > 0) {
+            $latDelta = $radiusKm / 111.0;
+            $cosLat = cos(deg2rad($lat));
+            $lngDelta = $radiusKm / (111.0 * ($cosLat != 0 ? abs($cosLat) : 1.0));
+
+            $query->whereBetween('latitude', [$lat - $latDelta, $lat + $latDelta])
+                  ->whereBetween('longitude', [$lng - $lngDelta, $lng + $lngDelta]);
         }
 
         return $query->get();
     }
 
-    public function findWithUser(int $id)
+    public function findWithUser(string $id)
     {
-        return $this->model->with('user:id,name,username,phone,email,avatar_url,sub_role')->find($id);
+        return $this->model->with([
+            'user:id,name,username,avatar_url,sub_role',
+            'requirements',
+            'approvedApplications.creator:id,name,username,avatar_url,sub_role',
+        ])->find($id);
     }
 
     public function getByUser(string $userId, ?string $status = null, string $orderBy = 'created_at', string $direction = 'desc', int $limit = 5)

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../models/opportunity_model.dart';
 import '../services/opportunity_service.dart';
 import '../widgets/opportunity_detail_sheet.dart';
 import '../widgets/skeleton_box.dart';
+import '../widgets/responsive_modal.dart';
 
 class PeluangLokasiScreen extends StatefulWidget {
   final UserModel user;
@@ -26,11 +28,15 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
     with TickerProviderStateMixin {
   final MapController _mapController = MapController();
   bool _isLoading = true;
+  bool _isLocating = false;
   List<OpportunityModel> _locations = [];
   String _selectedCategory = 'all';
+  LatLng? _userLocation;
+  double? _selectedRadiusKm;
 
   static const _categories = [
     {'slug': 'all', 'name': 'Semua', 'color': Colors.indigo},
+    {'slug': 'tukang_kendang', 'name': '🥁 Kendang', 'color': Color(0xFFD97706)},
     {'slug': 'mc', 'name': 'MC', 'color': Color(0xFFF59E0B)},
     {'slug': 'videographer', 'name': 'Videografer', 'color': Color(0xFF0EA5E9)},
     {'slug': 'photographer', 'name': 'Fotografer', 'color': Color(0xFF3B82F6)},
@@ -42,10 +48,199 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
     {'slug': 'community', 'name': 'Komunitas', 'color': Color(0xFFEC4899)},
   ];
 
+  static const _radiusOptions = [
+    {'label': 'Semua Jarak', 'value': null},
+    {'label': '5 km', 'value': 5.0},
+    {'label': '10 km', 'value': 10.0},
+    {'label': '25 km', 'value': 25.0},
+    {'label': '50 km', 'value': 50.0},
+  ];
+
+  String? _selectedCityName;
+
+  static const _majorCities = [
+    {'name': 'Jakarta', 'lat': -6.2088, 'lng': 106.8456, 'province': 'DKI Jakarta'},
+    {'name': 'Bandung', 'lat': -6.9175, 'lng': 107.6191, 'province': 'Jawa Barat'},
+    {'name': 'Yogyakarta', 'lat': -7.7956, 'lng': 110.3695, 'province': 'D.I. Yogyakarta'},
+    {'name': 'Surabaya', 'lat': -7.2575, 'lng': 112.7521, 'province': 'Jawa Timur'},
+    {'name': 'Denpasar / Bali', 'lat': -8.6705, 'lng': 115.2126, 'province': 'Bali'},
+    {'name': 'Semarang', 'lat': -6.9667, 'lng': 110.4167, 'province': 'Jawa Tengah'},
+    {'name': 'Solo / Surakarta', 'lat': -7.5755, 'lng': 110.8243, 'province': 'Jawa Tengah'},
+    {'name': 'Malang', 'lat': -7.9666, 'lng': 112.6326, 'province': 'Jawa Timur'},
+    {'name': 'Medan', 'lat': 3.5952, 'lng': 98.6722, 'province': 'Sumatera Utara'},
+    {'name': 'Makassar', 'lat': -5.1477, 'lng': 119.4327, 'province': 'Sulawesi Selatan'},
+  ];
+
   @override
   void initState() {
     super.initState();
     _loadLocations();
+    _detectUserLocation(autoCenter: true);
+  }
+
+  void _selectCity(Map<String, dynamic>? city) {
+    if (city == null) {
+      setState(() {
+        _selectedCityName = null;
+        _userLocation = null;
+      });
+      _mapController.move(const LatLng(-2.5, 118.0), 5.0);
+      _loadLocations();
+      return;
+    }
+
+    final lat = city['lat'] as double;
+    final lng = city['lng'] as double;
+    final loc = LatLng(lat, lng);
+    setState(() {
+      _selectedCityName = city['name'] as String;
+      _userLocation = loc;
+    });
+    _mapController.move(loc, 13.0);
+    _loadLocations();
+  }
+
+  void _showManualCityPicker(BuildContext context) {
+    ResponsiveModal.show(
+      context: context,
+      title: 'Pilih Wilayah / Kota',
+      body: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.public, color: AppTheme.primaryPurple),
+            title: const Text('Seluruh Indonesia (Peta Nasional)'),
+            subtitle: const Text('Tampilkan peluang di seluruh nusantara'),
+            onTap: () {
+              Navigator.pop(context);
+              _selectCity(null);
+            },
+          ),
+          const Divider(),
+          ..._majorCities.map((city) {
+            final isSelected = _selectedCityName == city['name'];
+            return ListTile(
+              leading: Icon(
+                Icons.location_on_outlined,
+                color: isSelected ? Colors.teal : Colors.grey,
+              ),
+              title: Text(
+                city['name'] as String,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? Colors.teal : null,
+                ),
+              ),
+              subtitle: Text(city['province'] as String),
+              trailing: isSelected ? const Icon(Icons.check, color: Colors.teal) : null,
+              onTap: () {
+                Navigator.pop(context);
+                _selectCity(city);
+              },
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _detectUserLocation({bool autoCenter = false}) async {
+    if (_isLocating) return;
+    setState(() => _isLocating = true);
+
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted && !autoCenter) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Layanan lokasi (GPS) tidak aktif di perangkat.'),
+              behavior: SnackBarBehavior.floating,
+              action: SnackBarAction(
+                label: 'Pilih Kota',
+                textColor: Colors.tealAccent,
+                onPressed: () => _showManualCityPicker(context),
+              ),
+            ),
+          );
+        }
+        setState(() => _isLocating = false);
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted && !autoCenter) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Izin akses lokasi tidak diberikan.'),
+                behavior: SnackBarBehavior.floating,
+                action: SnackBarAction(
+                  label: 'Pilih Kota',
+                  textColor: Colors.tealAccent,
+                  onPressed: () => _showManualCityPicker(context),
+                ),
+              ),
+            );
+          }
+          setState(() => _isLocating = false);
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted && !autoCenter) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Izin lokasi ditolak permanen. Pilih kota secara manual:'),
+              behavior: SnackBarBehavior.floating,
+              action: SnackBarAction(
+                label: 'Pilih Kota',
+                textColor: Colors.tealAccent,
+                onPressed: () => _showManualCityPicker(context),
+              ),
+            ),
+          );
+        }
+        setState(() => _isLocating = false);
+        return;
+      }
+
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            timeLimit: Duration(seconds: 8),
+          ),
+        );
+      } catch (_) {
+        position = await Geolocator.getLastKnownPosition();
+      }
+
+      if (position != null && mounted) {
+        final loc = LatLng(position.latitude, position.longitude);
+        setState(() {
+          _userLocation = loc;
+          _selectedCityName = null;
+          _isLocating = false;
+        });
+
+        if (autoCenter) {
+          _mapController.move(loc, 13.0);
+        }
+
+        // Re-load locations if radius filter is active
+        if (_selectedRadiusKm != null) {
+          _loadLocations();
+        }
+      } else {
+        if (mounted) setState(() => _isLocating = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLocating = false);
+    }
   }
 
   void _zoomIn() {
@@ -61,7 +256,11 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
   }
 
   void _resetCenter(bool isMobile) {
-    _mapController.move(const LatLng(-2.5, 118.0), isMobile ? 4.5 : 5.0);
+    if (_userLocation != null) {
+      _mapController.move(_userLocation!, 13.0);
+    } else {
+      _mapController.move(const LatLng(-2.5, 118.0), isMobile ? 4.5 : 5.0);
+    }
     if (mounted) setState(() {});
   }
 
@@ -69,6 +268,9 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
     setState(() => _isLoading = true);
     final list = await OpportunityService.getMapLocations(
       subRole: widget.subRoleSlug,
+      lat: _selectedRadiusKm != null ? _userLocation?.latitude : null,
+      lng: _selectedRadiusKm != null ? _userLocation?.longitude : null,
+      radiusKm: _selectedRadiusKm,
     );
     if (mounted) {
       setState(() {
@@ -85,6 +287,8 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
 
   Color _markerColor(String? subRole) {
     switch (subRole) {
+      case 'tukang_kendang':
+        return const Color(0xFFD97706);
       case 'mc':
         return const Color(0xFFF59E0B);
       case 'videographer':
@@ -235,6 +439,156 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
             ),
           ),
 
+          // ── Radius & Location Toolbar ──────────────────────────────────
+          Container(
+            height: isMobile ? 42 : 46,
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 8 : 12,
+              vertical: 4,
+            ),
+            child: Row(
+              children: [
+                // "Lokasi Saya" button
+                InkWell(
+                  onTap: _isLocating ? null : () => _detectUserLocation(autoCenter: true),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _userLocation != null
+                          ? Colors.teal.withValues(alpha: 0.15)
+                          : (isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _userLocation != null
+                            ? Colors.teal
+                            : Colors.transparent,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _isLocating
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Icon(
+                                _userLocation != null
+                                    ? Icons.my_location
+                                    : Icons.location_searching,
+                                size: 14,
+                                color: _userLocation != null
+                                    ? Colors.teal
+                                    : (isDark ? Colors.white70 : Colors.black87),
+                              ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _userLocation != null ? 'Lokasi Aktif' : 'Cari Sekitar Saya',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: _userLocation != null
+                                ? Colors.teal
+                                : (isDark ? Colors.white70 : Colors.black87),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                // "Pilih Kota" manual selector button
+                InkWell(
+                  onTap: () => _showManualCityPicker(context),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _selectedCityName != null
+                          ? Colors.teal.withValues(alpha: 0.15)
+                          : (isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _selectedCityName != null
+                            ? Colors.teal
+                            : Colors.transparent,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.location_city,
+                          size: 14,
+                          color: _selectedCityName != null
+                              ? Colors.teal
+                              : (isDark ? Colors.white70 : Colors.black87),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _selectedCityName ?? 'Pilih Kota',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: _selectedCityName != null
+                                ? Colors.teal
+                                : (isDark ? Colors.white70 : Colors.black87),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const VerticalDivider(width: 1, thickness: 1),
+                const SizedBox(width: 8),
+
+                // Radius filter options
+                Expanded(
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _radiusOptions.length,
+                    itemBuilder: (context, index) {
+                      final opt = _radiusOptions[index];
+                      final isSelected = _selectedRadiusKm == opt['value'];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: ChoiceChip(
+                          label: Text(
+                            opt['label'] as String,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              color: isSelected
+                                  ? Colors.teal.shade900
+                                  : (isDark ? Colors.white70 : Colors.black87),
+                            ),
+                          ),
+                          selected: isSelected,
+                          selectedColor: Colors.teal.shade100,
+                          onSelected: (_) {
+                            setState(() {
+                              _selectedRadiusKm = opt['value'] as double?;
+                            });
+                            if (_userLocation == null && _selectedRadiusKm != null) {
+                              _detectUserLocation(autoCenter: true);
+                            } else {
+                              _loadLocations();
+                            }
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           // ── Map area ────────────────────────────────────────────────────
           Expanded(
             child: _isLoading
@@ -301,8 +655,8 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                       FlutterMap(
                         mapController: _mapController,
                         options: MapOptions(
-                          initialCenter: const LatLng(-2.5, 118.0),
-                          initialZoom: isMobile ? 4.5 : 5.0,
+                          initialCenter: _userLocation ?? const LatLng(-2.5, 118.0),
+                          initialZoom: _userLocation != null ? 13.0 : (isMobile ? 4.5 : 5.0),
                           minZoom: 3,
                           maxZoom: 18,
                           interactionOptions: const InteractionOptions(
@@ -320,8 +674,75 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                                 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                             userAgentPackageName: 'com.kreavana.app',
                           ),
+
+                          // Radius circle layer if active
+                          if (_userLocation != null && _selectedRadiusKm != null)
+                            CircleLayer(
+                              circles: [
+                                CircleMarker(
+                                  point: _userLocation!,
+                                  radius: _selectedRadiusKm! * 1000,
+                                  useRadiusInMeter: true,
+                                  color: Colors.teal.withValues(alpha: 0.1),
+                                  borderColor: Colors.teal.shade400,
+                                  borderStrokeWidth: 1.5,
+                                ),
+                              ],
+                            ),
+
                           MarkerLayer(
-                            markers: filtered
+                            markers: [
+                              // User Location Marker
+                              if (_userLocation != null)
+                                Marker(
+                                  point: _userLocation!,
+                                  width: 80,
+                                  height: 80,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue.shade600,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: Colors.white, width: 2),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.blue.withValues(alpha: 0.5),
+                                              blurRadius: 10,
+                                              spreadRadius: 2,
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.my_location,
+                                          color: Colors.white,
+                                          size: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue.shade700,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Text(
+                                          'Lokasi Anda',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                              // Opportunity Markers
+                              ...filtered
                                 .where(
                                   (l) =>
                                       l.latitude != null && l.longitude != null,
@@ -413,8 +834,8 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                                       ),
                                     ),
                                   );
-                                })
-                                .toList(),
+                                }),
+                            ],
                           ),
                         ],
                       ),
@@ -588,6 +1009,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
     String selectedCategory = 'mc';
 
     final subRoles = [
+      {'slug': 'tukang_kendang', 'label': '🥁 Tukang Kendang'},
       {'slug': 'mc', 'label': '🎤 MC & Host Event'},
       {'slug': 'videografer', 'label': '🎥 Videografer'},
       {'slug': 'fotografer', 'label': '📸 Fotografer'},

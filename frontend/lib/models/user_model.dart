@@ -167,6 +167,18 @@ class UserModel {
 
   bool get isCreator => role == 'creator' && isCreatorApproved;
   bool get isAdmin => role == 'admin';
+  bool get isMarketing => role == 'marketing';
+  bool get isGuest => id == null || role == 'guest';
+
+  factory UserModel.guest() {
+    return UserModel(
+      id: null,
+      name: 'Tamu Kreavana',
+      username: 'guest',
+      email: '',
+      role: 'guest',
+    );
+  }
 }
 
 class SubRoleCategory {

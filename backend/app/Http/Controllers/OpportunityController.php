@@ -23,20 +23,24 @@ class OpportunityController extends Controller
 
     public function index(Request $request)
     {
-        $subRoleSlug = $request->query('sub_role_slug', 'all');
+        $subRoles = $request->query('sub_roles') ?? $request->query('sub_role_slug', 'all');
         $type = $request->query('type');
         $limit = (int) $request->query('limit', 50);
+        $search = $request->query('search');
 
-        $opportunities = $this->opportunityService->getList($subRoleSlug, $type, $limit);
+        $opportunities = $this->opportunityService->getList($subRoles, $type, $limit, $search);
 
         return $this->successResponse('Data peluang berhasil diambil', $opportunities->toArray());
     }
 
     public function mapLocations(Request $request)
     {
-        $subRoleSlug = $request->query('sub_role_slug', 'all');
+        $subRoles = $request->query('sub_roles') ?? $request->query('sub_role_slug', 'all');
+        $lat = $request->has('lat') ? (float) $request->query('lat') : null;
+        $lng = $request->has('lng') ? (float) $request->query('lng') : null;
+        $radiusKm = $request->has('radius_km') ? (float) $request->query('radius_km') : null;
 
-        $locations = $this->opportunityService->getMapLocations($subRoleSlug);
+        $locations = $this->opportunityService->getMapLocations($subRoles, $lat, $lng, $radiusKm);
 
         return $this->successResponse('Data lokasi peluang berhasil diambil', $locations->toArray());
     }
@@ -55,10 +59,75 @@ class OpportunityController extends Controller
     public function store(StoreOpportunityRequest $request)
     {
         $user = Auth::guard('api')->user();
+        $posterFile = $request->file('poster');
         
-        $opp = $this->opportunityService->createOpportunity($user->id, $request->validated());
+        $opp = $this->opportunityService->createOpportunity($user->id, $request->validated(), $posterFile);
 
         return $this->successResponse('Peluang berhasil dibuat.', $opp, 201);
+    }
+
+    public function apply(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+
+        $validated = $request->validate([
+            'sub_role_slug' => 'required|string|max:50',
+            'pitch_message' => 'required|string|min:10|max:2000',
+            'questions_notes' => 'nullable|string|max:1000',
+            'bid_price' => 'nullable|numeric|min:0',
+        ]);
+
+        try {
+            $application = $this->opportunityService->applyToOpportunity($user->id, $id, $validated);
+            return $this->successResponse('Lamaran berhasil diajukan. Pemilik proyek akan meninjau lamaran Anda.', $application, 201);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function applications(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+
+        try {
+            $applications = $this->opportunityService->getOpportunityApplications($id, $user->id);
+            return $this->successResponse('Daftar pelamar berhasil diambil.', $applications);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function approveApplication(Request $request, string $applicationId)
+    {
+        $user = Auth::guard('api')->user();
+
+        try {
+            $result = $this->opportunityService->reviewApplication($applicationId, $user->id, 'approve');
+            return $this->successResponse('Pelamar berhasil disetujui untuk proyek ini.', $result);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function rejectApplication(Request $request, string $applicationId)
+    {
+        $user = Auth::guard('api')->user();
+        $reason = $request->input('reason');
+
+        try {
+            $result = $this->opportunityService->reviewApplication($applicationId, $user->id, 'reject', $reason);
+            return $this->successResponse('Lamaran berhasil ditolak.', $result);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
     }
 
     public function submitReport(SubmitReportRequest $request)
@@ -70,16 +139,16 @@ class OpportunityController extends Controller
         return $this->successResponse('Laporan berhasil dikirim. Tim kami akan meninjau segera.');
     }
 
-    // New Endpoint to fetch poster information to avoid heavy payload in main list
+    // Endpoint to fetch creator public profile information
     public function getPoster($id)
     {
-        // Get the opportunity's posted_by
-        $opp = \App\Models\Opportunity::select('posted_by')->find($id);
+        $opp = \App\Models\Opportunity::select('id', 'posted_by')->find($id);
         
         if (!$opp) {
             return $this->errorResponse('Peluang tidak ditemukan.', 404);
         }
 
+        // Privacy safe: NEVER expose phone or email in public API
         $user = User::select('id', 'name', 'username', 'avatar_url', 'sub_role as selected_sub_role')->find($opp->posted_by);
         
         if (!$user) {

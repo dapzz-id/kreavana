@@ -17,9 +17,15 @@ class PortfolioItem extends Model
         'description',
         'image_url',
         'sort_order',
+        'event_date',
+        'location',
+        'source',
+        'verification_status',
+        'client_name',
     ];
 
     protected $casts = [
         'user_id' => 'string',
+        'event_date' => 'date',
     ];
 }

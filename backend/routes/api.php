@@ -11,7 +11,8 @@ use App\Http\Controllers\{
     PaymentMethodController, UserAddressController, AvatarController,
     PortfolioController, SubscriptionController,
     StorageController, DisputeController, OpportunityReviewController,
-    AiController, JobContractController, JobContractTransitionController
+    AiController, JobContractController, JobContractTransitionController,
+    MarketingController
 };
 
 // Public: serve avatar images with CORS headers (for Flutter Web)
@@ -104,8 +105,6 @@ Route::middleware('auth:api')->group(function () {
         Route::get('stats', [DashboardController::class, 'stats'])->middleware('permission:view_dashboard');
         Route::get('opportunities', [DashboardController::class, 'opportunities']);
     });
-    Route::get('client-dashboard/overview', [DashboardController::class, 'overview'])->middleware('permission:view_dashboard');
-
     // Wallet
     Route::prefix('wallet')->middleware('permission:manage_own_profile')->group(function () {
         Route::get('info', [WalletController::class, 'info']);
@@ -118,15 +117,25 @@ Route::middleware('auth:api')->group(function () {
         Route::post('withdraw', [WalletController::class, 'withdraw']);
     });
 
-    // Opportunities
+    // Opportunities (Write & Applications)
     Route::prefix('opportunities')->group(function () {
-        Route::get('/', [OpportunityController::class, 'index'])->middleware('permission:view_opportunities');
         Route::post('/', [OpportunityController::class, 'store'])->middleware('permission:create_opportunity');
-        Route::get('map', [OpportunityController::class, 'mapLocations'])->middleware('permission:view_opportunities');
         Route::post('report', [OpportunityController::class, 'submitReport'])->middleware('permission:submit_report');
-        Route::get('{id}', [OpportunityController::class, 'show'])->middleware('permission:view_opportunities');
-        Route::get('{id}/poster', [OpportunityController::class, 'getPoster'])->middleware('permission:view_opportunities');
         Route::post('{id}/reviews', [OpportunityReviewController::class, 'store']);
+        Route::post('{id}/applications', [OpportunityController::class, 'apply']);
+        Route::get('{id}/applications', [OpportunityController::class, 'applications']);
+        Route::post('applications/{id}/approve', [OpportunityController::class, 'approveApplication']);
+        Route::post('applications/{id}/reject', [OpportunityController::class, 'rejectApplication']);
+    });
+
+    // Marketing (High-Value Deals & Reviews)
+    Route::prefix('marketing')->middleware('role:marketing,admin')->group(function () {
+        Route::get('transactions', [MarketingController::class, 'index']);
+        Route::get('transactions/{id}', [MarketingController::class, 'show']);
+        Route::post('transactions/{id}/assign', [MarketingController::class, 'assign']);
+        Route::post('transactions/{id}/verify', [MarketingController::class, 'verify']);
+        Route::post('transactions/{id}/approve', [MarketingController::class, 'approve']);
+        Route::post('transactions/{id}/reject', [MarketingController::class, 'reject']);
     });
 
     // Job Contracts
@@ -321,3 +330,15 @@ Route::prefix('creator-services')->group(function () {
 Route::prefix('subscription')->group(function () {
     Route::get('plans', [SubscriptionController::class, 'plans']);
 });
+
+// Public Opportunities (Guest Browsing)
+Route::prefix('opportunities')->group(function () {
+    Route::get('/', [OpportunityController::class, 'index']);
+    Route::get('map', [OpportunityController::class, 'mapLocations']);
+    Route::get('{id}', [OpportunityController::class, 'show']);
+    Route::get('{id}/poster', [OpportunityController::class, 'getPoster']);
+});
+
+// Public Client Dashboard Overview (Guest Browsing)
+Route::get('client-dashboard/overview', [DashboardController::class, 'overview']);
+

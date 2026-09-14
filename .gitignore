@@ -1,0 +1,22 @@
+# Environment and credentials
+*.env
+*.key
+*.pem
+*firebase*adminsdk*.json
+*service-account*.json
+backend/storage/app/*.json
+
+# Redis / DB Dumps
+*.rdb
+dump.rdb
+backend/dump.rdb
+
+# Temporary & Audit logs
+audit_needs_review.txt
+frontend_audit_results*.txt
+phase_*_report.txt
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

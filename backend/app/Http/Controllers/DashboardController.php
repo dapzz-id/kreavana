@@ -49,12 +49,10 @@ class DashboardController extends Controller
     public function overview(Request $request)
     {
         $user = auth('api')->user();
-        if (!$user) {
-            return $this->errorResponse('User tidak ditemukan.', 401);
-        }
+        $userId = $user ? $user->id : 'guest';
+        $roleType = $user ? ($request->query('role_type', $user->role->value ?? 'user')) : 'guest';
 
-        $roleType = $request->query('role_type', $user->role->value ?? 'user');
-        $overview = $this->dashboardService->getClientDashboardOverview($user->id, $roleType);
+        $overview = $this->dashboardService->getClientDashboardOverview($userId, $roleType);
 
         return $this->successResponse('Ringkasan dashboard klien berhasil diambil', $overview);
     }

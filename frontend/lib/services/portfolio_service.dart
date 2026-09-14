@@ -9,6 +9,11 @@ class PortfolioItemModel {
   final String? description;
   final String? imageUrl;
   final int sortOrder;
+  final String? eventDate;
+  final String? location;
+  final String source; // 'kreavana' | 'external'
+  final String verificationStatus; // 'self_reported' | 'verified' | 'disputed'
+  final String? clientName;
 
   PortfolioItemModel({
     this.id,
@@ -17,7 +22,14 @@ class PortfolioItemModel {
     this.description,
     this.imageUrl,
     this.sortOrder = 0,
+    this.eventDate,
+    this.location,
+    this.source = 'external',
+    this.verificationStatus = 'self_reported',
+    this.clientName,
   });
+
+  bool get isExternal => source == 'external';
 
   factory PortfolioItemModel.fromJson(Map<String, dynamic> json) {
     return PortfolioItemModel(
@@ -27,6 +39,11 @@ class PortfolioItemModel {
       description: json['description'],
       imageUrl: json['image_url'],
       sortOrder: json['sort_order'] ?? 0,
+      eventDate: json['event_date']?.toString(),
+      location: json['location']?.toString(),
+      source: json['source']?.toString() ?? 'external',
+      verificationStatus: json['verification_status']?.toString() ?? 'self_reported',
+      clientName: json['client_name']?.toString(),
     );
   }
 }
@@ -52,15 +69,28 @@ class PortfolioService {
     required String title,
     String? category,
     String? description,
-    required File imageFile,
+    File? imageFile,
+    String? eventDate,
+    String? location,
+    String source = 'external',
+    String? clientName,
   }) async {
     try {
-      final formData = FormData.fromMap({
+      final formDataMap = <String, dynamic>{
         'title': title,
         if (category != null) 'category': category,
         if (description != null) 'description': description,
-        'image': await MultipartFile.fromFile(imageFile.path),
-      });
+        if (eventDate != null) 'event_date': eventDate,
+        if (location != null) 'location': location,
+        'source': source,
+        if (clientName != null) 'client_name': clientName,
+      };
+
+      if (imageFile != null) {
+        formDataMap['image'] = await MultipartFile.fromFile(imageFile.path);
+      }
+
+      final formData = FormData.fromMap(formDataMap);
 
       final response = await _dio.post('/portfolio', data: formData);
       if (response.statusCode == 201 && response.data['status'] == true) {

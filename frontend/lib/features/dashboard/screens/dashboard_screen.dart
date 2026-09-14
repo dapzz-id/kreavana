@@ -113,7 +113,8 @@ class _DashboardScreenState extends State<DashboardScreen>
             _overviewSummary = {
               'active_needs': summary['active_needs']?.toString() ?? '0',
               'proposals_count': summary['proposals_count']?.toString() ?? '0',
-              'running_projects': summary['running_projects']?.toString() ?? '0',
+              'running_projects':
+                  summary['running_projects']?.toString() ?? '0',
               'estimated_expenses':
                   summary['estimated_expenses']?.toString() ?? 'Rp0',
               'monthly_income': summary['monthly_income']?.toString() ?? 'Rp0',
@@ -128,10 +129,16 @@ class _DashboardScreenState extends State<DashboardScreen>
             };
           }
 
-          _vendorRecommendations = List<Map<String, dynamic>>.from(data['vendor_recommendations'] ?? []);
-          _projectNeeds = List<Map<String, dynamic>>.from(data['project_needs'] ?? []);
+          _vendorRecommendations = List<Map<String, dynamic>>.from(
+            data['vendor_recommendations'] ?? [],
+          );
+          _projectNeeds = List<Map<String, dynamic>>.from(
+            data['project_needs'] ?? [],
+          );
           _agenda = List<Map<String, dynamic>>.from(data['agenda'] ?? []);
-          _projectAssets = List<Map<String, dynamic>>.from(data['project_assets'] ?? []);
+          _projectAssets = List<Map<String, dynamic>>.from(
+            data['project_assets'] ?? [],
+          );
         });
         _statsAnimController.forward(from: 0);
       }
@@ -1027,7 +1034,9 @@ class _DashboardScreenState extends State<DashboardScreen>
               iconSize: 48,
             )
           : Column(
-              children: _projectNeeds.map((need) => _buildNeedItem(need, isDark)).toList(),
+              children: _projectNeeds
+                  .map((need) => _buildNeedItem(need, isDark))
+                  .toList(),
             ),
     );
   }
@@ -1120,7 +1129,9 @@ class _DashboardScreenState extends State<DashboardScreen>
               iconSize: 48,
             )
           : Column(
-              children: _agenda.map((item) => _buildAgendaItem(item, isDark)).toList(),
+              children: _agenda
+                  .map((item) => _buildAgendaItem(item, isDark))
+                  .toList(),
             ),
     );
   }

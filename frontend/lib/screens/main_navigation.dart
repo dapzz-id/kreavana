@@ -13,6 +13,7 @@ import 'realisasi_anggaran_screen.dart';
 import 'monitoring_evaluasi_screen.dart';
 import 'dokumen_instansi_screen.dart';
 import 'pengumuman_publik_screen.dart';
+import 'marketing_dashboard_screen.dart';
 import 'tim_hak_akses_screen.dart';
 import 'notifications_screen.dart';
 import 'profile_screen.dart';
@@ -23,6 +24,7 @@ import 'package:go_router/go_router.dart';
 import '../features/dashboard/screens/admin_dashboard_screen.dart';
 import '../features/dashboard/screens/admin_resolution_screen.dart';
 import 'admin_verification_screen.dart';
+import 'creator_calendar_screen.dart';
 import 'proyek_saya_screen.dart';
 import 'agenda_screen.dart';
 import 'kolaborasi_screen.dart';
@@ -103,6 +105,7 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   Future<void> _refreshProfile() async {
+    if (_currentUser.isGuest || _currentUser.id == null) return;
     final result = await ProfileService.getProfile(_currentUser.id ?? '');
     if (mounted) {
       setState(() {
@@ -465,6 +468,21 @@ class _MainNavigationState extends State<MainNavigation> {
     bool isMobileDrawer = false,
   }) {
     return [
+      if (_isCreatorUser)
+        _buildSidebarLink(
+          icon: Icons.calendar_month_outlined,
+          label: 'Kapasitas & Jadwal',
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CreatorCalendarScreen()),
+            );
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: false,
+          isMobileDrawer: isMobileDrawer,
+        ),
       _buildSidebarItem(
         icon: Icons.handshake_outlined,
         activeIcon: Icons.handshake,
@@ -616,6 +634,20 @@ class _MainNavigationState extends State<MainNavigation> {
       }),
       const SizedBox(height: 18),
       _buildSidebarSectionHeader('LAINNYA', isDark, isCollapsed: isCollapsed),
+      _buildSidebarLink(
+        icon: Icons.calendar_month_outlined,
+        label: 'Kapasitas & Jadwal',
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CreatorCalendarScreen()),
+          );
+        },
+        isDark: isDark,
+        isCollapsed: isCollapsed,
+        isSelected: false,
+        isMobileDrawer: isMobileDrawer,
+      ),
       if (CreatorSidebarMenus.showKolaborasiInLainnya(_currentUser.subRole))
         _buildSidebarItem(
           icon: Icons.handshake_outlined,
@@ -1029,6 +1061,34 @@ class _MainNavigationState extends State<MainNavigation> {
     required bool isDark,
     required bool isCollapsed,
   }) {
+    if (_currentUser.isGuest) {
+      return Container(
+        padding: EdgeInsets.all(isCollapsed ? 8 : 16),
+        child: isCollapsed
+            ? Tooltip(
+                message: 'Masuk / Daftar',
+                child: IconButton(
+                  icon: const Icon(Icons.login_rounded, color: Colors.teal),
+                  onPressed: () => context.go(AppRoutes.login),
+                ),
+              )
+            : ElevatedButton.icon(
+                onPressed: () => context.go(AppRoutes.login),
+                icon: const Icon(Icons.login, size: 16, color: Colors.white),
+                label: const Text(
+                  'Masuk / Daftar',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal.shade600,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+      );
+    }
+
     return Container(
       padding: EdgeInsets.all(isCollapsed ? 10 : 16),
       child: isCollapsed
@@ -1210,6 +1270,10 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   Widget _buildClientDashboardScreen() {
+    if (_currentUser.isMarketing) {
+      return MarketingDashboardScreen(user: _currentUser);
+    }
+
     if (_currentUser.role == 'creator' || _currentUser.isCreator) {
       return _buildCreatorDashboardScreen();
     }
@@ -1490,6 +1554,16 @@ class _MainNavigationState extends State<MainNavigation> {
 
     final activeIndex = _currentIndex >= screens.length ? 0 : _currentIndex;
     final sidebarWidth = _isSidebarCollapsed ? 78.0 : 260.0;
+    final bool hasPageFab =
+        !_currentUser.isAdmin &&
+        switch (activeIndex) {
+          2 => true, // ProyekSayaScreen ('Buat Proyek Baru')
+          3 => _currentUser.isCreator, // MarketplaceKaryaScreen ('Jual Karya')
+          4 => true, // AgendaScreen ('Tambah Agenda')
+          5 => true, // KolaborasiScreen ('Ajukan Kolaborasi')
+          11 => true, // DirectMessageScreen
+          _ => false,
+        };
 
     Widget scaffoldWidget;
 
@@ -1651,7 +1725,12 @@ class _MainNavigationState extends State<MainNavigation> {
             ),
           ],
         ),
-        floatingActionButton: const KreavanaAiFloatingWidget(),
+        floatingActionButton: AnimatedPadding(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          padding: EdgeInsets.only(bottom: hasPageFab ? 72.0 : 0.0),
+          child: const KreavanaAiFloatingWidget(),
+        ),
       );
     } else {
       // ─── Mobile Layout ─────────────────────────────────────────────────
@@ -1670,7 +1749,12 @@ class _MainNavigationState extends State<MainNavigation> {
           bottom: false,
           child: IndexedStack(index: activeIndex, children: screens),
         ),
-        floatingActionButton: const KreavanaAiFloatingWidget(),
+        floatingActionButton: AnimatedPadding(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          padding: EdgeInsets.only(bottom: hasPageFab ? 72.0 : 0.0),
+          child: const KreavanaAiFloatingWidget(),
+        ),
         bottomNavigationBar: CustomBottomNavBar(
           currentIndex: mobileBottomNavIndex,
           onTap: (navIndex) {

@@ -27,6 +27,7 @@ class CreatorAvailabilityService extends BaseService
     protected const ACTIVE_CONTRACT_STATUSES = [
         'approved',
         'escrow_paid',
+        'active',
         'cancel_requested',
         'disputed',
     ];

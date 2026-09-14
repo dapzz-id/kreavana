@@ -15,6 +15,7 @@ class Opportunity extends Model
     protected $fillable = [
         'title',
         'description',
+        'poster_url',
         'sub_role_slug',
         'type',
         'location',
@@ -23,6 +24,9 @@ class Opportunity extends Model
         'location_category',
         'address',
         'deadline',
+        'event_date',
+        'event_start_time',
+        'event_end_time',
         'budget_range',
         'status',
         'posted_by',
@@ -31,11 +35,27 @@ class Opportunity extends Model
 
     protected $casts = [
         'deadline' => 'date',
+        'event_date' => 'date',
         'created_at' => 'datetime',
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class, 'posted_by');
+    }
+
+    public function requirements(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(OpportunityRequirement::class);
+    }
+
+    public function applications(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(OpportunityApplication::class);
+    }
+
+    public function approvedApplications(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(OpportunityApplication::class)->where('status', 'approved');
     }
 }

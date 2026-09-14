@@ -19,6 +19,8 @@ abstract class TestCase extends BaseTestCase
 
     protected function actingAsApi(\App\Models\User $user)
     {
+        $this->flushHeaders();
+        auth('api')->setUser($user);
         $headers = $this->getAuthHeaders($user);
         return $this->withHeaders($headers);
     }

@@ -55,14 +55,43 @@ class DashboardService extends BaseService implements DashboardServiceInterface
 
     public function getClientDashboardOverview(string $userId, string $roleType): array
     {
+        $isGuest = empty($userId) || $userId === 'guest';
+
+        $recommendedOpps = $this->opportunityRepo->getList('all', null, 6);
+
         return [
-            'summary' => $this->getOverviewSummary($userId, $roleType),
+            'summary' => $isGuest ? $this->getGuestOverviewSummary() : $this->getOverviewSummary($userId, $roleType),
             'client_types' => $this->getClientTypes(),
-            'activity_feed' => $this->formatActivityFeed($this->notificationRepo->getRecentByUser($userId, 5)),
+            'activity_feed' => $isGuest ? [] : $this->formatActivityFeed($this->notificationRepo->getRecentByUser($userId, 5)),
             'vendor_recommendations' => $this->formatVendorRecommendations($this->userRepo->getRecommendedCreators(8)),
-            'project_needs' => $this->getProjectNeeds($userId),
-            'agenda' => $this->getAgenda($userId),
-            'project_assets' => $this->getProjectAssets($userId),
+            'recommended_opportunities' => $recommendedOpps->map(fn($opp) => [
+                'id' => $opp->id,
+                'title' => $opp->title,
+                'sub_role_slug' => $opp->sub_role_slug,
+                'location' => $opp->location ?? 'Indonesia',
+                'budget_range' => $opp->budget_range,
+                'deadline' => $opp->deadline?->format('d M Y'),
+                'poster_url' => $opp->poster_url,
+            ])->toArray(),
+            'project_needs' => $isGuest ? [] : $this->getProjectNeeds($userId),
+            'agenda' => $isGuest ? [] : $this->getAgenda($userId),
+            'project_assets' => $isGuest ? [] : $this->getProjectAssets($userId),
+        ];
+    }
+
+    protected function getGuestOverviewSummary(): array
+    {
+        return [
+            'active_needs' => 0,
+            'proposals_count' => 0,
+            'running_projects' => 0,
+            'estimated_expenses' => 'Rp 0',
+            'total_projects' => 0,
+            'active_projects' => 0,
+            'total_payments' => 'Rp 0',
+            'pending_payments' => 'Rp 0',
+            'favorites' => 0,
+            'role_type' => 'guest',
         ];
     }
 
@@ -177,19 +206,24 @@ class DashboardService extends BaseService implements DashboardServiceInterface
     protected function formatVendorRecommendations($users): array
     {
         return $users->map(function ($user) {
-            $reviewCount = rand(10, 120);
-            $basePrice = rand(150, 950) * 1000;
+            $services = $user->creatorServices ?? collect();
+            $minPrice = $services->isNotEmpty() ? $services->min('price') : 500000;
+            $city = $user->addresses?->first()?->city ?? 'Indonesia';
+            $portfolioImages = $user->portfolioItems?->pluck('image_url')->filter()->values()->all() ?? [];
+
+            $subRoleVal = is_string($user->sub_role) ? $user->sub_role : $user->sub_role?->value;
+            $category = $subRoleVal ? ucwords(str_replace('_', ' ', $subRoleVal)) : 'Creator';
 
             return [
                 'id' => $user->id,
                 'name' => $user->name,
-                'category' => is_string($user->sub_role) ? ucwords(str_replace('_', ' ', $user->sub_role)) : 'Creator',
-                'rating' => number_format(rand(45, 50) / 10, 1),
-                'review_count' => $reviewCount,
+                'category' => $category,
+                'rating' => number_format((float) ($user->rating ?? 5.0), 1),
+                'review_count' => (int) ($user->positive_marketplace_reviews_count ?? 0) + (int) ($user->positive_contract_reviews_count ?? 0),
                 'avatar_url' => $user->avatar_url,
-                'location' => 'Bandung, Indonesia',
-                'starting_price' => 'Rp ' . number_format($basePrice, 0, ',', '.') . ',00',
-                'portfolio_images' => [],
+                'location' => $city,
+                'starting_price' => 'Rp ' . number_format($minPrice, 0, ',', '.'),
+                'portfolio_images' => $portfolioImages,
             ];
         })->toArray();
     }

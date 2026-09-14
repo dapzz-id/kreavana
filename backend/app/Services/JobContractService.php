@@ -86,7 +86,20 @@ class JobContractService extends BaseService
                 'scheduled_end_date' => $data['scheduled_end_date'],
             ];
 
-            return $this->contractRepo->create($contractData);
+            $contract = $this->contractRepo->create($contractData);
+
+            // Large transaction detection & audit record creation
+            $threshold = config('app.large_transaction_threshold', 100000000);
+            if ((float) $contract->agreed_price >= (float) $threshold) {
+                \App\Models\LargeTransactionReview::create([
+                    'job_contract_id' => $contract->id,
+                    'threshold_amount' => $threshold,
+                    'contract_amount' => $contract->agreed_price,
+                    'status' => 'pending_review',
+                ]);
+            }
+
+            return $contract;
         });
     }
 

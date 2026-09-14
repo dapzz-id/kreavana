@@ -15,6 +15,7 @@ enum CreatorSubRole: string
     case PHOTOGRAPHER = 'photographer';
     case EDITOR = 'editor';
     case VIDEOGRAPHER = 'videographer';
+    case TUKANG_KENDANG = 'tukang_kendang';
 
     public function label(): string
     {
@@ -30,6 +31,7 @@ enum CreatorSubRole: string
             self::PHOTOGRAPHER => 'Photographer',
             self::EDITOR => 'Editor',
             self::VIDEOGRAPHER => 'Videographer',
+            self::TUKANG_KENDANG => 'Tukang Kendang',
         };
     }
 }

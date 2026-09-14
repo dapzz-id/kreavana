@@ -27,6 +27,10 @@ class PortfolioController extends Controller
             'category' => 'nullable|string|max:100',
             'description' => 'nullable|string|max:500',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'event_date' => 'nullable|date',
+            'location' => 'nullable|string|max:150',
+            'source' => 'nullable|in:external,internal',
+            'client_name' => 'nullable|string|max:150',
         ]);
 
         /** @var \App\Services\StorageService $storageService */
@@ -40,6 +44,11 @@ class PortfolioController extends Controller
             'description' => $request->description,
             'image_url' => $storageFile->path,
             'sort_order' => PortfolioItem::where('user_id', $request->user()->id)->count(),
+            'event_date' => $request->event_date,
+            'location' => $request->location,
+            'source' => $request->input('source', 'external'),
+            'verification_status' => 'self_reported',
+            'client_name' => $request->client_name,
         ]);
 
         return response()->json([
@@ -58,9 +67,13 @@ class PortfolioController extends Controller
             'category' => 'nullable|string|max:100',
             'description' => 'nullable|string|max:500',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'event_date' => 'nullable|date',
+            'location' => 'nullable|string|max:150',
+            'source' => 'nullable|in:external,internal',
+            'client_name' => 'nullable|string|max:150',
         ]);
 
-        $data = $request->only(['title', 'category', 'description']);
+        $data = $request->only(['title', 'category', 'description', 'event_date', 'location', 'source', 'client_name']);
 
         if ($request->hasFile('image')) {
             /** @var \App\Services\StorageService $storageService */

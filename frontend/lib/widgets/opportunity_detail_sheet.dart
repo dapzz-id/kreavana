@@ -1,537 +1,773 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/opportunity_model.dart';
+import '../models/opportunity_application_model.dart';
 import '../services/opportunity_service.dart';
-import '../services/api_service.dart';
 import '../services/chat_service.dart';
 import '../screens/direct_message_screen.dart';
+import '../widgets/responsive_modal.dart';
 import '../app/theme.dart';
+import '../services/app_router.dart';
+import 'package:go_router/go_router.dart';
 
-class OpportunityDetailSheet extends StatelessWidget {
+class OpportunityDetailSheet extends StatefulWidget {
   final OpportunityModel opportunity;
   final String currentUserId;
+  final bool isCreator;
 
   const OpportunityDetailSheet({
     super.key,
     required this.opportunity,
     required this.currentUserId,
+    this.isCreator = true,
   });
 
   static Future<void> show(
     BuildContext context, {
     required OpportunityModel opportunity,
     String? currentUserId,
+    bool isCreator = true,
   }) {
-    return showDialog(
+    return ResponsiveModal.show(
       context: context,
-      builder: (_) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: 500,
-            maxHeight: MediaQuery.of(context).size.height * 0.85,
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? AppTheme.cardBg
-                  : Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Stack(
-              children: [
-                OpportunityDetailSheet(
-                  opportunity: opportunity,
-                  currentUserId: currentUserId ?? '',
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+      title: opportunity.title,
+      subtitle: opportunity.location ?? 'Lokasi Fleksibel',
+      maxWidth: 680,
+      body: OpportunityDetailSheet(
+        opportunity: opportunity,
+        currentUserId: currentUserId ?? '',
+        isCreator: isCreator,
       ),
     );
   }
 
-  Future<void> _callPhone(String phone) async {
-    final uri = Uri.parse('tel:');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    }
-  }
+  @override
+  State<OpportunityDetailSheet> createState() => _OpportunityDetailSheetState();
+}
 
-  Future<void> _sendEmail(String email) async {
-    final uri = Uri.parse('mailto:');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    }
-  }
+class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
+  bool get _isOwner =>
+      widget.currentUserId.isNotEmpty &&
+      widget.opportunity.postedBy != null &&
+      widget.opportunity.postedBy == widget.currentUserId;
 
-  Future<void> _openChat(
+  bool get _isGuest => widget.currentUserId.isEmpty;
+
+  void _openChat(
     BuildContext context, {
     required String userId,
     String? name,
-    String? username,
-    String? avatarUrl,
   }) async {
+    if (_isGuest) {
+      _showLoginPrompt(context, 'menghubungi pembuat proyek via chat');
+      return;
+    }
+
     try {
       final result = await ChatService.startPersonalChat(userId);
       if (!context.mounted) return;
 
       final chatData = result['data'];
       if (chatData == null) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message'] ?? 'Gagal membuka chat.'),
-              backgroundColor: Colors.red.shade700,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Gagal membuka chat.'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
         return;
       }
 
-      final chat = Map<String, dynamic>.from(
-        chatData is Map ? chatData : result,
+      final chatId = chatData['id'] as String;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DirectMessageScreen(
+            chatId: chatId,
+          ),
+        ),
       );
-      chat['name'] = name ?? 'Creator';
-      if (username != null) chat['username'] = username;
-      if (avatarUrl != null) {
-        chat['avatar_url'] = ApiService.resolveAssetUrl(avatarUrl);
-      }
-      chat['user_id'] = userId;
-      chat['isOnline'] = false;
-      chat['isGroup'] = false;
-
-      if (context.mounted) {
-        Navigator.pop(context);
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) =>
-                Scaffold(body: ChatDetailSection(chat: chat, isMobile: true)),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal memulai chat: $e'),
-            backgroundColor: Colors.red.shade700,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
+    } catch (_) {}
   }
 
-  void _showReportDialog(BuildContext context) {
-    final reasons = [
-      'Konten palsu / penipuan',
-      'Informasi kontak tidak valid',
-      'Lokasi tidak sesuai',
-      'Spam / iklan',
-      'Lainnya',
-    ];
-    String selectedReason = reasons.first;
-    final descController = TextEditingController();
+  void _showLoginPrompt(BuildContext context, String actionDesc) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Masuk Diperlukan'),
+        content: Text('Silakan masuk atau daftar akun terlebih dahulu untuk $actionDesc.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryPurple,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.of(context).pop(); // Close detail sheet
+              context.push(AppRoutes.login);
+            },
+            child: const Text('Masuk Sekarang', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showApplicationDialog(BuildContext context) {
+    if (_isGuest) {
+      _showLoginPrompt(context, 'mengajukan lamaran proyek ini');
+      return;
+    }
+
+    final reqs = widget.opportunity.requirements.isNotEmpty
+        ? widget.opportunity.requirements
+        : [OpportunityRequirementModel(subRoleSlug: widget.opportunity.subRoleSlug)];
+
+    String selectedSlug = reqs.first.subRoleSlug;
+    final pitchCtrl = TextEditingController();
+    final questionsCtrl = TextEditingController();
+    final bidCtrl = TextEditingController();
+    bool isSubmitting = false;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
-          title: const Text('Laporkan Peluang'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+        builder: (context, setModalState) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Row(
               children: [
-                const Text(
-                  'Pilih alasan laporan:',
-                  style: TextStyle(fontSize: 13),
-                ),
-                const SizedBox(height: 8),
-                ...reasons.map(
-                  (r) => RadioListTile<String>(
-                    title: Text(r, style: const TextStyle(fontSize: 13)),
-                    value: r,
-                    groupValue: selectedReason,
-                    onChanged: (v) => setState(() => selectedReason = v!),
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: descController,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    labelText: 'Detail (opsional)',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
+                Icon(Icons.assignment_turned_in, color: AppTheme.primaryPurple),
+                SizedBox(width: 8),
+                Text('Ambil Peluang Proyek', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ],
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.pop(ctx);
-                final result = await OpportunityService.submitReport(
-                  targetType: 'opportunity',
-                  targetId: opportunity.id ?? '',
-                  reason: selectedReason,
-                  description: descController.text.trim().isEmpty
-                      ? null
-                      : descController.text.trim(),
-                );
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(result['message'] ?? 'Laporan terkirim'),
-                      backgroundColor: result['success'] == true
-                          ? Colors.green.shade700
-                          : Colors.red.shade700,
-                      behavior: SnackBarBehavior.floating,
+            content: SizedBox(
+              width: 480,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pilih posisi yang ingin Anda ambil:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
+                      ),
                     ),
-                  );
-                }
-              },
-              child: const Text('Kirim Laporan'),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: reqs.map((r) {
+                        final isSelected = selectedSlug == r.subRoleSlug;
+                        return ChoiceChip(
+                          label: Text(r.label),
+                          selected: isSelected,
+                          selectedColor: Colors.teal.withValues(alpha: 0.2),
+                          onSelected: (_) {
+                            setModalState(() => selectedSlug = r.subRoleSlug);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: pitchCtrl,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Pesan / Pitching Lamaran *',
+                        hintText: 'Jelaskan mengapa Anda cocok untuk proyek ini & pengalaman relevan...',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: bidCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Penawaran Tarif (Opsional)',
+                        hintText: 'Kosongkan jika mengikuti anggaran pemilik proyek',
+                        prefixText: 'Rp ',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: questionsCtrl,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: 'Pertanyaan untuk Klien (Opsional)',
+                        hintText: 'Misal: Mengenai rundown acara atau peralatan yang disediakan...',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryPurple,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        final pitch = pitchCtrl.text.trim();
+                        if (pitch.length < 10) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Pesan lamaran minimal 10 karakter.')),
+                          );
+                          return;
+                        }
+
+                        setModalState(() => isSubmitting = true);
+                        final bid = double.tryParse(bidCtrl.text.trim());
+                        final res = await OpportunityService.applyToOpportunity(
+                          opportunityId: widget.opportunity.id ?? '',
+                          subRoleSlug: selectedSlug,
+                          pitchMessage: pitch,
+                          bidPrice: bid,
+                          questionsNotes: questionsCtrl.text.trim().isNotEmpty ? questionsCtrl.text.trim() : null,
+                        );
+
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(res['message'] ?? 'Lamaran berhasil dikirim!'),
+                              backgroundColor: res['status'] == true ? Colors.teal : Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                child: isSubmitting
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text('Kirim Lamaran', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showApplicationsManagerDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return FutureBuilder<List<OpportunityApplicationModel>>(
+            future: OpportunityService.getOpportunityApplications(widget.opportunity.id ?? ''),
+            builder: (context, snapshot) {
+              final apps = snapshot.data ?? [];
+              final isLoading = snapshot.connectionState == ConnectionState.waiting;
+
+              return AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                title: Row(
+                  children: [
+                    const Icon(Icons.people_outline, color: AppTheme.primaryPurple),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Persetujuan Pelamar (${apps.length})',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                content: SizedBox(
+                  width: 550,
+                  height: 450,
+                  child: isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : apps.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'Belum ada kreator yang mengajukan diri untuk proyek ini.',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            )
+                          : ListView.separated(
+                              itemCount: apps.length,
+                              separatorBuilder: (_, __) => const Divider(height: 16),
+                              itemBuilder: (context, index) {
+                                final app = apps[index];
+                                return Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.grey.shade200),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          CircleAvatar(
+                                            radius: 18,
+                                            backgroundImage: app.creator?.avatarUrl != null
+                                                ? CachedNetworkImageProvider(app.creator!.avatarUrl!)
+                                                : null,
+                                            child: app.creator?.avatarUrl == null
+                                                ? const Icon(Icons.person, size: 20)
+                                                : null,
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(app.creator?.name ?? 'Kreator',
+                                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                                Text('Peran: ${app.subRoleSlug}',
+                                                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                                              ],
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: app.isApproved
+                                                  ? Colors.green.shade100
+                                                  : (app.isRejected ? Colors.red.shade100 : Colors.amber.shade100),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              app.status.toUpperCase(),
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: app.isApproved
+                                                    ? Colors.green.shade800
+                                                    : (app.isRejected ? Colors.red.shade800 : Colors.amber.shade900),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(app.pitchMessage, style: const TextStyle(fontSize: 13)),
+                                      if (app.questionsNotes != null && app.questionsNotes!.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Text('Pertanyaan: ${app.questionsNotes}',
+                                            style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade700, fontStyle: FontStyle.italic)),
+                                      ],
+                                      if (app.bidPrice != null) ...[
+                                        const SizedBox(height: 4),
+                                        Text('Tawaran: Rp ${app.bidPrice!.toStringAsFixed(0)}',
+                                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.indigo)),
+                                      ],
+                                      if (app.isPending) ...[
+                                        const SizedBox(height: 10),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.end,
+                                          children: [
+                                            OutlinedButton(
+                                              style: OutlinedButton.styleFrom(
+                                                foregroundColor: Colors.red.shade700,
+                                                side: BorderSide(color: Colors.red.shade300),
+                                              ),
+                                              onPressed: () async {
+                                                await OpportunityService.reviewApplication(
+                                                  applicationId: app.id,
+                                                  decision: 'reject',
+                                                  reason: 'Maaf, kuota belum terpenuhi atau profil belum sesuai.',
+                                                );
+                                                setDialogState(() {});
+                                              },
+                                              child: const Text('Tolak'),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.green.shade700,
+                                              ),
+                                              onPressed: () async {
+                                                await OpportunityService.reviewApplication(
+                                                  applicationId: app.id,
+                                                  decision: 'approve',
+                                                );
+                                                setDialogState(() {});
+                                              },
+                                              child: const Text('Setujui', style: TextStyle(color: Colors.white)),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Tutup'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  void _showCreatorPublicProfile(BuildContext context, OpportunityPoster poster) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Profil Pembuat Proyek', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 36,
+              backgroundImage: poster.avatarUrl != null
+                  ? CachedNetworkImageProvider(poster.avatarUrl!)
+                  : null,
+              child: poster.avatarUrl == null ? const Icon(Icons.person, size: 40) : null,
+            ),
+            const SizedBox(height: 12),
+            Text(poster.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            if (poster.selectedSubRole != null) ...[
+              const SizedBox(height: 4),
+              Text(poster.selectedSubRole!, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+            ],
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.shield_outlined, color: Colors.blue, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Kontak privat (telepon & email) dilindungi. Komunikasi dilakukan melalui sistem chat resmi Kreavana.',
+                      style: TextStyle(fontSize: 12, color: Colors.blue),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Tutup'),
+          ),
+          if (poster.id != null && poster.id != widget.currentUserId)
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryPurple),
+              onPressed: () {
+                Navigator.pop(ctx);
+                _openChat(context, userId: poster.id!, name: poster.name);
+              },
+              icon: const Icon(Icons.chat, size: 16, color: Colors.white),
+              label: const Text('Kirim Pesan', style: TextStyle(color: Colors.white)),
+            ),
+        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final poster = opportunity.poster;
+    final opp = widget.opportunity;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        // 1. Poster Banner (if present)
+        if (opp.posterUrl != null && opp.posterUrl!.isNotEmpty) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: CachedNetworkImage(
+              imageUrl: opp.posterUrl!,
+              height: 200,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(
+                height: 200,
+                color: Colors.grey.shade200,
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+              errorWidget: (_, __, ___) => Container(
+                height: 120,
+                color: Colors.grey.shade200,
+                child: const Icon(Icons.image_not_supported, size: 40, color: Colors.grey),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // 2. Status Badge & Category Header
+        Row(
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: opportunity.isLocation
-                    ? Colors.teal.withValues(alpha: 0.15)
-                    : Colors.indigo.withValues(alpha: 0.15),
+                color: opp.status == 'open'
+                    ? Colors.green.shade100
+                    : Colors.grey.shade200,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                opportunity.isLocation ? 'Peluang Lokasi' : 'Peluang Proyek',
+                opp.status == 'open' ? 'TERBUKA' : opp.status.toUpperCase(),
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
-                  color: opportunity.isLocation
-                      ? Colors.teal.shade700
-                      : Colors.indigo.shade700,
+                  color: opp.status == 'open' ? Colors.green.shade800 : Colors.grey.shade700,
                 ),
               ),
             ),
-            if (opportunity.locationCategory != null)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  opportunity.locationCategoryLabel,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.orange.shade800,
-                  ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.indigo.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                opp.subRoleLabel,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.indigo.shade800,
                 ),
               ),
-            if (opportunity.subRoleSlug.isNotEmpty)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.deepPurple.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  opportunity.subRoleLabel,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.deepPurple.shade700,
-                  ),
-                ),
-              ),
+            ),
           ],
         ),
-        const SizedBox(height: 12),
-        Text(
-          opportunity.title,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        if (opportunity.description != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            opportunity.description!,
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
-              height: 1.4,
-            ),
-          ),
-        ],
         const SizedBox(height: 16),
-        if (opportunity.location != null)
-          _InfoRow(
-            icon: Icons.location_on_outlined,
-            label: opportunity.address ?? opportunity.location!,
+
+        // 3. Procurement-Style Info Cards (SPSE-like)
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
           ),
-        if (opportunity.budgetRange != null)
-          _InfoRow(
-            icon: Icons.payments_outlined,
-            label: opportunity.budgetRange!,
-          ),
-        if (opportunity.deadline != null)
-          _InfoRow(icon: Icons.event_outlined, label: 'Deadline: '),
-        const SizedBox(height: 20),
-        const Divider(),
-        const SizedBox(height: 12),
-        const Text(
-          'Kontak Pembuat',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        if (poster != null) ...[
-          Row(
+          child: Column(
             children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: Colors.grey.shade200,
-                backgroundImage:
-                    poster.avatarUrl != null && poster.avatarUrl!.isNotEmpty
-                    ? NetworkImage(
-                        ApiService.resolveAssetUrl(poster.avatarUrl!),
-                      )
-                    : null,
-                child: poster.avatarUrl == null || poster.avatarUrl!.isEmpty
-                    ? Text(
-                        poster.name.isNotEmpty
-                            ? poster.name[0].toUpperCase()
-                            : '?',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      )
-                    : null,
+              _InfoRow(
+                icon: Icons.calendar_today_outlined,
+                label: 'Jadwal Acara Klien',
+                value: opp.eventDate != null
+                    ? '${opp.eventDate} ${opp.eventStartTime != null ? '(${opp.eventStartTime} - ${opp.eventEndTime ?? ''})' : ''}'
+                    : (opp.deadline != null ? 'Batas Waktu: ${opp.deadline}' : 'Fleksibel'),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      poster.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    Text(
-                      '@${poster.username}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark
-                            ? AppTheme.textMuted
-                            : Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 10),
+              _InfoRow(
+                icon: Icons.place_outlined,
+                label: 'Lokasi Event',
+                value: opp.address ?? opp.location ?? 'Indonesia',
+              ),
+              const SizedBox(height: 10),
+              _InfoRow(
+                icon: Icons.payments_outlined,
+                label: 'Perkiraan Budget',
+                value: opp.budgetRange ?? 'Sesuai Kesepakatan',
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 16),
+
+        // 4. Required Capabilities (Multi-Role Breakdown)
+        const Text(
+          'Keahlian yang Dibutuhkan:',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
+        const SizedBox(height: 8),
+        if (opp.requirements.isNotEmpty)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: opp.requirements.map((r) {
+              return Chip(
+                avatar: const Icon(Icons.check_circle_outline, size: 16, color: Colors.teal),
+                label: Text(r.label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                backgroundColor: Colors.teal.shade50,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              );
+            }).toList(),
+          )
+        else
+          Chip(
+            label: Text(opp.subRoleLabel),
+            backgroundColor: Colors.teal.shade50,
+          ),
+        const SizedBox(height: 16),
+
+        // 5. Approved Creators (Transparency)
+        if (opp.approvedCreators.isNotEmpty) ...[
+          const Text(
+            'Kreator Terpilih & Disetujui:',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.green.shade200),
+            ),
+            child: Column(
+              children: opp.approvedCreators.map((ac) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.verified, size: 16, color: Colors.green),
+                      const SizedBox(width: 8),
+                      Text(
+                        ac.name,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                      const Spacer(),
+                      Text(
+                        ac.capability ?? ac.subRole ?? '',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
           const SizedBox(height: 16),
-          if (poster.phone != null && poster.phone!.isNotEmpty)
-            _ContactButton(
-              icon: Icons.phone,
-              label: poster.phone!,
-              color: Colors.green,
-              onTap: () => _callPhone(poster.phone!),
-            ),
-          if (poster.email != null && poster.email!.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            _ContactButton(
-              icon: Icons.email_outlined,
-              label: poster.email!,
-              color: Colors.blue,
-              onTap: () => _sendEmail(poster.email!),
-            ),
-          ],
-          if ((poster.phone == null || poster.phone!.isEmpty) &&
-              (poster.email == null || poster.email!.isEmpty))
-            Text(
-              'Kontak tidak tersedia. Hubungi via chat Kreavana.',
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+        ],
+
+        // 6. Creator Public Profile Inspection
+        if (opp.poster != null) ...[
+          const Text(
+            'Pemilik Peluang Proyek:',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: () => _showCreatorPublicProfile(context, opp.poster!),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                border: Border.all(color: isDark ? AppTheme.inputBorder : Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: Colors.teal.shade100,
+                    child: Text(
+                      opp.poster!.name.isNotEmpty ? opp.poster!.name[0].toUpperCase() : '?',
+                      style: TextStyle(color: Colors.teal.shade900, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          opp.poster!.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                        if (opp.poster!.username.isNotEmpty)
+                          Text(
+                            '@${opp.poster!.username}',
+                            style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const Text(
+                    'Lihat Profil →',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.teal),
+                  ),
+                ],
               ),
             ),
+          ),
+          const SizedBox(height: 20),
+        ],
+
+        // 7. Action Area
+        if (_isOwner) ...[
+          ElevatedButton.icon(
+            onPressed: () => _showApplicationsManagerDialog(context),
+            icon: const Icon(Icons.how_to_reg, color: Colors.white),
+            label: const Text('Kelola & Persetujuan Pelamar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryPurple,
+              minimumSize: const Size(double.infinity, 48),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
         ] else ...[
           Row(
             children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: Colors.grey.shade200,
-                child: const Icon(Icons.person, color: Colors.grey),
-              ),
-              const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      opportunity.postedBy != null
-                          ? 'Creator #${opportunity.postedBy}'
-                          : 'Creator Kreavana',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    Text(
-                      'Kontak tidak tersedia. Hubungi via chat Kreavana.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark
-                            ? AppTheme.textMuted
-                            : Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (opportunity.postedBy != null &&
-                  opportunity.postedBy != currentUserId)
-                IconButton(
-                  onPressed: () {
-                    _openChat(
-                      context,
-                      userId: opportunity.postedBy!,
-                      name: null,
-                      username: null,
-                      avatarUrl: null,
-                    );
-                  },
-                  icon: Icon(
-                    Icons.chat_bubble_outline,
-                    color: Colors.teal.shade600,
+                flex: 3,
+                child: ElevatedButton.icon(
+                  onPressed: opp.status == 'open' ? () => _showApplicationDialog(context) : null,
+                  icon: const Icon(Icons.assignment_turned_in, color: Colors.white),
+                  label: Text(
+                    opp.status == 'open' ? 'Ambil Peluang' : 'Proyek Ditutup',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
-                  tooltip: 'Hubungi via Chat',
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal.shade700,
+                    minimumSize: const Size(double.infinity, 48),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
+              ),
+              if (opp.postedBy != null && opp.postedBy != widget.currentUserId) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openChat(context, userId: opp.postedBy!, name: opp.poster?.name),
+                    icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                    label: const Text('Chat'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ),
-        ],
-        const SizedBox(height: 20),
-        if (poster != null && poster.id != currentUserId) ...[
-          ElevatedButton.icon(
-            onPressed: () {
-              _openChat(
-                context,
-                userId: poster.id!,
-                name: poster.name,
-                username: poster.username,
-                avatarUrl: poster.avatarUrl,
-              );
-            },
-            icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
-            label: Text(
-              'Hubungi ${poster.name.split(" ").first} via Chat',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.teal.shade600,
-              minimumSize: const Size(double.infinity, 48),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: () => _showReportDialog(context),
-            icon: const Icon(Icons.flag_outlined, color: Colors.red),
-            label: const Text(
-              'Laporkan Peluang',
-              style: TextStyle(color: Colors.red),
-            ),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 48),
-              side: BorderSide(color: Colors.red.shade300),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ] else if (poster == null &&
-            opportunity.postedBy != null &&
-            opportunity.postedBy != currentUserId) ...[
-          ElevatedButton.icon(
-            onPressed: () {
-              _openChat(
-                context,
-                userId: opportunity.postedBy!,
-                name: null,
-                username: null,
-                avatarUrl: null,
-              );
-            },
-            icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
-            label: const Text(
-              'Hubungi via Chat',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.teal.shade600,
-              minimumSize: const Size(double.infinity, 48),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
           ),
         ],
       ],
@@ -542,83 +778,28 @@ class OpportunityDetailSheet extends StatelessWidget {
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String value;
 
-  const _InfoRow({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 18, color: Colors.grey.shade600),
-          const SizedBox(width: 8),
-          Expanded(child: Text(label, style: const TextStyle(fontSize: 13))),
-        ],
-      ),
-    );
-  }
-}
-
-class _ContactButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _ContactButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
+  const _InfoRow({required this.icon, required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withValues(alpha: 0.2)),
-          ),
-          child: Row(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: Colors.grey.shade600),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: color.shade700,
-                  ),
-                ),
-              ),
-              Icon(Icons.arrow_forward_ios, size: 14, color: color.shade400),
+              Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+              const SizedBox(height: 2),
+              Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
             ],
           ),
         ),
-      ),
+      ],
     );
-  }
-}
-
-extension on Color {
-  Color get shade700 {
-    final hsl = HSLColor.fromColor(this);
-    return hsl.withLightness((hsl.lightness - 0.15).clamp(0.0, 1.0)).toColor();
-  }
-
-  Color get shade400 {
-    final hsl = HSLColor.fromColor(this);
-    return hsl.withLightness((hsl.lightness + 0.1).clamp(0.0, 1.0)).toColor();
   }
 }

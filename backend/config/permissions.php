@@ -42,4 +42,12 @@ return [
         'manage_reports',
     ],
 
+    'marketing' => [
+        'view_dashboard',
+        'view_opportunities',
+        'manage_large_transactions',
+        'manage_own_profile',
+        'use_chat',
+    ],
+
 ];

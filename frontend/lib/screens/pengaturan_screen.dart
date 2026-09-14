@@ -11,6 +11,7 @@ import 'addresses_screen.dart';
 import 'help_screen.dart';
 import 'privacy_policy_screen.dart';
 import 'storage_management_screen.dart';
+import 'creator_calendar_screen.dart';
 import '../widgets/kreavana_image.dart';
 
 class PengaturanScreen extends StatefulWidget {
@@ -218,7 +219,9 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                 title: 'Manajemen Storage',
                 subtitle: 'Kelola file, media, dan kuota',
                 isDark: isDark,
-                isLast: true,
+                isLast:
+                    widget.user?.role != 'creator' &&
+                    widget.user?.isCreator != true,
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -226,6 +229,22 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                   ),
                 ),
               ),
+              if (widget.user?.role == 'creator' ||
+                  widget.user?.isCreator == true)
+                _buildNavTile(
+                  icon: Icons.calendar_month_outlined,
+                  iconColor: const Color(0xFF6366F1),
+                  title: 'Kapasitas & Jadwal Kerja',
+                  subtitle: 'Atur kapasitas harian & ketersediaan',
+                  isDark: isDark,
+                  isLast: true,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CreatorCalendarScreen(),
+                    ),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 16),
