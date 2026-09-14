@@ -22,6 +22,7 @@ class UserSeeder extends Seeder
                 'password' => Hash::make('password123'),
                 'role' => RoleType::Admin,
                 'is_creator_approved' => 0,
+                'email_verified_at' => now(),
             ]
         );
 
@@ -34,6 +35,7 @@ class UserSeeder extends Seeder
                 'password' => Hash::make('password123'),
                 'role' => RoleType::User,
                 'is_creator_approved' => 0,
+                'email_verified_at' => now(),
             ]
         );
 
@@ -107,6 +109,20 @@ class UserSeeder extends Seeder
             ],
         ];
 
+        $capacities = [
+            CreatorSubRole::PHOTOGRAPHER->value => 3,
+            CreatorSubRole::VIDEOGRAPHER->value => 2,
+            CreatorSubRole::EDITOR->value => 5,
+            CreatorSubRole::MAKEUP_ARTIST->value => 3,
+            CreatorSubRole::MC->value => 4,
+            CreatorSubRole::SINGER->value => 3,
+            CreatorSubRole::WEDDING_ORGANIZER->value => 2,
+            CreatorSubRole::EVENT_ORGANIZER->value => 2,
+            CreatorSubRole::COMMUNITY->value => 5,
+            CreatorSubRole::INSTITUTION->value => 5,
+            CreatorSubRole::GOVERNMENT->value => 5,
+        ];
+
         foreach ($creators as $data) {
             $creator = User::updateOrCreate(
                 ['email' => $data['email']],
@@ -117,6 +133,8 @@ class UserSeeder extends Seeder
                     'role' => RoleType::Creator,
                     'sub_role' => $data['sub_role']->value,
                     'is_creator_approved' => 1,
+                    'max_work_capacity' => $capacities[$data['sub_role']->value] ?? 3,
+                    'email_verified_at' => now(),
                 ]
             );
 

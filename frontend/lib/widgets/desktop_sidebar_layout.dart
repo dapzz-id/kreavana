@@ -16,6 +16,7 @@ import '../screens/dokumen_instansi_screen.dart';
 import '../screens/pengumuman_publik_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/tim_hak_akses_screen.dart';
+import '../screens/creator_calendar_screen.dart';
 import 'creator_sidebar_menus.dart';
 
 class DesktopSidebarLayout extends StatefulWidget {
@@ -164,6 +165,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     // Routes that push new screens (not in IndexedStack)
     Widget? destination;
     switch (route) {
+      case 'kapasitas_jadwal':
+        destination = const CreatorCalendarScreen();
+        break;
       case 'tender_kolaborasi':
         destination = TenderKolaborasiScreen(user: widget.user);
         break;
@@ -765,6 +769,17 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                               label: 'Kolaborasi',
                               onTap: () => _pushLink('kolaborasi'),
                               isSelected: widget.activeRoute == 'kolaborasi',
+                              isDark: isDark,
+                              isCollapsed: collapsed,
+                            ),
+                          ],
+                          if (_isCreatorUser) ...[
+                            _buildNavRow(
+                              icon: Icons.calendar_month_outlined,
+                              label: 'Kapasitas & Jadwal',
+                              onTap: () => _pushLink('kapasitas_jadwal'),
+                              isSelected:
+                                  widget.activeRoute == 'kapasitas_jadwal',
                               isDark: isDark,
                               isCollapsed: collapsed,
                             ),

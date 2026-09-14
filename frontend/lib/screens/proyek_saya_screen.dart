@@ -22,6 +22,7 @@ class ProyekSayaScreen extends StatefulWidget {
 
 class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   bool _isLoading = false;
+  String? _errorMessage;
   String _selectedStatus = 'Semua';
   String _searchQuery = '';
   final _debouncer = Debouncer(milliseconds: 500);
@@ -43,17 +44,23 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   Future<void> _fetchRealtimeProjects() async {
     setState(() {
       _isLoading = true;
+      _errorMessage = null;
     });
     try {
       final list = await JobContractService.getUserContracts();
       if (mounted) {
         setState(() {
           _projects = list;
+          _errorMessage = null;
         });
       }
     } catch (e) {
-      // Error handling removed or ignored as the field was unused.
       debugPrint('Error fetching projects: $e');
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Gagal memuat proyek. Periksa koneksi internet Anda.';
+        });
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -69,8 +76,13 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     final accentColor = SubRoleThemeEngine.getAccentColor(role, subRole);
 
     final filtered = _projects.where((p) {
-      final st = p.contractStatus;
-      if (_selectedStatus != 'Semua' && st != _selectedStatus) return false;
+      if (!_matchesContractCategory(
+        p.contractStatus,
+        _selectedStatus,
+        workStatus: p.workStatus,
+      )) {
+        return false;
+      }
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
         final title = p.title.toLowerCase();
@@ -81,13 +93,31 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     }).toList();
 
     final activeCount = _projects
-        .where((p) => p.contractStatus == 'Berjalan')
+        .where(
+          (p) => _matchesContractCategory(
+            p.contractStatus,
+            'Berjalan',
+            workStatus: p.workStatus,
+          ),
+        )
         .length;
     final pendingCount = _projects
-        .where((p) => p.contractStatus == 'Menunggu')
+        .where(
+          (p) => _matchesContractCategory(
+            p.contractStatus,
+            'Menunggu',
+            workStatus: p.workStatus,
+          ),
+        )
         .length;
     final doneCount = _projects
-        .where((p) => p.contractStatus == 'Selesai')
+        .where(
+          (p) => _matchesContractCategory(
+            p.contractStatus,
+            'Selesai',
+            workStatus: p.workStatus,
+          ),
+        )
         .length;
 
     return Scaffold(
@@ -191,6 +221,8 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               // ── Projects List ──
               if (_isLoading)
                 const SkeletonList()
+              else if (_errorMessage != null)
+                _buildErrorState(accentColor, isDark)
               else if (filtered.isEmpty)
                 _buildEmptyState(isDark)
               else
@@ -201,21 +233,131 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const BuatKebutuhanScreen()),
-          );
-        },
-        backgroundColor: accentColor,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          'Buat Proyek Baru',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).size.width < 900 ? 76 : 0,
+        ),
+        child: FloatingActionButton.extended(
+          heroTag: 'proyek_saya_fab',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const BuatKebutuhanScreen()),
+            );
+          },
+          backgroundColor: accentColor,
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text(
+            'Buat Proyek Baru',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
         ),
       ),
     );
+  }
+
+  bool _matchesContractCategory(
+    String contractStatus,
+    String selectedCategory, {
+    String? workStatus,
+  }) {
+    if (selectedCategory == 'Semua') return true;
+    final cs = contractStatus.toLowerCase();
+    final ws = (workStatus ?? '').toLowerCase();
+    switch (selectedCategory) {
+      case 'Berjalan':
+        return cs == 'active' || cs == 'approved' || cs == 'escrow_paid';
+      case 'Menunggu':
+        return cs == 'proposed' || cs == 'draft' || ws == 'pending';
+      case 'Selesai':
+        return cs == 'completed';
+      default:
+        return false;
+    }
+  }
+
+  int _getProgressPct(String workStatus) {
+    switch (workStatus.toLowerCase()) {
+      case 'completed':
+      case 'done':
+        return 100;
+      case 'submitted':
+        return 85;
+      case 'review':
+        return 75;
+      case 'revision':
+        return 60;
+      case 'in_progress':
+        return 50;
+      case 'scheduled':
+        return 15;
+      case 'cancelled':
+        return 0;
+      case 'pending':
+      default:
+        return 0;
+    }
+  }
+
+  String _getContractStatusLabel(String contractStatus) {
+    switch (contractStatus.toLowerCase()) {
+      case 'active':
+        return 'Aktif';
+      case 'approved':
+        return 'Disetujui';
+      case 'proposed':
+        return 'Diajukan';
+      case 'completed':
+        return 'Selesai';
+      case 'draft':
+        return 'Draf';
+      case 'cancelled':
+        return 'Dibatalkan';
+      case 'disputed':
+        return 'Sengketa';
+      case 'cancel_requested':
+        return 'Permintaan Batal';
+      case 'escrow_paid':
+        return 'Escrow Dibayar';
+      default:
+        return contractStatus;
+    }
+  }
+
+  String _getWorkStatusLabel(String workStatus) {
+    switch (workStatus.toLowerCase()) {
+      case 'in_progress':
+        return 'Sedang Dikerjakan';
+      case 'review':
+        return 'Dalam Review';
+      case 'revision':
+        return 'Perlu Revisi';
+      case 'scheduled':
+        return 'Terjadwal';
+      case 'submitted':
+        return 'Diserahkan';
+      case 'completed':
+      case 'done':
+        return 'Pekerjaan Selesai';
+      case 'cancelled':
+        return 'Dibatalkan';
+      case 'pending':
+      default:
+        return 'Menunggu Dimulai';
+    }
+  }
+
+  Color _getContractStatusColor(String contractStatus) {
+    final s = contractStatus.toLowerCase();
+    if (s == 'completed') {
+      return Colors.green;
+    } else if (s == 'active' || s == 'approved' || s == 'escrow_paid') {
+      return AppTheme.primaryPurple;
+    } else if (s == 'cancelled' || s == 'disputed' || s == 'cancel_requested') {
+      return Colors.red;
+    } else {
+      return Colors.orange;
+    }
   }
 
   Widget _buildSummaryHeader(
@@ -225,7 +367,26 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     int done,
     bool isDark,
   ) {
-    final List<Map<String, dynamic>> items = [];
+    final List<Map<String, dynamic>> items = [
+      {
+        'label': 'Berjalan',
+        'val': active.toString(),
+        'color': AppTheme.primaryPurple,
+        'icon': Icons.trending_up,
+      },
+      {
+        'label': 'Menunggu',
+        'val': pending.toString(),
+        'color': Colors.orange,
+        'icon': Icons.hourglass_top_rounded,
+      },
+      {
+        'label': 'Selesai',
+        'val': done.toString(),
+        'color': Colors.green,
+        'icon': Icons.check_circle_outline,
+      },
+    ];
 
     return Row(
       children: items.map((it) {
@@ -272,16 +433,10 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   }
 
   Widget _buildProjectCard(JobContract p, Color accentColor, bool isDark) {
-    Color statusColor;
-    if (p.contractStatus == 'Selesai') {
-      statusColor = Colors.green;
-    } else if (p.contractStatus == 'Berjalan') {
-      statusColor = AppTheme.primaryPurple;
-    } else {
-      statusColor = Colors.orange;
-    }
-
-    final progressPct = 0; // Not available in JobContract directly
+    final statusColor = _getContractStatusColor(p.contractStatus);
+    final contractLabel = _getContractStatusLabel(p.contractStatus);
+    final workLabel = _getWorkStatusLabel(p.workStatus);
+    final progressPct = _getProgressPct(p.workStatus);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -326,7 +481,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  p.contractStatus,
+                  contractLabel,
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -360,7 +515,9 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               ),
               const SizedBox(width: 6),
               Text(
-                p.scheduledEndDate?.toString().split(' ')[0] ?? '-',
+                p.deadline != null
+                    ? '${p.deadline!.day}/${p.deadline!.month}/${p.deadline!.year}'
+                    : (p.scheduledEndDate?.toString().split(' ')[0] ?? '-'),
                 style: TextStyle(
                   fontSize: 12,
                   color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
@@ -373,7 +530,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Progres Pekerjaan',
+                'Progres: $workLabel',
                 style: TextStyle(
                   fontSize: 11,
                   color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
@@ -469,6 +626,42 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               style: TextStyle(
                 fontSize: 14,
                 color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(Color accentColor, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      child: Center(
+        child: Column(
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              size: 48,
+              color: AppTheme.error,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _errorMessage ?? 'Terjadi kesalahan saat memuat data',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _fetchRealtimeProjects,
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('Coba Lagi'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accentColor,
+                foregroundColor: Colors.white,
               ),
             ),
           ],

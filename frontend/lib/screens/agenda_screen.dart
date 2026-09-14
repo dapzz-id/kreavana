@@ -193,13 +193,19 @@ class _AgendaScreenState extends State<AgendaScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddAgendaModal(context, accentColor),
-        backgroundColor: accentColor,
-        icon: const Icon(Icons.event, color: Colors.white),
-        label: const Text(
-          'Tambah Agenda',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).size.width < 900 ? 76 : 0,
+        ),
+        child: FloatingActionButton.extended(
+          heroTag: 'agenda_fab',
+          onPressed: () => _showAddAgendaModal(context, accentColor),
+          backgroundColor: accentColor,
+          icon: const Icon(Icons.event, color: Colors.white),
+          label: const Text(
+            'Tambah Agenda',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
         ),
       ),
     );

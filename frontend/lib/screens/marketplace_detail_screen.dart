@@ -214,7 +214,7 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
     final isDark = theme.brightness == Brightness.dark;
     final heroHeight = 320.0;
     final parallaxOffset = (_scrollOffset * 0.4).clamp(0.0, heroHeight);
-    
+
     final canReview = _item?.canReview ?? false;
     final hasReviewed = _item?.hasReviewed ?? false;
 

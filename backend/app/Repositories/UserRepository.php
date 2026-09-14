@@ -22,6 +22,11 @@ class UserRepository extends BaseRepository
         return $this->model
             ->where('role', \App\Enums\RoleType::Creator)
             ->where('is_creator_approved', true)
+            ->with([
+                'addresses' => fn($q) => $q->where('is_default', true),
+                'creatorServices' => fn($q) => $q->where('status', 'active'),
+                'portfolioItems' => fn($q) => $q->limit(3),
+            ])
             ->orderBy('performance_boost', 'desc')
             ->orderBy('created_at', 'desc')
             ->limit($limit)

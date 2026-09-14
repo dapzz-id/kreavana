@@ -176,13 +176,19 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showNewCollabDialog(context, accentColor),
-        backgroundColor: accentColor,
-        icon: const Icon(Icons.group_add, color: Colors.white),
-        label: const Text(
-          'Ajukan Kolaborasi',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).size.width < 900 ? 76 : 0,
+        ),
+        child: FloatingActionButton.extended(
+          heroTag: 'kolaborasi_fab',
+          onPressed: () => _showNewCollabDialog(context, accentColor),
+          backgroundColor: accentColor,
+          icon: const Icon(Icons.group_add, color: Colors.white),
+          label: const Text(
+            'Ajukan Kolaborasi',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
         ),
       ),
     );
