@@ -14,7 +14,7 @@ trait ApiResponse
      * @param int $code
      * @return JsonResponse
      */
-    protected function successResponse(string $message, ?array $data = null, int $code = 200): JsonResponse
+    protected function successResponse(string $message, mixed $data = null, int $code = 200): JsonResponse
     {
         $response = [
             'status' => true,
@@ -22,7 +22,7 @@ trait ApiResponse
         ];
 
         if (!is_null($data)) {
-            $response['data'] = $data;
+            $response['data'] = $data instanceof \Illuminate\Contracts\Support\Arrayable ? $data->toArray() : $data;
         }
 
         return response()->json($response, $code);

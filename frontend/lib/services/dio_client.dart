@@ -27,14 +27,25 @@ class DioClient {
   static String get baseUrl {
     try {
       if (dotenv.isInitialized) {
-        return dotenv.env['API_BASE_URL'] ?? 'http://127.0.0.1:8000/api';
+        final envUrl = dotenv.env['API_BASE_URL'];
+        if (envUrl != null && envUrl.isNotEmpty) {
+          if (kIsWeb &&
+              Uri.base.scheme == 'https' &&
+              (envUrl.startsWith('http://127.0.0.1') || envUrl.startsWith('http://localhost'))) {
+            return 'https://670a-114-10-72-54.ngrok-free.app/api';
+          }
+          return envUrl;
+        }
       }
     } catch (_) {}
-    return 'http://127.0.0.1:8000/api';
+    return 'https://670a-114-10-72-54.ngrok-free.app/api';
   }
 
   DioClient._internal() {
-    final headers = <String, dynamic>{'Accept': 'application/json'};
+    final headers = <String, dynamic>{
+      'Accept': 'application/json',
+      'ngrok-skip-browser-warning': 'true',
+    };
     if (!kIsWeb) {
       headers['X-Client-Type'] = 'mobile';
     }

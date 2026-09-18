@@ -53,13 +53,16 @@ class AuthService {
         userDataToSave = Map<String, dynamic>.from(data['user'] as Map);
       }
 
-      final profileResult = await ApiService.get('profile/identity');
-      if (profileResult['status'] == true && profileResult['data'] != null) {
-        final pData = profileResult['data'] is Map<String, dynamic>
-            ? Map<String, dynamic>.from(profileResult['data'] as Map)
-            : null;
-        if (pData != null) {
-          userDataToSave = {...?userDataToSave, ...pData};
+      // If user data was not in login response, fallback to profile/identity
+      if (userDataToSave == null) {
+        final profileResult = await ApiService.get('profile/identity');
+        if (profileResult['status'] == true && profileResult['data'] != null) {
+          final pData = profileResult['data'] is Map<String, dynamic>
+              ? Map<String, dynamic>.from(profileResult['data'] as Map)
+              : null;
+          if (pData != null) {
+            userDataToSave = pData;
+          }
         }
       }
 
@@ -67,11 +70,16 @@ class AuthService {
         await saveUserData(userDataToSave);
         final user = UserModel.fromJson(userDataToSave);
 
-        RealtimeService().init(user.id ?? '', accessToken);
-        FCMService().init();
-
-        // Initialize E2EE Keys
-        EncryptionService().initializeKeys();
+        // Run non-critical background services asynchronously to prevent blocking login UI
+        Future.microtask(() {
+          try {
+            RealtimeService().init(user.id ?? '', accessToken);
+            FCMService().init();
+            Future.delayed(const Duration(seconds: 2), () {
+              EncryptionService().initializeKeys();
+            });
+          } catch (_) {}
+        });
 
         return {
           'success': true,

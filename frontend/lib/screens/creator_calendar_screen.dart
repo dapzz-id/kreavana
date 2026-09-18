@@ -2,11 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../app/theme.dart';
 import '../models/schedule_model.dart';
+import '../models/user_model.dart';
 import '../services/schedule_service.dart';
 import '../widgets/app_empty_state.dart';
 
 class CreatorCalendarScreen extends StatefulWidget {
-  const CreatorCalendarScreen({super.key});
+  final UserModel? user;
+  final ValueChanged<UserModel>? onUserUpdated;
+
+  const CreatorCalendarScreen({
+    super.key,
+    this.user,
+    this.onUserUpdated,
+  });
 
   @override
   State<CreatorCalendarScreen> createState() => _CreatorCalendarScreenState();
@@ -56,7 +64,7 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
       context: context,
       builder: (ctx) {
         return StatefulBuilder(
-          builder: (context, setStateDialog) {
+          builder: (dialogCtx, setStateDialog) {
             return AlertDialog(
               backgroundColor: AppTheme.cardLight,
               title: Text(
@@ -283,20 +291,60 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
     }
   }
 
+  String _formatDate(String rawDate) {
+    try {
+      final dt = DateTime.parse(rawDate).toLocal();
+      const monthNames = [
+        '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      ];
+      const dayNames = [
+        '', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'
+      ];
+      final dayName = dayNames[dt.weekday];
+      final monthName = monthNames[dt.month];
+      return '$dayName, ${dt.day} $monthName ${dt.year}';
+    } catch (_) {
+      return rawDate;
+    }
+  }
+
+  String _cleanIsoDate(String rawDate) {
+    try {
+      final dt = DateTime.parse(rawDate).toLocal();
+      return DateFormat('yyyy-MM-dd').format(dt);
+    } catch (_) {
+      return rawDate.split('T').first;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppTheme.surfaceLight,
+      backgroundColor: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
       appBar: AppBar(
-        title: const Text(
+        automaticallyImplyLeading: Navigator.canPop(context),
+        toolbarHeight: 70,
+        title: Text(
           'Jadwal & Ketersediaan',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: AppTheme.textDark,
+            color: isDark ? Colors.white : AppTheme.textDark,
           ),
         ),
-        backgroundColor: AppTheme.cardLight,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _loadSchedules,
+            tooltip: 'Perbarui Jadwal',
+          ),
+          const SizedBox(width: 8),
+        ],
+        backgroundColor: isDark ? AppTheme.cardDark : AppTheme.cardLight,
         elevation: 0,
       ),
       floatingActionButton: FloatingActionButton(
@@ -337,25 +385,57 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
               itemBuilder: (context, index) {
                 final s = _schedules[index];
                 return Card(
-                  color: AppTheme.cardLight,
+                  color: isDark ? AppTheme.cardDark : AppTheme.cardLight,
                   margin: const EdgeInsets.only(bottom: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: ListTile(
                     contentPadding: const EdgeInsets.all(16),
-                    title: Text(
-                      s.date,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textDark,
-                      ),
+                    title: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        Text(
+                          _formatDate(s.date),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : AppTheme.textDark,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white10 : Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: isDark
+                                  ? const Color(0xFF2D2A3E)
+                                  : Colors.grey.shade300,
+                            ),
+                          ),
+                          child: Text(
+                            _cleanIsoDate(s.date),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: isDark
+                                  ? Colors.white70
+                                  : Colors.grey.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         if (s.isUnavailable)
                           Container(
                             padding: const EdgeInsets.symmetric(

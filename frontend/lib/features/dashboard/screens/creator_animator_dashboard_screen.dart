@@ -89,23 +89,25 @@ class _CreatorAnimatorDashboardScreenState
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildHeroBanner(isDark),
+                                RepaintBoundary(child: _buildHeroBanner(isDark)),
                                 const SizedBox(height: 24),
-                                _buildMetricsRow(isDark),
+                                RepaintBoundary(child: _buildMetricsRow(isDark)),
                                 const SizedBox(height: 24),
-                                _buildRenderQueueSection(isDark),
+                                RepaintBoundary(child: _buildRenderQueueSection(isDark)),
                                 const SizedBox(height: 24),
-                                _buildShowreelSection(isDark),
+                                RepaintBoundary(child: _buildShowreelSection(isDark)),
                               ],
                             ),
                           ),
                           const SizedBox(width: 24),
                           Expanded(
                             flex: 3,
-                            child: SubRoleRightSidebar(
-                              user: widget.user,
-                              onUserUpdated: widget.onUserUpdated,
-                              isDark: isDark,
+                            child: RepaintBoundary(
+                              child: SubRoleRightSidebar(
+                                user: widget.user,
+                                onUserUpdated: widget.onUserUpdated,
+                                isDark: isDark,
+                              ),
                             ),
                           ),
                         ],
@@ -113,19 +115,21 @@ class _CreatorAnimatorDashboardScreenState
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildHeroBanner(isDark),
+                          RepaintBoundary(child: _buildHeroBanner(isDark)),
                           const SizedBox(height: 24),
-                          _buildMetricsRow(isDark),
+                          RepaintBoundary(child: _buildMetricsRow(isDark)),
                           const SizedBox(height: 24),
-                          SubRoleRightSidebar(
-                            user: widget.user,
-                            onUserUpdated: widget.onUserUpdated,
-                            isDark: isDark,
+                          RepaintBoundary(
+                            child: SubRoleRightSidebar(
+                              user: widget.user,
+                              onUserUpdated: widget.onUserUpdated,
+                              isDark: isDark,
+                            ),
                           ),
                           const SizedBox(height: 24),
-                          _buildRenderQueueSection(isDark),
+                          RepaintBoundary(child: _buildRenderQueueSection(isDark)),
                           const SizedBox(height: 24),
-                          _buildShowreelSection(isDark),
+                          RepaintBoundary(child: _buildShowreelSection(isDark)),
                         ],
                       ),
               ),

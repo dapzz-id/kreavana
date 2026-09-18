@@ -35,6 +35,8 @@ class ChatService {
     }
   }
 
+  static int _chatRetryCount = 0;
+
   /// Ensure Pusher client is created and connecting/connected.
   static void _ensureConnected() {
     if (_pusher != null) return;
@@ -52,13 +54,17 @@ class ChatService {
       connectionErrorHandler: (exception, trace, refresh) {
         debugPrint('Pusher chat connection error: $exception');
         _isConnected = false;
-        Future.delayed(const Duration(seconds: 5), refresh);
+        _chatRetryCount++;
+        if (_chatRetryCount <= 2) {
+          Future.delayed(Duration(seconds: _chatRetryCount * 5), refresh);
+        }
       },
     );
 
     _pusher!.onConnectionEstablished.listen((event) {
       debugPrint('✅ Pusher Chat Connection Established');
       _isConnected = true;
+      _chatRetryCount = 0;
       // Now subscribe to all channels that were queued while waiting for connection
       final pending = Set<String>.from(_pendingChatIds);
       _pendingChatIds.clear();

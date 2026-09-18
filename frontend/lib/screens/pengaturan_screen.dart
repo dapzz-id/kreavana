@@ -11,7 +11,8 @@ import 'addresses_screen.dart';
 import 'help_screen.dart';
 import 'privacy_policy_screen.dart';
 import 'storage_management_screen.dart';
-import 'creator_calendar_screen.dart';
+import 'package:go_router/go_router.dart';
+import '../services/app_router.dart';
 import '../widgets/kreavana_image.dart';
 
 class PengaturanScreen extends StatefulWidget {
@@ -238,12 +239,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                   subtitle: 'Atur kapasitas harian & ketersediaan',
                   isDark: isDark,
                   isLast: true,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const CreatorCalendarScreen(),
-                    ),
-                  ),
+                  onTap: () => context.go(AppRoutes.kapasitasJadwal),
                 ),
             ],
           ),

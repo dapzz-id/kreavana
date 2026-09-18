@@ -16,7 +16,6 @@ import '../screens/dokumen_instansi_screen.dart';
 import '../screens/pengumuman_publik_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/tim_hak_akses_screen.dart';
-import '../screens/creator_calendar_screen.dart';
 import 'creator_sidebar_menus.dart';
 
 class DesktopSidebarLayout extends StatefulWidget {
@@ -161,13 +160,13 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
       case 'pengaturan_akun':
         _goToMain(8);
         return;
+      case 'kapasitas_jadwal':
+        _goToMain(13);
+        return;
     }
     // Routes that push new screens (not in IndexedStack)
     Widget? destination;
     switch (route) {
-      case 'kapasitas_jadwal':
-        destination = const CreatorCalendarScreen();
-        break;
       case 'tender_kolaborasi':
         destination = TenderKolaborasiScreen(user: widget.user);
         break;

@@ -17,6 +17,23 @@ class ApiService {
   /// dan bisa dimuat dari Flutter Web.
   static String resolveAssetUrl(String? url) {
     if (url == null || url.isEmpty) return '';
+
+    // Relative path handling
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      final base = DioClient.baseUrl.replaceAll('/api', '');
+      final cleanPath = url.startsWith('/') ? url : '/$url';
+      if (cleanPath.startsWith('/portfolio/')) {
+        return '$base/api/portfolio-assets/${cleanPath.replaceFirst('/portfolio/', '')}';
+      }
+      return '$base$cleanPath';
+    }
+
+    // Rewrite localhost/127.0.0.1 to current DioClient.baseUrl when accessing remotely
+    if (url.contains('localhost:8000') || url.contains('127.0.0.1:8000')) {
+      final base = DioClient.baseUrl.replaceAll('/api', '');
+      url = url.replaceFirst(RegExp(r'https?://(localhost|127\.0\.0\.1):8000'), base);
+    }
+
     // Rewrite /storage/avatar/file.jpg → /api/avatars/file.jpg
     if (url.contains('/storage/avatar/') && !url.contains('/api/avatars/')) {
       return url.replaceFirst(RegExp(r'/storage/avatar/'), '/api/avatars/');
@@ -24,6 +41,10 @@ class ApiService {
     // Rewrite /avatars/file.jpg → /api/avatars/file.jpg
     if (url.contains('/avatars/') && !url.contains('/api/avatars/')) {
       return url.replaceFirst('/avatars/', '/api/avatars/');
+    }
+    // Rewrite /storage/portfolio/file.jpg → /api/portfolio-assets/file.jpg
+    if (url.contains('/storage/portfolio/') && !url.contains('/api/portfolio-assets/')) {
+      return url.replaceFirst(RegExp(r'/storage/portfolio/'), '/api/portfolio-assets/');
     }
     return url;
   }

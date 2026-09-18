@@ -11,6 +11,7 @@ class BadgeService extends ChangeNotifier {
   int _unreadMessages = 0;
   Timer? _timer;
   bool _polling = false;
+  bool _isFetching = false;
 
   int get unreadNotifications => _unreadNotifications;
   int get unreadMessages => _unreadMessages;
@@ -20,7 +21,7 @@ class BadgeService extends ChangeNotifier {
   String get unreadMessagesText =>
       _unreadMessages > 0 ? '$_unreadMessages' : '';
 
-  void startPolling({Duration interval = const Duration(seconds: 20)}) {
+  void startPolling({Duration interval = const Duration(seconds: 45)}) {
     if (_polling) return;
     _polling = true;
     fetchCounts();
@@ -34,20 +35,25 @@ class BadgeService extends ChangeNotifier {
   }
 
   Future<void> fetchCounts() async {
+    if (_isFetching) return;
+    _isFetching = true;
     try {
       final res = await ApiService.get('unread-count');
       if ((res['success'] == true || res['status'] == true) &&
           res['data'] != null) {
         final data = res['data'];
-        final newNotif = data['unread_notifications'] ?? 0;
-        final newChat = data['unread_messages'] ?? 0;
+        final newNotif = (data['unread_notifications'] as num?)?.toInt() ?? 0;
+        final newChat = (data['unread_messages'] as num?)?.toInt() ?? 0;
         if (newNotif != _unreadNotifications || newChat != _unreadMessages) {
           _unreadNotifications = newNotif;
           _unreadMessages = newChat;
           notifyListeners();
         }
       }
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      _isFetching = false;
+    }
   }
 
   void markNotificationsRead() {

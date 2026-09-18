@@ -37,6 +37,7 @@ class AppRoutes {
   static const adminResolution = '/resolusi';
   static const verifyEmail = '/verify-email';
   static const peluangProyek = '/peluang-proyek';
+  static const kapasitasJadwal = '/kapasitas-jadwal';
 }
 
 const _routeIndexMap = {
@@ -53,6 +54,7 @@ const _routeIndexMap = {
   AppRoutes.notifikasi: 10,
   AppRoutes.pesan: 11,
   AppRoutes.peluangProyek: 12,
+  AppRoutes.kapasitasJadwal: 13,
 };
 
 const _adminRouteIndexMap = {

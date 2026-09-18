@@ -9,7 +9,8 @@ import '../screens/proyek_saya_screen.dart';
 import '../screens/wallet_screen.dart';
 import '../screens/laporan_screen.dart';
 import '../screens/profile_screen.dart';
-import '../screens/creator_calendar_screen.dart';
+import 'package:go_router/go_router.dart';
+import '../services/app_router.dart';
 import '../services/profile_completeness_service.dart';
 
 class SubRoleRightSidebar extends StatelessWidget {
@@ -316,12 +317,7 @@ class SubRoleRightSidebar extends StatelessWidget {
                       ),
                     );
                   } else if (label == 'Atur Jadwal') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const CreatorCalendarScreen(),
-                      ),
-                    );
+                    context.go(AppRoutes.kapasitasJadwal);
                   } else if (label == 'Bayar DP' || label == 'Tarik Dana') {
                     Navigator.push(
                       context,

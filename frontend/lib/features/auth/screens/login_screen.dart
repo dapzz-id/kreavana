@@ -76,32 +76,33 @@ class _LoginScreenState extends State<LoginScreen>
       );
 
       if (mounted) {
-        setState(() => _isLoading = false);
         if (result['success'] == true) {
           currentUserNotifier.value = result['user'];
-          CallService().initPusher();
-          PushNotificationService.initialize();
           if (mounted) context.go(AppRoutes.beranda);
+          Future.microtask(() {
+            try {
+              CallService().initPusher();
+              PushNotificationService.initialize();
+            } catch (_) {}
+          });
         } else {
-          // Check for email_not_verified from API error response
-          final errorCode = result['error_code']?.toString() ?? '';
-          if (errorCode == 'email_not_verified') {
-            final email =
-                result['data']?['email']?.toString() ??
-                _usernameOrEmailController.text.trim();
-            if (mounted) {
-              // Auto-send new OTP and redirect to verification screen
+          setState(() {
+            _isLoading = false;
+            // Check for email_not_verified from API error response
+            final errorCode = result['error_code']?.toString() ?? '';
+            if (errorCode == 'email_not_verified') {
+              final email =
+                  result['data']?['email']?.toString() ??
+                  _usernameOrEmailController.text.trim();
               AuthService.resendVerificationCode(email: email);
               context.go(
                 AppRoutes.verifyEmail,
                 extra: {'email': email, 'autoResend': true},
               );
-            }
-          } else {
-            setState(() {
+            } else {
               _errorMessage = AppErrors.messageFromResult(result);
-            });
-          }
+            }
+          });
         }
       }
     }
@@ -146,9 +147,13 @@ class _LoginScreenState extends State<LoginScreen>
 
   void _completeGoogleSignIn(dynamic user) {
     currentUserNotifier.value = user;
-    CallService().initPusher();
-    PushNotificationService.initialize();
     if (mounted) context.go(AppRoutes.beranda);
+    Future.microtask(() {
+      try {
+        CallService().initPusher();
+        PushNotificationService.initialize();
+      } catch (_) {}
+    });
   }
 
   // void _showSetInitialPasswordDialog(dynamic user) {

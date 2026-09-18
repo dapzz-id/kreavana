@@ -90,17 +90,17 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildHeroBanner(isDark),
+                          RepaintBoundary(child: _buildHeroBanner(isDark)),
                           const SizedBox(height: 24),
-                          _buildMetricsRow(isDark),
+                          RepaintBoundary(child: _buildMetricsRow(isDark)),
                           const SizedBox(height: 24),
-                          _buildChartSection(isDark),
+                          RepaintBoundary(child: _buildChartSection(isDark)),
                           const SizedBox(height: 24),
-                          _buildPackagesSection(isDark),
+                          RepaintBoundary(child: _buildPackagesSection(isDark)),
                           const SizedBox(height: 24),
-                          _buildActiveProjectsSection(isDark),
+                          RepaintBoundary(child: _buildActiveProjectsSection(isDark)),
                           const SizedBox(height: 24),
-                          _buildCreatorRosterSection(isDark),
+                          RepaintBoundary(child: _buildCreatorRosterSection(isDark)),
                         ],
                       ),
                     ),
@@ -108,10 +108,12 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
                     // Right Sidebar Column (Profile completeness, Quick Actions, AI Tips)
                     Expanded(
                       flex: 3,
-                      child: SubRoleRightSidebar(
-                        user: widget.user,
-                        onUserUpdated: widget.onUserUpdated,
-                        isDark: isDark,
+                      child: RepaintBoundary(
+                        child: SubRoleRightSidebar(
+                          user: widget.user,
+                          onUserUpdated: widget.onUserUpdated,
+                          isDark: isDark,
+                        ),
                       ),
                     ),
                   ],
@@ -119,23 +121,25 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildHeroBanner(isDark),
+                    RepaintBoundary(child: _buildHeroBanner(isDark)),
                     const SizedBox(height: 24),
-                    _buildMetricsRow(isDark),
+                    RepaintBoundary(child: _buildMetricsRow(isDark)),
                     const SizedBox(height: 24),
-                    _buildChartSection(isDark),
+                    RepaintBoundary(child: _buildChartSection(isDark)),
                     const SizedBox(height: 24),
-                    SubRoleRightSidebar(
-                      user: widget.user,
-                      onUserUpdated: widget.onUserUpdated,
-                      isDark: isDark,
+                    RepaintBoundary(
+                      child: SubRoleRightSidebar(
+                        user: widget.user,
+                        onUserUpdated: widget.onUserUpdated,
+                        isDark: isDark,
+                      ),
                     ),
                     const SizedBox(height: 24),
-                    _buildPackagesSection(isDark),
+                    RepaintBoundary(child: _buildPackagesSection(isDark)),
                     const SizedBox(height: 24),
-                    _buildActiveProjectsSection(isDark),
+                    RepaintBoundary(child: _buildActiveProjectsSection(isDark)),
                     const SizedBox(height: 24),
-                    _buildCreatorRosterSection(isDark),
+                    RepaintBoundary(child: _buildCreatorRosterSection(isDark)),
                   ],
                 ),
         ),

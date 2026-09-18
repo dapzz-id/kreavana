@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../services/dio_client.dart';
 
@@ -70,6 +71,8 @@ class PortfolioService {
     String? category,
     String? description,
     File? imageFile,
+    Uint8List? imageBytes,
+    String? fileName,
     String? eventDate,
     String? location,
     String source = 'external',
@@ -86,8 +89,16 @@ class PortfolioService {
         if (clientName != null) 'client_name': clientName,
       };
 
-      if (imageFile != null) {
-        formDataMap['image'] = await MultipartFile.fromFile(imageFile.path);
+      if (imageBytes != null) {
+        formDataMap['image'] = MultipartFile.fromBytes(
+          imageBytes,
+          filename: fileName ?? 'portfolio_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        );
+      } else if (imageFile != null && !kIsWeb) {
+        formDataMap['image'] = await MultipartFile.fromFile(
+          imageFile.path,
+          filename: fileName,
+        );
       }
 
       final formData = FormData.fromMap(formDataMap);
@@ -98,6 +109,7 @@ class PortfolioService {
       }
       return null;
     } catch (e) {
+      debugPrint('Error adding portfolio: $e');
       return null;
     }
   }
