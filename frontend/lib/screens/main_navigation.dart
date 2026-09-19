@@ -79,6 +79,8 @@ class _MainNavigationState extends State<MainNavigation> {
   late UserModel _currentUser;
   int _currentIndex = 0;
   bool _isSidebarCollapsed = false;
+  bool _isMobileDrawerOpen = false;
+  final Set<int> _loadedScreenIndices = {};
   String? _activeGovRoute;
   final ScrollController _sidebarScrollController = ScrollController();
   static double _savedSidebarScrollOffset = 0;
@@ -88,6 +90,7 @@ class _MainNavigationState extends State<MainNavigation> {
     super.initState();
     _currentUser = widget.initialUser;
     _currentIndex = widget.initialIndex;
+    _loadedScreenIndices.add(widget.initialIndex);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _refreshProfile();
@@ -159,7 +162,7 @@ class _MainNavigationState extends State<MainNavigation> {
     bool isCollapsed = false,
     bool isMobileDrawer = false,
   }) {
-    final screensCount = _currentUser.isAdmin ? 5 : 13;
+    final screensCount = _currentUser.isAdmin ? 5 : 14;
     final activeIndex = _currentIndex >= screensCount ? 0 : _currentIndex;
     final isSelected = activeIndex == index;
     final activeColor = SubRoleThemeEngine.getAccentColorForUser(_currentUser);
@@ -337,6 +340,7 @@ class _MainNavigationState extends State<MainNavigation> {
     10: AppRoutes.notifikasi,
     11: AppRoutes.pesan,
     12: AppRoutes.peluangProyek,
+    13: AppRoutes.kapasitasJadwal,
   };
 
   static const _adminIndexRouteMap = {
@@ -353,6 +357,7 @@ class _MainNavigationState extends State<MainNavigation> {
     }
     setState(() {
       _currentIndex = index;
+      _loadedScreenIndices.add(index);
       _activeGovRoute = null;
     });
     // Sync URL di web
@@ -469,18 +474,14 @@ class _MainNavigationState extends State<MainNavigation> {
   }) {
     return [
       if (_isCreatorUser)
-        _buildSidebarLink(
+        _buildSidebarItem(
           icon: Icons.calendar_month_outlined,
+          activeIcon: Icons.calendar_month,
           label: 'Kapasitas & Jadwal',
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CreatorCalendarScreen()),
-            );
-          },
+          index: 13,
+          theme: theme,
           isDark: isDark,
           isCollapsed: isCollapsed,
-          isSelected: false,
           isMobileDrawer: isMobileDrawer,
         ),
       _buildSidebarItem(
@@ -566,6 +567,7 @@ class _MainNavigationState extends State<MainNavigation> {
       'agenda' => 4,
       'proyek' => 2,
       'kolaborasi' => 5,
+      'kapasitas_jadwal' => 13,
       _ => null,
     };
     if (index != null) _navigateToScreenIndex(index);
@@ -620,6 +622,7 @@ class _MainNavigationState extends State<MainNavigation> {
           'agenda' => 4,
           'proyek' => 2,
           'kolaborasi' => 5,
+          'kapasitas_jadwal' => 13,
           _ => null,
         };
         return _buildSidebarLink(
@@ -634,18 +637,14 @@ class _MainNavigationState extends State<MainNavigation> {
       }),
       const SizedBox(height: 18),
       _buildSidebarSectionHeader('LAINNYA', isDark, isCollapsed: isCollapsed),
-      _buildSidebarLink(
+      _buildSidebarItem(
         icon: Icons.calendar_month_outlined,
+        activeIcon: Icons.calendar_month,
         label: 'Kapasitas & Jadwal',
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const CreatorCalendarScreen()),
-          );
-        },
+        index: 13,
+        theme: theme,
         isDark: isDark,
         isCollapsed: isCollapsed,
-        isSelected: false,
         isMobileDrawer: isMobileDrawer,
       ),
       if (CreatorSidebarMenus.showKolaborasiInLainnya(_currentUser.subRole))
@@ -1506,6 +1505,65 @@ class _MainNavigationState extends State<MainNavigation> {
             sub == 'instansi');
   }
 
+  Widget _buildScreenAt(int index) {
+    if (!_loadedScreenIndices.contains(index)) {
+      return const SizedBox.shrink();
+    }
+
+    if (_currentUser.isAdmin) {
+      return switch (index) {
+        0 => AdminDashboardScreen(user: _currentUser),
+        1 => const AdminVerificationScreen(),
+        2 => AdminResolutionScreen(user: _currentUser),
+        3 => NotificationsScreen(userId: _currentUser.id ?? ''),
+        4 => ProfileScreen(
+            user: _currentUser,
+            onUserUpdated: _onUserUpdated,
+            onLogout: _onLogout,
+          ),
+        _ => const SizedBox.shrink(),
+      };
+    }
+
+    return switch (index) {
+      0 => _buildClientDashboardScreen(),
+      1 => ExploreScreen(user: _currentUser),
+      2 => ProyekSayaScreen(user: _currentUser),
+      3 => MarketplaceKaryaScreen(user: _currentUser),
+      4 => const AgendaScreen(),
+      5 => KolaborasiScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        ),
+      6 => UlasanReputasiScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        ),
+      7 => WalletScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        ),
+      8 => PengaturanScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+          onLogout: _onLogout,
+        ),
+      9 => ProfileScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+          onLogout: _onLogout,
+        ),
+      10 => NotificationsScreen(userId: _currentUser.id ?? ''),
+      11 => const DirectMessageScreen(),
+      12 => PeluangProyekScreen(user: _currentUser),
+      13 => CreatorCalendarScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        ),
+      _ => const SizedBox.shrink(),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -1513,46 +1571,14 @@ class _MainNavigationState extends State<MainNavigation> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 900;
 
-    final List<Widget> screens = _currentUser.isAdmin
-        ? [
-            AdminDashboardScreen(user: _currentUser),
-            const AdminVerificationScreen(),
-            AdminResolutionScreen(user: _currentUser),
-            NotificationsScreen(userId: _currentUser.id ?? ''),
-            ProfileScreen(
-              user: _currentUser,
-              onUserUpdated: _onUserUpdated,
-              onLogout: _onLogout,
-            ),
-          ]
-        : [
-            _buildClientDashboardScreen(), // 0
-            ExploreScreen(user: _currentUser), // 1
-            ProyekSayaScreen(user: _currentUser), // 2
-            MarketplaceKaryaScreen(user: _currentUser), // 3
-            const AgendaScreen(), // 4
-            const KolaborasiScreen(), // 5
-            const UlasanReputasiScreen(), // 6
-            WalletScreen(
-              user: _currentUser,
-              onUserUpdated: _onUserUpdated,
-            ), // 7
-            PengaturanScreen(
-              user: _currentUser,
-              onUserUpdated: _onUserUpdated,
-              onLogout: _onLogout,
-            ), // 8
-            ProfileScreen(
-              user: _currentUser,
-              onUserUpdated: _onUserUpdated,
-              onLogout: _onLogout,
-            ), // 9
-            NotificationsScreen(userId: _currentUser.id ?? ''), // 10
-            const DirectMessageScreen(), // 11
-            PeluangProyekScreen(user: _currentUser), // 12
-          ];
+    final totalScreenCount = _currentUser.isAdmin ? 5 : 14;
+    final activeIndex = _currentIndex >= totalScreenCount ? 0 : _currentIndex;
+    _loadedScreenIndices.add(activeIndex);
 
-    final activeIndex = _currentIndex >= screens.length ? 0 : _currentIndex;
+    final List<Widget> screens = List.generate(
+      totalScreenCount,
+      (index) => _buildScreenAt(index),
+    );
     final sidebarWidth = _isSidebarCollapsed ? 78.0 : 260.0;
     final bool hasPageFab =
         !_currentUser.isAdmin &&
@@ -1725,12 +1751,6 @@ class _MainNavigationState extends State<MainNavigation> {
             ),
           ],
         ),
-        floatingActionButton: AnimatedPadding(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          padding: EdgeInsets.only(bottom: hasPageFab ? 72.0 : 0.0),
-          child: const KreavanaAiFloatingWidget(),
-        ),
       );
     } else {
       // ─── Mobile Layout ─────────────────────────────────────────────────
@@ -1745,15 +1765,14 @@ class _MainNavigationState extends State<MainNavigation> {
 
       scaffoldWidget = Scaffold(
         drawer: _buildMobileDrawer(context, isDark, theme),
+        onDrawerChanged: (isOpen) {
+          setState(() {
+            _isMobileDrawerOpen = isOpen;
+          });
+        },
         body: SafeArea(
           bottom: false,
           child: IndexedStack(index: activeIndex, children: screens),
-        ),
-        floatingActionButton: AnimatedPadding(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          padding: EdgeInsets.only(bottom: hasPageFab ? 72.0 : 0.0),
-          child: const KreavanaAiFloatingWidget(),
         ),
         bottomNavigationBar: CustomBottomNavBar(
           currentIndex: mobileBottomNavIndex,
@@ -1822,6 +1841,12 @@ class _MainNavigationState extends State<MainNavigation> {
       );
     }
 
-    return scaffoldWidget;
+    return Stack(
+      children: [
+        scaffoldWidget,
+        if (!_isMobileDrawerOpen)
+          KreavanaAiFloatingWidget(hasPageFab: hasPageFab),
+      ],
+    );
   }
 }

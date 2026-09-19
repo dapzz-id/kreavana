@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:encrypt/encrypt.dart';
 import 'package:pointycastle/asymmetric/api.dart';
@@ -35,30 +34,40 @@ class EncryptionService {
       _publicKey != null ? _encodePublicKeyToPem(_publicKey!) : null;
   String? get deviceId => _deviceId;
 
+  bool _isInitializing = false;
+
   Future<void> initializeKeys() async {
-    final privKeyString = await _secureStorage.read(key: _privateKeyStorageKey);
-    final pubKeyString = await _secureStorage.read(key: _publicKeyStorageKey);
-    _deviceId = await _secureStorage.read(key: _deviceIdStorageKey);
+    if (isInitialized || _isInitializing) return;
+    _isInitializing = true;
+    try {
+      final privKeyString = await _secureStorage.read(key: _privateKeyStorageKey);
+      final pubKeyString = await _secureStorage.read(key: _publicKeyStorageKey);
+      _deviceId = await _secureStorage.read(key: _deviceIdStorageKey);
 
-    if (_deviceId == null) {
-      _deviceId = const Uuid().v4();
-      await _secureStorage.write(key: _deviceIdStorageKey, value: _deviceId);
-    }
+      if (_deviceId == null) {
+        _deviceId = const Uuid().v4();
+        await _secureStorage.write(key: _deviceIdStorageKey, value: _deviceId);
+      }
 
-    if (privKeyString != null && pubKeyString != null) {
-      final keys = await compute(_parseKeysIsolate, {
-        'private': privKeyString,
-        'public': pubKeyString,
-      });
-      _privateKey = keys['private'] as RSAPrivateKey;
-      _publicKey = keys['public'] as RSAPublicKey;
-    } else {
-      await generateNewKeyPair();
-    }
+      if (privKeyString != null && pubKeyString != null) {
+        final keys = await compute(_parseKeysIsolate, {
+          'private': privKeyString,
+          'public': pubKeyString,
+        });
+        _privateKey = keys['private'] as RSAPrivateKey;
+        _publicKey = keys['public'] as RSAPublicKey;
+      } else {
+        await generateNewKeyPair();
+      }
 
-    // Always upload public key to ensure backend has it
-    if (_publicKey != null) {
-      await uploadPublicKey(publicKeyPem!);
+      // Always upload public key to ensure backend has it
+      if (_publicKey != null) {
+        await uploadPublicKey(publicKeyPem!);
+      }
+    } catch (e) {
+      debugPrint('EncryptionService init error: $e');
+    } finally {
+      _isInitializing = false;
     }
   }
 
@@ -187,10 +196,6 @@ class EncryptionService {
   String _encodePublicKeyToPem(RSAPublicKey key) {
     return RsaKeyHelper().encodePublicKeyToPemPKCS1(key);
   }
-
-  String _encodePrivateKeyToPem(RSAPrivateKey key) {
-    return RsaKeyHelper().encodePrivateKeyToPemPKCS1(key);
-  }
 }
 
 Map<String, String> _generateRSAKeyPairIsolate(dynamic _) {
@@ -199,10 +204,11 @@ Map<String, String> _generateRSAKeyPairIsolate(dynamic _) {
   final seeds = List<int>.generate(32, (_) => random.nextInt(256));
   secureRandom.seed(crypto.KeyParameter(Uint8List.fromList(seeds)));
 
+  final bitLength = kIsWeb ? 1024 : 2048;
   final keyGen = RSAKeyGenerator()
     ..init(
       crypto.ParametersWithRandom(
-        RSAKeyGeneratorParameters(BigInt.parse('65537'), 2048, 64),
+        RSAKeyGeneratorParameters(BigInt.parse('65537'), bitLength, 64),
         secureRandom,
       ),
     );

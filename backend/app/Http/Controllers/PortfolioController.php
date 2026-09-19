@@ -26,23 +26,27 @@ class PortfolioController extends Controller
             'title' => 'required|string|max:255',
             'category' => 'nullable|string|max:100',
             'description' => 'nullable|string|max:500',
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:20480',
             'event_date' => 'nullable|date',
             'location' => 'nullable|string|max:150',
             'source' => 'nullable|in:external,internal',
             'client_name' => 'nullable|string|max:150',
         ]);
 
-        /** @var \App\Services\StorageService $storageService */
-        $storageService = app(\App\Services\StorageService::class);
-        $storageFile = $storageService->store($request->user(), $request->file('image'), 'portfolio', 'public');
+        $imageUrl = null;
+        if ($request->hasFile('image')) {
+            /** @var \App\Services\StorageService $storageService */
+            $storageService = app(\App\Services\StorageService::class);
+            $storageFile = $storageService->store($request->user(), $request->file('image'), 'portfolio', 'public');
+            $imageUrl = $storageFile->path;
+        }
 
         $item = PortfolioItem::create([
             'user_id' => $request->user()->id,
             'title' => $request->title,
             'category' => $request->category,
             'description' => $request->description,
-            'image_url' => $storageFile->path,
+            'image_url' => $imageUrl,
             'sort_order' => PortfolioItem::where('user_id', $request->user()->id)->count(),
             'event_date' => $request->event_date,
             'location' => $request->location,
@@ -66,7 +70,7 @@ class PortfolioController extends Controller
             'title' => 'sometimes|string|max:255',
             'category' => 'nullable|string|max:100',
             'description' => 'nullable|string|max:500',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:20480',
             'event_date' => 'nullable|date',
             'location' => 'nullable|string|max:150',
             'source' => 'nullable|in:external,internal',
@@ -127,6 +131,47 @@ class PortfolioController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Urutan portfolio berhasil diperbarui.',
+        ]);
+    }
+
+    /**
+     * Public: serve portfolio image with CORS headers.
+     */
+    public function showAsset(Request $request, string $file)
+    {
+        if (!preg_match('/^[a-zA-Z0-9_\-\.]+\.(jpg|jpeg|png|gif|webp|svg|heic)$/i', $file)) {
+            abort(404);
+        }
+
+        $possiblePaths = [
+            storage_path('app/public/portfolio/' . $file),
+            public_path('storage/portfolio/' . $file),
+            public_path('portfolio/' . $file),
+        ];
+
+        $path = null;
+        foreach ($possiblePaths as $p) {
+            if (file_exists($p)) {
+                $path = $p;
+                break;
+            }
+        }
+
+        if (!$path) {
+            abort(404);
+        }
+
+        $mime = match (strtolower(pathinfo($file, PATHINFO_EXTENSION))) {
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'svg' => 'image/svg+xml',
+            default => 'image/jpeg',
+        };
+
+        return response()->file($path, [
+            'Content-Type' => $mime,
+            'Cache-Control' => 'public, max-age=31536000',
         ]);
     }
 }

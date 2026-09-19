@@ -36,17 +36,22 @@ class RealtimeService {
           ) ??
           'http://127.0.0.1:8000/api/broadcasting/auth';
 
+      int realtimeRetryCount = 0;
       _pusher = PusherChannelsClient.websocket(
         options: options,
         connectionErrorHandler: (exception, trace, refresh) {
           debugPrint('Realtime connection error: $exception');
           _subscribed = false;
-          Future.delayed(const Duration(seconds: 3), refresh);
+          realtimeRetryCount++;
+          if (realtimeRetryCount <= 2) {
+            Future.delayed(Duration(seconds: realtimeRetryCount * 5), refresh);
+          }
         },
       );
 
       _pusher!.onConnectionEstablished.listen((_) {
         debugPrint('✅ Realtime Connected');
+        realtimeRetryCount = 0;
         _subscribeToUser(userId, token, authEndpoint);
       });
 

@@ -28,4 +28,18 @@ class PortfolioItem extends Model
         'user_id' => 'string',
         'event_date' => 'date',
     ];
+
+    public function getImageUrlAttribute($value)
+    {
+        if (!$value) {
+            return null;
+        }
+
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return $value;
+        }
+
+        $filename = basename($value);
+        return url('api/portfolio-assets/' . $filename);
+    }
 }

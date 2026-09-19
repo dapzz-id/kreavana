@@ -7,7 +7,6 @@ import '../models/user_model.dart';
 import '../models/opportunity_model.dart';
 import '../services/opportunity_service.dart';
 import '../widgets/opportunity_detail_sheet.dart';
-import '../widgets/skeleton_box.dart';
 import '../widgets/responsive_modal.dart';
 
 class PeluangLokasiScreen extends StatefulWidget {
@@ -84,7 +83,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
         _selectedCityName = null;
         _userLocation = null;
       });
-      _mapController.move(const LatLng(-2.5, 118.0), 5.0);
+      _animatedMapMove(const LatLng(-2.5, 118.0), 5.0);
       _loadLocations();
       return;
     }
@@ -96,7 +95,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
       _selectedCityName = city['name'] as String;
       _userLocation = loc;
     });
-    _mapController.move(loc, 13.0);
+    _animatedMapMove(loc, 13.0);
     _loadLocations();
   }
 
@@ -212,7 +211,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
       try {
         position = await Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(
-            timeLimit: Duration(seconds: 8),
+            timeLimit: Duration(seconds: 3),
           ),
         );
       } catch (_) {
@@ -228,7 +227,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
         });
 
         if (autoCenter) {
-          _mapController.move(loc, 13.0);
+          _animatedMapMove(loc, 13.0);
         }
 
         // Re-load locations if radius filter is active
@@ -243,25 +242,67 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
     }
   }
 
+  void _animatedMapMove(LatLng destLocation, double destZoom) {
+    try {
+      final camera = _mapController.camera;
+      final latTween = Tween<double>(
+        begin: camera.center.latitude,
+        end: destLocation.latitude,
+      );
+      final lngTween = Tween<double>(
+        begin: camera.center.longitude,
+        end: destLocation.longitude,
+      );
+      final zoomTween = Tween<double>(
+        begin: camera.zoom,
+        end: destZoom,
+      );
+
+      final controller = AnimationController(
+        duration: const Duration(milliseconds: 300),
+        vsync: this,
+      );
+      final Animation<double> animation = CurvedAnimation(
+        parent: controller,
+        curve: Curves.easeInOutCubic,
+      );
+
+      controller.addListener(() {
+        _mapController.move(
+          LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
+          zoomTween.evaluate(animation),
+        );
+      });
+
+      animation.addStatusListener((status) {
+        if (status == AnimationStatus.completed ||
+            status == AnimationStatus.dismissed) {
+          controller.dispose();
+        }
+      });
+
+      controller.forward();
+    } catch (_) {
+      _mapController.move(destLocation, destZoom);
+    }
+  }
+
   void _zoomIn() {
     final targetZoom = (_mapController.camera.zoom + 1.0).clamp(3.0, 18.0);
-    _mapController.move(_mapController.camera.center, targetZoom);
-    if (mounted) setState(() {});
+    _animatedMapMove(_mapController.camera.center, targetZoom);
   }
 
   void _zoomOut() {
     final targetZoom = (_mapController.camera.zoom - 1.0).clamp(3.0, 18.0);
-    _mapController.move(_mapController.camera.center, targetZoom);
-    if (mounted) setState(() {});
+    _animatedMapMove(_mapController.camera.center, targetZoom);
   }
 
   void _resetCenter(bool isMobile) {
     if (_userLocation != null) {
-      _mapController.move(_userLocation!, 13.0);
+      _animatedMapMove(_userLocation!, 13.0);
     } else {
-      _mapController.move(const LatLng(-2.5, 118.0), isMobile ? 4.5 : 5.0);
+      _animatedMapMove(const LatLng(-2.5, 118.0), isMobile ? 4.5 : 5.0);
     }
-    if (mounted) setState(() {});
   }
 
   Future<void> _loadLocations() async {
@@ -591,89 +632,31 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
 
           // ── Map area ────────────────────────────────────────────────────
           Expanded(
-            child: _isLoading
-                ? Stack(
-                    children: [
-                      FlutterMap(
-                        options: const MapOptions(
-                          initialCenter: LatLng(-2.5, 118.0),
-                          initialZoom: 5.0,
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate:
-                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.kreavana.app',
-                          ),
-                        ],
-                      ),
-                      Center(
-                        child: Container(
-                          margin: const EdgeInsets.all(24),
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF1E1E2C)
-                                : Colors.white.withValues(alpha: 0.95),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 12,
-                              ),
-                            ],
-                          ),
-                          child: const Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SkeletonBox(
-                                width: 48,
-                                height: 48,
-                                shape: BoxShape.circle,
-                              ),
-                              SizedBox(height: 12),
-                              SkeletonBox(
-                                width: 140,
-                                height: 18,
-                                borderRadius: 6,
-                              ),
-                              SizedBox(height: 8),
-                              SkeletonBox(
-                                width: 100,
-                                height: 14,
-                                borderRadius: 4,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                : Stack(
-                    children: [
-                      // ── Map ─────────────────────────────────────────────
-                      FlutterMap(
-                        mapController: _mapController,
-                        options: MapOptions(
-                          initialCenter: _userLocation ?? const LatLng(-2.5, 118.0),
-                          initialZoom: _userLocation != null ? 13.0 : (isMobile ? 4.5 : 5.0),
-                          minZoom: 3,
-                          maxZoom: 18,
-                          interactionOptions: const InteractionOptions(
-                            flags: InteractiveFlag.all,
-                          ),
-                          onPositionChanged: (camera, hasGesture) {
-                            if (mounted && hasGesture) {
-                              setState(() {});
-                            }
-                          },
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate:
-                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.kreavana.app',
-                          ),
+            child: Stack(
+              children: [
+                // ── Persistent Single Map ────────────────────────────────
+                FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(
+                    initialCenter: _userLocation ?? const LatLng(-2.5, 118.0),
+                    initialZoom: _userLocation != null ? 13.0 : (isMobile ? 4.5 : 5.0),
+                    minZoom: 3,
+                    maxZoom: 18,
+                    interactionOptions: const InteractionOptions(
+                      flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                    ),
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.kreavana.app',
+                      maxNativeZoom: 19,
+                      maxZoom: 18,
+                      minZoom: 3,
+                      keepBuffer: 3,
+                      panBuffer: 1,
+                    ),
 
                           // Radius circle layer if active
                           if (_userLocation != null && _selectedRadiusKm != null)
@@ -840,8 +823,60 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                         ],
                       ),
 
+                      // ── Non-blocking floating loading indicator ─────────
+                      if (_isLoading)
+                        Positioned(
+                          top: 14,
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? const Color(0xFF1E1E2C)
+                                    : Colors.white.withValues(alpha: 0.95),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.15),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor:
+                                          AlwaysStoppedAnimation<Color>(Colors.teal),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Memuat peluang...',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
                       // ── Empty state ──────────────────────────────────────
-                      if (filtered.isEmpty)
+                      if (!_isLoading && filtered.isEmpty)
                         Center(
                           child: Container(
                             padding: const EdgeInsets.all(20),

@@ -3,9 +3,10 @@ import '../app/theme.dart';
 import '../services/ai_service.dart';
 
 /// Floating Blackbox.AI-style Assistant Widget.
-/// Responsive for Mobile & Desktop with monochromatic violet styling and fully active action buttons.
+/// Draggable across Mobile & Desktop viewport with violet styling, bounds clamping, and active action buttons.
 class KreavanaAiFloatingWidget extends StatefulWidget {
-  const KreavanaAiFloatingWidget({super.key});
+  final bool hasPageFab;
+  const KreavanaAiFloatingWidget({super.key, this.hasPageFab = false});
 
   @override
   State<KreavanaAiFloatingWidget> createState() =>
@@ -13,6 +14,15 @@ class KreavanaAiFloatingWidget extends StatefulWidget {
 }
 
 class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
+  static Offset? _savedPosition;
+  Offset? _position;
+  bool _isDragging = false;
+  bool _hasDragged = false;
+  Offset? _dragStartPos;
+
+  static const double _buttonWidth = 156.0;
+  static const double _buttonHeight = 46.0;
+
   void _toggleWidget() {
     final isDesktop = MediaQuery.of(context).size.width >= 768;
     if (isDesktop) {
@@ -47,27 +57,154 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return FloatingActionButton.extended(
-      heroTag: 'kreavana_ai_fab',
-      onPressed: _toggleWidget,
-      backgroundColor: AppTheme.primaryPurple,
-      elevation: 6,
-      icon: ClipRRect(
-        borderRadius: BorderRadius.circular(6),
-        child: Image.asset(
-          'assets/brandlogo.png',
-          width: 22,
-          height: 22,
-          fit: BoxFit.contain,
-        ),
-      ),
-      label: const Text(
-        'Kreavana AI',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 13,
-          letterSpacing: -0.2,
+    final screenSize = MediaQuery.of(context).size;
+    final isDesktop = screenSize.width >= 768;
+
+    final maxLeft =
+        (screenSize.width - _buttonWidth - 12.0).clamp(12.0, double.infinity);
+    final maxTop =
+        (screenSize.height - _buttonHeight - 12.0).clamp(12.0, double.infinity);
+
+    // Calculate or clamp position to viewport
+    if (_savedPosition != null) {
+      _position = Offset(
+        _savedPosition!.dx.clamp(12.0, maxLeft),
+        _savedPosition!.dy.clamp(12.0, maxTop),
+      );
+    } else {
+      final initialBottomOffset = isDesktop
+          ? (widget.hasPageFab ? 96.0 : 32.0)
+          : (widget.hasPageFab ? 150.0 : 88.0);
+      _position = Offset(
+        (screenSize.width - _buttonWidth - 24.0).clamp(12.0, maxLeft),
+        (screenSize.height - _buttonHeight - initialBottomOffset)
+            .clamp(12.0, maxTop),
+      );
+    }
+
+    return Positioned(
+      left: _position!.dx,
+      top: _position!.dy,
+      child: MouseRegion(
+        cursor:
+            _isDragging ? SystemMouseCursors.grabbing : SystemMouseCursors.grab,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onPanStart: (details) {
+            _dragStartPos = details.globalPosition;
+            _hasDragged = false;
+            setState(() {
+              _isDragging = true;
+            });
+          },
+          onPanUpdate: (details) {
+            if (_dragStartPos != null) {
+              if ((details.globalPosition - _dragStartPos!).distance > 4.0) {
+                _hasDragged = true;
+              }
+            }
+            final nextX =
+                (_position!.dx + details.delta.dx).clamp(12.0, maxLeft);
+            final nextY =
+                (_position!.dy + details.delta.dy).clamp(12.0, maxTop);
+            setState(() {
+              _position = Offset(nextX, nextY);
+              _savedPosition = _position;
+            });
+          },
+          onPanEnd: (details) {
+            setState(() {
+              _isDragging = false;
+            });
+            // Delay resetting _hasDragged slightly to prevent synthetic click events
+            Future.delayed(const Duration(milliseconds: 150), () {
+              if (mounted) {
+                _hasDragged = false;
+              }
+            });
+          },
+          onPanCancel: () {
+            setState(() {
+              _isDragging = false;
+            });
+            _hasDragged = false;
+          },
+          onTap: () {
+            if (!_hasDragged) {
+              _toggleWidget();
+            }
+          },
+          child: Material(
+            color: Colors.transparent,
+            elevation: _isDragging ? 12 : 6,
+            shadowColor: AppTheme.primaryPurple.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(24),
+            child: AnimatedScale(
+              scale: _isDragging ? 1.04 : 1.0,
+              duration: const Duration(milliseconds: 120),
+              child: Container(
+                width: _buttonWidth,
+                height: _buttonHeight,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryPurple,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryPurple.withValues(
+                        alpha: _isDragging ? 0.6 : 0.35,
+                      ),
+                      blurRadius: _isDragging ? 16 : 10,
+                      offset: Offset(0, _isDragging ? 6 : 4),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.asset(
+                        'assets/brandlogo.png',
+                        width: 22,
+                        height: 22,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Kreavana AI',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          letterSpacing: -0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Icon(
+                      Icons.drag_indicator_rounded,
+                      size: 16,
+                      color: Colors.white.withValues(alpha: 0.65),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

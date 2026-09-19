@@ -53,13 +53,13 @@ class _TourismDashboardScreenState extends State<TourismDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeroBanner(isDark),
+              RepaintBoundary(child: _buildHeroBanner(isDark)),
               const SizedBox(height: 24),
-              _buildMetricCards(isDark),
+              RepaintBoundary(child: _buildMetricCards(isDark)),
               const SizedBox(height: 24),
-              _buildTopThreeColumns(isDark),
+              RepaintBoundary(child: _buildTopThreeColumns(isDark)),
               const SizedBox(height: 24),
-              _buildBottomThreeColumns(isDark), // <-- perbaikan utama
+              RepaintBoundary(child: _buildBottomThreeColumns(isDark)),
             ],
           ),
         ),

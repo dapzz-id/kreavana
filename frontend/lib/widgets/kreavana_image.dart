@@ -96,11 +96,24 @@ class _KreavanaImageState extends State<KreavanaImage> {
 
     final resolvedUrl = ApiService.resolveAssetUrl(widget.url!);
 
+    final int cacheWidth = widget.isAvatar
+        ? 160
+        : (widget.width != null
+            ? (widget.width! * 2).clamp(120, 800).toInt()
+            : 600);
+    final int? cacheHeight = widget.isAvatar
+        ? 160
+        : (widget.height != null
+            ? (widget.height! * 2).clamp(120, 800).toInt()
+            : null);
+
     return CachedNetworkImage(
       imageUrl: resolvedUrl,
       width: widget.width,
       height: widget.height,
       fit: widget.fit,
+      memCacheWidth: cacheWidth,
+      memCacheHeight: cacheHeight,
       placeholder: (context, url) =>
           widget.placeholder ?? Container(color: Colors.grey.shade100),
       errorWidget: (context, url, error) {

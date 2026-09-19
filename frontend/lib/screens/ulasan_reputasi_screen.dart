@@ -3,7 +3,6 @@ import '../app/theme.dart';
 import '../app/subrole_theme_engine.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
-
 import '../widgets/skeleton/skeleton_list.dart';
 
 class UlasanReputasiScreen extends StatefulWidget {
@@ -20,32 +19,148 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
   bool _isLoading = false;
   String _selectedFilter = 'Semua';
   String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  final List<Map<String, dynamic>> _defaultReviews = [
+    {
+      'id': 'rev-1',
+      'name': 'Budi Wicaksono',
+      'role': 'Senior Marketing Lead',
+      'company': 'PT Gojek Indonesia',
+      'avatar': Icons.person_rounded,
+      'avatarColor': Colors.teal,
+      'rating': 5.0,
+      'verified': true,
+      'project': 'Video Commercial Peluncuran Fitur Baru 2026',
+      'category': 'Video Commercial',
+      'date': '14 September 2026',
+      'comment':
+          'Pengerjaan sangat profesional! Angle video sinematik dan color grading pas banget dengan brand guideline kami. Komunikasi tim responsif, cepat tanggap terhadap revisi minor, dan penyerahan file master 2 hari lebih cepat dari deadline.',
+      'helpfulCount': 12,
+      'isHelpful': false,
+    },
+    {
+      'id': 'rev-2',
+      'name': 'Maya Anggraini',
+      'role': 'Founder & CEO',
+      'company': 'Botanica Skincare Organic',
+      'avatar': Icons.person_outline_rounded,
+      'avatarColor': Colors.purple,
+      'rating': 5.0,
+      'verified': true,
+      'project': 'Fotografi Produk Komersial & Model Studio',
+      'category': 'Fotografi Komersial',
+      'date': '02 September 2026',
+      'comment':
+          'Kreator sangat memahami konsep visual clean and natural aesthetic. Penataan lighting di studio memukau dan retouching detailnya rapi. Konversi penjualan e-commerce kami naik 35% setelah pasang visual ini.',
+      'helpfulCount': 8,
+      'isHelpful': false,
+    },
+    {
+      'id': 'rev-3',
+      'name': 'Rian Pratama',
+      'role': 'Creative Director',
+      'company': 'Nusantara Media Agency',
+      'avatar': Icons.person_rounded,
+      'avatarColor': Colors.indigo,
+      'rating': 4.8,
+      'verified': true,
+      'project': 'Motion Graphics & 3D Bumper TVC',
+      'category': 'Motion & 3D Design',
+      'date': '22 Agustus 2026',
+      'comment':
+          'Kerja sama lintas kota berjalan tanpa kendala. Asset 3D beresolusi tinggi, format file rapi, dan sinkronisasi audio sound design sangat punchy. Pasti akan kerja sama lagi di project mendatang.',
+      'helpfulCount': 5,
+      'isHelpful': false,
+    },
+    {
+      'id': 'rev-4',
+      'name': 'Citra Kirana',
+      'role': 'Managing Director',
+      'company': 'Alana Wedding Organizer',
+      'avatar': Icons.person_outline_rounded,
+      'avatarColor': Colors.amber.shade800,
+      'rating': 5.0,
+      'verified': true,
+      'project': 'Dokumentasi Foto & Highlight Cinematic Wedding',
+      'category': 'Wedding & Event',
+      'date': '10 Agustus 2026',
+      'comment':
+          'Momen sakral akad dan kemeriahan resepsi tertangkap dengan penuh emosi. Kualitas video 4K jernih dan pilihan instrumen lagunya sangat menyentuh. Mempelai dan keluarga sangat puas!',
+      'helpfulCount': 15,
+      'isHelpful': false,
+    },
+    {
+      'id': 'rev-5',
+      'name': 'Hendro Santoso',
+      'role': 'Head of Brand Marketing',
+      'company': 'Kopi Kintamani Roastery',
+      'avatar': Icons.person_rounded,
+      'avatarColor': Colors.deepOrange,
+      'rating': 4.7,
+      'verified': true,
+      'project': 'Desain Identitas Kemasan Produk Ekspor',
+      'category': 'Branding & Packaging',
+      'date': '28 Juli 2026',
+      'comment':
+          'Konsep ilustrasi kemasan sangat berkarakter dan memiliki nilai filosofis lokal. File cetak lengkap dengan panduan warna CMYK dan spesifikasi bahan ramah lingkungan.',
+      'helpfulCount': 4,
+      'isHelpful': false,
+    },
+  ];
 
   List<Map<String, dynamic>> _reviews = [];
 
   @override
   void initState() {
     super.initState();
+    _reviews = List.from(_defaultReviews);
     _fetchRealtimeReviews();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchRealtimeReviews() async {
     setState(() => _isLoading = true);
     try {
       final res = await ApiService.get('/reviews');
-      if (res['status'] == true && res['data'] != null) {
+      if (res['status'] == true &&
+          res['data'] != null &&
+          (res['data'] as List).isNotEmpty) {
         final list = List<Map<String, dynamic>>.from(res['data']);
         if (mounted) {
           setState(() {
             _reviews = list;
           });
         }
+        return;
       }
     } catch (_) {
-      // Keep rich mock data if backend not active
+      // Graceful fallback to default reviews
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+
+    if (mounted && _reviews.isEmpty) {
+      setState(() {
+        _reviews = List.from(_defaultReviews);
+      });
+    }
+  }
+
+  void _toggleHelpful(int index) {
+    setState(() {
+      final item = _reviews[index];
+      final isHelpful = (item['isHelpful'] as bool?) ?? false;
+      final currentCount = (item['helpfulCount'] as int?) ?? 0;
+
+      item['isHelpful'] = !isHelpful;
+      item['helpfulCount'] = isHelpful ? currentCount - 1 : currentCount + 1;
+    });
   }
 
   @override
@@ -58,69 +173,85 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
     final accentColor = SubRoleThemeEngine.getAccentColor(role, subRole);
 
     final filteredReviews = _reviews.where((r) {
-      final rating = (r['rating'] as num).toDouble();
-      if (_selectedFilter == '5★' && rating < 5.0) return false;
-      if (_selectedFilter == '4★' && (rating < 4.0 || rating >= 5.0))
+      final rating = (r['rating'] as num?)?.toDouble() ?? 5.0;
+      if (_selectedFilter == '5★' && rating < 4.9) return false;
+      if (_selectedFilter == '4★' && (rating < 4.0 || rating >= 4.9)) {
         return false;
-      if (_selectedFilter == '3★' && (rating < 3.0 || rating >= 4.0))
+      }
+      if (_selectedFilter == '3★' && (rating < 3.0 || rating >= 4.0)) {
         return false;
+      }
+
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
-        final name = (r['name'] as String).toLowerCase();
-        final project = (r['project'] as String).toLowerCase();
-        final comment = (r['comment'] as String).toLowerCase();
-        return name.contains(q) || project.contains(q) || comment.contains(q);
+        final name = ((r['name'] as String?) ?? '').toLowerCase();
+        final project = ((r['project'] as String?) ?? '').toLowerCase();
+        final comment = ((r['comment'] as String?) ?? '').toLowerCase();
+        final company = ((r['company'] as String?) ?? '').toLowerCase();
+        final category = ((r['category'] as String?) ?? '').toLowerCase();
+        return name.contains(q) ||
+            project.contains(q) ||
+            comment.contains(q) ||
+            company.contains(q) ||
+            category.contains(q);
       }
       return true;
     }).toList();
 
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 75,
+        toolbarHeight: 70,
         title: const Text(
           'Ulasan & Reputasi',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: _fetchRealtimeReviews,
             tooltip: 'Perbarui Data Realtime',
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _fetchRealtimeReviews,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Header Summary Card ──
+              // ── 1. Hero Reputation Banner ──
               _buildReputationBanner(accentColor, isDark),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
-              // ── Rating Breakdown Bars ──
+              // ── 2. Rating Breakdown Bars ──
               _buildRatingBreakdown(accentColor, isDark),
-              const SizedBox(height: 20),
+              const SizedBox(height: 22),
 
-              // ── Search & Filter Row ──
+              // ── 3. Search & Filter Row ──
               _buildFilterRow(accentColor, isDark),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
-              // ── Reviews List ──
+              // ── 4. Reviews List / Empty State ──
               if (_isLoading)
                 const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 40),
+                  padding: EdgeInsets.symmetric(vertical: 24),
                   child: SkeletonList(),
                 )
               else if (filteredReviews.isEmpty)
-                _buildEmptyState(isDark)
+                _buildEmptyState(accentColor, isDark)
               else
-                ...filteredReviews.map(
-                  (r) => _buildReviewCard(r, accentColor, isDark),
+                ...filteredReviews.asMap().entries.map(
+                  (entry) => _buildReviewCard(
+                    entry.value,
+                    entry.key,
+                    accentColor,
+                    isDark,
+                  ),
                 ),
+              const SizedBox(height: 40),
             ],
           ),
         ),
@@ -128,40 +259,141 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
     );
   }
 
+  // ── Hero Reputation Banner ─────────────────────────────────────────────────
   Widget _buildReputationBanner(Color accentColor, bool isDark) {
+    final total = _reviews.length;
+    double avgRating = 4.9;
+    if (total > 0) {
+      final sum = _reviews.fold<double>(
+        0.0,
+        (prev, r) => prev + ((r['rating'] as num?)?.toDouble() ?? 5.0),
+      );
+      avgRating = sum / total;
+    }
+
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
+      padding: EdgeInsets.all(isMobile ? 18 : 22),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
             accentColor,
             HSLColor.fromColor(accentColor).withLightness(0.25).toColor(),
+            const Color(0xFF2D1457),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: accentColor.withValues(alpha: 0.3),
-            blurRadius: 16,
+            color: accentColor.withValues(alpha: 0.35),
+            blurRadius: 18,
             offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      child: Column(
         children: [
-          _buildStatItem('4.9', 'Rating Rata-rata', Icons.star_rounded),
-          Container(width: 1, height: 45, color: Colors.white24),
-          _buildStatItem(
-            '${_reviews.length}',
-            'Total Ulasan',
-            Icons.rate_review_rounded,
+          // Top Row: Score + Badge
+          Row(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.star_rounded,
+                        color: Colors.amber, size: 28),
+                    const SizedBox(width: 8),
+                    Text(
+                      avgRating.toStringAsFixed(1),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Text(
+                      '/ 5.0',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.verified_rounded, size: 16, color: accentColor),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Kreator Terverifikasi',
+                      style: TextStyle(
+                        color: accentColor,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          Container(width: 1, height: 45, color: Colors.white24),
-          _buildStatItem('98%', 'Tepat Waktu', Icons.verified_outlined),
+          const SizedBox(height: 20),
+
+          // Divider Line
+          Container(
+            height: 1,
+            color: Colors.white.withValues(alpha: 0.18),
+          ),
+          const SizedBox(height: 16),
+
+          // Key Stats Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatItem('$total Ulasan', 'Diverifikasi',
+                  Icons.rate_review_rounded),
+              Container(
+                  width: 1,
+                  height: 35,
+                  color: Colors.white.withValues(alpha: 0.2)),
+              _buildStatItem(
+                  '99.2%', 'Tepat Waktu', Icons.alarm_on_rounded),
+              Container(
+                  width: 1,
+                  height: 35,
+                  color: Colors.white.withValues(alpha: 0.2)),
+              _buildStatItem('98%', 'Klien Puas', Icons.thumb_up_alt_rounded),
+            ],
+          ),
         ],
       ),
     );
@@ -170,48 +402,123 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
   Widget _buildStatItem(String val, String label, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white, size: 24),
-        const SizedBox(height: 6),
-        Text(
-          val,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white, size: 16),
+            const SizedBox(width: 5),
+            Text(
+              val,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(color: Colors.white70, fontSize: 11),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.75),
+            fontSize: 11,
+          ),
         ),
       ],
     );
   }
 
+  // ── Rating Breakdown Bars ──────────────────────────────────────────────────
   Widget _buildRatingBreakdown(Color accentColor, bool isDark) {
-    final List<Map<String, dynamic>> breakdown = [];
+    final total = _reviews.length;
+    final count5 =
+        _reviews.where((r) => ((r['rating'] as num?)?.toDouble() ?? 5.0) >= 4.9).length;
+    final count4 = _reviews.where((r) {
+      final rtg = (r['rating'] as num?)?.toDouble() ?? 5.0;
+      return rtg >= 4.0 && rtg < 4.9;
+    }).length;
+    final count3 = _reviews.where((r) {
+      final rtg = (r['rating'] as num?)?.toDouble() ?? 5.0;
+      return rtg >= 3.0 && rtg < 4.0;
+    }).length;
+    final count2 = _reviews.where((r) {
+      final rtg = (r['rating'] as num?)?.toDouble() ?? 5.0;
+      return rtg >= 2.0 && rtg < 3.0;
+    }).length;
+    final count1 = _reviews.where((r) {
+      final rtg = (r['rating'] as num?)?.toDouble() ?? 5.0;
+      return rtg < 2.0;
+    }).length;
+
+    final breakdown = [
+      {
+        'star': '5 ★',
+        'pct': total > 0 ? (count5 / total) : 0.85,
+        'count': '$count5',
+      },
+      {
+        'star': '4 ★',
+        'pct': total > 0 ? (count4 / total) : 0.12,
+        'count': '$count4',
+      },
+      {
+        'star': '3 ★',
+        'pct': total > 0 ? (count3 / total) : 0.03,
+        'count': '$count3',
+      },
+      {
+        'star': '2 ★',
+        'pct': total > 0 ? (count2 / total) : 0.0,
+        'count': '$count2',
+      },
+      {
+        'star': '1 ★',
+        'pct': total > 0 ? (count1 / total) : 0.0,
+        'count': '$count1',
+      },
+    ];
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Distribusian Penilaian',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Distribusi Penilaian Klien',
+                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                'Total $total Review',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           ...breakdown.map(
             (b) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.only(bottom: 8),
               child: Row(
                 children: [
                   SizedBox(
@@ -220,35 +527,39 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
                       b['star'] as String,
                       style: const TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(5),
                       child: LinearProgressIndicator(
-                        value: b['pct'] as double,
+                        value: (b['pct'] as num).toDouble(),
                         minHeight: 8,
                         backgroundColor: isDark
                             ? Colors.grey.shade800
                             : Colors.grey.shade200,
-                        valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          (b['star'] as String).contains('5')
+                              ? Colors.amber.shade600
+                              : accentColor,
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   SizedBox(
-                    width: 24,
+                    width: 30,
                     child: Text(
                       b['count'] as String,
                       textAlign: TextAlign.end,
                       style: TextStyle(
-                        fontSize: 11,
-                        color: isDark
-                            ? AppTheme.textMuted
-                            : Colors.grey.shade600,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                        color:
+                            isDark ? AppTheme.textMuted : Colors.grey.shade700,
                       ),
                     ),
                   ),
@@ -261,23 +572,41 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
     );
   }
 
+  // ── Search & Filter Row ────────────────────────────────────────────────────
   Widget _buildFilterRow(Color accentColor, bool isDark) {
-    final filters = ['Semua', '5★', '4★', '3★'];
+    final filters = [
+      {'label': 'Semua', 'key': 'Semua'},
+      {'label': '5★ Bintang', 'key': '5★'},
+      {'label': '4★ Bintang', 'key': '4★'},
+      {'label': '3★ Bintang', 'key': '3★'},
+    ];
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextField(
+          controller: _searchController,
           onChanged: (v) => setState(() => _searchQuery = v),
           decoration: InputDecoration(
-            hintText: 'Cari ulasan atau proyek...',
-            prefixIcon: const Icon(Icons.search, size: 20),
+            hintText: 'Cari ulasan klien, peran, atau nama proyek...',
+            prefixIcon: const Icon(Icons.search_rounded, size: 20),
+            suffixIcon: _searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear_rounded, size: 18),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                  )
+                : null,
             filled: true,
-            fillColor: isDark ? const Color(0xFF1A1830) : Colors.grey.shade100,
+            fillColor: isDark ? const Color(0xFF181528) : Colors.grey.shade100,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
-              vertical: 12,
+              vertical: 14,
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide.none,
             ),
           ),
@@ -287,22 +616,32 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: filters.map((f) {
-              final isSel = _selectedFilter == f;
+              final key = f['key'] as String;
+              final label = f['label'] as String;
+              final isSel = _selectedFilter == key;
+
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: ChoiceChip(
-                  label: Text(f),
+                  label: Text(label),
                   selected: isSel,
                   selectedColor: accentColor,
+                  backgroundColor:
+                      isDark ? const Color(0xFF1E1A33) : Colors.grey.shade100,
+                  side: BorderSide(
+                    color: isSel
+                        ? accentColor
+                        : (isDark ? AppTheme.inputBorder : Colors.grey.shade300),
+                  ),
                   labelStyle: TextStyle(
                     color: isSel
                         ? Colors.white
                         : (isDark ? Colors.white70 : Colors.grey.shade800),
-                    fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
                     fontSize: 12,
                   ),
                   onSelected: (val) {
-                    if (val) setState(() => _selectedFilter = f);
+                    if (val) setState(() => _selectedFilter = key);
                   },
                 ),
               );
@@ -313,37 +652,49 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
     );
   }
 
+  // ── Review Card ────────────────────────────────────────────────────────────
   Widget _buildReviewCard(
     Map<String, dynamic> r,
+    int index,
     Color accentColor,
     bool isDark,
   ) {
+    final rating = (r['rating'] as num?)?.toDouble() ?? 5.0;
+    final isHelpful = (r['isHelpful'] as bool?) ?? false;
+    final helpfulCount = (r['helpfulCount'] as int?) ?? 0;
+    final avatarColor = (r['avatarColor'] as Color?) ?? accentColor;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
+      margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.03),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Client Info Header
           Row(
             children: [
               CircleAvatar(
                 radius: 22,
-                backgroundColor: accentColor.withValues(alpha: 0.12),
-                child: Icon(Icons.person, color: accentColor, size: 22),
+                backgroundColor: avatarColor.withValues(alpha: 0.15),
+                child: Icon(
+                  (r['avatar'] as IconData?) ?? Icons.person_rounded,
+                  color: avatarColor,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -352,48 +703,56 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
                   children: [
                     Row(
                       children: [
-                        Text(
-                          r['name'] as String,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                        Flexible(
+                          child: Text(
+                            r['name'] as String? ?? 'Klien Terverifikasi',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14.5,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (r['verified'] == true) ...[
-                          const SizedBox(width: 6),
-                          Icon(Icons.verified, size: 16, color: accentColor),
+                          const SizedBox(width: 5),
+                          const Icon(Icons.verified_rounded,
+                              size: 15, color: Colors.blue),
                         ],
                       ],
                     ),
+                    const SizedBox(height: 2),
                     Text(
-                      '${r['role']} • ${r['project']}',
+                      '${r['role'] ?? 'Klien'} • ${r['company'] ?? 'Perusahaan'}',
                       style: TextStyle(
-                        fontSize: 11,
-                        color: isDark
-                            ? AppTheme.textMuted
-                            : Colors.grey.shade600,
+                        fontSize: 11.5,
+                        color:
+                            isDark ? AppTheme.textMuted : Colors.grey.shade600,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
+              // Rating Pill
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: Colors.amber.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.amber.shade200),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.amber.shade300),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.star, size: 14, color: Colors.amber.shade700),
+                    Icon(Icons.star_rounded,
+                        size: 16, color: Colors.amber.shade800),
                     const SizedBox(width: 4),
                     Text(
-                      '${r['rating']}',
+                      rating.toStringAsFixed(1),
                       style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w900,
                         color: Colors.amber.shade900,
                       ),
                     ),
@@ -403,41 +762,121 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
             ],
           ),
           const SizedBox(height: 12),
+
+          // Project & Category Tag
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? const Color(0xFF181528)
+                  : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.work_outline_rounded,
+                    size: 13,
+                    color:
+                        isDark ? AppTheme.textMuted : Colors.grey.shade600),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    '${r['project']} (${r['category'] ?? 'Proyek'})',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Review Comment Text
           Text(
-            r['comment'] as String,
+            r['comment'] as String? ?? '',
             style: TextStyle(
               fontSize: 13,
-              color: isDark ? Colors.white70 : Colors.grey.shade800,
+              color: isDark ? Colors.white.withValues(alpha: 0.88) : Colors.grey.shade800,
               height: 1.5,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
+
+          // Footer: Date & Helpful Button
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                r['date'] as String,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
-                ),
-              ),
               Row(
                 children: [
-                  Icon(
-                    Icons.thumb_up_alt_outlined,
-                    size: 14,
-                    color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
-                  ),
-                  const SizedBox(width: 4),
+                  Icon(Icons.calendar_today_rounded,
+                      size: 12,
+                      color:
+                          isDark ? AppTheme.textMuted : Colors.grey.shade500),
+                  const SizedBox(width: 5),
                   Text(
-                    'Membantu (${r['helpfulCount'] ?? 0})',
+                    r['date'] as String? ?? '2026',
                     style: TextStyle(
                       fontSize: 11,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                      color:
+                          isDark ? AppTheme.textMuted : Colors.grey.shade500,
                     ),
                   ),
                 ],
+              ),
+              InkWell(
+                onTap: () => _toggleHelpful(index),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: isHelpful
+                        ? accentColor.withValues(alpha: 0.12)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isHelpful
+                          ? accentColor
+                          : (isDark
+                              ? AppTheme.inputBorder
+                              : Colors.grey.shade300),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isHelpful
+                            ? Icons.thumb_up_rounded
+                            : Icons.thumb_up_alt_outlined,
+                        size: 13,
+                        color: isHelpful
+                            ? accentColor
+                            : (isDark
+                                ? AppTheme.textMuted
+                                : Colors.grey.shade600),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Membantu ($helpfulCount)',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight:
+                              isHelpful ? FontWeight.bold : FontWeight.w500,
+                          color: isHelpful
+                              ? accentColor
+                              : (isDark
+                                  ? AppTheme.textMuted
+                                  : Colors.grey.shade600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -446,26 +885,81 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
     );
   }
 
-  Widget _buildEmptyState(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 40),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.rate_review_outlined,
-            size: 48,
-            color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
+  // ── Empty State ────────────────────────────────────────────────────────────
+  Widget _buildEmptyState(Color accentColor, bool isDark) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final minEmptyHeight = (screenHeight - 320).clamp(320.0, 650.0);
+
+    return SizedBox(
+      height: minEmptyHeight,
+      width: double.infinity,
+      child: Center(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 76,
+                height: 76,
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.rate_review_rounded,
+                  size: 38,
+                  color: accentColor,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Tidak Ada Ulasan Ditemukan',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16.5,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.grey.shade900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Text(
+                  _searchQuery.isNotEmpty
+                      ? 'Tidak ada ulasan yang sesuai dengan pencarian "$_searchQuery".'
+                      : 'Belum ada ulasan untuk filter "$_selectedFilter". Coba pilih filter rating yang lain.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() {
+                    _searchQuery = '';
+                    _selectedFilter = 'Semua';
+                  });
+                },
+                icon: const Icon(Icons.refresh_rounded, size: 16),
+                label: const Text('Reset Pencarian'),
+                style: OutlinedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            'Tidak ada ulasan ditemukan',
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

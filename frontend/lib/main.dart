@@ -32,6 +32,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   ServicesBinding.instance.channelBuffers.resize('flutter/lifecycle', 64);
 
+  // Optimasi Image Cache untuk mencegah OOM / GPU Context Lost di Web & Mobile
+  PaintingBinding.instance.imageCache.maximumSize = 80;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 48 * 1024 * 1024; // 48 MB
+
   // Pakai path-based URL (/login) bukan hash-based (/#/login).
   // No-op di platform native (Windows/Android/iOS) via conditional import.
   configureUrlStrategy();
@@ -118,18 +122,22 @@ void main() async {
       if (user != null) {
         currentUserNotifier.value = user;
         authSignedOutNotifier.value = false;
-        CallService().initPusher();
 
-        final token = await SecureStorageService().getToken();
-        if (token != null) {
-          RealtimeService().init(user.id ?? '', token);
-        }
-
-        FCMService().init();
-        BadgeService().startPolling();
-
-        // Initialize E2EE Keys
-        EncryptionService().initializeKeys();
+        // Initialize background services asynchronously to prevent blocking initial app render
+        Future.microtask(() async {
+          try {
+            CallService().initPusher();
+            final token = await SecureStorageService().getToken();
+            if (token != null) {
+              RealtimeService().init(user.id ?? '', token);
+            }
+            FCMService().init();
+            BadgeService().startPolling();
+            Future.delayed(const Duration(seconds: 2), () {
+              EncryptionService().initializeKeys();
+            });
+          } catch (_) {}
+        });
       }
     }
   } catch (_) {

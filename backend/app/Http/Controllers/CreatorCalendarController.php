@@ -24,7 +24,7 @@ class CreatorCalendarController extends Controller
             ->orderBy('date', 'asc')
             ->get();
 
-        return $this->successResponse('Jadwal kreator berhasil diambil.', $schedules);
+        return $this->successResponse('Jadwal kreator berhasil diambil.', $schedules->toArray());
     }
 
     public function storeOrUpdate(Request $request)
@@ -62,7 +62,7 @@ class CreatorCalendarController extends Controller
             ]
         );
 
-        return $this->successResponse('Jadwal berhasil disimpan.', $schedule);
+        return $this->successResponse('Jadwal berhasil disimpan.', $schedule->toArray());
     }
 
     public function destroy(string $dateStr)

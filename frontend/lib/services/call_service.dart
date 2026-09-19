@@ -112,6 +112,8 @@ class CallService extends ChangeNotifier {
     }
   }
 
+  int _callRetryCount = 0;
+
   /// Initialize Pusher for Call Signaling
   Future<void> initPusher() async {
     final currentUser = await AuthService.getCurrentUser();
@@ -131,11 +133,15 @@ class CallService extends ChangeNotifier {
           connectionErrorHandler: (exception, trace, refresh) {
             debugPrint('Pusher call connection error: $exception');
             _callChannelSubscribed = false;
-            Future.delayed(const Duration(seconds: 3), refresh);
+            _callRetryCount++;
+            if (_callRetryCount <= 2) {
+              Future.delayed(Duration(seconds: _callRetryCount * 5), refresh);
+            }
           },
         );
         _pusher!.onConnectionEstablished.listen((event) {
           debugPrint('Pusher Call Connection Event: Connected');
+          _callRetryCount = 0;
           _subscribeCallChannel(currentUser.id ?? '');
         });
         _pusher!.connect();

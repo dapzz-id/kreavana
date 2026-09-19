@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../../../services/badge_service.dart';
 import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
@@ -60,10 +61,19 @@ class _CreatorDroneDashboardScreenState
     final result = await FilePicker.pickFiles(
       type: FileType.image,
       allowMultiple: false,
+      withData: true,
     );
     if (result == null || result.files.isEmpty) return;
 
-    final file = File(result.files.first.path!);
+    final picked = result.files.first;
+    Uint8List? bytes = picked.bytes;
+    if (bytes == null || bytes.isEmpty) {
+      try {
+        bytes = await picked.readAsBytes();
+      } catch (_) {}
+    }
+    final path = picked.path;
+    final fileName = picked.name;
     final nameController = TextEditingController();
 
     if (!mounted) return;
@@ -73,6 +83,7 @@ class _CreatorDroneDashboardScreenState
         title: const Text('Nama Portofolio'),
         content: TextField(
           controller: nameController,
+          autofocus: true,
           decoration: const InputDecoration(
             hintText: 'Contoh: Color Grading Sinematik',
             border: OutlineInputBorder(),
@@ -95,11 +106,28 @@ class _CreatorDroneDashboardScreenState
 
     final item = await PortfolioService.addPortfolio(
       title: name,
-      imageFile: file,
+      imageBytes: bytes,
+      fileName: fileName,
+      imageFile: (!kIsWeb && path != null) ? File(path) : null,
     );
 
-    if (item != null && mounted) {
-      setState(() => _portfolioItems.add(item));
+    if (mounted) {
+      if (item != null) {
+        setState(() => _portfolioItems.add(item));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Portofolio berhasil ditambahkan!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal menambahkan portofolio. Pastikan ukuran file < 20MB.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -125,15 +153,15 @@ class _CreatorDroneDashboardScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeroBanner(isDark),
+              RepaintBoundary(child: _buildHeroBanner(isDark)),
               const SizedBox(height: 24),
-              _buildMetricCards(isDark),
+              RepaintBoundary(child: _buildMetricCards(isDark)),
               const SizedBox(height: 24),
-              _buildRecommendationsSection(isDark),
+              RepaintBoundary(child: _buildRecommendationsSection(isDark)),
               const SizedBox(height: 24),
-              _buildMiddleThreeColumns(isDark),
+              RepaintBoundary(child: _buildMiddleThreeColumns(isDark)),
               const SizedBox(height: 24),
-              _buildGrowthRoadmap(isDark),
+              RepaintBoundary(child: _buildGrowthRoadmap(isDark)),
             ],
           ),
         ),

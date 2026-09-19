@@ -21,6 +21,12 @@ Route::get('avatars/{file}', [AvatarController::class, 'show'])
     ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class)
     ->withoutMiddleware(\App\Http\Middleware\TouchLastOnline::class);
 
+// Public: serve portfolio images with CORS headers (for Flutter Web)
+Route::get('portfolio-assets/{file}', [PortfolioController::class, 'showAsset'])
+    ->where('file', '.*')
+    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class)
+    ->withoutMiddleware(\App\Http\Middleware\TouchLastOnline::class);
+
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
