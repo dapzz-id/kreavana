@@ -49,15 +49,28 @@ jobs:
           VPS_HOST: ${{ secrets.KREAVANA_DEV_VPS_HOST }}
           VPS_PORT: ${{ secrets.KREAVANA_DEV_VPS_PORT }}
         run: |
+          set -e
+
           mkdir -p ~/.ssh
 
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/kreavana_dev_ci
           chmod 600 ~/.ssh/kreavana_dev_ci
 
+          echo "=== PRIVATE KEY FINGERPRINT ==="
+          ssh-keygen -y -f ~/.ssh/kreavana_dev_ci | ssh-keygen -lf -
+
           eval "$(ssh-agent -s)"
 
           printf '%s\n' "$SSH_PASSPHRASE" | \
             ssh-add ~/.ssh/kreavana_dev_ci
+
+          echo "=== SSH AGENT KEYS ==="
+          ssh-add -l -E sha256
+
+          echo "=== SSH CONFIG ==="
+          ssh -G \
+            -p "$VPS_PORT" \
+            "$VPS_HOST" | grep -E '^(user|hostname|port|identityfile|identitiesonly) '
 
           ssh-keyscan -p "$VPS_PORT" "$VPS_HOST" \
             >> ~/.ssh/known_hosts
