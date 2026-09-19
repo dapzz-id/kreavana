@@ -18,9 +18,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ============================================================
+      # 1. CHECKOUT
+      # ============================================================
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ============================================================
+      # 2. FLUTTER
+      # ============================================================
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -34,6 +40,9 @@ jobs:
         working-directory: frontend
         run: flutter pub get
 
+      # ============================================================
+      # 3. BUILD FLUTTER WEB - DEVELOPMENT
+      # ============================================================
       - name: Build Flutter Web DEV
         working-directory: frontend
         run: |
@@ -42,6 +51,9 @@ jobs:
             --dart-define=ENV=development \
             --no-wasm-dry-run
 
+      # ============================================================
+      # 4. PREPARE SSH
+      # ============================================================
       - name: Prepare SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.KREAVANA_DEV_CI_PRIVATE_KEY }}
@@ -52,52 +64,108 @@ jobs:
           set -e
 
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
 
+          # Write DEV CI private key
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/kreavana_dev_ci
           chmod 600 ~/.ssh/kreavana_dev_ci
 
+          # Start SSH agent
           eval "$(ssh-agent -s)"
 
+          # Load private key into agent
           printf '%s\n' "$SSH_PASSPHRASE" | \
             ssh-add ~/.ssh/kreavana_dev_ci
 
           echo "=== SSH AGENT KEYS ==="
           ssh-add -l -E sha256
 
-          ssh-keyscan -p "$VPS_PORT" "$VPS_HOST" \
+          # Add VPS host key
+          ssh-keyscan \
+            -p "$VPS_PORT" \
+            "$VPS_HOST" \
             >> ~/.ssh/known_hosts
 
+          chmod 600 ~/.ssh/known_hosts
+
+      # ============================================================
+      # 5. TEST SSH AUTHENTICATION
+      # ============================================================
+      - name: Test SSH to DEV VPS
+        env:
+          VPS_HOST: ${{ secrets.KREAVANA_DEV_VPS_HOST }}
+          VPS_PORT: ${{ secrets.KREAVANA_DEV_VPS_PORT }}
+          VPS_USER: ${{ secrets.KREAVANA_DEV_VPS_USER }}
+        run: |
+          set -e
+
+          echo "=== TESTING SSH CONNECTION ==="
+
+          ssh \
+            -o IdentitiesOnly=yes \
+            -o PreferredAuthentications=publickey \
+            -o PasswordAuthentication=no \
+            -i ~/.ssh/kreavana_dev_ci \
+            -p "$VPS_PORT" \
+            "$VPS_USER@$VPS_HOST" \
+            "echo 'SSH_AUTH_OK'"
+
+      # ============================================================
+      # 6. PREPARE TEMPORARY DIRECTORY
+      # ============================================================
       - name: Prepare temporary directory on VPS
         env:
           VPS_HOST: ${{ secrets.KREAVANA_DEV_VPS_HOST }}
           VPS_PORT: ${{ secrets.KREAVANA_DEV_VPS_PORT }}
           VPS_USER: ${{ secrets.KREAVANA_DEV_VPS_USER }}
         run: |
+          set -e
+
           ssh \
+            -o IdentitiesOnly=yes \
+            -o PreferredAuthentications=publickey \
+            -o PasswordAuthentication=no \
             -i ~/.ssh/kreavana_dev_ci \
             -p "$VPS_PORT" \
             "$VPS_USER@$VPS_HOST" \
-            "rm -rf /var/www/kreavana-dev-build && mkdir -p /var/www/kreavana-dev-build"
+            "rm -rf /var/www/kreavana-dev-build && \
+             mkdir -p /var/www/kreavana-dev-build"
 
+      # ============================================================
+      # 7. UPLOAD FLUTTER WEB
+      # ============================================================
       - name: Upload Flutter Web
         env:
           VPS_HOST: ${{ secrets.KREAVANA_DEV_VPS_HOST }}
           VPS_PORT: ${{ secrets.KREAVANA_DEV_VPS_PORT }}
           VPS_USER: ${{ secrets.KREAVANA_DEV_VPS_USER }}
         run: |
+          set -e
+
           scp \
+            -o IdentitiesOnly=yes \
+            -o PreferredAuthentications=publickey \
+            -o PasswordAuthentication=no \
             -i ~/.ssh/kreavana_dev_ci \
             -P "$VPS_PORT" \
             -r frontend/build/web/. \
             "$VPS_USER@$VPS_HOST:/var/www/kreavana-dev-build/"
 
+      # ============================================================
+      # 8. UPDATE DEV WEB
+      # ============================================================
       - name: Update DEV Web
         env:
           VPS_HOST: ${{ secrets.KREAVANA_DEV_VPS_HOST }}
           VPS_PORT: ${{ secrets.KREAVANA_DEV_VPS_PORT }}
           VPS_USER: ${{ secrets.KREAVANA_DEV_VPS_USER }}
         run: |
+          set -e
+
           ssh \
+            -o IdentitiesOnly=yes \
+            -o PreferredAuthentications=publickey \
+            -o PasswordAuthentication=no \
             -i ~/.ssh/kreavana_dev_ci \
             -p "$VPS_PORT" \
             "$VPS_USER@$VPS_HOST" \
@@ -106,13 +174,21 @@ jobs:
              cp -a /var/www/kreavana-dev-build/. \
              /var/www/kreavana-dev/frontend/build/web/"
 
+      # ============================================================
+      # 9. VERIFY DEV WEB
+      # ============================================================
       - name: Verify DEV Web
         env:
           VPS_HOST: ${{ secrets.KREAVANA_DEV_VPS_HOST }}
           VPS_PORT: ${{ secrets.KREAVANA_DEV_VPS_PORT }}
           VPS_USER: ${{ secrets.KREAVANA_DEV_VPS_USER }}
         run: |
+          set -e
+
           ssh \
+            -o IdentitiesOnly=yes \
+            -o PreferredAuthentications=publickey \
+            -o PasswordAuthentication=no \
             -i ~/.ssh/kreavana_dev_ci \
             -p "$VPS_PORT" \
             "$VPS_USER@$VPS_HOST" \
