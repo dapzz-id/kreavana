@@ -6,6 +6,7 @@ import 'package:dart_pusher_channels/dart_pusher_channels.dart';
 import 'api_service.dart';
 import 'badge_service.dart';
 import 'encryption_service.dart';
+import 'pusher_config.dart';
 
 class ChatService {
   static PusherChannelsClient? _pusher;
@@ -45,12 +46,7 @@ class ChatService {
     _subscribedChatIds.clear();
 
     _pusher = PusherChannelsClient.websocket(
-      options: PusherChannelsOptions.fromHost(
-        scheme: 'ws',
-        host: ApiService.hostIp,
-        port: 8080,
-        key: ApiService.keyPusher,
-      ),
+      options: PusherConfig.options,
       connectionErrorHandler: (exception, trace, refresh) {
         debugPrint('Pusher chat connection error: $exception');
         _isConnected = false;

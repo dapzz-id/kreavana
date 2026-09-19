@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'api_service.dart';
 import '../features/auth/services/auth_service.dart';
 import 'badge_service.dart';
+import 'pusher_config.dart';
 
 class PushNotificationService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
@@ -51,12 +52,7 @@ class PushNotificationService {
       }
 
       _pusher = PusherChannelsClient.websocket(
-        options: PusherChannelsOptions.fromHost(
-          scheme: 'ws',
-          host: ApiService.hostIp,
-          port: 8080,
-          key: ApiService.keyPusher,
-        ),
+        options: PusherConfig.options,
         connectionErrorHandler: (exception, trace, refresh) {
           debugPrint('Pusher notification connection error: $exception');
           Future.delayed(const Duration(seconds: 5), refresh);

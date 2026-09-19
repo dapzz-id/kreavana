@@ -14,6 +14,7 @@ import 'api_service.dart';
 import '../features/auth/services/auth_service.dart';
 import '../main.dart';
 import '../screens/call_screen.dart';
+import 'pusher_config.dart';
 
 class CallService extends ChangeNotifier {
   static final CallService _instance = CallService._internal();
@@ -124,12 +125,7 @@ class CallService extends ChangeNotifier {
     try {
       if (_pusher == null) {
         _pusher = PusherChannelsClient.websocket(
-          options: PusherChannelsOptions.fromHost(
-            scheme: 'ws',
-            host: ApiService.hostIp,
-            port: 8080,
-            key: ApiService.keyPusher,
-          ),
+          options: PusherConfig.options,
           connectionErrorHandler: (exception, trace, refresh) {
             debugPrint('Pusher call connection error: $exception');
             _callChannelSubscribed = false;
