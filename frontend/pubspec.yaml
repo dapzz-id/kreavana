@@ -106,7 +106,6 @@ flutter:
   assets:
     - assets/
     - .env.development
-    - .env.production
 
   # To add assets to your application, add an assets section, like this:
   # assets:
