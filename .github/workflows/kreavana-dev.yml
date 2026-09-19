@@ -1,0 +1,115 @@
+name: Kreavana DEV
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: kreavana-dev-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-update:
+    name: Build & Update Kreavana DEV
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Flutter pub get
+        working-directory: frontend
+        run: flutter pub get
+
+      - name: Build Flutter Web DEV
+        working-directory: frontend
+        run: |
+          flutter build web \
+            --release \
+            --dart-define=ENV=development \
+            --no-wasm-dry-run
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.KREAVANA_DEV_CI_PRIVATE_KEY }}
+          SSH_PASSPHRASE: ${{ secrets.KREAVANA_DEV_CI_PASSPHRASE }}
+          VPS_HOST: ${{ secrets.KREAVANA_DEV_VPS_HOST }}
+          VPS_PORT: ${{ secrets.KREAVANA_DEV_VPS_PORT }}
+        run: |
+          mkdir -p ~/.ssh
+
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/kreavana_dev_ci
+          chmod 600 ~/.ssh/kreavana_dev_ci
+
+          eval "$(ssh-agent -s)"
+
+          printf '%s\n' "$SSH_PASSPHRASE" | \
+            ssh-add ~/.ssh/kreavana_dev_ci
+
+          ssh-keyscan -p "$VPS_PORT" "$VPS_HOST" \
+            >> ~/.ssh/known_hosts
+
+      - name: Prepare temporary directory on VPS
+        env:
+          VPS_HOST: ${{ secrets.KREAVANA_DEV_VPS_HOST }}
+          VPS_PORT: ${{ secrets.KREAVANA_DEV_VPS_PORT }}
+          VPS_USER: ${{ secrets.KREAVANA_DEV_VPS_USER }}
+        run: |
+          ssh \
+            -i ~/.ssh/kreavana_dev_ci \
+            -p "$VPS_PORT" \
+            "$VPS_USER@$VPS_HOST" \
+            "rm -rf /var/www/kreavana-dev-build && mkdir -p /var/www/kreavana-dev-build"
+
+      - name: Upload Flutter Web
+        env:
+          VPS_HOST: ${{ secrets.KREAVANA_DEV_VPS_HOST }}
+          VPS_PORT: ${{ secrets.KREAVANA_DEV_VPS_PORT }}
+          VPS_USER: ${{ secrets.KREAVANA_DEV_VPS_USER }}
+        run: |
+          scp \
+            -i ~/.ssh/kreavana_dev_ci \
+            -P "$VPS_PORT" \
+            -r frontend/build/web/. \
+            "$VPS_USER@$VPS_HOST:/var/www/kreavana-dev-build/"
+
+      - name: Update DEV Web
+        env:
+          VPS_HOST: ${{ secrets.KREAVANA_DEV_VPS_HOST }}
+          VPS_PORT: ${{ secrets.KREAVANA_DEV_VPS_PORT }}
+          VPS_USER: ${{ secrets.KREAVANA_DEV_VPS_USER }}
+        run: |
+          ssh \
+            -i ~/.ssh/kreavana_dev_ci \
+            -p "$VPS_PORT" \
+            "$VPS_USER@$VPS_HOST" \
+            "rm -rf /var/www/kreavana-dev/frontend/build/web && \
+             mkdir -p /var/www/kreavana-dev/frontend/build/web && \
+             cp -a /var/www/kreavana-dev-build/. \
+             /var/www/kreavana-dev/frontend/build/web/"
+
+      - name: Verify DEV Web
+        env:
+          VPS_HOST: ${{ secrets.KREAVANA_DEV_VPS_HOST }}
+          VPS_PORT: ${{ secrets.KREAVANA_DEV_VPS_PORT }}
+          VPS_USER: ${{ secrets.KREAVANA_DEV_VPS_USER }}
+        run: |
+          ssh \
+            -i ~/.ssh/kreavana_dev_ci \
+            -p "$VPS_PORT" \
+            "$VPS_USER@$VPS_HOST" \
+            "test -f /var/www/kreavana-dev/frontend/build/web/index.html && \
+             echo 'Kreavana DEV Web update OK'"

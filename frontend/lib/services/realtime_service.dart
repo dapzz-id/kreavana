@@ -3,6 +3,7 @@ import 'package:dart_pusher_channels/dart_pusher_channels.dart';
 import 'dart:async';
 import 'badge_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'pusher_config.dart';
 
 class RealtimeService {
   static final RealtimeService _instance = RealtimeService._internal();
@@ -16,23 +17,12 @@ class RealtimeService {
     if (userId.isEmpty || _pusher != null) return;
 
     try {
-      final pusherKey = dotenv.env['PUSHER_KEY'];
-      if (pusherKey == null || pusherKey.isEmpty) {
+      if (PusherConfig.key.isEmpty) {
         debugPrint('Realtime Init Error: PUSHER_KEY is missing from .env');
         return;
       }
 
-      final pusherScheme = dotenv.env['PUSHER_SCHEME'] ?? 'ws';
-      final pusherHost = dotenv.env['PUSHER_HOST'] ?? '127.0.0.1';
-      final pusherPort =
-          int.tryParse(dotenv.env['PUSHER_PORT'] ?? '') ?? 8080;
-
-      final options = PusherChannelsOptions.fromHost(
-        scheme: pusherScheme,
-        host: pusherHost,
-        port: pusherPort,
-        key: pusherKey,
-      );
+      final options = PusherConfig.options;
 
       final authEndpoint =
           dotenv.env['API_BASE_URL']?.replaceAll(
