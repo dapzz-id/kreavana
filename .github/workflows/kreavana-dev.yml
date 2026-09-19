@@ -67,6 +67,8 @@ jobs:
           VPS_HOST: ${{ secrets.KREAVANA_DEV_VPS_HOST }}
           VPS_PORT: ${{ secrets.KREAVANA_DEV_VPS_PORT }}
           VPS_USER: ${{ secrets.KREAVANA_DEV_VPS_USER }}
+          DEPLOY_SHA: ${{ github.sha }}
+
         run: |
           set -euo pipefail
 
@@ -133,34 +135,90 @@ jobs:
             -o StrictHostKeyChecking=yes \
             -p "$VPS_PORT" \
             "$VPS_USER@$VPS_HOST" \
-            'bash -s' <<'REMOTE_SCRIPT'
+            "DEPLOY_SHA='$DEPLOY_SHA' bash -s" <<'REMOTE_SCRIPT'
+
           set -euo pipefail
 
           PROJECT="/var/www/kreavana-dev"
           BACKEND="$PROJECT/backend"
 
           echo "Project: $PROJECT"
+          echo "Target commit: $DEPLOY_SHA"
 
           cd "$PROJECT"
 
-          echo "Current commit:"
-          git rev-parse --short HEAD
+          echo "============================================================"
+          echo "CONFIGURE GIT SAFE DIRECTORY"
+          echo "============================================================"
 
-          echo "Fetching origin/main..."
+          git config --global --add safe.directory "$PROJECT"
+
+          echo "Git safe directory configured."
+
+          echo "============================================================"
+          echo "CURRENT DEV COMMIT"
+          echo "============================================================"
+
+          git rev-parse HEAD || true
+
+          echo "============================================================"
+          echo "FETCH ORIGIN MAIN"
+          echo "============================================================"
 
           git fetch --prune origin main
 
-          echo "Updating DEV source to origin/main..."
+          echo "Origin main:"
+          git rev-parse origin/main
 
-          git checkout -B main origin/main
+          echo "============================================================"
+          echo "VERIFY DEPLOY COMMIT"
+          echo "============================================================"
+
+          if ! git cat-file -e "${DEPLOY_SHA}^{commit}" 2>/dev/null; then
+              echo "Deploy commit is not available locally."
+              echo "Fetching target commit from origin..."
+
+              git fetch origin "$DEPLOY_SHA"
+          fi
+
+          if ! git cat-file -e "${DEPLOY_SHA}^{commit}" 2>/dev/null; then
+              echo "ERROR: Deploy commit $DEPLOY_SHA could not be found."
+              exit 1
+          fi
+
+          echo "Deploy commit exists."
+
+          echo "============================================================"
+          echo "UPDATE DEV SOURCE"
+          echo "============================================================"
+
+          git reset --hard "$DEPLOY_SHA"
+
+          echo "DEV source updated."
 
           echo "Updated commit:"
-          git rev-parse --short HEAD
+          git rev-parse HEAD
 
-          echo "Remote:"
+          echo "Expected commit:"
+          echo "$DEPLOY_SHA"
+
+          if [ "$(git rev-parse HEAD)" != "$DEPLOY_SHA" ]; then
+              echo "ERROR: Deployed commit does not match workflow commit."
+              exit 1
+          fi
+
+          echo "Commit verification OK."
+
+          echo "============================================================"
+          echo "GIT REMOTE"
+          echo "============================================================"
+
           git remote -v | head -2
 
-          echo "Git status:"
+          echo "============================================================"
+          echo "GIT STATUS"
+          echo "============================================================"
+
           git status --short --branch
 
           echo "============================================================"
@@ -209,6 +267,7 @@ jobs:
           php8.4 artisan --version
 
           echo "DEV backend update completed."
+
           REMOTE_SCRIPT
 
           echo "============================================================"
@@ -268,7 +327,7 @@ jobs:
             -p "$VPS_PORT" \
             "$VPS_USER@$VPS_HOST" \
             "test -f /var/www/kreavana-dev/frontend/build/web/index.html && \
-             echo 'Kreavana DEV Web update OK'"
+             echo 'Krevana DEV Web update OK'"
 
           echo "============================================================"
           echo "VERIFY DEV SOURCE COMMIT"
