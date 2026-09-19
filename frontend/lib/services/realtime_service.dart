@@ -22,10 +22,15 @@ class RealtimeService {
         return;
       }
 
+      final pusherScheme = dotenv.env['PUSHER_SCHEME'] ?? 'ws';
+      final pusherHost = dotenv.env['PUSHER_HOST'] ?? '127.0.0.1';
+      final pusherPort =
+          int.tryParse(dotenv.env['PUSHER_PORT'] ?? '') ?? 8080;
+
       final options = PusherChannelsOptions.fromHost(
-        scheme: 'ws',
-        host: '127.0.0.1',
-        port: 8080,
+        scheme: pusherScheme,
+        host: pusherHost,
+        port: pusherPort,
         key: pusherKey,
       );
 
