@@ -175,7 +175,10 @@ Route::middleware('auth:api')->group(function () {
             ->join('messages', function ($join) use ($userId) {
                 $join->on('messages.chat_id', '=', 'chat_participants.chat_id')
                      ->where('messages.user_id', '!=', $userId)
-                     ->whereRaw('messages.created_at > COALESCE(chat_participants.last_read_at, chat_participants.created_at, "2000-01-01 00:00:00")');
+                     ->whereRaw(
+                            'messages.created_at > COALESCE(chat_participants.last_read_at, chat_participants.created_at, ?)',
+                            ['2000-01-01 00:00:00']
+                        );
             })
             ->count();
         return response()->json([
