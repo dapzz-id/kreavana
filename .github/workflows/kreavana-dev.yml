@@ -55,12 +55,12 @@ jobs:
             --no-wasm-dry-run
 
       # ============================================================
-      # 5. UPDATE KREVANA DEV
+      # 5. UPDATE KREVANA DEV VPS
       #
       # SSH AGENT + SSH + SCP BERADA DALAM SATU STEP
       # sehingga SSH_AUTH_SOCK tetap tersedia.
       # ============================================================
-      - name: Update Kreavana DEV VPS
+      - name: Update Krevana DEV VPS
         env:
           SSH_PRIVATE_KEY: ${{ secrets.KREAVANA_DEV_CI_PRIVATE_KEY }}
           SSH_PASSPHRASE: ${{ secrets.KREAVANA_DEV_CI_PASSPHRASE }}
@@ -68,7 +68,7 @@ jobs:
           VPS_PORT: ${{ secrets.KREAVANA_DEV_VPS_PORT }}
           VPS_USER: ${{ secrets.KREAVANA_DEV_VPS_USER }}
         run: |
-          set -e
+          set -euo pipefail
 
           echo "============================================================"
           echo "PREPARING SSH"
@@ -124,7 +124,95 @@ jobs:
             "echo 'SSH_AUTH_OK'"
 
           echo "============================================================"
-          echo "PREPARE TEMPORARY DIRECTORY"
+          echo "UPDATE DEV SOURCE CODE"
+          echo "============================================================"
+
+          ssh \
+            -o PreferredAuthentications=publickey \
+            -o PasswordAuthentication=no \
+            -o StrictHostKeyChecking=yes \
+            -p "$VPS_PORT" \
+            "$VPS_USER@$VPS_HOST" \
+            'bash -s' <<'REMOTE_SCRIPT'
+          set -euo pipefail
+
+          PROJECT="/var/www/kreavana-dev"
+          BACKEND="$PROJECT/backend"
+
+          echo "Project: $PROJECT"
+
+          cd "$PROJECT"
+
+          echo "Current commit:"
+          git rev-parse --short HEAD
+
+          echo "Fetching origin/main..."
+
+          git fetch --prune origin main
+
+          echo "Updating DEV source to origin/main..."
+
+          git checkout -B main origin/main
+
+          echo "Updated commit:"
+          git rev-parse --short HEAD
+
+          echo "Remote:"
+          git remote -v | head -2
+
+          echo "Git status:"
+          git status --short --branch
+
+          echo "============================================================"
+          echo "UPDATE LARAVEL DEPENDENCIES"
+          echo "============================================================"
+
+          cd "$BACKEND"
+
+          php8.4 /usr/bin/composer install \
+            --no-interaction \
+            --prefer-dist \
+            --optimize-autoloader
+
+          echo "Composer install completed."
+
+          echo "============================================================"
+          echo "CLEAR LARAVEL CACHE"
+          echo "============================================================"
+
+          php8.4 artisan optimize:clear
+
+          echo "Laravel cache cleared."
+
+          echo "============================================================"
+          echo "REBUILD LARAVEL OPTIMIZED CACHE"
+          echo "============================================================"
+
+          php8.4 artisan config:cache
+          php8.4 artisan route:cache
+          php8.4 artisan view:cache
+
+          echo "Laravel caches rebuilt."
+
+          echo "============================================================"
+          echo "RESTART QUEUE WORKERS"
+          echo "============================================================"
+
+          php8.4 artisan queue:restart || true
+
+          echo "Queue restart signal sent."
+
+          echo "============================================================"
+          echo "VERIFY LARAVEL"
+          echo "============================================================"
+
+          php8.4 artisan --version
+
+          echo "DEV backend update completed."
+          REMOTE_SCRIPT
+
+          echo "============================================================"
+          echo "PREPARE TEMPORARY FLUTTER BUILD DIRECTORY"
           echo "============================================================"
 
           ssh \
@@ -181,6 +269,24 @@ jobs:
             "$VPS_USER@$VPS_HOST" \
             "test -f /var/www/kreavana-dev/frontend/build/web/index.html && \
              echo 'Kreavana DEV Web update OK'"
+
+          echo "============================================================"
+          echo "VERIFY DEV SOURCE COMMIT"
+          echo "============================================================"
+
+          ssh \
+            -o PreferredAuthentications=publickey \
+            -o PasswordAuthentication=no \
+            -o StrictHostKeyChecking=yes \
+            -p "$VPS_PORT" \
+            "$VPS_USER@$VPS_HOST" \
+            "cd /var/www/kreavana-dev && \
+             echo 'DEPLOYED COMMIT:' && \
+             git rev-parse HEAD && \
+             echo 'DEPLOYED BRANCH:' && \
+             git branch --show-current && \
+             echo 'GIT STATUS:' && \
+             git status --short --branch"
 
           echo "============================================================"
           echo "KREVANA DEV UPDATE COMPLETED"
