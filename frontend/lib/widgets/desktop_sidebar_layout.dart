@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'upgrade_plan_modal.dart';
 import '../app/theme.dart';
@@ -537,9 +538,29 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
 
                   // ── Nav items ──────────────────────────────────────
                   Expanded(
-                    child: ListView(
-                      controller: _sidebarScrollController,
-                      padding: const EdgeInsets.only(top: 12),
+                    child: ScrollConfiguration(
+                      behavior: const MaterialScrollBehavior().copyWith(
+                        dragDevices: {
+                          PointerDeviceKind.mouse,
+                          PointerDeviceKind.touch,
+                          PointerDeviceKind.stylus,
+                          PointerDeviceKind.trackpad,
+                        },
+                      ),
+                      child: RawScrollbar(
+                        controller: _sidebarScrollController,
+                        thumbVisibility: false,
+                        thickness: 4,
+                        radius: const Radius.circular(4),
+                        thumbColor: isDark
+                            ? Colors.white.withValues(alpha: 0.25)
+                            : Colors.black.withValues(alpha: 0.2),
+                        child: ListView(
+                          controller: _sidebarScrollController,
+                          physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics(),
+                          ),
+                          padding: const EdgeInsets.only(top: 12, bottom: 20),
                       children: [
                         _buildNavRow(
                           icon: Icons.home_outlined,
@@ -549,7 +570,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                           isDark: isDark,
                           isCollapsed: collapsed,
                         ),
-                        _buildNavRow(
+                        if (_isCreatorUser) _buildNavRow(
                           icon: Icons.explore_outlined,
                           label: 'Rekomendasi Peluang',
                           onTap: () => _goToMain(1),
@@ -820,6 +841,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                       ],
                     ),
                   ),
+                ),
+              ),
 
                   // ── Bottom user card ───────────────────────────────
                   Divider(

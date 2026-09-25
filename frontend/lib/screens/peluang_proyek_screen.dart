@@ -125,24 +125,37 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 75,
-        title: const Column(
+        automaticallyImplyLeading: Navigator.canPop(context),
+        toolbarHeight: 80,
+        titleSpacing: isDesktop ? 32 : 16,
+        elevation: 0,
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Peluang Proyek',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
             ),
+            const SizedBox(height: 2),
             Text(
               'Kebutuhan proyek kreatif dari klien',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.normal),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.normal,
+                color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+              ),
             ),
           ],
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            padding: EdgeInsets.fromLTRB(
+              isDesktop ? 32 : 16,
+              0,
+              isDesktop ? 32 : 16,
+              12,
+            ),
             child: SearchBar(
               controller: _searchController,
               hintText: 'Cari proyek, lokasi, atau keahlian...',
@@ -168,7 +181,12 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
         child: _isLoading
             ? isDesktop
                   ? GridView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                      padding: EdgeInsets.fromLTRB(
+                        isDesktop ? 32 : 16,
+                        16,
+                        isDesktop ? 32 : 16,
+                        110,
+                      ),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
@@ -213,7 +231,12 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
               )
             : isDesktop
             ? GridView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                padding: EdgeInsets.fromLTRB(
+                  isDesktop ? 32 : 16,
+                  16,
+                  isDesktop ? 32 : 16,
+                  110,
+                ),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 16,

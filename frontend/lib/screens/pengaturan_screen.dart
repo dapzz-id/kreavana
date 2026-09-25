@@ -85,17 +85,28 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 900;
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        toolbarHeight: 70,
+        automaticallyImplyLeading: Navigator.canPop(context),
+        toolbarHeight: 80,
+        titleSpacing: isDesktop ? 32 : 16,
+        elevation: 0,
         title: const Text(
           'Pengaturan',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
+        padding: EdgeInsets.fromLTRB(
+          isDesktop ? 32 : 16,
+          16,
+          isDesktop ? 32 : 16,
+          110,
+        ),
         children: [
           // ── Profile header ────────────────────────────────────────────────
           if (widget.user != null) ...[

@@ -191,12 +191,17 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
       return true;
     }).toList();
 
+    final isDesktop = MediaQuery.of(context).size.width > 900;
+
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 70,
+        automaticallyImplyLeading: Navigator.canPop(context),
+        toolbarHeight: 80,
+        titleSpacing: isDesktop ? 32 : 18,
+        elevation: 0,
         title: const Text(
           'Kolaborasi',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
@@ -204,14 +209,17 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
             onPressed: _fetchRealtimeCollabs,
             tooltip: 'Perbarui Data',
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: isDesktop ? 24 : 8),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _fetchRealtimeCollabs,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          padding: EdgeInsets.symmetric(
+            horizontal: isDesktop ? 32 : 18,
+            vertical: 16,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

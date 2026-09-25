@@ -68,12 +68,18 @@ class _WalletScreenState extends State<WalletScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 900;
+
     final content = Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        automaticallyImplyLeading: Navigator.canPop(context),
+        toolbarHeight: 80,
+        titleSpacing: isDesktop ? 32 : 16,
         title: const Text(
           'Dompet Kreavana',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -82,13 +88,19 @@ class _WalletScreenState extends State<WalletScreen> {
             icon: const Icon(Icons.refresh_rounded),
             onPressed: _loadWalletData,
           ),
+          SizedBox(width: isDesktop ? 24 : 8),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadWalletData,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(
+            isDesktop ? 32 : 16,
+            16,
+            isDesktop ? 32 : 16,
+            24,
+          ),
           child: !_hasPin
               ? _buildActivationUI(theme)
               : Column(

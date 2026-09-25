@@ -744,7 +744,7 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
               ),
               const SizedBox(height: 10),
               ElevatedButton(
-                onPressed: () => UpgradePlanModal.show(context),
+                onPressed: () => UpgradePlanModal.show(context, user: widget.user),
                 style: ElevatedButton.styleFrom(backgroundColor: _indivPurple),
                 child: const Text(
                   'Upgrade Sekarang',

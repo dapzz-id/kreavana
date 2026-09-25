@@ -469,12 +469,17 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width > 900;
+
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 65,
+        automaticallyImplyLeading: Navigator.canPop(context),
+        toolbarHeight: 80,
+        titleSpacing: isDesktop ? 32 : 16,
+        elevation: 0,
         title: const Text(
           'Verifikasi Akun Kreator',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         bottom: TabBar(
           controller: _tabController,

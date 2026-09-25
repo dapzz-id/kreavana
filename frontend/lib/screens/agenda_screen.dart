@@ -100,12 +100,17 @@ class _AgendaScreenState extends State<AgendaScreen> {
       return true;
     }).toList();
 
+    final isDesktop = MediaQuery.of(context).size.width > 900;
+
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 75,
+        automaticallyImplyLeading: Navigator.canPop(context),
+        toolbarHeight: 80,
+        titleSpacing: isDesktop ? 32 : 16,
+        elevation: 0,
         title: const Text(
           'Agenda Kegiatan',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
@@ -113,13 +118,19 @@ class _AgendaScreenState extends State<AgendaScreen> {
             onPressed: _fetchRealtimeAgenda,
             tooltip: 'Refresh Realtime',
           ),
+          SizedBox(width: isDesktop ? 24 : 8),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _fetchRealtimeAgenda,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(
+            isDesktop ? 32 : 16,
+            16,
+            isDesktop ? 32 : 16,
+            24,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

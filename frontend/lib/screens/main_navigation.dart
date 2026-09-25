@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../widgets/upgrade_plan_modal.dart';
 import '../app/theme.dart';
@@ -59,6 +60,8 @@ import '../app/subrole_theme_engine.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
 import '../widgets/creator_sidebar_menus.dart';
 import '../widgets/kreavana_ai_floating_widget.dart';
+import 'kreavana_ai_screen.dart';
+import 'admin_system_settings_screen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -161,11 +164,13 @@ class _MainNavigationState extends State<MainNavigation> {
     required bool isDark,
     bool isCollapsed = false,
     bool isMobileDrawer = false,
+    bool isAi = false,
   }) {
-    final screensCount = _currentUser.isAdmin ? 5 : 14;
+    final screensCount = _currentUser.isAdmin ? 6 : 15;
     final activeIndex = _currentIndex >= screensCount ? 0 : _currentIndex;
     final isSelected = activeIndex == index;
-    final activeColor = SubRoleThemeEngine.getAccentColorForUser(_currentUser);
+    final defaultAccent = SubRoleThemeEngine.getAccentColorForUser(_currentUser);
+    final activeColor = isAi ? const Color(0xFF8B5CF6) : defaultAccent;
 
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -202,22 +207,48 @@ class _MainNavigationState extends State<MainNavigation> {
             ),
             decoration: BoxDecoration(
               color: isSelected
-                  ? activeColor.withValues(alpha: 0.1)
+                  ? activeColor.withValues(alpha: isDark ? 0.18 : 0.1)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
+              border: isSelected && isAi
+                  ? Border.all(
+                      color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
+                      width: 1,
+                    )
+                  : null,
             ),
             child: Row(
               mainAxisAlignment: isCollapsed
                   ? MainAxisAlignment.center
                   : MainAxisAlignment.start,
               children: [
-                Icon(
-                  isSelected ? activeIcon : icon,
-                  color: isSelected
-                      ? activeColor
-                      : (isDark ? Colors.white70 : Colors.grey.shade700),
-                  size: 22,
-                ),
+                if (isAi && isSelected)
+                  ShaderMask(
+                    shaderCallback: (bounds) => const LinearGradient(
+                      colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ).createShader(bounds),
+                    child: Icon(
+                      activeIcon,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  )
+                else if (isAi)
+                  Icon(
+                    icon,
+                    color: isDark ? Colors.white70 : Colors.grey.shade700,
+                    size: 22,
+                  )
+                else
+                  Icon(
+                    isSelected ? activeIcon : icon,
+                    color: isSelected
+                        ? activeColor
+                        : (isDark ? Colors.white70 : Colors.grey.shade700),
+                    size: 22,
+                  ),
                 if (!isCollapsed) ...[
                   const SizedBox(width: 16),
                   Expanded(
@@ -236,6 +267,37 @@ class _MainNavigationState extends State<MainNavigation> {
                       ),
                     ),
                   ),
+                  if (isAi)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: isSelected
+                            ? const LinearGradient(
+                                colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+                              )
+                            : null,
+                        color: isSelected
+                            ? null
+                            : (isDark
+                                ? const Color(0xFF8B5CF6).withValues(alpha: 0.2)
+                                : const Color(0xFF8B5CF6).withValues(alpha: 0.12)),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'AI',
+                        style: TextStyle(
+                          color: isSelected
+                              ? Colors.white
+                              : const Color(0xFF8B5CF6),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
                 ],
               ],
             ),
@@ -341,14 +403,16 @@ class _MainNavigationState extends State<MainNavigation> {
     11: AppRoutes.pesan,
     12: AppRoutes.peluangProyek,
     13: AppRoutes.kapasitasJadwal,
+    14: AppRoutes.aiAssistant,
   };
 
   static const _adminIndexRouteMap = {
     0: AppRoutes.adminDashboard,
     1: AppRoutes.adminVerification,
     2: AppRoutes.adminResolution,
-    3: AppRoutes.notifikasi,
-    4: AppRoutes.profil,
+    3: AppRoutes.adminSystemSettings,
+    4: AppRoutes.notifikasi,
+    5: AppRoutes.profil,
   };
 
   void _navigateToScreenIndex(int index) {
@@ -469,7 +533,6 @@ class _MainNavigationState extends State<MainNavigation> {
     required ThemeData theme,
     required bool isDark,
     required bool isCollapsed,
-    bool includeMarketplace = true,
     bool isMobileDrawer = false,
   }) {
     return [
@@ -494,7 +557,7 @@ class _MainNavigationState extends State<MainNavigation> {
         isCollapsed: isCollapsed,
         isMobileDrawer: isMobileDrawer,
       ),
-      if (includeMarketplace)
+      if (_isCreatorUser)
         _buildSidebarItem(
           icon: Icons.work_outline,
           activeIcon: Icons.work,
@@ -740,10 +803,20 @@ class _MainNavigationState extends State<MainNavigation> {
           isMobileDrawer: isMobileDrawer,
         ),
         _buildSidebarItem(
+          icon: Icons.settings_suggest_outlined,
+          activeIcon: Icons.settings_suggest_rounded,
+          label: 'Pengaturan Sistem',
+          index: 3,
+          theme: theme,
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarItem(
           icon: Icons.notifications_none_outlined,
           activeIcon: Icons.notifications,
           label: 'Notifikasi',
-          index: 3,
+          index: 4,
           theme: theme,
           isDark: isDark,
           isCollapsed: isCollapsed,
@@ -753,7 +826,7 @@ class _MainNavigationState extends State<MainNavigation> {
           icon: Icons.person_outline,
           activeIcon: Icons.person,
           label: 'Profil Saya',
-          index: 4,
+          index: 5,
           theme: theme,
           isDark: isDark,
           isCollapsed: isCollapsed,
@@ -774,6 +847,17 @@ class _MainNavigationState extends State<MainNavigation> {
         isMobileDrawer: isMobileDrawer,
       ),
       _buildSidebarItem(
+        icon: Icons.auto_awesome_outlined,
+        activeIcon: Icons.auto_awesome_rounded,
+        label: 'Kreavana AI',
+        index: 14,
+        theme: theme,
+        isDark: isDark,
+        isCollapsed: isCollapsed,
+        isMobileDrawer: isMobileDrawer,
+        isAi: true,
+      ),
+      if (_isCreatorUser) _buildSidebarItem(
         icon: Icons.explore_outlined,
         activeIcon: Icons.explore,
         label: 'Rekomendasi Peluang',
@@ -1061,30 +1145,207 @@ class _MainNavigationState extends State<MainNavigation> {
     required bool isCollapsed,
   }) {
     if (_currentUser.isGuest) {
-      return Container(
-        padding: EdgeInsets.all(isCollapsed ? 8 : 16),
-        child: isCollapsed
-            ? Tooltip(
-                message: 'Masuk / Daftar',
-                child: IconButton(
-                  icon: const Icon(Icons.login_rounded, color: Colors.teal),
-                  onPressed: () => context.go(AppRoutes.login),
-                ),
-              )
-            : ElevatedButton.icon(
-                onPressed: () => context.go(AppRoutes.login),
-                icon: const Icon(Icons.login, size: 16, color: Colors.white),
-                label: const Text(
-                  'Masuk / Daftar',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal.shade600,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+      if (isCollapsed) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          alignment: Alignment.center,
+          child: Tooltip(
+            message: 'Masuk / Daftar Akun',
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => context.go(AppRoutes.login),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.login_rounded,
+                    color: Colors.white,
+                    size: 20,
                   ),
                 ),
               ),
+            ),
+          ),
+        );
+      }
+
+      return Container(
+        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: isDark
+              ? const Color(0xFF1E1C2B)
+              : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : const Color(0xFFE2E8F0),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.account_circle_outlined,
+                    size: 16,
+                    color: Color(0xFF6366F1),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Akses Akun',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
+                      ),
+                      Text(
+                        'Masuk atau daftar baru',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => context.go(AppRoutes.login),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        alignment: Alignment.center,
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.login_rounded, size: 14, color: Colors.white),
+                            SizedBox(width: 5),
+                            Text(
+                              'Masuk',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => context.go(AppRoutes.register),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 7.5),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.06)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.12)
+                                : const Color(0xFFCBD5E1),
+                            width: 1,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.person_add_alt_1_rounded,
+                              size: 14,
+                              color: isDark ? Colors.white70 : const Color(0xFF334155),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              'Daftar',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.white : const Color(0xFF334155),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       );
     }
 
@@ -1515,8 +1776,9 @@ class _MainNavigationState extends State<MainNavigation> {
         0 => AdminDashboardScreen(user: _currentUser),
         1 => const AdminVerificationScreen(),
         2 => AdminResolutionScreen(user: _currentUser),
-        3 => NotificationsScreen(userId: _currentUser.id ?? ''),
-        4 => ProfileScreen(
+        3 => AdminSystemSettingsScreen(user: _currentUser),
+        4 => NotificationsScreen(userId: _currentUser.id ?? ''),
+        5 => ProfileScreen(
             user: _currentUser,
             onUserUpdated: _onUserUpdated,
             onLogout: _onLogout,
@@ -1560,6 +1822,7 @@ class _MainNavigationState extends State<MainNavigation> {
           user: _currentUser,
           onUserUpdated: _onUserUpdated,
         ),
+      14 => KreavanaAiScreen(user: _currentUser),
       _ => const SizedBox.shrink(),
     };
   }
@@ -1571,7 +1834,7 @@ class _MainNavigationState extends State<MainNavigation> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 900;
 
-    final totalScreenCount = _currentUser.isAdmin ? 5 : 14;
+    final totalScreenCount = _currentUser.isAdmin ? 6 : 15;
     final activeIndex = _currentIndex >= totalScreenCount ? 0 : _currentIndex;
     _loadedScreenIndices.add(activeIndex);
 
@@ -1717,13 +1980,35 @@ class _MainNavigationState extends State<MainNavigation> {
 
                     // ── Nav items ──────────────────────────────────────
                     Expanded(
-                      child: ListView(
-                        controller: _sidebarScrollController,
-                        padding: const EdgeInsets.only(top: 12),
-                        children: _buildSidebarItemsList(
-                          theme: theme,
-                          isDark: isDark,
-                          isCollapsed: _isSidebarCollapsed,
+                      child: ScrollConfiguration(
+                        behavior: const MaterialScrollBehavior().copyWith(
+                          dragDevices: {
+                            PointerDeviceKind.mouse,
+                            PointerDeviceKind.touch,
+                            PointerDeviceKind.stylus,
+                            PointerDeviceKind.trackpad,
+                          },
+                        ),
+                        child: RawScrollbar(
+                          controller: _sidebarScrollController,
+                          thumbVisibility: false,
+                          thickness: 4,
+                          radius: const Radius.circular(4),
+                          thumbColor: isDark
+                              ? Colors.white.withValues(alpha: 0.25)
+                              : Colors.black.withValues(alpha: 0.2),
+                          child: ListView(
+                            controller: _sidebarScrollController,
+                            physics: const AlwaysScrollableScrollPhysics(
+                              parent: BouncingScrollPhysics(),
+                            ),
+                            padding: const EdgeInsets.only(top: 12, bottom: 20),
+                            children: _buildSidebarItemsList(
+                              theme: theme,
+                              isDark: isDark,
+                              isCollapsed: _isSidebarCollapsed,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -1844,7 +2129,7 @@ class _MainNavigationState extends State<MainNavigation> {
     return Stack(
       children: [
         scaffoldWidget,
-        if (!_isMobileDrawerOpen)
+        if (!_isMobileDrawerOpen && activeIndex != 14)
           KreavanaAiFloatingWidget(hasPageFab: hasPageFab),
       ],
     );

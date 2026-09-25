@@ -10,6 +10,7 @@ import '../services/follow_service.dart';
 import '../features/auth/services/auth_service.dart';
 import '../utils/app_errors.dart';
 import '../widgets/wallet_pin_dialog.dart';
+import '../widgets/auth_guard_dialog.dart';
 import 'package:go_router/go_router.dart';
 
 class MarketplaceDetailScreen extends StatefulWidget {
@@ -94,6 +95,10 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
   }
 
   void _toggleFavorite() {
+    if (_currentUserId == null || _currentUserId!.isEmpty) {
+      AuthGuardDialog.show(context, actionName: 'menyimpan karya ke favorit');
+      return;
+    }
     _heartCtrl.forward(from: 0).then((_) {
       _heartCtrl.reverse();
     });
@@ -101,6 +106,10 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
   }
 
   Future<void> _toggleFollow() async {
+    if (_currentUserId == null || _currentUserId!.isEmpty) {
+      AuthGuardDialog.show(context, actionName: 'mengikuti profil kreator');
+      return;
+    }
     if (_followBusy) return;
     final creatorId = _item?.userId;
     if (creatorId == null || creatorId.isEmpty) return;
@@ -133,6 +142,10 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
   }
 
   Future<void> _purchaseItem() async {
+    if (_currentUserId == null || _currentUserId!.isEmpty) {
+      AuthGuardDialog.show(context, actionName: 'membeli karya ini');
+      return;
+    }
     if (_item == null) return;
 
     final pin = await WalletPinDialog.show(
@@ -173,6 +186,10 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
   }
 
   Future<void> _submitReview() async {
+    if (_currentUserId == null || _currentUserId!.isEmpty) {
+      AuthGuardDialog.show(context, actionName: 'memberikan ulasan karya');
+      return;
+    }
     if (_selectedRating == 0) {
       AppSnackbar.info(context, 'Pilih rating terlebih dahulu.');
       return;

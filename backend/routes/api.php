@@ -12,7 +12,7 @@ use App\Http\Controllers\{
     PortfolioController, SubscriptionController,
     StorageController, DisputeController, OpportunityReviewController,
     AiController, JobContractController, JobContractTransitionController,
-    MarketingController
+    MarketingController, AdminSystemSettingController
 };
 
 // Public: serve avatar images with CORS headers (for Flutter Web)
@@ -33,6 +33,10 @@ Route::get('/user', function (Request $request) {
 
 // Roles endpoints
 Route::get('roles/creator/sub-roles', [RoleController::class, 'getCreatorSubRoles']);
+
+// Public System Statuses
+Route::get('system/module-statuses', [AdminSystemSettingController::class, 'getPublicModuleStatuses'])
+    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
 
 // Auth (Public)
 Route::prefix('auth')->withoutMiddleware(\App\Http\Middleware\ValidateJti::class)->group(function () {
@@ -247,7 +251,16 @@ Route::middleware('auth:api')->group(function () {
         Route::post('disputes/{id}/decision-refund', [DisputeController::class, 'adminDecideRefund']);
         Route::post('disputes/{id}/settle-refund', [DisputeController::class, 'adminSettleRefund']);
         Route::post('disputes/{id}/decision-cancellation', [DisputeController::class, 'adminDecideCancellation']);
+
+        // System Modules & AI Engine Settings
+        Route::get('modules', [AdminSystemSettingController::class, 'getModules']);
+        Route::put('modules/{key}', [AdminSystemSettingController::class, 'updateModule']);
+        Route::get('ai-config', [AdminSystemSettingController::class, 'getAiConfig']);
+        Route::post('ai-config', [AdminSystemSettingController::class, 'updateAiConfig']);
+        Route::post('ai-config/test', [AdminSystemSettingController::class, 'testAiConnection']);
     });
+
+
 
     // Disputes
     Route::prefix('disputes')->group(function () {
@@ -306,11 +319,15 @@ Route::middleware('auth:api')->group(function () {
         Route::get('purchased/{id}/download', [StorageController::class, 'downloadPurchasedAsset']);
     });
 
-    // AI Service (Protected, Requires Pro/Super subscription tier)
+    // AI Service (Protected)
     Route::prefix('ai')->group(function () {
         Route::post('summarize-report', [AiController::class, 'summarizeReport']);
         Route::post('recommendations', [AiController::class, 'getRecommendations']);
         Route::post('message-assistant', [AiController::class, 'messageAssistant']);
+        Route::get('chat-sessions', [AiController::class, 'getChatSessions']);
+        Route::post('chat-sessions', [AiController::class, 'syncChatSession']);
+        Route::delete('chat-sessions/{sessionId}', [AiController::class, 'deleteChatSession']);
+        Route::delete('chat-sessions', [AiController::class, 'clearChatSessions']);
     });
 });
 
@@ -350,4 +367,6 @@ Route::prefix('opportunities')->group(function () {
 
 // Public Client Dashboard Overview (Guest Browsing)
 Route::get('client-dashboard/overview', [DashboardController::class, 'overview']);
+
+
 

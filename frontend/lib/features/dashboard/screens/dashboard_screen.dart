@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../../services/app_router.dart';
+import '../../../widgets/auth_guard_dialog.dart';
 import '../../../app/theme.dart';
 import '../../../widgets/role_toggle.dart';
 import '../../../services/theme_transition_service.dart';
@@ -966,7 +969,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                     width: double.infinity,
                     height: 28,
                     child: OutlinedButton(
-                      onPressed: () => _navigateTo('Cari Kreator'),
+                      onPressed: () async {
+                        final vendorId = vendor['id'];
+                        if (vendorId == null) return;
+                        final isAllowed = await AuthGuardDialog.check(
+                          context,
+                          actionName: 'melihat profil kreator ${vendor['name'] ?? ''}',
+                        );
+                        if (isAllowed && context.mounted) {
+                          context.push('${AppRoutes.profil}?id=$vendorId');
+                        }
+                      },
                       style: OutlinedButton.styleFrom(
                         padding: EdgeInsets.zero,
                         side: BorderSide(

@@ -38,6 +38,7 @@ class SubscriptionController extends Controller
                 'Voice call: 80 menit',
                 'Video call: 45 menit',
                 'Storage 3 GB',
+                'Rekomendasi AI (Kreator & Peluang)',
             ],
             'is_popular' => false,
         ],
@@ -51,7 +52,7 @@ class SubscriptionController extends Controller
                 'Voice call: 100 menit',
                 'Video call: 60 menit',
                 'Storage 10 GB',
-                'Fitur AI',
+                'Fitur AI & Rekomendasi Pintar',
             ],
             'is_popular' => true,
         ],
@@ -65,7 +66,7 @@ class SubscriptionController extends Controller
                 'Voice call: 120 menit',
                 'Video call: 75 menit',
                 'Storage 20 GB',
-                'Fitur AI',
+                'Fitur AI & Rekomendasi Pintar',
                 'Layanan Prioritas',
             ],
             'is_popular' => false,
@@ -77,11 +78,31 @@ class SubscriptionController extends Controller
      * Returns all plan definitions (name, price, features).
      * This is the ONLY place prices are defined; frontend must not hardcode them.
      */
-    public function plans()
+    public function plans(Request $request)
     {
+        $role = $request->query('role');
+        if (!$role) {
+            $user = auth('api')->user();
+            if ($user) {
+                $role = is_object($user->role) ? $user->role->value : (string) $user->role;
+            }
+        }
+
+        $isCreator = in_array(strtolower((string) $role), ['creator', 'kreator']);
+
+        $plans = array_values(array_map(function ($plan) use ($isCreator) {
+            if (!$isCreator) {
+                // Boost akun hanya untuk role creator; hilangkan fitur boost untuk user dan client
+                $plan['features'] = array_values(array_filter($plan['features'], function ($feature) {
+                    return !preg_match('/boost/i', $feature);
+                }));
+            }
+            return $plan;
+        }, $this->plans));
+
         return response()->json([
             'status' => true,
-            'data'   => array_values($this->plans),
+            'data'   => $plans,
         ]);
     }
 
@@ -104,27 +125,33 @@ class SubscriptionController extends Controller
         }
 
         if (!Hash::check($request->pin, $user->wallet_pin)) {
-            return response()->json(['message' => 'PIN salah.'], 401);
+            return response()->json(['message' => 'PIN Dompet salah.'], 403);
         }
-        // ────────────────────────────────────────────────────────────────────
 
-        $tier      = $request->tier;
-        $price     = $this->plans[$tier]['price'];
-        $autoRenew = $request->input('auto_renew', false);
+        $tier = $request->tier;
+        $price = $this->plans[$tier]['price'];
 
+        if ($user->balance < $price) {
+            return response()->json([
+                'message' => 'Saldo dompet tidak mencukupi untuk berlangganan paket ini.',
+                'error_code' => 'insufficient_balance',
+                'required' => $price,
+                'current' => $user->balance
+            ], 400);
+        }
+
+        $autoRenew = $request->boolean('auto_renew', false);
+
+        DB::beginTransaction();
         try {
-            DB::beginTransaction();
-
-            $user = \App\Models\User::where('id', $user->id)->lockForUpdate()->first();
-
-            if ($user->balance < $price) {
-                DB::rollBack();
-                return response()->json(['message' => 'Saldo tidak mencukupi untuk membeli paket ini.'], 400);
-            }
-
             $user->balance -= $price;
             $user->subscription_tier = $tier;
             $user->save();
+
+            // Update performance boost hanya jika role adalah creator
+            if ($user->role === \App\Enums\RoleType::Creator) {
+                $user->updatePerformanceBoost();
+            }
 
             WalletTransaction::create([
                 'user_id' => $user->id,

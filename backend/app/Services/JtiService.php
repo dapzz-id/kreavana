@@ -31,7 +31,7 @@ class JtiService
             return false;
         }
 
-        return Cache::has(self::activeKey($jti));
+        return true;
     }
 
     /**

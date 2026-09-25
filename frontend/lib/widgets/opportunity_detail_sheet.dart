@@ -7,8 +7,7 @@ import '../services/chat_service.dart';
 import '../screens/direct_message_screen.dart';
 import '../widgets/responsive_modal.dart';
 import '../app/theme.dart';
-import '../services/app_router.dart';
-import 'package:go_router/go_router.dart';
+import '../widgets/auth_guard_dialog.dart';
 
 class OpportunityDetailSheet extends StatefulWidget {
   final OpportunityModel opportunity;
@@ -91,32 +90,7 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
   }
 
   void _showLoginPrompt(BuildContext context, String actionDesc) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Masuk Diperlukan'),
-        content: Text('Silakan masuk atau daftar akun terlebih dahulu untuk $actionDesc.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryPurple,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.of(context).pop(); // Close detail sheet
-              context.push(AppRoutes.login);
-            },
-            child: const Text('Masuk Sekarang', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+    AuthGuardDialog.show(context, actionName: actionDesc);
   }
 
   void _showApplicationDialog(BuildContext context) {

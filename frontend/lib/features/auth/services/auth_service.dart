@@ -278,4 +278,11 @@ class AuthService {
   }) async {
     return ApiService.post('auth/resend-verification', {'email': email});
   }
+
+  /// Lupa kata sandi
+  static Future<Map<String, dynamic>> forgotPassword({
+    required String email,
+  }) async {
+    return ApiService.post('auth/forgot-password', {'email': email});
+  }
 }
