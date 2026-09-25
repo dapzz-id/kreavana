@@ -100,7 +100,14 @@ class _ExploreScreenState extends State<ExploreScreen>
                 (op) =>
                     op.title.toLowerCase().contains(query) ||
                     (op.description?.toLowerCase().contains(query) ?? false) ||
-                    (op.location?.toLowerCase().contains(query) ?? false),
+                    (op.location?.toLowerCase().contains(query) ?? false) ||
+                    (op.address?.toLowerCase().contains(query) ?? false) ||
+                    op.subRoleSlug.toLowerCase().contains(query) ||
+                    op.allTags.any((t) => t.toLowerCase().contains(query)) ||
+                    op.requirements.any((r) =>
+                        r.subRoleSlug.toLowerCase().contains(query) ||
+                        r.subRoleTitle.toLowerCase().contains(query) ||
+                        (r.notes?.toLowerCase().contains(query) ?? false)),
               )
               .toList();
         }
@@ -200,8 +207,12 @@ class _ExploreScreenState extends State<ExploreScreen>
           PeluangLokasiScreen(user: widget.user, subRoleSlug: _selectedSubRole),
           if (_isCreator)
             PeluangProyekScreen(user: widget.user, subRoleSlug: _selectedSubRole),
-          Column(
-            children: [
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1240),
+              child: Column(
+                children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: SearchBar(
@@ -346,9 +357,11 @@ class _ExploreScreenState extends State<ExploreScreen>
               ),
             ],
           ),
-          const RecommendedCreatorsSection(),
-        ],
+        ),
       ),
-    );
+      const RecommendedCreatorsSection(),
+    ],
+  ),
+);
   }
 }

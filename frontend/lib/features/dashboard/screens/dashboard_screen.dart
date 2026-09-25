@@ -976,7 +976,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           context,
                           actionName: 'melihat profil kreator ${vendor['name'] ?? ''}',
                         );
-                        if (isAllowed && context.mounted) {
+                        if (isAllowed && mounted) {
                           context.push('${AppRoutes.profil}?id=$vendorId');
                         }
                       },

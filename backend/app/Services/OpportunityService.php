@@ -34,6 +34,13 @@ class OpportunityService extends BaseService
         return $opportunities->map(fn ($opp) => $this->formatOpportunity($opp, false));
     }
 
+    public function getUserOpportunities(string $userId, int $limit = 50)
+    {
+        $opportunities = $this->opportunityRepo->getMyOpportunities($userId, $limit);
+
+        return $opportunities->map(fn ($opp) => $this->formatOpportunity($opp, false));
+    }
+
     public function getMapLocations(string|array $subRole = 'all', ?float $lat = null, ?float $lng = null, ?float $radiusKm = null)
     {
         $locations = $this->opportunityRepo->getMapLocations($subRole, $lat, $lng, $radiusKm);
@@ -335,6 +342,7 @@ class OpportunityService extends BaseService
             'status' => $opp->status,
             'posted_by' => $opp->posted_by,
             'created_at' => $opp->created_at?->toIso8601String(),
+            'applications_count' => (int) ($opp->applications_count ?? ($opp->relationLoaded('applications') ? $opp->applications->count() : 0)),
         ];
 
         // Format required capabilities

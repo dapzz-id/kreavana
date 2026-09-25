@@ -82,6 +82,20 @@ class OpportunityService {
     return [];
   }
 
+  static Future<List<OpportunityModel>> getMyOpportunities() async {
+    try {
+      final result = await ApiService.get('opportunities/my');
+      if (result['status'] == true && result['data'] != null) {
+        final list = (result['data'] as List)
+            .map((item) => OpportunityModel.fromJson(item))
+            .toList();
+        return list;
+      }
+    } catch (_) {}
+
+    return [];
+  }
+
   static Future<List<OpportunityModel>> getMapLocations({
     String subRole = 'all',
     double? lat,

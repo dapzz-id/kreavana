@@ -284,11 +284,12 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                             await Clipboard.setData(
                               ClipboardData(text: method.accountNumber),
                             );
-                            if (mounted)
+                            if (mounted) {
                               AppSnackbar.success(
                                 context,
                                 'Nomor rekening disalin',
                               );
+                            }
                           },
                           borderRadius: BorderRadius.circular(6),
                           child: const Icon(

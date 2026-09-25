@@ -1142,51 +1142,56 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
       {'slug': 'talent', 'label': '💃 Model & Talent'},
     ];
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => DraggableScrollableSheet(
-          initialChildSize: 0.85,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          builder: (_, scrollController) => Container(
-            decoration: BoxDecoration(
-              color: isDark ? AppTheme.cardBg : Colors.white,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
+    final isDesktop = MediaQuery.of(context).size.width >= 600;
+
+    Widget buildLocationForm(
+      BuildContext ctx,
+      StateSetter setModalState,
+      ScrollController? scrollController, {
+      bool inDialog = false,
+    }) {
+      return ListView(
+        controller: scrollController,
+        padding: EdgeInsets.fromLTRB(20, inDialog ? 20 : 12, 20, 32),
+        children: [
+          if (!inDialog) ...[
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-            child: ListView(
-              controller: scrollController,
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade400,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+            const SizedBox(height: 16),
+          ],
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '📍 Tambah Lokasi Kolaborasi',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              if (inDialog)
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20),
+                  onPressed: () => Navigator.pop(ctx),
+                  tooltip: 'Tutup',
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  '📍 Tambah Lokasi Kolaborasi',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Isi data di bawah agar klien / creator lain dapat menemukan Anda di peta.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                // Sub-role
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Isi data di bawah agar klien / creator lain dapat menemukan Anda di peta.',
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Sub-role
                 const Text(
                   'Posisi / Sub-Role Anda',
                   style: TextStyle(fontWeight: FontWeight.bold),
@@ -1408,11 +1413,61 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                     ),
                   ),
                 ),
-              ],
+        ],
+      );
+    }
+
+    if (isDesktop) {
+      showDialog(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setModalState) => Dialog(
+            backgroundColor: Colors.transparent,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 620,
+                maxHeight: MediaQuery.of(ctx).size.height * 0.88,
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.cardBg : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: buildLocationForm(ctx, setModalState, null, inDialog: true),
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setModalState) => DraggableScrollableSheet(
+            initialChildSize: 0.85,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            builder: (_, scrollController) => Container(
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.cardBg : Colors.white,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
+              ),
+              child: buildLocationForm(ctx, setModalState, scrollController, inDialog: false),
+            ),
+          ),
+        ),
+      );
+    }
   }
 }

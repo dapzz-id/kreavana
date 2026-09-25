@@ -75,33 +75,68 @@ class OpportunityRequirementModel {
     };
   }
 
-  String get label {
-    switch (subRoleSlug.toLowerCase()) {
-      case 'mc':
-        return '🎤 MC ($quantity orang)';
-      case 'videographer':
-      case 'videografer':
-        return '🎥 Videografer ($quantity orang)';
+  List<String> get tags {
+    if (notes == null || notes!.trim().isEmpty) return [];
+    return notes!
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+  }
+
+  String get subRoleTitle {
+    switch (subRoleSlug.toLowerCase().replaceAll('-', '_')) {
+      case 'fotografi':
       case 'photographer':
       case 'fotografer':
-        return '📸 Fotografer ($quantity orang)';
+        return 'Fotografer';
+      case 'videografi':
+      case 'videographer':
+      case 'videografer':
+        return 'Videografer';
+      case 'desain_grafis':
+      case 'desainer':
+        return 'Desainer Grafis';
       case 'editor':
-        return '✂️ Editor ($quantity orang)';
-      case 'makeup_artist':
-        return '💄 MUA ($quantity orang)';
+        return 'Editor Video';
+      case 'animator':
+        return 'Animator';
+      case 'konten_kreator':
+      case 'content_creator':
+        return 'Content Creator';
+      case 'drone':
+        return 'Pilot Drone';
+      case 'mc':
+        return 'MC / Host';
       case 'singer':
-        return '🎤 Penyanyi ($quantity orang)';
+        return 'Penyanyi / Musisi';
       case 'event_organizer':
-        return '🎪 Event Organizer ($quantity tim)';
+        return 'Event Organizer';
       case 'wedding_organizer':
-        return '💍 Wedding Organizer ($quantity tim)';
+        return 'Wedding Organizer';
+      case 'makeup_artist':
+        return 'Makeup Artist';
+      case 'model':
+        return 'Model / Talent';
+      case 'copywriter':
+        return 'Copywriter';
       case 'community':
-        return '👥 Komunitas ($quantity kelompok)';
+        return 'Komunitas Kreatif';
+      case 'institution':
+        return 'Lembaga / Yayasan';
+      case 'government':
+        return 'Instansi Pemerintah';
       case 'tukang_kendang':
-        return '🥁 Tukang Kendang ($quantity orang)';
+        return 'Tukang Kendang';
       default:
-        return '$subRoleSlug ($quantity)';
+        return subRoleSlug.replaceAll('_', ' ').replaceAll('-', ' ');
     }
+  }
+
+  String get label {
+    final title = subRoleTitle;
+    final unit = (subRoleSlug.contains('organizer') || subRoleSlug.contains('community')) ? 'tim' : 'orang';
+    return '$title ($quantity $unit)';
   }
 }
 
@@ -168,6 +203,7 @@ class OpportunityModel {
   final OpportunityPoster? poster;
   final List<OpportunityRequirementModel> requirements;
   final List<OpportunityApprovedCreatorModel> approvedCreators;
+  final int applicationsCount;
 
   OpportunityModel({
     required this.id,
@@ -192,10 +228,28 @@ class OpportunityModel {
     this.poster,
     this.requirements = const [],
     this.approvedCreators = const [],
+    this.applicationsCount = 0,
   });
 
   bool get isLocation => type == 'location';
   bool get isProject => type == 'project';
+
+  List<String> get allTags {
+    final list = <String>{};
+    for (final r in requirements) {
+      list.addAll(r.tags);
+    }
+    return list.toList();
+  }
+
+  List<String> get allSubRoleSlugs {
+    final slugs = <String>{};
+    if (subRoleSlug.isNotEmpty) slugs.add(subRoleSlug.toLowerCase());
+    for (final r in requirements) {
+      if (r.subRoleSlug.isNotEmpty) slugs.add(r.subRoleSlug.toLowerCase());
+    }
+    return slugs.toList();
+  }
 
   factory OpportunityModel.fromJson(Map<String, dynamic> json) {
     var reqsList = <OpportunityRequirementModel>[];
@@ -245,6 +299,11 @@ class OpportunityModel {
           : null,
       requirements: reqsList,
       approvedCreators: approvedList,
+      applicationsCount: json['applications_count'] != null
+          ? int.tryParse(json['applications_count'].toString()) ?? 0
+          : (json['applications'] is List
+              ? (json['applications'] as List).length
+              : 0),
     );
   }
 

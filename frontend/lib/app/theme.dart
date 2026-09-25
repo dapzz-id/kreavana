@@ -18,6 +18,8 @@ class AppTheme {
   static const Color inputBorder = Color(0xFF2D2A3E);
   static const Color dividerDark = Color(0xFF252238);
 
+  static const Color surfaceDarkElevated = cardDark2;
+
   // ── Light surface colors ─────────────────────────────────────────────────────
   static const Color surfaceLight = Color(0xFFF5F3FF);
   static const Color cardLight = Color(0xFFFFFFFF);
@@ -30,6 +32,8 @@ class AppTheme {
   static const Color textMutedLight = Color(0xFF64748B);
   static const Color textWhite = Color(0xFFF9FAFB);
   static const Color textDark = Color(0xFF0F0A2A);
+  static const Color textPrimary = textDark;
+  static const Color textSecondary = textMutedLight;
 
   // ── Semantic colors ──────────────────────────────────────────────────────────
   static const Color success = Color(0xFF10B981);

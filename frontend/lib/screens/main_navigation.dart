@@ -174,8 +174,8 @@ class _MainNavigationState extends State<MainNavigation> {
 
     return Padding(
       padding: EdgeInsets.symmetric(
-        horizontal: isCollapsed ? 8 : 16,
-        vertical: 4,
+        horizontal: isCollapsed ? 8 : 12,
+        vertical: 2,
       ),
       child: Tooltip(
         message: isCollapsed ? label : '',
@@ -200,19 +200,23 @@ class _MainNavigationState extends State<MainNavigation> {
             }
           },
           borderRadius: BorderRadius.circular(12),
-          child: Container(
+          hoverColor: isDark
+              ? Colors.white.withValues(alpha: 0.04)
+              : Colors.black.withValues(alpha: 0.03),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
             padding: EdgeInsets.symmetric(
-              horizontal: isCollapsed ? 0 : 16,
-              vertical: 12,
+              horizontal: isCollapsed ? 0 : 12,
+              vertical: 10,
             ),
             decoration: BoxDecoration(
               color: isSelected
-                  ? activeColor.withValues(alpha: isDark ? 0.18 : 0.1)
+                  ? activeColor.withValues(alpha: isDark ? 0.18 : 0.09)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
-              border: isSelected && isAi
+              border: isSelected
                   ? Border.all(
-                      color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
+                      color: activeColor.withValues(alpha: isDark ? 0.35 : 0.2),
                       width: 1,
                     )
                   : null,
@@ -222,6 +226,21 @@ class _MainNavigationState extends State<MainNavigation> {
                   ? MainAxisAlignment.center
                   : MainAxisAlignment.start,
               children: [
+                if (!isCollapsed && isSelected) ...[
+                  Container(
+                    width: 3.5,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      gradient: isAi
+                          ? const LinearGradient(
+                              colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+                            )
+                          : AppTheme.primaryGradient,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 if (isAi && isSelected)
                   ShaderMask(
                     shaderCallback: (bounds) => const LinearGradient(
@@ -232,25 +251,25 @@ class _MainNavigationState extends State<MainNavigation> {
                     child: Icon(
                       activeIcon,
                       color: Colors.white,
-                      size: 22,
+                      size: 20,
                     ),
                   )
                 else if (isAi)
                   Icon(
                     icon,
                     color: isDark ? Colors.white70 : Colors.grey.shade700,
-                    size: 22,
+                    size: 20,
                   )
                 else
                   Icon(
                     isSelected ? activeIcon : icon,
                     color: isSelected
                         ? activeColor
-                        : (isDark ? Colors.white70 : Colors.grey.shade700),
-                    size: 22,
+                        : (isDark ? AppTheme.textMuted : AppTheme.textSecondary),
+                    size: 20,
                   ),
                 if (!isCollapsed) ...[
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       label,
@@ -258,12 +277,13 @@ class _MainNavigationState extends State<MainNavigation> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontWeight: isSelected
-                            ? FontWeight.bold
+                            ? FontWeight.w700
                             : FontWeight.w500,
-                        fontSize: 14,
+                        fontSize: 13.5,
                         color: isSelected
-                            ? activeColor
-                            : (isDark ? Colors.white70 : Colors.grey.shade800),
+                            ? (isDark ? Colors.white : activeColor)
+                            : (isDark ? Colors.white70 : AppTheme.textPrimary),
+                        letterSpacing: isSelected ? 0.1 : 0,
                       ),
                     ),
                   ),
@@ -319,8 +339,8 @@ class _MainNavigationState extends State<MainNavigation> {
     final activeColor = SubRoleThemeEngine.getAccentColorForUser(_currentUser);
     return Padding(
       padding: EdgeInsets.symmetric(
-        horizontal: isCollapsed ? 8 : 16,
-        vertical: 4,
+        horizontal: isCollapsed ? 8 : 12,
+        vertical: 2,
       ),
       child: Tooltip(
         message: isCollapsed ? label : '',
@@ -332,31 +352,52 @@ class _MainNavigationState extends State<MainNavigation> {
             onTap();
           },
           borderRadius: BorderRadius.circular(12),
-          child: Container(
+          hoverColor: isDark
+              ? Colors.white.withValues(alpha: 0.04)
+              : Colors.black.withValues(alpha: 0.03),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
             padding: EdgeInsets.symmetric(
-              horizontal: isCollapsed ? 0 : 16,
-              vertical: 12,
+              horizontal: isCollapsed ? 0 : 12,
+              vertical: 10,
             ),
             decoration: BoxDecoration(
               color: isSelected
-                  ? activeColor.withValues(alpha: 0.1)
+                  ? activeColor.withValues(alpha: isDark ? 0.18 : 0.09)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
+              border: isSelected
+                  ? Border.all(
+                      color: activeColor.withValues(alpha: isDark ? 0.35 : 0.2),
+                      width: 1,
+                    )
+                  : null,
             ),
             child: Row(
               mainAxisAlignment: isCollapsed
                   ? MainAxisAlignment.center
                   : MainAxisAlignment.start,
               children: [
+                if (!isCollapsed && isSelected) ...[
+                  Container(
+                    width: 3.5,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.primaryGradient,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 Icon(
                   icon,
                   color: isSelected
                       ? activeColor
-                      : (isDark ? Colors.white70 : Colors.grey.shade700),
-                  size: 22,
+                      : (isDark ? AppTheme.textMuted : AppTheme.textSecondary),
+                  size: 20,
                 ),
                 if (!isCollapsed) ...[
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       label,
@@ -364,12 +405,13 @@ class _MainNavigationState extends State<MainNavigation> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontWeight: isSelected
-                            ? FontWeight.bold
+                            ? FontWeight.w700
                             : FontWeight.w500,
-                        fontSize: 14,
+                        fontSize: 13.5,
                         color: isSelected
-                            ? activeColor
-                            : (isDark ? Colors.white70 : Colors.grey.shade800),
+                            ? (isDark ? Colors.white : activeColor)
+                            : (isDark ? Colors.white70 : AppTheme.textPrimary),
+                        letterSpacing: isSelected ? 0.1 : 0,
                       ),
                     ),
                   ),

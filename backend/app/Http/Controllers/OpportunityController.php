@@ -56,6 +56,19 @@ class OpportunityController extends Controller
         return $this->successResponse('Detail peluang berhasil diambil', $opp);
     }
 
+    public function myOpportunities(Request $request)
+    {
+        $user = Auth::guard('api')->user() ?? $request->user();
+        if (!$user) {
+            return $this->errorResponse('Unauthenticated.', 401);
+        }
+
+        $limit = (int) $request->query('limit', 50);
+        $opportunities = $this->opportunityService->getUserOpportunities($user->id, $limit);
+
+        return $this->successResponse('Daftar kebutuhan/proyek saya berhasil diambil', $opportunities->toArray());
+    }
+
     public function store(StoreOpportunityRequest $request)
     {
         $user = Auth::guard('api')->user();

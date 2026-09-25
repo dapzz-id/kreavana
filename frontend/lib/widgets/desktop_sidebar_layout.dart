@@ -250,39 +250,60 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
 
     return Padding(
       padding: EdgeInsets.symmetric(
-        horizontal: isCollapsed ? 8 : 16,
-        vertical: 4,
+        horizontal: isCollapsed ? 8 : 12,
+        vertical: 2,
       ),
       child: Tooltip(
         message: isCollapsed ? label : '',
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
-          child: Container(
+          hoverColor: isDark
+              ? Colors.white.withValues(alpha: 0.04)
+              : Colors.black.withValues(alpha: 0.03),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
             padding: EdgeInsets.symmetric(
-              horizontal: isCollapsed ? 0 : 16,
-              vertical: 12,
+              horizontal: isCollapsed ? 0 : 12,
+              vertical: 10,
             ),
             decoration: BoxDecoration(
               color: isSelected
-                  ? activeColor.withValues(alpha: 0.1)
+                  ? activeColor.withValues(alpha: isDark ? 0.16 : 0.09)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
+              border: isSelected
+                  ? Border.all(
+                      color: activeColor.withValues(alpha: isDark ? 0.3 : 0.2),
+                      width: 1,
+                    )
+                  : null,
             ),
             child: Row(
               mainAxisAlignment: isCollapsed
                   ? MainAxisAlignment.center
                   : MainAxisAlignment.start,
               children: [
+                if (!isCollapsed && isSelected) ...[
+                  Container(
+                    width: 3.5,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.primaryGradient,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 Icon(
                   icon,
                   color: isSelected
                       ? activeColor
-                      : (isDark ? Colors.white70 : Colors.grey.shade700),
-                  size: 22,
+                      : (isDark ? AppTheme.textMuted : AppTheme.textSecondary),
+                  size: 20,
                 ),
                 if (!isCollapsed) ...[
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       label,
@@ -290,12 +311,13 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontWeight: isSelected
-                            ? FontWeight.bold
+                            ? FontWeight.w700
                             : FontWeight.w500,
-                        fontSize: 14,
+                        fontSize: 13.5,
                         color: isSelected
-                            ? activeColor
-                            : (isDark ? Colors.white70 : Colors.grey.shade800),
+                            ? (isDark ? Colors.white : activeColor)
+                            : (isDark ? Colors.white70 : AppTheme.textPrimary),
+                        letterSpacing: isSelected ? 0.1 : 0,
                       ),
                     ),
                   ),
@@ -310,14 +332,14 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
 
   Widget _buildSectionHeader(String title, bool isDark) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Text(
-        title,
+        title.toUpperCase(),
         style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: isDark ? Colors.white54 : Colors.grey.shade500,
-          letterSpacing: 0.5,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+          letterSpacing: 0.9,
         ),
       ),
     );

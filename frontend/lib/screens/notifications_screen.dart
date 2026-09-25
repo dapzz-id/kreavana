@@ -537,7 +537,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                                       chatId,
                                       true,
                                     );
-                                    if (context.mounted) {
+                                    if (mounted) {
                                       AppSnackbar.success(
                                         context,
                                         'Berhasil bergabung dengan grup!',
@@ -580,7 +580,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                                       chatId,
                                       false,
                                     );
-                                    if (context.mounted) {
+                                    if (mounted) {
                                       AppSnackbar.info(
                                         context,
                                         'Undangan grup ditolak',

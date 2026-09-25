@@ -156,13 +156,15 @@ class _CreateContractDialogState extends State<CreateContractDialog> {
                     border: OutlineInputBorder(),
                   ),
                   validator: (val) {
-                    if (val == null || val.trim().isEmpty)
+                    if (val == null || val.trim().isEmpty) {
                       return 'Nilai kontrak wajib diisi';
+                    }
                     final num = double.tryParse(
                       val.replaceAll('.', '').replaceAll(',', ''),
                     );
-                    if (num == null || num <= 0)
+                    if (num == null || num <= 0) {
                       return 'Nilai kontrak tidak valid';
+                    }
                     return null;
                   },
                 ),

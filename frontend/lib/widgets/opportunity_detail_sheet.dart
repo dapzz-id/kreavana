@@ -280,7 +280,7 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
                             )
                           : ListView.separated(
                               itemCount: apps.length,
-                              separatorBuilder: (_, __) => const Divider(height: 16),
+                              separatorBuilder: (_, _) => const Divider(height: 16),
                               itemBuilder: (context, index) {
                                 final app = apps[index];
                                 return Container(
@@ -487,12 +487,12 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
               height: 200,
               width: double.infinity,
               fit: BoxFit.cover,
-              placeholder: (_, __) => Container(
+              placeholder: (context, url) => Container(
                 height: 200,
                 color: Colors.grey.shade200,
                 child: const Center(child: CircularProgressIndicator()),
               ),
-              errorWidget: (_, __, ___) => Container(
+              errorWidget: (context, url, error) => Container(
                 height: 120,
                 color: Colors.grey.shade200,
                 child: const Icon(Icons.image_not_supported, size: 40, color: Colors.grey),
@@ -542,32 +542,75 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
         ),
         const SizedBox(height: 16),
 
-        // 3. Procurement-Style Info Cards (SPSE-like)
+        // 3. Description (if available)
+        if (opp.description != null && opp.description!.trim().isNotEmpty) ...[
+          const Text(
+            'Deskripsi Kebutuhan & Ruang Lingkup:',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1B2E) : const Color(0xFFF8F9FA),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+              ),
+            ),
+            child: Text(
+              opp.description!,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.5,
+                color: isDark ? Colors.white70 : Colors.grey.shade800,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // 4. Procurement-Style Info Cards
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+            color: isDark ? const Color(0xFF1A1829) : const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+            ),
           ),
           child: Column(
             children: [
               _InfoRow(
-                icon: Icons.calendar_today_outlined,
-                label: 'Jadwal Acara Klien',
+                icon: Icons.calendar_today_rounded,
+                iconColor: const Color(0xFFF59E0B),
+                iconBg: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                label: 'Jadwal Acara & Batas Waktu',
                 value: opp.eventDate != null
-                    ? '${opp.eventDate} ${opp.eventStartTime != null ? '(${opp.eventStartTime} - ${opp.eventEndTime ?? ''})' : ''}'
-                    : (opp.deadline != null ? 'Batas Waktu: ${opp.deadline}' : 'Fleksibel'),
+                    ? ' '
+                    : (opp.deadline != null ? opp.deadline! : 'Fleksibel'),
               ),
-              const SizedBox(height: 10),
-              _InfoRow(
-                icon: Icons.place_outlined,
-                label: 'Lokasi Event',
-                value: opp.address ?? opp.location ?? 'Indonesia',
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Divider(height: 1),
               ),
-              const SizedBox(height: 10),
               _InfoRow(
-                icon: Icons.payments_outlined,
+                icon: Icons.place_rounded,
+                iconColor: const Color(0xFF06B6D4),
+                iconBg: const Color(0xFF06B6D4).withValues(alpha: 0.12),
+                label: 'Lokasi Event / Proyek',
+                value: opp.address ?? opp.location ?? 'Indonesia (Online / Fleksibel)',
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Divider(height: 1),
+              ),
+              _InfoRow(
+                icon: Icons.payments_rounded,
+                iconColor: const Color(0xFF10B981),
+                iconBg: const Color(0xFF10B981).withValues(alpha: 0.12),
                 label: 'Perkiraan Budget',
                 value: opp.budgetRange ?? 'Sesuai Kesepakatan',
               ),
@@ -578,20 +621,64 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
 
         // 4. Required Capabilities (Multi-Role Breakdown)
         const Text(
-          'Keahlian yang Dibutuhkan:',
+          'Peran & Spesialisasi yang Dibutuhkan:',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
         const SizedBox(height: 8),
         if (opp.requirements.isNotEmpty)
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          Column(
             children: opp.requirements.map((r) {
-              return Chip(
-                avatar: const Icon(Icons.check_circle_outline, size: 16, color: Colors.teal),
-                label: Text(r.label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                backgroundColor: Colors.teal.shade50,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E1B2E) : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.check_circle_rounded, size: 16, color: Colors.teal),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            r.label,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (r.tags.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: r.tags.map((tag) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryPurple.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '#$tag',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.primaryPurple,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ],
+                ),
               );
             }).toList(),
           )
@@ -753,23 +840,57 @@ class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final Color? iconColor;
+  final Color? iconBg;
 
-  const _InfoRow({required this.icon, required this.label, required this.value});
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.iconColor,
+    this.iconBg,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iColor = iconColor ?? AppTheme.primaryPurple;
+    final iBg = iconBg ?? iColor.withValues(alpha: 0.12);
+
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(icon, size: 18, color: Colors.grey.shade600),
-        const SizedBox(width: 10),
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: iBg,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: iColor),
+        ),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                ),
+              ),
               const SizedBox(height: 2),
-              Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : const Color(0xFF1E293B),
+                ),
+              ),
             ],
           ),
         ),

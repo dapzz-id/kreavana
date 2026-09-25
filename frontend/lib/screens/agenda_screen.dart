@@ -599,24 +599,31 @@ class _AgendaScreenState extends State<AgendaScreen> {
                           setState(() {
                             final now = DateTime.now();
                             Color getTypeColor(String type) {
-                              if (type == 'Online' || type == 'Client')
+                              if (type == 'Online' || type == 'Client') {
                                 return const Color(0xFF3B82F6);
-                              if (type == 'Offline')
+                              }
+                              if (type == 'Offline') {
                                 return const Color(0xFFF97316);
-                              if (type == 'Deadline' || type == 'Review')
+                              }
+                              if (type == 'Deadline' || type == 'Review') {
                                 return const Color(0xFFEF4444);
+                              }
                               return Colors.grey.shade600; // Lainnya
                             }
 
                             IconData getTypeIcon(String type) {
-                              if (type == 'Online' || type == 'Client')
+                              if (type == 'Online' || type == 'Client') {
                                 return Icons.videocam_outlined;
-                              if (type == 'Offline')
+                              }
+                              if (type == 'Offline') {
                                 return Icons.location_on_outlined;
-                              if (type == 'Deadline')
+                              }
+                              if (type == 'Deadline') {
                                 return Icons.alarm_outlined;
-                              if (type == 'Review')
+                              }
+                              if (type == 'Review') {
                                 return Icons.rate_review_outlined;
+                              }
                               return Icons.event_note_outlined; // Lainnya
                             }
 

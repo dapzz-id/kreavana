@@ -95,20 +95,25 @@ class _WalletScreenState extends State<WalletScreen> {
         onRefresh: _loadWalletData,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-            isDesktop ? 32 : 16,
-            16,
-            isDesktop ? 32 : 16,
-            24,
-          ),
-          child: !_hasPin
-              ? _buildActivationUI(theme)
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 1. Premium Wallet Card with Linear Gradient
-                    Container(
-                      width: double.infinity,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1040),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  isDesktop ? 32 : 16,
+                  16,
+                  isDesktop ? 32 : 16,
+                  isDesktop ? 48 : 24,
+                ),
+                child: !_hasPin
+                    ? _buildActivationUI(theme)
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 1. Premium Wallet Card with Linear Gradient
+                          Container(
+                            width: double.infinity,
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -505,6 +510,9 @@ class _WalletScreenState extends State<WalletScreen> {
                           ),
                   ],
                 ),
+              ),
+            ),
+          ),
         ),
       ),
     );

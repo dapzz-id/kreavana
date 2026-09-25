@@ -517,12 +517,15 @@ class _CaptureImageScreenState extends State<_CaptureImageScreen> {
   }
 
   Future<void> _takePicture() async {
-    if (_isTaking || _controller == null || !_controller!.value.isInitialized)
+    if (_isTaking || _controller == null || !_controller!.value.isInitialized) {
       return;
+    }
     _isTaking = true;
 
     final xFile = await _controller!.takePicture();
-    if (mounted) Navigator.pop(context, xFile);
+    if (mounted) {
+      Navigator.pop(context, xFile);
+    }
   }
 
   @override

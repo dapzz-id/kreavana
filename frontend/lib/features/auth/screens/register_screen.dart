@@ -254,7 +254,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     return Container(
       constraints: const BoxConstraints(maxWidth: 920),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        color: isDark ? AppTheme.cardDark : Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -264,7 +264,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           ),
         ],
         border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
           width: 1,
         ),
       ),
@@ -303,7 +303,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     return Container(
       constraints: const BoxConstraints(maxWidth: 480),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        color: isDark ? AppTheme.cardDark : Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -313,7 +313,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           ),
         ],
         border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
           width: 1,
         ),
       ),

@@ -129,6 +129,7 @@ Route::middleware('auth:api')->group(function () {
 
     // Opportunities (Write & Applications)
     Route::prefix('opportunities')->group(function () {
+        Route::get('my', [OpportunityController::class, 'myOpportunities']);
         Route::post('/', [OpportunityController::class, 'store'])->middleware('permission:create_opportunity');
         Route::post('report', [OpportunityController::class, 'submitReport'])->middleware('permission:submit_report');
         Route::post('{id}/reviews', [OpportunityReviewController::class, 'store']);

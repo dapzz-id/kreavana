@@ -236,11 +236,13 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
                   keyboardType: TextInputType.number,
                   textInputAction: TextInputAction.next,
                   validator: (val) {
-                    if (val == null || val.trim().isEmpty)
+                    if (val == null || val.trim().isEmpty) {
                       return 'Harga wajib diisi';
+                    }
                     final num = double.tryParse(val.trim());
-                    if (num == null || num <= 0)
+                    if (num == null || num <= 0) {
                       return 'Format harga tidak valid';
+                    }
                     return null;
                   },
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],

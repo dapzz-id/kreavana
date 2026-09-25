@@ -123,188 +123,295 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
     final textController = TextEditingController(
       text: _locationMode == 'custom' ? _customCity : '',
     );
+    final isDesktop = MediaQuery.of(context).size.width >= 600;
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF161426) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: EdgeInsets.fromLTRB(
-            20,
-            20,
-            20,
-            MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+    Widget buildPickerContent(BuildContext ctx, {bool inDialog = false}) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!inDialog) ...[
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          Row(
             children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+              const Icon(Icons.location_on_rounded, color: AppTheme.primaryPurple, size: 20),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Pilih Filter Lokasi AI',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
-              const SizedBox(height: 16),
-              const Row(
-                children: [
-                  Icon(Icons.location_on_rounded, color: AppTheme.primaryPurple, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Pilih Filter Lokasi AI',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
+              if (inDialog)
+                IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: () => Navigator.pop(ctx),
+                  tooltip: 'Tutup',
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
 
-              // Option 1: Lokasi Sekarang / GPS
-              InkWell(
-                onTap: () {
-                  setState(() {
-                    _locationMode = 'current';
-                  });
-                  Navigator.pop(ctx);
-                  _fetchRecommendations();
-                },
+          // Option 1: Lokasi Sekarang / GPS
+          InkWell(
+            onTap: () {
+              setState(() {
+                _locationMode = 'current';
+              });
+              Navigator.pop(ctx);
+              _fetchRecommendations();
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: _locationMode == 'current'
+                    ? AppTheme.primaryPurple.withValues(alpha: 0.12)
+                    : (isDark ? const Color(0xFF1E1A30) : const Color(0xFFF7F5FC)),
                 borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: _locationMode == 'current'
-                        ? AppTheme.primaryPurple.withValues(alpha: 0.12)
-                        : (isDark ? const Color(0xFF221E38) : const Color(0xFFF3F0FA)),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _locationMode == 'current'
-                          ? AppTheme.primaryPurple
-                          : Colors.transparent,
-                      width: 1.5,
+                border: Border.all(
+                  color: _locationMode == 'current'
+                      ? AppTheme.primaryPurple
+                      : Colors.transparent,
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.my_location_rounded,
+                    color: _locationMode == 'current' ? AppTheme.primaryPurple : Colors.grey,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Lokasi Sekarang (GPS)',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                        Text(
+                          'Cari kreator & proyek terdekat dari posisimu',
+                          style: TextStyle(fontSize: 11, color: Colors.grey),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.my_location_rounded, color: AppTheme.primaryPurple, size: 20),
-                      const SizedBox(width: 10),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Lokasi Sekarang (GPS)',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                            ),
-                            Text(
-                              'Rekomendasi kreator & peluang di area terdekat Anda',
-                              style: TextStyle(fontSize: 11, color: Colors.grey),
-                            ),
-                          ],
+                  if (_locationMode == 'current')
+                    const Icon(Icons.check_circle_rounded, color: AppTheme.primaryPurple, size: 18),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // Option 2: Seluruh Indonesia
+          InkWell(
+            onTap: () {
+              setState(() {
+                _locationMode = 'all';
+              });
+              Navigator.pop(ctx);
+              _fetchRecommendations();
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: _locationMode == 'all'
+                    ? AppTheme.primaryPurple.withValues(alpha: 0.12)
+                    : (isDark ? const Color(0xFF1E1A30) : const Color(0xFFF7F5FC)),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _locationMode == 'all'
+                      ? AppTheme.primaryPurple
+                      : Colors.transparent,
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.public_rounded,
+                    color: _locationMode == 'all' ? AppTheme.primaryPurple : Colors.grey,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Seluruh Indonesia',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                         ),
-                      ),
-                      if (_locationMode == 'current')
-                        const Icon(Icons.check_circle_rounded, color: AppTheme.primaryPurple, size: 18),
-                    ],
+                        Text(
+                          'Tampilkan rekomendasi dari semua kota',
+                          style: TextStyle(fontSize: 11, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_locationMode == 'all')
+                    const Icon(Icons.check_circle_rounded, color: AppTheme.primaryPurple, size: 18),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 14),
+          const Text(
+            'Atau pilih kota populer:',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey),
+          ),
+          const SizedBox(height: 8),
+
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _popularCities.map((city) {
+              final isSel = _locationMode == 'custom' && _customCity.toLowerCase() == city.toLowerCase();
+              return ChoiceChip(
+                label: Text(city),
+                selected: isSel,
+                selectedColor: AppTheme.primaryPurple.withValues(alpha: 0.18),
+                backgroundColor: isDark ? const Color(0xFF1E1A30) : const Color(0xFFF2EFFB),
+                labelStyle: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                  color: isSel ? AppTheme.primaryPurple : (isDark ? Colors.white70 : Colors.black87),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(
+                    color: isSel ? AppTheme.primaryPurple : Colors.transparent,
+                  ),
+                ),
+                onSelected: (val) {
+                  if (val) {
+                    setState(() {
+                      _locationMode = 'custom';
+                      _customCity = city;
+                    });
+                    Navigator.pop(ctx);
+                    _fetchRecommendations();
+                  }
+                },
+              );
+            }).toList(),
+          ),
+
+          const SizedBox(height: 14),
+          // Custom text input
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: textController,
+                  decoration: InputDecoration(
+                    hintText: 'Ketik kota lainnya (misal: Bogor, Solo)',
+                    hintStyle: const TextStyle(fontSize: 12),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    filled: true,
+                    fillColor: isDark ? const Color(0xFF1E1A30) : const Color(0xFFF7F5FC),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: AppTheme.primaryPurple.withValues(alpha: 0.3)),
+                    ),
                   ),
                 ),
               ),
-
-              const SizedBox(height: 16),
-              const Text(
-                'Atau Pilih Kota / Lokasi Custom:',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey),
-              ),
-              const SizedBox(height: 8),
-
-              // Preset popular city chips
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _popularCities.map((city) {
-                  final isSelected = _locationMode == 'custom' && _customCity == city;
-                  return ChoiceChip(
-                    label: Text(city),
-                    selected: isSelected,
-                    selectedColor: AppTheme.primaryPurple,
-                    labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
-                      fontSize: 12,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    ),
-                    backgroundColor: isDark ? const Color(0xFF221E38) : const Color(0xFFF0ECF9),
-                    onSelected: (val) {
-                      if (val) {
-                        setState(() {
-                          _locationMode = 'custom';
-                          _customCity = city;
-                        });
-                        Navigator.pop(ctx);
-                        _fetchRecommendations();
-                      }
-                    },
-                  );
-                }).toList(),
-              ),
-
-              const SizedBox(height: 14),
-              // Custom text input
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: textController,
-                      decoration: InputDecoration(
-                        hintText: 'Ketik kota lainnya (misal: Bogor, Solo)',
-                        hintStyle: const TextStyle(fontSize: 12),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        filled: true,
-                        fillColor: isDark ? const Color(0xFF1E1A30) : const Color(0xFFF7F5FC),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: AppTheme.primaryPurple.withValues(alpha: 0.3)),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      final text = textController.text.trim();
-                      if (text.isNotEmpty) {
-                        setState(() {
-                          _locationMode = 'custom';
-                          _customCity = text;
-                        });
-                        Navigator.pop(ctx);
-                        _fetchRecommendations();
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryPurple,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
-                    child: const Text('Pilih', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  ),
-                ],
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () {
+                  final text = textController.text.trim();
+                  if (text.isNotEmpty) {
+                    setState(() {
+                      _locationMode = 'custom';
+                      _customCity = text;
+                    });
+                    Navigator.pop(ctx);
+                    _fetchRecommendations();
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryPurple,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+                child: const Text('Pilih', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
-        );
-      },
-    );
+        ],
+      );
+    }
+
+    if (isDesktop) {
+      showDialog(
+        context: context,
+        builder: (ctx) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF161426) : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(24),
+              child: buildPickerContent(ctx, inDialog: true),
+            ),
+          ),
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) {
+          return Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF161426) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              MediaQuery.of(ctx).viewInsets.bottom + 24,
+            ),
+            child: buildPickerContent(ctx, inDialog: false),
+          );
+        },
+      );
+    }
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const accent = AppTheme.primaryPurple;

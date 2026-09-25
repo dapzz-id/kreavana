@@ -56,24 +56,29 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 70,
-        backgroundColor: isDark ? AppTheme.cardBg : Colors.white,
-        elevation: 1,
+        backgroundColor: isDark ? AppTheme.cardDark : Colors.white,
+        elevation: 0,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            color: isDark ? AppTheme.surfaceDarkElevated : AppTheme.dividerLight,
+            height: 1,
+          ),
+        ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Colors.teal, Color(0xFF0EA5E9)],
-                ),
+                gradient: AppTheme.primaryGradient,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Text(
                 'K',
                 style: TextStyle(
                   color: Colors.white,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w900,
                   fontSize: 20,
                 ),
               ),
@@ -96,7 +101,7 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
                     'Pasar & Kolaborasi Kreatif',
                     style: TextStyle(
                       fontSize: 11,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                      color: isDark ? AppTheme.textMuted : AppTheme.textSecondary,
                     ),
                   ),
                 ],
@@ -136,7 +141,7 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
           ElevatedButton(
             onPressed: () => context.go(AppRoutes.register),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.teal.shade600,
+              backgroundColor: AppTheme.primaryPurple,
               foregroundColor: Colors.white,
               minimumSize: const Size(80, 36),
               shape: RoundedRectangleBorder(
@@ -203,16 +208,19 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark
-              ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
-              : [Colors.teal.shade50, Colors.blue.shade50],
+              ? [const Color(0xFF1E1B38), const Color(0xFF131124)]
+              : [const Color(0xFFF5F3FF), const Color(0xFFEDE9FE)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isDark ? AppTheme.inputBorder : Colors.teal.shade100,
+          color: isDark
+              ? AppTheme.primaryPurple.withValues(alpha: 0.25)
+              : AppTheme.primaryPurple.withValues(alpha: 0.15),
           width: 1,
         ),
+        boxShadow: isDark ? AppTheme.cardShadowDark : AppTheme.cardShadowLight,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,32 +228,38 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.teal.withValues(alpha: 0.15),
+              color: AppTheme.primaryPurple.withValues(alpha: isDark ? 0.22 : 0.12),
               borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppTheme.primaryPurple.withValues(alpha: 0.25),
+                width: 1,
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.verified, size: 16, color: Colors.teal.shade700),
+                const Icon(Icons.verified, size: 16, color: AppTheme.primaryPurple),
                 const SizedBox(width: 6),
                 Text(
                   'Platform Kolaborasi Kreatif Terpercaya',
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.teal.shade700,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? const Color(0xFFA78BFA) : AppTheme.primaryPurple,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           Text(
             'Temukan Talenta & Peluang Proyek Kreatif Tanpa Batas',
             style: TextStyle(
               fontSize: isDesktop ? 36 : 24,
               fontWeight: FontWeight.w900,
               height: 1.2,
+              letterSpacing: -0.5,
+              color: isDark ? Colors.white : AppTheme.textPrimary,
             ),
           ),
           const SizedBox(height: 12),
@@ -253,8 +267,8 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
             'Kreavana menghubungkan penyelenggara acara, instansi, dan bisnis dengan para kreator profesional — mulai dari Fotografer, Videografer, MC, hingga Seniman Tradisional seperti Tukang Kendang. Transparan, aman, dan tanpa biaya perantara tersembunyi.',
             style: TextStyle(
               fontSize: 15,
-              color: isDark ? AppTheme.textMuted : Colors.grey.shade800,
-              height: 1.5,
+              color: isDark ? AppTheme.textMuted : AppTheme.textSecondary,
+              height: 1.55,
             ),
           ),
           const SizedBox(height: 24),
@@ -274,22 +288,30 @@ class _LandingPageScreenState extends State<LandingPageScreen> {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal.shade600,
+                  backgroundColor: AppTheme.primaryPurple,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
+                  elevation: 2,
                 ),
               ),
               OutlinedButton.icon(
                 onPressed: () => context.go(AppRoutes.explore),
-                icon: const Icon(Icons.people_alt_outlined),
+                icon: const Icon(Icons.people_alt_outlined, color: AppTheme.primaryPurple),
                 label: const Text(
                   'Cari Kreator Berbakat',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryPurple,
+                  ),
                 ),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  side: BorderSide(
+                    color: AppTheme.primaryPurple.withValues(alpha: 0.4),
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
