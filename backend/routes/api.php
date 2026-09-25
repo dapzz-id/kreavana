@@ -100,6 +100,16 @@ Route::middleware('auth:api')->group(function () {
         Route::post('apply-creator', [ProfileController::class, 'applyCreator'])->middleware('role:user');
     });
 
+    // Verification
+    Route::prefix('verification')->group(function () {
+        Route::get('status', [ProfileController::class, 'getVerificationStatus']);
+        Route::post('client', [ProfileController::class, 'applyClientVerification'])->middleware('role:user');
+    });
+
+    // Public User Profile
+    Route::get('users/{id}/profile', [ProfileController::class, 'getPublicProfile'])
+        ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
+
     Route::put('user/public-key', [ProfileController::class, 'updatePublicKey'])->middleware('auth:api');
 
     // Follows
@@ -137,6 +147,10 @@ Route::middleware('auth:api')->group(function () {
         Route::get('{id}/applications', [OpportunityController::class, 'applications']);
         Route::post('applications/{id}/approve', [OpportunityController::class, 'approveApplication']);
         Route::post('applications/{id}/reject', [OpportunityController::class, 'rejectApplication']);
+        Route::post('{id}/start-event', [OpportunityController::class, 'startEvent']);
+        Route::post('{id}/update-progress', [OpportunityController::class, 'updateProgress']);
+        Route::post('{id}/schedule-meeting', [OpportunityController::class, 'scheduleMeeting']);
+        Route::post('applications/{id}/submit-documents', [OpportunityController::class, 'submitDocuments']);
     });
 
     // Marketing (High-Value Deals & Reviews)
@@ -147,6 +161,8 @@ Route::middleware('auth:api')->group(function () {
         Route::post('transactions/{id}/verify', [MarketingController::class, 'verify']);
         Route::post('transactions/{id}/approve', [MarketingController::class, 'approve']);
         Route::post('transactions/{id}/reject', [MarketingController::class, 'reject']);
+        Route::get('opportunities', [MarketingController::class, 'listHighValueOpportunities']);
+        Route::post('opportunities/{id}/confirm-payment', [MarketingController::class, 'confirmOpportunityPayment']);
     });
 
     // Job Contracts

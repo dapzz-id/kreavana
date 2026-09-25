@@ -4,6 +4,8 @@ import '../app/subrole_theme_engine.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
 import '../widgets/skeleton/skeleton_list.dart';
+import '../widgets/app_breadcrumbs.dart';
+import 'main_navigation.dart';
 
 class UlasanReputasiScreen extends StatefulWidget {
   final UserModel? user;
@@ -230,6 +232,33 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              AppBreadcrumbs(
+                items: [
+                  BreadcrumbItem(
+                    label: 'Beranda',
+                    icon: Icons.home_rounded,
+                    onTap: () {
+                      if (widget.user != null) {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => MainNavigation(
+                              initialUser: widget.user!,
+                              initialIndex: 0,
+                            ),
+                          ),
+                          (r) => false,
+                        );
+                      }
+                    },
+                  ),
+                  const BreadcrumbItem(
+                    label: 'Ulasan & Reputasi',
+                    icon: Icons.star_rounded,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
               // ── 1. Hero Reputation Banner ──
               _buildReputationBanner(accentColor, isDark),
               const SizedBox(height: 18),

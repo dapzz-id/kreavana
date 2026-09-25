@@ -5,13 +5,18 @@ import 'package:kreavana/services/marketplace_service.dart';
 import '../app/theme.dart';
 import '../app/app_animations.dart';
 import '../utils/app_errors.dart';
+import '../models/user_model.dart';
 import '../widgets/animated_input_field.dart';
 import '../widgets/gradient_button.dart';
+import '../widgets/app_breadcrumbs.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 
 /// Form untuk user membuat karya/layanan baru di marketplace.
 /// Data dikirim sungguhan ke backend (POST /marketplace).
 class JualKaryaScreen extends StatefulWidget {
-  const JualKaryaScreen({super.key});
+  final UserModel? user;
+
+  const JualKaryaScreen({super.key, this.user});
 
   @override
   State<JualKaryaScreen> createState() => _JualKaryaScreenState();
@@ -95,7 +100,7 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
 
     final isDesktop = MediaQuery.of(context).size.width > 900;
 
-    return Scaffold(
+    final content = Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: Navigator.canPop(context),
         toolbarHeight: 80,
@@ -118,6 +123,22 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
           child: EntranceList(
             stepDelay: const Duration(milliseconds: 60),
             children: [
+              if (isDesktop) ...[
+                AppBreadcrumbs(
+                  items: [
+                    BreadcrumbItem(
+                      label: 'Portofolio',
+                      icon: Icons.photo_library_outlined,
+                      onTap: () => Navigator.pop(context),
+                    ),
+                    const BreadcrumbItem(
+                      label: 'Jual / Tambah Karya',
+                      icon: Icons.add_photo_alternate_outlined,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -342,6 +363,16 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
         ),
       ),
     );
+
+    if (isDesktop && widget.user != null) {
+      return DesktopSidebarLayout(
+        user: widget.user!,
+        activeRoute: 'portofolio',
+        child: content,
+      );
+    }
+
+    return content;
   }
 }
 

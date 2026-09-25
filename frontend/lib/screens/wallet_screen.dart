@@ -8,6 +8,8 @@ import 'transfer_screen.dart';
 import 'withdraw_screen.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/wallet_pin_dialog.dart';
+import '../widgets/app_breadcrumbs.dart';
+import 'main_navigation.dart';
 
 class WalletScreen extends StatefulWidget {
   final UserModel user;
@@ -111,6 +113,29 @@ class _WalletScreenState extends State<WalletScreen> {
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          AppBreadcrumbs(
+                            items: [
+                              BreadcrumbItem(
+                                label: 'Beranda',
+                                icon: Icons.home_rounded,
+                                onTap: () => Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => MainNavigation(
+                                      initialUser: _currentUser,
+                                      initialIndex: 0,
+                                    ),
+                                  ),
+                                  (r) => false,
+                                ),
+                              ),
+                              const BreadcrumbItem(
+                                label: 'Dompet & Pembayaran',
+                                icon: Icons.account_balance_wallet_rounded,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
                           // 1. Premium Wallet Card with Linear Gradient
                           Container(
                             width: double.infinity,

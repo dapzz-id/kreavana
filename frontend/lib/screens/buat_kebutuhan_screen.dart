@@ -9,6 +9,8 @@ import 'proyek_saya_screen.dart';
 import '../models/user_model.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import '../widgets/app_breadcrumbs.dart';
+import '../services/verification_service.dart';
+import 'client_verification_page.dart';
 
 class RoleRequirementFormItem {
   String slug;
@@ -52,7 +54,46 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   final _judulController = TextEditingController();
   final _deskripsiController = TextEditingController();
   final _alamatController = TextEditingController();
+  final _bannerUrlController = TextEditingController();
+  final _meetingLocationController = TextEditingController();
+  final _meetingNotesController = TextEditingController();
+
+  String? _bannerUrl;
+  DateTime _eventStartDate = DateTime.now().add(const Duration(days: 3));
+  DateTime _eventEndDate = DateTime.now().add(const Duration(days: 5));
+  DateTime _meetingDate = DateTime.now().add(const Duration(days: 2));
+  TimeOfDay _meetingTime = const TimeOfDay(hour: 14, minute: 0);
+  String _selectedMeetingPlaceType = 'office'; // 'office' | 'client_location'
+
+  bool get _isLargeBudget => _selectedBudget.contains('20.000.000');
+
   bool _submitting = false;
+  bool _isClientVerified = true;
+
+  Future<void> _checkClientVerification() async {
+    final isClient =
+        widget.user?.role == 'user' || widget.user?.isClient == true;
+    if (!isClient) {
+      if (mounted) setState(() => _isClientVerified = true);
+      return;
+    }
+    if (widget.user?.isVerified == true) {
+      if (mounted) setState(() => _isClientVerified = true);
+      return;
+    }
+    try {
+      final status = await VerificationService.getStatus();
+      if (mounted) {
+        setState(() {
+          _isClientVerified = status?.isVerified == true;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isClientVerified = widget.user?.isVerified ?? false);
+      }
+    }
+  }
 
   // Multi-role requirement items
   List<RoleRequirementFormItem>? _requirements;
@@ -330,7 +371,8 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
     '< Rp 500.000',
     'Rp 500.000 - 1.000.000',
     'Rp 1.000.000 - 5.000.000',
-    '> Rp 5.000.000',
+    'Rp 5.000.000 - 20.000.000',
+    '>= Rp 20.000.000 (Skala Besar - MoU Legal Kreavana)',
   ];
 
   static const List<Map<String, dynamic>> _deadlineItems = [
@@ -366,6 +408,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
       _selectedBudget = widget.initialBudget!;
     }
     _initDefaultRequirement();
+    _checkClientVerification();
   }
 
   @override
@@ -373,6 +416,9 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
     _judulController.dispose();
     _deskripsiController.dispose();
     _alamatController.dispose();
+    _bannerUrlController.dispose();
+    _meetingLocationController.dispose();
+    _meetingNotesController.dispose();
     if (_requirements != null) {
       for (final item in _requirements!) {
         item.dispose();
@@ -430,6 +476,59 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   }
 
   Future<void> _submit() async {
+    final isClient =
+        widget.user?.role == 'user' || widget.user?.isClient == true;
+    if (isClient && !_isClientVerified) {
+      final shouldVerify = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.shield_rounded, color: Colors.blue),
+              SizedBox(width: 8),
+              Text(
+                'Verifikasi KTP Diperlukan',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: const Text(
+            'Untuk mempublikasikan kebutuhan proyek baru, akun Klien Anda wajib diverifikasi KTP terlebih dahulu demi keamanan.\n\nVerifikasi ini tidak mengubah akun Anda menjadi Kreator.',
+            style: TextStyle(fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade700,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Verifikasi Sekarang'),
+            ),
+          ],
+        ),
+      );
+      if (shouldVerify == true && mounted) {
+        final res = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ClientVerificationPage(user: widget.user),
+          ),
+        );
+        if (res == true) {
+          _checkClientVerification();
+        }
+      }
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
     final reqs = safeRequirements;
     if (reqs.isEmpty) {
@@ -468,12 +567,29 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
         description: _deskripsiController.text.trim().isNotEmpty
             ? _deskripsiController.text.trim()
             : null,
+        posterUrl: _bannerUrl,
+        bannerUrl: _bannerUrl,
         location: locationName,
         address: addressDetail,
         latitude: _isRemote ? null : (cityData['lat'] as double),
         longitude: _isRemote ? null : (cityData['lng'] as double),
         budgetRange: _selectedBudget,
         deadline: deadlineDate,
+        eventDate: _eventStartDate.toIso8601String().substring(0, 10),
+        eventStartDate: _eventStartDate.toIso8601String().substring(0, 10),
+        eventEndDate: _eventEndDate.toIso8601String().substring(0, 10),
+        meetingDate: _isLargeBudget ? _meetingDate.toIso8601String().substring(0, 10) : null,
+        meetingTime: _isLargeBudget ? '${_meetingTime.hour.toString().padLeft(2, '0')}:${_meetingTime.minute.toString().padLeft(2, '0')} WIB' : null,
+        meetingLocation: _isLargeBudget
+            ? (_selectedMeetingPlaceType == 'office'
+                ? 'Kantor Representatif Kreavana (Menara Kreatif Lt. 8, Jakarta)'
+                : (_meetingLocationController.text.trim().isNotEmpty
+                    ? _meetingLocationController.text.trim()
+                    : addressDetail))
+            : null,
+        meetingNotes: _isLargeBudget && _meetingNotesController.text.trim().isNotEmpty
+            ? _meetingNotesController.text.trim()
+            : null,
         requirements: requirementsPayload,
       );
 
@@ -599,6 +715,79 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                     ),
                   ],
                 ),
+                if (!_isClientVerified &&
+                    (widget.user?.role == 'user' ||
+                        widget.user?.isClient == true))
+                  Container(
+                    margin: const EdgeInsets.only(top: 14, bottom: 6),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade50
+                          .withValues(alpha: isDark ? 0.15 : 0.95),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.amber.shade400),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.shield_outlined,
+                          color: Colors.amber.shade800,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Verifikasi KTP Diperlukan Sebelum Publikasi',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: isDark
+                                      ? Colors.amber.shade300
+                                      : Colors.amber.shade900,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Sebagai Klien, verifikasi KTP wajib untuk menjamin rasa aman dan mendapatkan lencana centang biru 🔵. Verifikasi ini tidak mengubah peran Anda menjadi kreator.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark
+                                      ? Colors.grey.shade300
+                                      : Colors.grey.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue.shade700,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () async {
+                            final res = await Navigator.push<bool>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ClientVerificationPage(user: widget.user),
+                              ),
+                            );
+                            if (res == true) {
+                              _checkClientVerification();
+                            }
+                          },
+                          icon: const Icon(Icons.verified_user, size: 16),
+                          label: const Text('Verifikasi KTP'),
+                        ),
+                      ],
+                    ),
+                  ),
                 const SizedBox(height: 12),
                 Container(
                   padding: EdgeInsets.all(isDesktop ? 32 : 20),
@@ -627,11 +816,15 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                         _InfoBanner(isDark: isDark),
                         const SizedBox(height: 24),
 
+                        // ── Banner Acara (Opsional) ──
+                        _buildBannerUploadSection(isDark),
+                        const SizedBox(height: 24),
+
                         // ── Judul ──
                         AnimatedInputField(
                           controller: _judulController,
                           label: 'Judul Kebutuhan Proyek',
-                          hint: 'Contoh: Foto Katalog Lookbook & Video Reels Event Peluncuran',
+                          hint: 'Contoh: Foto Marathon 10Km & Video Highlight Dokumentasi',
                           icon: Icons.title_rounded,
                           textInputAction: TextInputAction.next,
                           validator: (v) {
@@ -641,6 +834,10 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                           },
                         ),
                         const SizedBox(height: 24),
+
+                        // ── Durasi Acara (Tanggal Mulai - Selesai) ──
+                        _buildDurationSection(isDark, isDesktop),
+                        const SizedBox(height: 28),
 
                         // ── Multi-Role Section ──
                         _buildRolesSection(isDark),
@@ -723,6 +920,13 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                             onChanged: (v) => setState(() => _selectedDeadline = v!),
                           ),
                         ],
+
+                        // ── Escrow vs MoU Legal (> 20 Juta) ──
+                        if (_isLargeBudget)
+                          _buildMoUMeetingSection(isDark, isDesktop)
+                        else
+                          _buildEscrowProtectionCard(isDark),
+
                         const SizedBox(height: 36),
 
                         // ── Submit & Actions ──
@@ -1279,6 +1483,713 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
         ],
       ),
     );
+  }
+
+  // ─── Banner Upload Section ──────────────────────────────────────────────────
+  Widget _buildBannerUploadSection(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.image_outlined,
+              size: 20,
+              color: AppTheme.primaryPurple,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Banner Acara / Proyek',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white10 : Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'Opsional',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white70 : Colors.grey.shade700,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Upload foto banner atau pilih gambar tema untuk dipajang di bagian atas detail acara.',
+          style: TextStyle(
+            fontSize: 12,
+            color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_bannerUrl != null && _bannerUrl!.isNotEmpty) ...[
+          Container(
+            height: 180,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade300,
+              ),
+              image: DecorationImage(
+                image: NetworkImage(_bannerUrl!),
+                fit: BoxFit.cover,
+              ),
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black.withValues(alpha: 0.7),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    ),
+                    icon: const Icon(Icons.delete_outline, size: 16),
+                    label: const Text('Hapus Banner', style: TextStyle(fontSize: 12)),
+                    onPressed: () => setState(() {
+                      _bannerUrl = null;
+                      _bannerUrlController.clear();
+                    }),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1B33) : Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade300,
+                style: BorderStyle.solid,
+              ),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.add_photo_alternate_outlined,
+                  size: 38,
+                  color: isDark ? Colors.white54 : Colors.grey.shade400,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Belum ada banner acara',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white70 : Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.palette_outlined, size: 16),
+                      label: const Text('Pilih Tema Acara', style: TextStyle(fontSize: 12)),
+                      onPressed: () => _showBannerThemePicker(context, isDark),
+                    ),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryPurple,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.link_rounded, size: 16),
+                      label: const Text('Input URL Banner', style: TextStyle(fontSize: 12)),
+                      onPressed: () => _showBannerUrlDialog(context, isDark),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _showBannerThemePicker(BuildContext context, bool isDark) {
+    final themes = [
+      {
+        'title': 'Marathon & Olahraga',
+        'url': 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?auto=format&fit=crop&w=1200&q=80',
+      },
+      {
+        'title': 'Festival Musik & Konser',
+        'url': 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1200&q=80',
+      },
+      {
+        'title': 'Wedding & Romance',
+        'url': 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80',
+      },
+      {
+        'title': 'Tech Conference & Summit',
+        'url': 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
+      },
+      {
+        'title': 'Creative Studio & Exhibition',
+        'url': 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=80',
+      },
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF161426) : Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Pilih Banner Tema Acara',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 180,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: themes.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 12),
+                itemBuilder: (ctx, i) {
+                  final t = themes[i];
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      setState(() => _bannerUrl = t['url']);
+                      Navigator.pop(ctx);
+                    },
+                    child: Container(
+                      width: 200,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        image: DecorationImage(
+                          image: NetworkImage(t['url']!),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      alignment: Alignment.bottomLeft,
+                      padding: const EdgeInsets.all(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.7),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          t['title']!,
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showBannerUrlDialog(BuildContext context, bool isDark) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF161426) : Colors.white,
+        title: const Text('Input URL Banner Acara'),
+        content: TextField(
+          controller: _bannerUrlController,
+          decoration: const InputDecoration(
+            hintText: 'https://example.com/banner.jpg',
+            labelText: 'URL Gambar Banner',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final url = _bannerUrlController.text.trim();
+              if (url.isNotEmpty) {
+                setState(() => _bannerUrl = url);
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Duration Section (Tanggal Mulai - Selesai) ──────────────────────────────
+  Widget _buildDurationSection(bool isDark, bool isDesktop) {
+    final diffDays = _eventEndDate.difference(_eventStartDate).inDays + 1;
+    final startStr = '${_eventStartDate.day} ${_monthName(_eventStartDate.month)} ${_eventStartDate.year}';
+    final endStr = '${_eventEndDate.day} ${_monthName(_eventEndDate.month)} ${_eventEndDate.year}';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.event_available_rounded,
+              size: 20,
+              color: AppTheme.primaryPurple,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Durasi Acara / Kegiatan Proyek',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '$diffDays Hari',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF8B5CF6),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Kreator dapat melihat durasi lengkap agar bisa mengajukan bayaran/gaji sesuai beban kerja.',
+          style: TextStyle(
+            fontSize: 12,
+            color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _eventStartDate,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                  );
+                  if (picked != null) {
+                    setState(() {
+                      _eventStartDate = picked;
+                      if (_eventEndDate.isBefore(_eventStartDate)) {
+                        _eventEndDate = _eventStartDate.add(const Duration(days: 2));
+                      }
+                    });
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.inputDark : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDark ? AppTheme.inputBorder : Colors.grey.shade300,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.play_circle_outline_rounded, size: 20, color: Colors.blue),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Tanggal Mulai',
+                              style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey.shade600),
+                            ),
+                            Text(
+                              startStr,
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _eventEndDate,
+                    firstDate: _eventStartDate,
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                  );
+                  if (picked != null) {
+                    setState(() => _eventEndDate = picked);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.inputDark : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDark ? AppTheme.inputBorder : Colors.grey.shade300,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.flag_outlined, size: 20, color: Colors.orange),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Tanggal Selesai',
+                              style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey.shade600),
+                            ),
+                            Text(
+                              endStr,
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ─── High-Value MoU Legal Meeting Section (>= 20 Jt) ─────────────────────────
+  Widget _buildMoUMeetingSection(bool isDark, bool isDesktop) {
+    final meetingDateStr = '${_meetingDate.day} ${_monthName(_meetingDate.month)} ${_meetingDate.year}';
+    final meetingTimeStr = '${_meetingTime.hour.toString().padLeft(2, '0')}:${_meetingTime.minute.toString().padLeft(2, '0')} WIB';
+
+    return Container(
+      margin: const EdgeInsets.only(top: 24),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF231D12) : const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF59E0B), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.gavel_rounded, color: Color(0xFFD97706), size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '⚖️ Prosedur Hukum MoU Resmi (Anggaran >= Rp 20.000.000)',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Wajib Hitam di Atas Putih Bersama Tim Marketing Kreavana',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.amber.shade300 : const Color(0xFFB45309),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Demi kepatuhan regulasi perbankan & hukum perdata Indonesia, dana proyek bernilai besar (>= 20 Jt) tidak diperkenankan ditransfer langsung ke sistem tanpa kontrak formal. Silakan tentukan jadwal & lokasi pertemuan dengan tim Marketing Kreavana:',
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.45,
+              color: isDark ? Colors.white70 : const Color(0xFF78350F),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Tanggal & Jam Pertemuan
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _meetingDate,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 90)),
+                    );
+                    if (picked != null) setState(() => _meetingDate = picked);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.cardBg : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_month_rounded, size: 18, color: Color(0xFFD97706)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Tanggal Pertemuan', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                              Text(meetingDateStr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () async {
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: _meetingTime,
+                    );
+                    if (picked != null) setState(() => _meetingTime = picked);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.cardBg : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.access_time_rounded, size: 18, color: Color(0xFFD97706)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Waktu / Jam', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                              Text(meetingTimeStr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Pilihan Lokasi Pertemuan
+          Text(
+            'Lokasi Pertemuan:',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              ChoiceChip(
+                label: const Text('Kantor Kreavana'),
+                selected: _selectedMeetingPlaceType == 'office',
+                onSelected: (_) => setState(() => _selectedMeetingPlaceType = 'office'),
+              ),
+              const SizedBox(width: 8),
+              ChoiceChip(
+                label: const Text('Pick Lokasi Klien / Map'),
+                selected: _selectedMeetingPlaceType == 'client_location',
+                onSelected: (_) => setState(() => _selectedMeetingPlaceType = 'client_location'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_selectedMeetingPlaceType == 'office')
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.cardBg : Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.amber.shade300),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.business_rounded, color: Colors.amber, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Menara Kreatif Kreavana Lt. 8, Jl. Sudirman Kav. 24, Jakarta',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            TextField(
+              controller: _meetingLocationController,
+              decoration: const InputDecoration(
+                hintText: 'Masukkan nama hotel, cafe, kantor atau koordinat lokasi pertemuan...',
+                labelText: 'Detail Alamat Pertemuan MoU',
+                prefixIcon: Icon(Icons.place_rounded, color: Colors.amber),
+                border: OutlineInputBorder(),
+                filled: true,
+              ),
+              style: const TextStyle(fontSize: 13),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Escrow Protection Card (< 20 Jt) ───────────────────────────────────────
+  Widget _buildEscrowProtectionCard(bool isDark) {
+    return Container(
+      margin: const EdgeInsets.only(top: 24),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF10B981).withValues(alpha: isDark ? 0.12 : 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF10B981).withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.verified_user_rounded, color: Color(0xFF059669), size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '🛡️ Sistem Escrow Rekber Kreavana Aktif',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF059669),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Anggaran < Rp 20 Juta ditampung aman di Rekening Bersama (Escrow) Kreavana. Dana hanya akan dicairkan kepada kreator yang diterima setelah hasil kerja diverifikasi.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.4,
+                    color: isDark ? Colors.white70 : Colors.grey.shade800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _monthName(int month) {
+    const months = [
+      '',
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember'
+    ];
+    return (month >= 1 && month <= 12) ? months[month] : '';
   }
 }
 

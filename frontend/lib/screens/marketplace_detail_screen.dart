@@ -11,11 +11,14 @@ import '../features/auth/services/auth_service.dart';
 import '../utils/app_errors.dart';
 import '../widgets/wallet_pin_dialog.dart';
 import '../widgets/auth_guard_dialog.dart';
+import '../models/user_model.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 import 'package:go_router/go_router.dart';
 
 class MarketplaceDetailScreen extends StatefulWidget {
   final String itemId;
-  const MarketplaceDetailScreen({super.key, required this.itemId});
+  final UserModel? user;
+  const MarketplaceDetailScreen({super.key, required this.itemId, this.user});
 
   @override
   State<MarketplaceDetailScreen> createState() =>
@@ -233,7 +236,9 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
     final parallaxOffset = (_scrollOffset * 0.4).clamp(0.0, heroHeight);
     final canReview = _item?.canReview ?? false;
 
-    return Scaffold(
+    final isDesktop = MediaQuery.of(context).size.width > 900;
+
+    final content = Scaffold(
       backgroundColor: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
       body: _isLoading
           ? _buildLoadingState(isDark)
@@ -261,6 +266,16 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
             ),
       bottomSheet: _item == null ? null : _buildBottomBar(isDark),
     );
+
+    if (isDesktop && widget.user != null) {
+      return DesktopSidebarLayout(
+        user: widget.user!,
+        activeRoute: 'portofolio',
+        child: content,
+      );
+    }
+
+    return content;
   }
 
   Widget _buildLoadingState(bool isDark) {

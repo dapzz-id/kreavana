@@ -101,6 +101,45 @@ class ProfileController extends Controller
         }
     }
 
+    public function getPublicProfile(string $id)
+    {
+        try {
+            $data = $this->profileService->getPublicProfile($id);
+            return $this->successResponse('Profil pengguna berhasil diambil.', $data);
+        } catch (Exception $e) {
+            return $this->errorResponse($e->getMessage(), $e->getCode() ?: 404);
+        }
+    }
+
+    public function getVerificationStatus()
+    {
+        $user = Auth::guard('api')->user();
+        $status = $this->profileService->getVerificationStatus($user->id);
+        return $this->successResponse('Status verifikasi berhasil diambil.', $status);
+    }
+
+    public function applyClientVerification(Request $request)
+    {
+        $request->validate([
+            'nik' => 'required|regex:/^\d{16}$/',
+            'full_name_ktp' => 'required|string|min:3|max:150',
+            'birth_place' => 'nullable|string|max:100',
+            'birth_date' => 'nullable|date|date_format:Y-m-d|before:today',
+            'address_ktp' => 'nullable|string|max:500',
+            'ktp_photo_url' => 'required|string',
+            'selfie_photo_url' => 'nullable|string',
+        ]);
+
+        $user = Auth::guard('api')->user();
+
+        try {
+            $app = $this->profileService->applyClientVerification($user->id, $request->all());
+            return $this->successResponse('Pengajuan verifikasi KTP klien berhasil dikirim.', ['application' => $app]);
+        } catch (Exception $e) {
+            return $this->errorResponse($e->getMessage(), $e->getCode() ?: 500);
+        }
+    }
+
     public function history(Request $request)
     {
         $user = Auth::guard('api')->user();

@@ -200,7 +200,9 @@ class OpportunityService extends BaseService
             abort(403, 'Akses ditolak. Anda bukan pemilik proyek ini.');
         }
 
-        $applications = OpportunityApplication::with(['creator:id,name,username,avatar_url,sub_role,rating'])
+        $applications = OpportunityApplication::with([
+            'creator:id,name,username,avatar_url,sub_role,rating,subscription_tier,is_verified,completed_projects_count'
+        ])
             ->where('opportunity_id', $opportunityId)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -216,10 +218,14 @@ class OpportunityService extends BaseService
                     'avatar_url' => $app->creator->avatar_url,
                     'sub_role' => is_string($app->creator->sub_role) ? $app->creator->sub_role : $app->creator->sub_role?->value,
                     'rating' => round($app->creator->rating ?? 5.0, 1),
+                    'subscription_tier' => $app->creator->subscription_tier ?? 'free',
+                    'is_verified' => (bool) ($app->creator->is_verified ?? false),
+                    'completed_projects_count' => (int) ($app->creator->completed_projects_count ?? 0),
                 ] : null,
                 'sub_role_slug' => $app->sub_role_slug,
                 'pitch_message' => $app->pitch_message,
                 'questions_notes' => $app->questions_notes,
+                'submitted_documents' => $app->submitted_documents ?? [],
                 'bid_price' => $app->bid_price,
                 'status' => $app->status,
                 'rejection_reason' => $app->rejection_reason,
@@ -227,6 +233,121 @@ class OpportunityService extends BaseService
                 'created_at' => $app->created_at?->toIso8601String(),
             ];
         })->toArray();
+    }
+
+    public function startEvent(string $opportunityId, string $userId): array
+    {
+        return DB::transaction(function () use ($opportunityId, $userId) {
+            $opp = Opportunity::where('id', $opportunityId)->lockForUpdate()->firstOrFail();
+            $user = User::where('id', $userId)->firstOrFail();
+
+            if ($opp->posted_by !== $userId && $user->role !== RoleType::Admin) {
+                abort(403, 'Hanya pembuat proyek yang dapat memulai acara.');
+            }
+
+            if ($opp->status === 'in_progress') {
+                abort(400, 'Acara sudah dimulai dan sedang berlangsung.');
+            }
+
+            // Must have at least 1 approved creator to start event
+            $approvedCount = OpportunityApplication::where('opportunity_id', $opp->id)
+                ->where('status', 'approved')
+                ->count();
+
+            if ($approvedCount === 0) {
+                abort(422, 'Tidak dapat memulai acara: Belum ada kreator yang disetujui (minimal 1 kreator).');
+            }
+
+            $opp->status = 'in_progress';
+            if ($opp->event_progress == 0) {
+                $opp->event_progress = 30; // Start at 30% (Persiapan Selesai, Acara Dimulai)
+            }
+            $opp->save();
+
+            // Notify all approved creators that the event has started!
+            $approvedCreators = OpportunityApplication::where('opportunity_id', $opp->id)
+                ->where('status', 'approved')
+                ->pluck('creator_id');
+
+            foreach ($approvedCreators as $creatorId) {
+                $this->notificationRepo->create([
+                    'user_id' => $creatorId,
+                    'title' => 'Acara Telah Dimulai!',
+                    'message' => 'Acara "' . $opp->title . '" resmi dimulai. Silakan mulai koordinasi dan serahkan dokumen/hasil karya.',
+                    'type' => 'project',
+                    'data' => ['opportunity_id' => $opp->id],
+                    'is_read' => false,
+                    'created_at' => now(),
+                ]);
+            }
+
+            return $this->formatOpportunity($opp->fresh(['approvedApplications.creator', 'user']), true);
+        });
+    }
+
+    public function updateProgress(string $opportunityId, string $userId, int $progress): array
+    {
+        $opp = Opportunity::where('id', $opportunityId)->firstOrFail();
+        $user = User::where('id', $userId)->firstOrFail();
+
+        if ($opp->posted_by !== $userId && $user->role !== RoleType::Admin) {
+            abort(403, 'Hanya pembuat proyek yang dapat memperbarui progress.');
+        }
+
+        $clampedProgress = max(0, min(100, $progress));
+        $opp->event_progress = $clampedProgress;
+        if ($clampedProgress >= 100) {
+            $opp->status = 'completed';
+        }
+        $opp->save();
+
+        return $this->formatOpportunity($opp->fresh(['approvedApplications.creator', 'user']), true);
+    }
+
+    public function submitDocuments(string $applicationId, string $userId, array $documents): array
+    {
+        $application = OpportunityApplication::where('id', $applicationId)->firstOrFail();
+        $opp = Opportunity::where('id', $application->opportunity_id)->firstOrFail();
+
+        if ($application->creator_id !== $userId && $opp->posted_by !== $userId) {
+            abort(403, 'Akses ditolak.');
+        }
+
+        if ($application->status !== 'approved') {
+            abort(422, 'Hanya pelamar yang telah disetujui yang dapat mengirimkan dokumen atau tautan hasil kerja.');
+        }
+
+        $currentDocs = $application->submitted_documents ?? [];
+        $merged = array_merge($currentDocs, $documents);
+        $application->submitted_documents = $merged;
+        $application->save();
+
+        return [
+            'application_id' => $application->id,
+            'submitted_documents' => $application->submitted_documents,
+            'message' => 'Dokumen berhasil dikirimkan.',
+        ];
+    }
+
+    public function scheduleMeeting(string $opportunityId, string $userId, array $data): array
+    {
+        $opp = Opportunity::where('id', $opportunityId)->firstOrFail();
+        $user = User::where('id', $userId)->firstOrFail();
+
+        if ($opp->posted_by !== $userId && $user->role !== RoleType::Admin) {
+            abort(403, 'Hanya pembuat proyek yang dapat mengatur jadwal pertemuan.');
+        }
+
+        $opp->meeting_date = $data['meeting_date'] ?? $opp->meeting_date;
+        $opp->meeting_time = $data['meeting_time'] ?? $opp->meeting_time;
+        $opp->meeting_location = $data['meeting_location'] ?? $opp->meeting_location;
+        $opp->meeting_lat = $data['meeting_lat'] ?? $opp->meeting_lat;
+        $opp->meeting_lng = $data['meeting_lng'] ?? $opp->meeting_lng;
+        $opp->meeting_notes = $data['meeting_notes'] ?? $opp->meeting_notes;
+        $opp->meeting_status = 'pending_marketing_review';
+        $opp->save();
+
+        return $this->formatOpportunity($opp->fresh(['approvedApplications.creator', 'user']), true);
     }
 
     public function reviewApplication(string $applicationId, string $userId, string $decision, ?string $reason = null): array
@@ -327,6 +448,7 @@ class OpportunityService extends BaseService
             'title' => $opp->title,
             'description' => $opp->description,
             'poster_url' => $opp->poster_url,
+            'banner_url' => $opp->banner_url,
             'sub_role_slug' => $opp->sub_role_slug,
             'type' => $opp->type ?? 'project',
             'location' => $opp->location,
@@ -336,10 +458,21 @@ class OpportunityService extends BaseService
             'address' => $opp->address,
             'deadline' => $opp->deadline?->format('Y-m-d'),
             'event_date' => $opp->event_date?->format('Y-m-d'),
+            'event_start_date' => $opp->event_start_date?->format('Y-m-d'),
+            'event_end_date' => $opp->event_end_date?->format('Y-m-d'),
             'event_start_time' => $opp->event_start_time,
             'event_end_time' => $opp->event_end_time,
             'budget_range' => $opp->budget_range,
             'status' => $opp->status,
+            'meeting_date' => $opp->meeting_date?->format('Y-m-d'),
+            'meeting_time' => $opp->meeting_time,
+            'meeting_location' => $opp->meeting_location,
+            'meeting_lat' => $opp->meeting_lat ? (float) $opp->meeting_lat : null,
+            'meeting_lng' => $opp->meeting_lng ? (float) $opp->meeting_lng : null,
+            'meeting_notes' => $opp->meeting_notes,
+            'meeting_status' => $opp->meeting_status ?? 'not_required',
+            'escrow_status' => $opp->escrow_status ?? 'none',
+            'event_progress' => (int) ($opp->event_progress ?? 0),
             'posted_by' => $opp->posted_by,
             'created_at' => $opp->created_at?->toIso8601String(),
             'applications_count' => (int) ($opp->applications_count ?? ($opp->relationLoaded('applications') ? $opp->applications->count() : 0)),
@@ -385,7 +518,10 @@ class OpportunityService extends BaseService
                 'name' => $opp->user->name,
                 'username' => $opp->user->username,
                 'avatar_url' => $opp->user->avatar_url,
+                'role' => is_string($opp->user->role) ? $opp->user->role : $opp->user->role?->value,
                 'selected_sub_role' => is_string($opp->user->sub_role) ? $opp->user->sub_role : $opp->user->sub_role?->value,
+                'is_verified' => (bool) $opp->user->is_verified,
+                'verification_type' => $opp->user->verification_type,
             ];
         }
 

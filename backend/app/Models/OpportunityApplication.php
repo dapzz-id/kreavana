@@ -16,6 +16,7 @@ class OpportunityApplication extends Model
         'sub_role_slug',
         'pitch_message',
         'questions_notes',
+        'submitted_documents',
         'bid_price',
         'status',
         'rejection_reason',
@@ -24,6 +25,7 @@ class OpportunityApplication extends Model
 
     protected $casts = [
         'bid_price' => 'decimal:2',
+        'submitted_documents' => 'array',
         'reviewed_at' => 'datetime',
     ];
 

@@ -5,6 +5,8 @@ import '../models/user_model.dart';
 import '../services/api_service.dart';
 import 'direct_message_screen.dart';
 import '../widgets/skeleton/skeleton_list.dart';
+import '../widgets/app_breadcrumbs.dart';
+import 'main_navigation.dart';
 
 class KolaborasiScreen extends StatefulWidget {
   final UserModel? user;
@@ -228,6 +230,33 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    AppBreadcrumbs(
+                      items: [
+                        BreadcrumbItem(
+                          label: 'Beranda',
+                          icon: Icons.home_rounded,
+                          onTap: () {
+                            if (widget.user != null) {
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => MainNavigation(
+                                    initialUser: widget.user!,
+                                    initialIndex: 0,
+                                  ),
+                                ),
+                                (r) => false,
+                              );
+                            }
+                          },
+                        ),
+                        const BreadcrumbItem(
+                          label: 'Kolaborasi',
+                          icon: Icons.handshake_rounded,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
               // ── Search Bar ──
               TextField(
                 controller: _searchController,

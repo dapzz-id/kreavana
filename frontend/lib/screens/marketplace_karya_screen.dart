@@ -197,7 +197,10 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => MarketplaceDetailScreen(itemId: item.id),
+        builder: (_) => MarketplaceDetailScreen(
+          itemId: item.id,
+          user: widget.user,
+        ),
       ),
     );
   }
@@ -205,7 +208,9 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
   Future<void> _openJualKarya() async {
     final created = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => const JualKaryaScreen()),
+      MaterialPageRoute(
+        builder: (_) => JualKaryaScreen(user: widget.user),
+      ),
     );
     if (created == true) {
       _loadAll();

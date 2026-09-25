@@ -6,6 +6,7 @@ import '../services/opportunity_service.dart';
 import '../widgets/feature_card.dart';
 import '../widgets/opportunity_detail_sheet.dart';
 import '../widgets/skeleton_box.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 
 class PeluangProyekScreen extends StatefulWidget {
   final UserModel user;
@@ -247,7 +248,7 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
         _selectedCity != 'all' ||
         _selectedTag != null;
 
-    return Scaffold(
+    final content = Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F0D15) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         automaticallyImplyLeading: Navigator.canPop(context),
@@ -643,5 +644,15 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
         ],
       ),
     );
+
+    if (isDesktop) {
+      return DesktopSidebarLayout(
+        user: widget.user,
+        activeRoute: 'explore',
+        child: content,
+      );
+    }
+
+    return content;
   }
 }

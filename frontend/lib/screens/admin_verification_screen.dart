@@ -183,26 +183,80 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: theme.colorScheme.primary.withValues(
-                  alpha: 0.08,
+                backgroundColor: (app.type == 'client_verification'
+                        ? Colors.blue
+                        : theme.colorScheme.primary)
+                    .withValues(alpha: 0.12),
+                child: Icon(
+                  app.type == 'client_verification'
+                      ? Icons.verified_user_rounded
+                      : Icons.palette_rounded,
+                  color: app.type == 'client_verification'
+                      ? Colors.blue.shade700
+                      : Colors.teal.shade700,
                 ),
-                child: const Icon(Icons.person, color: Colors.blue),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      app.subRoleCategory.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.secondary,
-                        letterSpacing: 1.0,
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: app.type == 'client_verification'
+                                ? Colors.blue.shade50
+                                : Colors.teal.shade50,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: app.type == 'client_verification'
+                                  ? Colors.blue.shade300
+                                  : Colors.teal.shade300,
+                            ),
+                          ),
+                          child: Text(
+                            app.type == 'client_verification'
+                                ? 'VERIFIKASI KLIEN (KTP)'
+                                : 'UPGRADE KREATOR (${app.subRoleCategory.toUpperCase()})',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: app.type == 'client_verification'
+                                  ? Colors.blue.shade800
+                                  : Colors.teal.shade800,
+                            ),
+                          ),
+                        ),
+                        if (app.reusedKtp) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.purple.shade200),
+                            ),
+                            child: Text(
+                              'KTP TERSIMPAN',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.purple.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
                       'Nama Pemohon: (ID ${app.userId})',
                       style: const TextStyle(
@@ -239,45 +293,31 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
             ],
           ),
           const Divider(height: 24),
-          Text(
-            'Keahlian & Deskripsi:',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade600,
+          if (app.type == 'client_verification') ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 18, color: Colors.blue.shade800),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Permohonan verifikasi KTP Klien. Setelah disetujui, akun tetap berstatus Klien (User) dengan centang biru 🔵 dan dapat membuat kebutuhan proyek baru.',
+                      style: TextStyle(fontSize: 12, color: Colors.blue.shade900),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            app.skillDescription,
-            style: const TextStyle(fontSize: 13, height: 1.3),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Link Portofolio:',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            app.portfolioLink ?? 'Tidak dicantumkan',
-            style: TextStyle(
-              fontSize: 12,
-              color: app.portfolioLink != null
-                  ? Colors.blue.shade600
-                  : Colors.grey,
-              decoration: app.portfolioLink != null
-                  ? TextDecoration.underline
-                  : null,
-            ),
-          ),
-          if (app.experience != null && app.experience!.isNotEmpty) ...[
-            const SizedBox(height: 12),
+          ] else ...[
             Text(
-              'Pengalaman Kerja:',
+              'Keahlian & Deskripsi:',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -286,9 +326,87 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
             ),
             const SizedBox(height: 4),
             Text(
-              app.experience!,
-              style: const TextStyle(fontSize: 12, height: 1.3),
+              app.skillDescription,
+              style: const TextStyle(fontSize: 13, height: 1.3),
             ),
+            const SizedBox(height: 12),
+            Text(
+              'Link Portofolio:',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              app.portfolioLink ?? 'Tidak dicantumkan',
+              style: TextStyle(
+                fontSize: 12,
+                color: app.portfolioLink != null
+                    ? Colors.blue.shade600
+                    : Colors.grey,
+                decoration: app.portfolioLink != null
+                    ? TextDecoration.underline
+                    : null,
+              ),
+            ),
+            if (app.experience != null && app.experience!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Pengalaman Kerja:',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                app.experience!,
+                style: const TextStyle(fontSize: 12, height: 1.3),
+              ),
+            ],
+          ],
+          if (app.nibNumber != null && app.nibNumber!.isNotEmpty) ...[
+            const Divider(height: 24),
+            Row(
+              children: [
+                Icon(Icons.business, size: 18, color: Colors.indigo.shade700),
+                const SizedBox(width: 8),
+                const Text(
+                  'Dokumen Legalitas Usaha (NIB)',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Nomor Induk Berusaha (NIB): ${app.nibNumber}',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            if (app.nibFileUrl != null && app.nibFileUrl!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  app.nibFileUrl!,
+                  height: 120,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 60,
+                    color: Colors.grey.shade200,
+                    child: Center(
+                      child: Text(
+                        'Dokumen NIB: ${app.nibFileUrl}',
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
           if (app.nik != null || app.fullNameKtp != null) ...[
             const Divider(height: 24),
@@ -296,9 +414,11 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
               children: [
                 Icon(Icons.badge, size: 18, color: Colors.teal.shade700),
                 const SizedBox(width: 8),
-                const Text(
-                  'Verifikasi KTP',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                Text(
+                  app.reusedKtp
+                      ? 'Verifikasi KTP (Riwayat Tersimpan)'
+                      : 'Verifikasi KTP',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ],
             ),

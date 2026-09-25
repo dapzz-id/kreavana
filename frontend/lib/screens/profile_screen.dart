@@ -8,9 +8,12 @@ import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/profile_service.dart';
 import '../services/api_service.dart';
-import '../widgets/creator_application_card.dart';
 import '../utils/form_validators.dart';
 import '../widgets/skeleton_box.dart';
+import '../widgets/desktop_sidebar_layout.dart';
+import 'client_verification_page.dart';
+import '../widgets/app_breadcrumbs.dart';
+import 'main_navigation.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserModel user;
@@ -31,6 +34,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = false;
   CreatorApplication? _latestApplication;
+  late UserModel _currentUser;
 
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -39,14 +43,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _nameController.text = widget.user.name;
-    _phoneController.text = widget.user.phone ?? '';
+    _currentUser = widget.user;
+    _nameController.text = _currentUser.name;
+    _phoneController.text = _currentUser.phone ?? '';
     _loadProfileDetails();
   }
 
   @override
   void didUpdateWidget(covariant ProfileScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.user != oldWidget.user) {
+      _currentUser = widget.user;
+    }
     if (widget.user.name != oldWidget.user.name) {
       _nameController.text = widget.user.name;
     }
@@ -65,13 +73,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadProfileDetails() async {
     setState(() => _isLoading = true);
-    final result = await ProfileService.getProfile(widget.user.id ?? '');
+    final result = await ProfileService.getProfile(_currentUser.id ?? '');
     if (mounted) {
       setState(() {
         _isLoading = false;
         if (result.success == true) {
           _latestApplication = result.application;
           if (result.user != null) {
+            _currentUser = result.user!;
             widget.onUserUpdated(result.user!);
           }
         }
@@ -104,7 +113,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final dataUrl = 'data:image/$extension;base64,$base64String';
 
         final response = await ProfileService.updateProfile(
-          userId: widget.user.id ?? '',
+          userId: _currentUser.id ?? '',
           avatarUrl: dataUrl,
         );
 
@@ -112,6 +121,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           setState(() => _isLoading = false);
           if (response.success == true) {
             if (response.user != null) {
+              setState(() => _currentUser = response.user!);
               widget.onUserUpdated(response.user!);
             }
             ScaffoldMessenger.of(context).showSnackBar(
@@ -150,7 +160,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _handleUpdateProfile() async {
     setState(() => _isLoading = true);
     final result = await ProfileService.updateProfile(
-      userId: widget.user.id ?? '',
+      userId: _currentUser.id ?? '',
       name: _nameController.text.trim(),
       phone: _phoneController.text.trim(),
     );
@@ -159,6 +169,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() => _isLoading = false);
       if (result.success == true) {
         if (result.user != null) {
+          setState(() => _currentUser = result.user!);
           widget.onUserUpdated(result.user!);
         }
         ScaffoldMessenger.of(context).showSnackBar(
@@ -171,60 +182,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result.message ?? 'Gagal memperbarui profil.'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.red.shade700,
-          ),
-        );
-      }
-    }
-  }
-
-  void _handleApplyCreator({
-    required String category,
-    required String skills,
-    required String portfolio,
-    required String experience,
-    required String nik,
-    required String fullNameKtp,
-    required String addressKtp,
-    required String ktpPhotoBase64,
-    required String selfiePhotoBase64,
-    required String birthPlace,
-    required String birthDate,
-  }) async {
-    setState(() => _isLoading = true);
-    final result = await ProfileService.applyAsCreator(
-      userId: widget.user.id ?? '',
-      subRoleCategory: category,
-      skillDescription: skills,
-      portfolioLink: portfolio,
-      experience: experience,
-      nik: nik,
-      fullNameKtp: fullNameKtp,
-      addressKtp: addressKtp,
-      ktpPhotoBase64: ktpPhotoBase64,
-      selfiePhotoBase64: selfiePhotoBase64,
-      birthPlace: birthPlace,
-      birthDate: birthDate,
-    );
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-      if (result.success == true) {
-        _loadProfileDetails();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Pengajuan Kreator berhasil dikirim! Menunggu verifikasi admin.',
-            ),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.message ?? 'Gagal mengirim pengajuan.'),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.red.shade700,
           ),
@@ -259,8 +216,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 900;
 
-    return Scaffold(
+    final content = Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: Navigator.canPop(context),
         toolbarHeight: 75,
         title: const Text(
           'Profil Pengguna',
@@ -319,11 +277,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         16,
                         isDesktop ? 110 : 16,
                       ),
-                      child: isDesktop
-                          ? Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AppBreadcrumbs(
+                            items: [
+                              BreadcrumbItem(
+                                label: 'Beranda',
+                                icon: Icons.home_rounded,
+                                onTap: () => Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => MainNavigation(
+                                      initialUser: _currentUser,
+                                      initialIndex: 0,
+                                    ),
+                                  ),
+                                  (r) => false,
+                                ),
+                              ),
+                              BreadcrumbItem(
+                                label: 'Pengaturan',
+                                icon: Icons.settings_rounded,
+                                onTap: () {
+                                  if (Navigator.canPop(context)) {
+                                    Navigator.pop(context);
+                                  } else {
+                                    Navigator.pushAndRemoveUntil(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => MainNavigation(
+                                          initialUser: _currentUser,
+                                          initialIndex: 8,
+                                        ),
+                                      ),
+                                      (r) => false,
+                                    );
+                                  }
+                                },
+                              ),
+                              const BreadcrumbItem(
+                                label: 'Profil Saya',
+                                icon: Icons.person_rounded,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          isDesktop
+                              ? Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     // Left Column - Profile Card
@@ -338,37 +339,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       child: _buildProfileForm(theme, isDark),
                                     ),
                                   ],
+                                )
+                              : Column(
+                                  children: [
+                                    _buildProfileCard(theme, isDark),
+                                    const SizedBox(height: 24),
+                                    _buildProfileForm(theme, isDark),
+                                  ],
                                 ),
-                                const SizedBox(height: 24),
-                                // Creator Application Card - Full Width
-                                if (!widget.user.isAdmin)
-                                  CreatorApplicationCard(
-                                    user: widget.user,
-                                    application: _latestApplication,
-                                    onApply: _handleApplyCreator,
-                                  ),
-                              ],
-                            )
-                          : Column(
-                              children: [
-                                _buildProfileCard(theme, isDark),
-                                const SizedBox(height: 24),
-                                _buildProfileForm(theme, isDark),
-                                const SizedBox(height: 24),
-                                if (!widget.user.isAdmin)
-                                  CreatorApplicationCard(
-                                    user: widget.user,
-                                    application: _latestApplication,
-                                    onApply: _handleApplyCreator,
-                                  ),
-                              ],
-                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
     );
+
+    if (isDesktop) {
+      final isGov = (_currentUser.role == 'user' || _currentUser.role == 'creator') &&
+          (_currentUser.subRole == 'government' ||
+              _currentUser.subRole == 'institution' ||
+              _currentUser.subRole == 'pemerintah' ||
+              _currentUser.subRole == 'instansi');
+      return DesktopSidebarLayout(
+        user: _currentUser,
+        activeRoute: isGov ? 'profil_instansi' : 'pengaturan',
+        onUserUpdated: (u) {
+          setState(() => _currentUser = u);
+          widget.onUserUpdated(u);
+        },
+        child: content,
+      );
+    }
+
+    return content;
   }
 
   Widget _buildProfileCard(ThemeData theme, bool isDark) {
@@ -432,14 +437,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         widget.user.avatarUrl != null &&
                             widget.user.avatarUrl!.isNotEmpty
                         ? NetworkImage(
-                            ApiService.resolveAssetUrl(widget.user.avatarUrl!),
+                            ApiService.resolveAssetUrl(_currentUser.avatarUrl!),
                           )
                         : null,
                     child:
-                        widget.user.avatarUrl == null ||
-                            widget.user.avatarUrl!.isEmpty
+                        _currentUser.avatarUrl == null ||
+                            _currentUser.avatarUrl!.isEmpty
                         ? Icon(
-                            widget.user.role == 'creator'
+                            _currentUser.role == 'creator'
                                 ? Icons.verified_user_rounded
                                 : Icons.account_circle_outlined,
                             size: 56,
@@ -485,13 +490,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 20),
           Text(
-            widget.user.name,
+            _currentUser.name,
             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 6),
           Text(
-            '@${widget.user.username}',
+            '@${_currentUser.username}',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w500,
@@ -503,9 +508,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: widget.user.isAdmin
+                colors: _currentUser.isAdmin
                     ? [Colors.red.shade400, Colors.red.shade600]
-                    : widget.user.role == 'creator'
+                    : _currentUser.role == 'creator'
                     ? [Colors.green.shade400, Colors.green.shade600]
                     : [Colors.grey.shade400, Colors.grey.shade600],
               ),
@@ -513,9 +518,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               boxShadow: [
                 BoxShadow(
                   color:
-                      (widget.user.isAdmin
+                      (_currentUser.isAdmin
                               ? Colors.red
-                              : widget.user.role == 'creator'
+                              : _currentUser.role == 'creator'
                               ? Colors.green
                               : Colors.grey)
                           .withValues(alpha: 0.3),
@@ -525,9 +530,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
             child: Text(
-              widget.user.isAdmin
+              _currentUser.isAdmin
                   ? 'ADMINISTRATOR'
-                  : widget.user.role == 'creator'
+                  : _currentUser.role == 'creator'
                   ? 'CREATOR / MITRA'
                   : 'KLIEN / USER',
               style: const TextStyle(
@@ -544,7 +549,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               _buildStatColumn(
                 'Pengikut',
-                widget.user.followersCount.toString(),
+                _currentUser.followersCount.toString(),
                 isDark,
               ),
               const SizedBox(width: 32),
@@ -556,11 +561,67 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(width: 32),
               _buildStatColumn(
                 'Mengikuti',
-                widget.user.followingCount.toString(),
+                _currentUser.followingCount.toString(),
                 isDark,
               ),
             ],
           ),
+          const SizedBox(height: 20),
+          // ── Verification & Role Badges ─────────────────────────────────────
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              // Client verification badge (blue)
+              if (_currentUser.isVerified && !_currentUser.isCreator)
+                _VerificationBadge(
+                  label: 'Klien Terverifikasi',
+                  icon: Icons.verified_rounded,
+                  color: const Color(0xFF3B82F6),
+                ),
+              // Creator badge (green)
+              if (_currentUser.isCreator)
+                _VerificationBadge(
+                  label: 'Kreator Terverifikasi',
+                  icon: Icons.verified_rounded,
+                  color: const Color(0xFF22C55E),
+                ),
+            ],
+          ),
+          // ── Quick action buttons ─────────────────────────────────────────
+          if (!_currentUser.isAdmin) ...[
+            const SizedBox(height: 16),
+            if (!_currentUser.isVerified && !_currentUser.isCreator)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ClientVerificationPage(
+                          user: _currentUser,
+                          onSuccess: _loadProfileDetails,
+                        ),
+                      ),
+                    );
+                    _loadProfileDetails();
+                  },
+                  icon: const Icon(Icons.badge_outlined, size: 16),
+                  label: const Text('Verifikasi Identitas (KTP)'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF3B82F6),
+                    side: const BorderSide(color: Color(0xFF3B82F6)),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+            // (Daftar menjadi kreator dipindahkan ke pengaturan)
+          ],
         ],
       ),
     );
@@ -616,7 +677,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 20),
           TextFormField(
-            initialValue: widget.user.username,
+            initialValue: _currentUser.username,
             readOnly: true,
             decoration: InputDecoration(
               labelText: 'Username',
@@ -629,7 +690,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 20),
           TextFormField(
-            initialValue: widget.user.email,
+            initialValue: _currentUser.email,
             readOnly: true,
             decoration: InputDecoration(
               labelText: 'Email',
@@ -658,6 +719,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 'Simpan Perubahan',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Verification Badge Widget ─────────────────────────────────────────────────
+
+class _VerificationBadge extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  const _VerificationBadge({
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 15),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
             ),
           ),
         ],

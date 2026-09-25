@@ -5,6 +5,8 @@ import '../models/user_model.dart';
 import '../services/job_contract_service.dart';
 
 import '../widgets/skeleton/skeleton_list.dart';
+import '../widgets/app_breadcrumbs.dart';
+import 'main_navigation.dart';
 
 class AgendaScreen extends StatefulWidget {
   final UserModel? user;
@@ -134,6 +136,33 @@ class _AgendaScreenState extends State<AgendaScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              AppBreadcrumbs(
+                items: [
+                  BreadcrumbItem(
+                    label: 'Beranda',
+                    icon: Icons.home_rounded,
+                    onTap: () {
+                      if (widget.user != null) {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => MainNavigation(
+                              initialUser: widget.user!,
+                              initialIndex: 0,
+                            ),
+                          ),
+                          (r) => false,
+                        );
+                      }
+                    },
+                  ),
+                  const BreadcrumbItem(
+                    label: 'Agenda',
+                    icon: Icons.calendar_today_rounded,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
               // ── Top Summary Header Card ──
               _buildAgendaHeader(accentColor, isDark),
               const SizedBox(height: 20),

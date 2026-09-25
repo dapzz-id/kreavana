@@ -136,4 +136,46 @@ class MarketingController extends Controller
 
         return $this->successResponse('Transaksi bernilai besar ditolak oleh Marketing.', $review->toArray());
     }
+
+    public function listHighValueOpportunities(Request $request)
+    {
+        $actor = $request->user();
+        if ($actor->role !== RoleType::Marketing && $actor->role !== RoleType::Admin) {
+            return $this->errorResponse('Akses ditolak. Khusus tim Marketing / Admin.', 403);
+        }
+
+        $opps = \App\Models\Opportunity::with(['user:id,name,username,avatar_url'])
+            ->where(function ($q) {
+                $q->where('meeting_status', 'pending_marketing_review')
+                  ->orWhere('budget_range', 'LIKE', '%20.000.000%')
+                  ->orWhere('budget_range', 'LIKE', '%50.000.000%');
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate((int) $request->query('per_page', 20));
+
+        return $this->successResponse('Daftar event bernilai besar (> 20 Jt) berhasil diambil.', $opps->toArray());
+    }
+
+    public function confirmOpportunityPayment(Request $request, string $id)
+    {
+        $actor = $request->user();
+        if ($actor->role !== RoleType::Marketing && $actor->role !== RoleType::Admin) {
+            return $this->errorResponse('Akses ditolak. Hanya Marketing atau Admin yang dapat mengonfirmasi penerimaan dana dan MoU.', 403);
+        }
+
+        $validated = $request->validate([
+            'notes' => 'nullable|string|max:1000',
+            'document_mou_url' => 'nullable|string|max:500',
+        ]);
+
+        $opp = \App\Models\Opportunity::findOrFail($id);
+        $opp->meeting_status = 'verified_paid';
+        $opp->escrow_status = 'held_in_escrow';
+        if (!empty($validated['notes'])) {
+            $opp->meeting_notes = ($opp->meeting_notes ? $opp->meeting_notes . "\n" : '') . "[Marketing " . $actor->name . "]: " . $validated['notes'] . " (Uang diterima & MoU Legal Lengkap)";
+        }
+        $opp->save();
+
+        return $this->successResponse('Status MoU dan penerimaan dana untuk event berhasil dikonfirmasi oleh Marketing.', $opp->toArray());
+    }
 }

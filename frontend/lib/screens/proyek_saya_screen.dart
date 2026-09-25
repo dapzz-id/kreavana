@@ -13,6 +13,10 @@ import 'buat_kebutuhan_screen.dart';
 import 'detail_kebutuhan_screen.dart';
 import '../widgets/app_breadcrumbs.dart';
 import '../widgets/skeleton/skeleton_list.dart';
+import 'main_navigation.dart';
+import '../services/verification_service.dart';
+import 'client_verification_page.dart';
+import '../widgets/user_profile_modal.dart';
 
 enum ProjectItemType {
   opportunity,
@@ -284,6 +288,87 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   }
 
   Future<void> _openBuatKebutuhan() async {
+    // Check if client is verified
+    final isClient =
+        widget.user?.role == 'user' || widget.user?.isClient == true;
+    if (isClient) {
+      bool isVerified = widget.user?.isVerified == true;
+      if (!isVerified) {
+        // Double check latest status from server
+        try {
+          final status = await VerificationService.getStatus();
+          if (status != null && status.isVerified) {
+            isVerified = true;
+          }
+        } catch (_) {}
+      }
+
+      if (!isVerified && mounted) {
+        final shouldVerify = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Row(
+              children: [
+                Icon(Icons.verified_user_outlined, color: Colors.blue),
+                SizedBox(width: 8),
+                Text(
+                  'Verifikasi KTP Diperlukan',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            content: const Text(
+              'Untuk menjaga keamanan komunitas dan kepercayaan di platform Kreavana, akun Klien wajib melakukan verifikasi KTP terlebih dahulu sebelum menambahkan kebutuhan proyek baru.\n\nVerifikasi ini tidak mengubah akun Anda menjadi Kreator.',
+              style: TextStyle(fontSize: 13, height: 1.4),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade700,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: () => Navigator.of(ctx).pop(true),
+                icon: const Icon(Icons.shield_rounded, size: 16),
+                label: const Text('Verifikasi Sekarang'),
+              ),
+            ],
+          ),
+        );
+
+        if (shouldVerify == true && mounted) {
+          final res = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ClientVerificationPage(user: widget.user),
+            ),
+          );
+          if (res == true && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Verifikasi KTP berhasil dikirim! Menunggu persetujuan admin.',
+                ),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+        return;
+      }
+    }
+
+    if (!mounted) return;
     final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: widget.user)),
@@ -364,9 +449,27 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // ── Breadcrumbs ──
-                    const AppBreadcrumbs(
+                    AppBreadcrumbs(
                       items: [
                         BreadcrumbItem(
+                          label: 'Beranda',
+                          icon: Icons.home_rounded,
+                          onTap: () {
+                            if (widget.user != null) {
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => MainNavigation(
+                                    initialUser: widget.user!,
+                                    initialIndex: 0,
+                                  ),
+                                ),
+                                (r) => false,
+                              );
+                            }
+                          },
+                        ),
+                        const BreadcrumbItem(
                           label: 'Proyek Saya',
                           icon: Icons.folder_rounded,
                         ),
@@ -1073,23 +1176,52 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.person_rounded,
-                      size: 15,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                InkWell(
+                  onTap: () {
+                    final creatorId = item.contract?.creatorId;
+                    if (creatorId != null && creatorId.isNotEmpty) {
+                      UserProfileModal.show(
+                        context,
+                        userId: creatorId,
+                        initialName: item.contract?.creatorName,
+                        initialRole: 'creator',
+                        currentUser: widget.user,
+                      );
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.person_rounded,
+                          size: 15,
+                          color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          item.partnerOrApplicants ?? '-',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white70 : Colors.grey.shade800,
+                            decoration: (item.contract?.creatorId.isNotEmpty == true)
+                                ? TextDecoration.underline
+                                : null,
+                          ),
+                        ),
+                        if (item.contract?.creatorId.isNotEmpty == true) ...[
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.open_in_new_rounded,
+                            size: 11,
+                            color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                          ),
+                        ],
+                      ],
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      item.partnerOrApplicants ?? '-',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white70 : Colors.grey.shade800,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
                 Text(
                   '${(item.progress * 100).toInt()}%',
@@ -1276,6 +1408,23 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
           ],
         ),
         actions: [
+          if (c.creatorId.isNotEmpty)
+            OutlinedButton.icon(
+              onPressed: () {
+                UserProfileModal.show(
+                  context,
+                  userId: c.creatorId,
+                  initialName: c.creatorName,
+                  initialRole: 'creator',
+                  currentUser: widget.user,
+                );
+              },
+              icon: const Icon(Icons.person_outline_rounded, size: 15),
+              label: const Text('Profil & Portofolio'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.primaryPurple,
+              ),
+            ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Tutup'),

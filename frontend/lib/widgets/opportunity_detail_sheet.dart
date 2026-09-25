@@ -8,6 +8,7 @@ import '../screens/direct_message_screen.dart';
 import '../widgets/responsive_modal.dart';
 import '../app/theme.dart';
 import '../widgets/auth_guard_dialog.dart';
+import '../widgets/user_profile_modal.dart';
 
 class OpportunityDetailSheet extends StatefulWidget {
   final OpportunityModel opportunity;
@@ -293,49 +294,78 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Row(
-                                        children: [
-                                          CircleAvatar(
-                                            radius: 18,
-                                            backgroundImage: app.creator?.avatarUrl != null
-                                                ? CachedNetworkImageProvider(app.creator!.avatarUrl!)
-                                                : null,
-                                            child: app.creator?.avatarUrl == null
-                                                ? const Icon(Icons.person, size: 20)
-                                                : null,
-                                          ),
-                                          const SizedBox(width: 10),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(app.creator?.name ?? 'Kreator',
-                                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                                Text('Peran: ${app.subRoleSlug}',
-                                                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                                              ],
-                                            ),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: app.isApproved
-                                                  ? Colors.green.shade100
-                                                  : (app.isRejected ? Colors.red.shade100 : Colors.amber.shade100),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              app.status.toUpperCase(),
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
-                                                color: app.isApproved
-                                                    ? Colors.green.shade800
-                                                    : (app.isRejected ? Colors.red.shade800 : Colors.amber.shade900),
+                                      InkWell(
+                                        onTap: () {
+                                          if (app.creator?.id.isNotEmpty == true) {
+                                            UserProfileModal.show(
+                                              context,
+                                              userId: app.creator!.id,
+                                              initialName: app.creator!.name,
+                                              initialUsername: app.creator!.username,
+                                              initialAvatarUrl: app.creator!.avatarUrl,
+                                              initialRole: 'creator',
+                                            );
+                                          }
+                                        },
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 2),
+                                          child: Row(
+                                            children: [
+                                              CircleAvatar(
+                                                radius: 18,
+                                                backgroundImage: app.creator?.avatarUrl != null
+                                                    ? CachedNetworkImageProvider(app.creator!.avatarUrl!)
+                                                    : null,
+                                                child: app.creator?.avatarUrl == null
+                                                    ? const Icon(Icons.person, size: 20)
+                                                    : null,
                                               ),
-                                            ),
+                                              const SizedBox(width: 10),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Row(
+                                                      children: [
+                                                        Flexible(
+                                                          child: Text(
+                                                            app.creator?.name ?? 'Kreator',
+                                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                                            overflow: TextOverflow.ellipsis,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 4),
+                                                        const Icon(Icons.open_in_new_rounded, size: 12, color: AppTheme.primaryPurple),
+                                                      ],
+                                                    ),
+                                                    Text('Peran: ${app.subRoleSlug}',
+                                                        style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                                                  ],
+                                                ),
+                                              ),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: app.isApproved
+                                                      ? Colors.green.shade100
+                                                      : (app.isRejected ? Colors.red.shade100 : Colors.amber.shade100),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: Text(
+                                                  app.status.toUpperCase(),
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: app.isApproved
+                                                        ? Colors.green.shade800
+                                                        : (app.isRejected ? Colors.red.shade800 : Colors.amber.shade900),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ],
+                                        ),
                                       ),
                                       const SizedBox(height: 8),
                                       Text(app.pitchMessage, style: const TextStyle(fontSize: 13)),
@@ -349,15 +379,38 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
                                         Text('Tawaran: Rp ${app.bidPrice!.toStringAsFixed(0)}',
                                             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.indigo)),
                                       ],
-                                      if (app.isPending) ...[
-                                        const SizedBox(height: 10),
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.end,
-                                          children: [
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          OutlinedButton.icon(
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor: AppTheme.primaryPurple,
+                                              side: BorderSide(color: AppTheme.primaryPurple.withValues(alpha: 0.5)),
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                            ),
+                                            onPressed: () {
+                                              if (app.creator?.id.isNotEmpty == true) {
+                                                UserProfileModal.show(
+                                                  context,
+                                                  userId: app.creator!.id,
+                                                  initialName: app.creator!.name,
+                                                  initialUsername: app.creator!.username,
+                                                  initialAvatarUrl: app.creator!.avatarUrl,
+                                                  initialRole: 'creator',
+                                                );
+                                              }
+                                            },
+                                            icon: const Icon(Icons.person_search_rounded, size: 14),
+                                            label: const Text('Portofolio', style: TextStyle(fontSize: 12)),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          if (app.isPending) ...[
                                             OutlinedButton(
                                               style: OutlinedButton.styleFrom(
                                                 foregroundColor: Colors.red.shade700,
                                                 side: BorderSide(color: Colors.red.shade300),
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                               ),
                                               onPressed: () async {
                                                 await OpportunityService.reviewApplication(
@@ -373,6 +426,7 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
                                             ElevatedButton(
                                               style: ElevatedButton.styleFrom(
                                                 backgroundColor: Colors.green.shade700,
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                               ),
                                               onPressed: () async {
                                                 await OpportunityService.reviewApplication(
@@ -384,8 +438,8 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
                                               child: const Text('Setujui', style: TextStyle(color: Colors.white)),
                                             ),
                                           ],
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ],
                                   ),
                                 );
@@ -407,6 +461,18 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
   }
 
   void _showCreatorPublicProfile(BuildContext context, OpportunityPoster poster) {
+    if (poster.id != null && poster.id!.isNotEmpty) {
+      UserProfileModal.show(
+        context,
+        userId: poster.id!,
+        initialName: poster.name,
+        initialUsername: poster.username,
+        initialAvatarUrl: poster.avatarUrl,
+        initialRole: poster.role,
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(

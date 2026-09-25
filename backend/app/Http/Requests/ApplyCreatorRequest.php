@@ -16,18 +16,23 @@ class ApplyCreatorRequest extends FormRequest
 
     public function rules(): array
     {
+        $reuseKtp = filter_var($this->input('reuse_ktp'), FILTER_VALIDATE_BOOLEAN);
+
         return [
             'sub_role_category' => ['required', 'string', 'in:' . implode(',', array_column(CreatorSubRole::cases(), 'value'))],
             'skill_description' => 'required|string|min:20|max:2000',
             'portfolio_link' => 'required|url|max:255',
             'experience' => 'nullable|string|max:2000',
-            'nik' => 'required|regex:/^\d{16}$/',
-            'full_name_ktp' => 'required|string|min:3|max:150|regex:/^[A-Za-z\s\.\',-]+$/',
-            'birth_place' => 'required|string|min:2|max:100|regex:/^[A-Za-z\s\.\',-]+$/',
-            'birth_date' => 'required|date|date_format:Y-m-d|before:today',
-            'address_ktp' => 'required|string|min:10|max:500',
-            'ktp_photo_url' => 'required|string',
-            'selfie_photo_url' => 'required|string',
+            'reuse_ktp' => 'nullable|boolean',
+            'nib_number' => 'nullable|string|max:50',
+            'nib_file_url' => 'nullable|string',
+            'nik' => $reuseKtp ? 'nullable|regex:/^\d{16}$/' : 'required|regex:/^\d{16}$/',
+            'full_name_ktp' => $reuseKtp ? 'nullable|string|min:3|max:150' : 'required|string|min:3|max:150',
+            'birth_place' => $reuseKtp ? 'nullable|string|min:2|max:100' : 'required|string|min:2|max:100',
+            'birth_date' => $reuseKtp ? 'nullable|date|date_format:Y-m-d|before:today' : 'required|date|date_format:Y-m-d|before:today',
+            'address_ktp' => $reuseKtp ? 'nullable|string|min:10|max:500' : 'required|string|min:10|max:500',
+            'ktp_photo_url' => $reuseKtp ? 'nullable|string' : 'required|string',
+            'selfie_photo_url' => $reuseKtp ? 'nullable|string' : 'required|string',
         ];
     }
 

@@ -11,9 +11,13 @@ import 'addresses_screen.dart';
 import 'help_screen.dart';
 import 'privacy_policy_screen.dart';
 import 'storage_management_screen.dart';
+import 'client_verification_page.dart';
+import 'creator_application_page.dart';
 import 'package:go_router/go_router.dart';
 import '../services/app_router.dart';
 import '../widgets/kreavana_image.dart';
+import '../widgets/app_breadcrumbs.dart';
+import 'main_navigation.dart';
 
 class PengaturanScreen extends StatefulWidget {
   final UserModel? user;
@@ -108,6 +112,38 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
           110,
         ),
         children: [
+          // ── Breadcrumbs ──────────────────────────────────────────────────
+          AppBreadcrumbs(
+            items: [
+              BreadcrumbItem(
+                label: 'Beranda',
+                icon: Icons.home_rounded,
+                onTap: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  }
+                  if (widget.user != null) {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MainNavigation(
+                          initialUser: widget.user!,
+                          initialIndex: 0,
+                        ),
+                      ),
+                      (r) => false,
+                    );
+                  }
+                },
+              ),
+              const BreadcrumbItem(
+                label: 'Pengaturan',
+                icon: Icons.settings_rounded,
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+
           // ── Profile header ────────────────────────────────────────────────
           if (widget.user != null) ...[
             GestureDetector(
@@ -255,6 +291,124 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
             ],
           ),
           const SizedBox(height: 16),
+
+          // ── Verifikasi & Status ──────────────────────────────────────────
+          if (widget.user != null) ...[
+            _buildSection(
+              title: 'Verifikasi & Status',
+              icon: Icons.verified_user_outlined,
+              isDark: isDark,
+              children: [
+                // Client Verification tile
+                _buildNavTile(
+                  icon: Icons.badge_outlined,
+                  iconColor: const Color(0xFF3B82F6),
+                  title: 'Verifikasi Identitas (KTP)',
+                  subtitle: widget.user!.isVerified
+                      ? 'Terverifikasi · Badge centang biru aktif'
+                      : 'Diperlukan untuk membuat proyek — upload KTP & selfie',
+                  isDark: isDark,
+                  trailing: widget.user!.isVerified
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.verified_rounded,
+                                color: Color(0xFF3B82F6),
+                                size: 13,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Aktif',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF3B82F6),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : null,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ClientVerificationPage(
+                        user: widget.user!,
+                        onSuccess: () {
+                          if (widget.onUserUpdated != null) {
+                            // trigger refresh
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                // Creator Application tile — only for non-creator users
+                if (widget.user!.role != 'admin')
+                  _buildNavTile(
+                    icon: Icons.workspace_premium_outlined,
+                    iconColor: const Color(0xFF22C55E),
+                    title: 'Pengajuan Menjadi Kreator',
+                    subtitle: widget.user!.isCreator
+                        ? 'Anda sudah menjadi Kreator · Badge centang hijau aktif'
+                        : 'Upgrade ke akun Kreator — terima proyek & buka layanan',
+                    isDark: isDark,
+                    isLast: true,
+                    trailing: widget.user!.isCreator
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF22C55E).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.verified_rounded,
+                                  color: Color(0xFF22C55E),
+                                  size: 13,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Kreator',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF22C55E),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : null,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CreatorApplicationPage(
+                          user: widget.user!,
+                          onUserUpdated: widget.onUserUpdated,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
 
           // ── Notifikasi ───────────────────────────────────────────────────
           _buildSection(

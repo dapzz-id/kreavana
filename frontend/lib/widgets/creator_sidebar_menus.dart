@@ -73,7 +73,7 @@ class CreatorSidebarMenus {
   }
 
   static bool showPortofolioAgendaTopItems(UserModel user) {
-    return !isCreatorUser(user) || !hasSpecificSubRole(user.subRole);
+    return isCreatorUser(user) && !hasSpecificSubRole(user.subRole);
   }
 
   static String? layananSectionTitle(String? subRole) {

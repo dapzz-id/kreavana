@@ -6,6 +6,9 @@ class OpportunityPoster {
   final String? email;
   final String? avatarUrl;
   final String? selectedSubRole;
+  final String role;
+  final bool isVerified;
+  final String? verificationType;
 
   OpportunityPoster({
     required this.id,
@@ -15,6 +18,9 @@ class OpportunityPoster {
     this.email,
     this.avatarUrl,
     this.selectedSubRole,
+    this.role = 'user',
+    this.isVerified = false,
+    this.verificationType,
   });
 
   factory OpportunityPoster.fromJson(Map<String, dynamic> json) {
@@ -26,6 +32,9 @@ class OpportunityPoster {
       email: json['email'],
       avatarUrl: json['avatar_url'],
       selectedSubRole: json['selected_sub_role'],
+      role: json['role'] ?? 'user',
+      isVerified: json['is_verified'] == true || json['is_verified'] == 1,
+      verificationType: json['verification_type'],
     );
   }
 
@@ -38,6 +47,9 @@ class OpportunityPoster {
       'email': email,
       'avatar_url': avatarUrl,
       'selected_sub_role': selectedSubRole,
+      'role': role,
+      'is_verified': isVerified,
+      'verification_type': verificationType,
     };
   }
 }
@@ -185,6 +197,7 @@ class OpportunityModel {
   final String title;
   final String? description;
   final String? posterUrl;
+  final String? bannerUrl;
   final String subRoleSlug;
   final String type; // 'location' | 'project'
   final String? location;
@@ -194,10 +207,21 @@ class OpportunityModel {
   final String? address;
   final String? deadline;
   final String? eventDate;
+  final String? eventStartDate;
+  final String? eventEndDate;
   final String? eventStartTime;
   final String? eventEndTime;
   final String? budgetRange;
   final String status;
+  final String? meetingDate;
+  final String? meetingTime;
+  final String? meetingLocation;
+  final double? meetingLat;
+  final double? meetingLng;
+  final String? meetingNotes;
+  final String meetingStatus; // 'not_required', 'pending_marketing_review', 'verified_paid'
+  final String escrowStatus; // 'none', 'pending_deposit', 'held_in_escrow', 'released_to_creators'
+  final int eventProgress;
   final String? postedBy;
   final String? createdAt;
   final OpportunityPoster? poster;
@@ -210,6 +234,7 @@ class OpportunityModel {
     required this.title,
     this.description,
     this.posterUrl,
+    this.bannerUrl,
     required this.subRoleSlug,
     this.type = 'project',
     this.location,
@@ -219,10 +244,21 @@ class OpportunityModel {
     this.address,
     this.deadline,
     this.eventDate,
+    this.eventStartDate,
+    this.eventEndDate,
     this.eventStartTime,
     this.eventEndTime,
     this.budgetRange,
     this.status = 'open',
+    this.meetingDate,
+    this.meetingTime,
+    this.meetingLocation,
+    this.meetingLat,
+    this.meetingLng,
+    this.meetingNotes,
+    this.meetingStatus = 'not_required',
+    this.escrowStatus = 'none',
+    this.eventProgress = 0,
     this.postedBy,
     this.createdAt,
     this.poster,
@@ -233,6 +269,27 @@ class OpportunityModel {
 
   bool get isLocation => type == 'location';
   bool get isProject => type == 'project';
+  bool get isOngoing => status.toLowerCase() == 'in_progress' || status.toLowerCase() == 'ongoing';
+  bool get isClosed => status.toLowerCase() == 'closed' || status.toLowerCase() == 'completed';
+
+  bool get isLargeTransaction {
+    final b = (budgetRange ?? '').toLowerCase();
+    return b.contains('20.000.000') || b.contains('50.000.000') || b.contains('mou') || meetingStatus != 'not_required';
+  }
+
+  String get effectiveBannerUrl => (bannerUrl != null && bannerUrl!.isNotEmpty)
+      ? bannerUrl!
+      : (posterUrl ?? '');
+
+  String get durationDisplay {
+    if (eventStartDate != null && eventStartDate!.isNotEmpty && eventEndDate != null && eventEndDate!.isNotEmpty) {
+      return '$eventStartDate s/d $eventEndDate';
+    }
+    if (eventDate != null && eventDate!.isNotEmpty) {
+      return eventDate!;
+    }
+    return deadline ?? 'Jadwal fleksibel';
+  }
 
   List<String> get allTags {
     final list = <String>{};
@@ -249,6 +306,82 @@ class OpportunityModel {
       if (r.subRoleSlug.isNotEmpty) slugs.add(r.subRoleSlug.toLowerCase());
     }
     return slugs.toList();
+  }
+
+  OpportunityModel copyWith({
+    String? id,
+    String? type,
+    String? title,
+    String? description,
+    String? locationCategory,
+    String? subRoleSlug,
+    String? location,
+    String? address,
+    double? latitude,
+    double? longitude,
+    String? posterUrl,
+    String? bannerUrl,
+    String? deadline,
+    String? eventDate,
+    String? eventStartDate,
+    String? eventEndDate,
+    String? eventStartTime,
+    String? eventEndTime,
+    String? budgetRange,
+    String? status,
+    String? meetingDate,
+    String? meetingTime,
+    String? meetingLocation,
+    double? meetingLat,
+    double? meetingLng,
+    String? meetingNotes,
+    String? meetingStatus,
+    String? escrowStatus,
+    int? eventProgress,
+    String? postedBy,
+    String? createdAt,
+    OpportunityPoster? poster,
+    List<OpportunityRequirementModel>? requirements,
+    List<OpportunityApprovedCreatorModel>? approvedCreators,
+    int? applicationsCount,
+  }) {
+    return OpportunityModel(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      locationCategory: locationCategory ?? this.locationCategory,
+      subRoleSlug: subRoleSlug ?? this.subRoleSlug,
+      location: location ?? this.location,
+      address: address ?? this.address,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      posterUrl: posterUrl ?? this.posterUrl,
+      bannerUrl: bannerUrl ?? this.bannerUrl,
+      deadline: deadline ?? this.deadline,
+      eventDate: eventDate ?? this.eventDate,
+      eventStartDate: eventStartDate ?? this.eventStartDate,
+      eventEndDate: eventEndDate ?? this.eventEndDate,
+      eventStartTime: eventStartTime ?? this.eventStartTime,
+      eventEndTime: eventEndTime ?? this.eventEndTime,
+      budgetRange: budgetRange ?? this.budgetRange,
+      status: status ?? this.status,
+      meetingDate: meetingDate ?? this.meetingDate,
+      meetingTime: meetingTime ?? this.meetingTime,
+      meetingLocation: meetingLocation ?? this.meetingLocation,
+      meetingLat: meetingLat ?? this.meetingLat,
+      meetingLng: meetingLng ?? this.meetingLng,
+      meetingNotes: meetingNotes ?? this.meetingNotes,
+      meetingStatus: meetingStatus ?? this.meetingStatus,
+      escrowStatus: escrowStatus ?? this.escrowStatus,
+      eventProgress: eventProgress ?? this.eventProgress,
+      postedBy: postedBy ?? this.postedBy,
+      createdAt: createdAt ?? this.createdAt,
+      poster: poster ?? this.poster,
+      requirements: requirements ?? this.requirements,
+      approvedCreators: approvedCreators ?? this.approvedCreators,
+      applicationsCount: applicationsCount ?? this.applicationsCount,
+    );
   }
 
   factory OpportunityModel.fromJson(Map<String, dynamic> json) {
@@ -271,6 +404,7 @@ class OpportunityModel {
       title: json['title'] ?? '',
       description: json['description'],
       posterUrl: json['poster_url'],
+      bannerUrl: json['banner_url'],
       subRoleSlug: json['sub_role_slug'] ?? '',
       type: json['type'] ?? 'project',
       location: json['location'],
@@ -288,10 +422,31 @@ class OpportunityModel {
       address: json['address'],
       deadline: json['deadline']?.toString(),
       eventDate: json['event_date']?.toString(),
+      eventStartDate: json['event_start_date']?.toString(),
+      eventEndDate: json['event_end_date']?.toString(),
       eventStartTime: json['event_start_time']?.toString(),
       eventEndTime: json['event_end_time']?.toString(),
       budgetRange: json['budget_range'],
       status: json['status'] ?? 'open',
+      meetingDate: json['meeting_date']?.toString(),
+      meetingTime: json['meeting_time']?.toString(),
+      meetingLocation: json['meeting_location']?.toString(),
+      meetingLat: json['meeting_lat'] != null
+          ? (json['meeting_lat'] is double
+              ? json['meeting_lat']
+              : double.tryParse(json['meeting_lat'].toString()))
+          : null,
+      meetingLng: json['meeting_lng'] != null
+          ? (json['meeting_lng'] is double
+              ? json['meeting_lng']
+              : double.tryParse(json['meeting_lng'].toString()))
+          : null,
+      meetingNotes: json['meeting_notes']?.toString(),
+      meetingStatus: json['meeting_status']?.toString() ?? 'not_required',
+      escrowStatus: json['escrow_status']?.toString() ?? 'none',
+      eventProgress: json['event_progress'] != null
+          ? int.tryParse(json['event_progress'].toString()) ?? 0
+          : 0,
       postedBy: json['posted_by']?.toString(),
       createdAt: json['created_at']?.toString(),
       poster: json['poster'] != null
@@ -313,6 +468,7 @@ class OpportunityModel {
       'title': title,
       'description': description,
       'poster_url': posterUrl,
+      'banner_url': bannerUrl,
       'sub_role_slug': subRoleSlug,
       'type': type,
       'location': location,
@@ -322,10 +478,21 @@ class OpportunityModel {
       'address': address,
       'deadline': deadline,
       'event_date': eventDate,
+      'event_start_date': eventStartDate,
+      'event_end_date': eventEndDate,
       'event_start_time': eventStartTime,
       'event_end_time': eventEndTime,
       'budget_range': budgetRange,
       'status': status,
+      'meeting_date': meetingDate,
+      'meeting_time': meetingTime,
+      'meeting_location': meetingLocation,
+      'meeting_lat': meetingLat,
+      'meeting_lng': meetingLng,
+      'meeting_notes': meetingNotes,
+      'meeting_status': meetingStatus,
+      'escrow_status': escrowStatus,
+      'event_progress': eventProgress,
       'posted_by': postedBy,
       'created_at': createdAt,
       'poster': poster?.toJson(),

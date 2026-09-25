@@ -458,6 +458,9 @@ class _MainNavigationState extends State<MainNavigation> {
   };
 
   void _navigateToScreenIndex(int index) {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
     if (_sidebarScrollController.hasClients) {
       _savedSidebarScrollOffset = _sidebarScrollController.offset;
     }
@@ -919,7 +922,7 @@ class _MainNavigationState extends State<MainNavigation> {
         isCollapsed: isCollapsed,
         isMobileDrawer: isMobileDrawer,
       ),
-      if (!_isCreatorUser || !_hasSpecificCreatorSubRole) ...[
+      if (!_hasSpecificCreatorSubRole) ...[
         _buildSidebarItem(
           icon: Icons.storefront_outlined,
           activeIcon: Icons.storefront,
@@ -930,16 +933,17 @@ class _MainNavigationState extends State<MainNavigation> {
           isCollapsed: isCollapsed,
           isMobileDrawer: isMobileDrawer,
         ),
-        _buildSidebarItem(
-          icon: Icons.calendar_today_outlined,
-          activeIcon: Icons.calendar_today,
-          label: 'Agenda',
-          index: 4,
-          theme: theme,
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isMobileDrawer: isMobileDrawer,
-        ),
+        if (_isCreatorUser)
+          _buildSidebarItem(
+            icon: Icons.calendar_today_outlined,
+            activeIcon: Icons.calendar_today,
+            label: 'Agenda',
+            index: 4,
+            theme: theme,
+            isDark: isDark,
+            isCollapsed: isCollapsed,
+            isMobileDrawer: isMobileDrawer,
+          ),
       ],
       if (!isCollapsed && _isGovernment) ...[
         const SizedBox(height: 18),
