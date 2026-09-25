@@ -96,7 +96,7 @@ class User extends Authenticatable implements JWTSubject
         if ($tier === 'super') return 20 * 1024 * 1024 * 1024; // 20GB
         if ($tier === 'pro') return 10 * 1024 * 1024 * 1024; // 10GB
         if ($tier === 'plus') return 3 * 1024 * 1024 * 1024; // 3GB
-        return 1 * 1024 * 1024 * 1024; // 1GB free
+        return 512 * 1024 * 1024; // 512MB free
     }
 
     public function getMaxVoiceCallDurationSecondsAttribute()

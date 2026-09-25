@@ -331,7 +331,15 @@ Route::middleware('auth:api')->group(function () {
     // Storage Management
     Route::prefix('storage')->group(function () {
         Route::get('history', [StorageController::class, 'history']);
+        Route::post('batch-delete', [StorageController::class, 'batchDestroy']);
+        Route::post('clear-trash', [StorageController::class, 'clearTrash']);
+        Route::post('batch-restore', [StorageController::class, 'batchRestore']);
+        Route::post('batch-permanent-delete', [StorageController::class, 'batchForceDestroy']);
+        Route::post('{id}/restore', [StorageController::class, 'restore']);
+        Route::delete('{id}/permanent', [StorageController::class, 'forceDestroy']);
         Route::delete('{id}', [StorageController::class, 'destroy']);
+        Route::get('{id}/download', [StorageController::class, 'download']);
+        Route::get('{id}/view', [StorageController::class, 'view']);
         Route::post('purchased/{id}/retry', [StorageController::class, 'retryPurchasedClone']);
         Route::get('purchased/{id}/download', [StorageController::class, 'downloadPurchasedAsset']);
     });
@@ -348,8 +356,12 @@ Route::middleware('auth:api')->group(function () {
     });
 });
 
-// Storage Management (Public Read for Status)
+// Storage Management (Public Read for Status, View, and Download)
 Route::get('storage/file/{id}/status', [StorageController::class, 'status']);
+Route::get('storage/file/{id}/view', [StorageController::class, 'view']);
+Route::get('storage/file/{id}/download', [StorageController::class, 'download']);
+Route::get('storage/{id}/view', [StorageController::class, 'view']);
+Route::get('storage/{id}/download', [StorageController::class, 'download']);
 
 // Marketplace (public read)
 Route::prefix('marketplace')->group(function () {

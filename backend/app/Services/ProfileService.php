@@ -199,7 +199,14 @@ class ProfileService extends BaseService
 
         $existing = $this->creatorAppRepo->findPendingByUserId($userId);
         if ($existing) {
-            throw new Exception('Anda sudah memiliki pengajuan verifikasi yang sedang diproses.', 422);
+            throw new Exception('Anda sudah memiliki pengajuan verifikasi yang sedang diproses. Mohon tunggu peninjauan dari Admin.', 422);
+        }
+
+        if ($user->role->value === 'creator' || ($user->is_verified && $user->verification_type === 'creator')) {
+            throw new Exception('Akun Anda telah terdaftar sebagai Kreator. Verifikasi KTP Klien dinonaktifkan.', 422);
+        }
+        if ($user->is_verified && $user->verification_type === 'client') {
+            throw new Exception('Identitas KTP Anda sudah terverifikasi.', 422);
         }
 
         try {
@@ -210,6 +217,9 @@ class ProfileService extends BaseService
 
             if (!$ktpPhotoUrl) {
                 throw new Exception('Foto KTP gagal diupload. Pastikan format JPG/PNG.', 422);
+            }
+            if (!$selfiePhotoUrl) {
+                throw new Exception('Foto selfie sambil memegang KTP wajib diupload untuk memverifikasi kepemilikan KTP.', 422);
             }
 
             $app = $this->creatorAppRepo->create([

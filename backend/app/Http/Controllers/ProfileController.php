@@ -127,7 +127,7 @@ class ProfileController extends Controller
             'birth_date' => 'nullable|date|date_format:Y-m-d|before:today',
             'address_ktp' => 'nullable|string|max:500',
             'ktp_photo_url' => 'required|string',
-            'selfie_photo_url' => 'nullable|string',
+            'selfie_photo_url' => 'required|string',
         ]);
 
         $user = Auth::guard('api')->user();
@@ -136,7 +136,9 @@ class ProfileController extends Controller
             $app = $this->profileService->applyClientVerification($user->id, $request->all());
             return $this->successResponse('Pengajuan verifikasi KTP klien berhasil dikirim.', ['application' => $app]);
         } catch (Exception $e) {
-            return $this->errorResponse($e->getMessage(), $e->getCode() ?: 500);
+            $code = $e->getCode();
+            $statusCode = (is_int($code) && $code >= 400 && $code <= 599) ? $code : 422;
+            return $this->errorResponse($e->getMessage(), $statusCode);
         }
     }
 

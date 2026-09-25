@@ -23,7 +23,7 @@ class SubscriptionController extends Controller
             'label'    => 'Saat ini',
             'features' => [
                 'Durasi call standar',
-                'Storage bawaan',
+                'Storage 512 MB',
                 'Tanpa boost',
             ],
             'is_popular' => false,

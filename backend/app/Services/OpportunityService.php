@@ -66,8 +66,11 @@ class OpportunityService extends BaseService
 
             // Handle poster image upload securely
             if ($posterFile && $posterFile->isValid()) {
-                $storagePath = $posterFile->store('posters', 'public');
-                $data['poster_url'] = '/storage/' . $storagePath;
+                $user = User::find($userId);
+                /** @var \App\Services\StorageService $storageService */
+                $storageService = app(\App\Services\StorageService::class);
+                $storageFile = $storageService->store($user, $posterFile, 'posters', 'public');
+                $data['poster_url'] = '/storage/' . $storageFile->path;
             }
 
             // Extract requirements if provided

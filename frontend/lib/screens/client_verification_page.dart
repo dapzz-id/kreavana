@@ -13,6 +13,12 @@ import '../widgets/desktop_sidebar_layout.dart';
 import '../features/auth/services/auth_service.dart';
 import 'main_navigation.dart';
 
+class _HistoryRowData {
+  final String label;
+  final String value;
+  const _HistoryRowData(this.label, this.value);
+}
+
 class ClientVerificationPage extends StatefulWidget {
   final UserModel? user;
   final VoidCallback? onSuccess;
@@ -48,17 +54,159 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
   bool _isSubmitting = false;
   int _currentStep = 0; // 0 = Data KTP, 1 = Upload Foto, 2 = Review
 
+  bool _loadingStatus = true;
+  VerificationStatusData? _statusData;
+  bool _isReapplying = false;
+
   @override
   void initState() {
     super.initState();
     _currentUser = widget.user;
+    _initData();
+  }
+
+  Future<void> _initData() async {
     if (_currentUser == null) {
-      AuthService.getCurrentUser().then((u) {
-        if (mounted && u != null) {
-          setState(() => _currentUser = u);
-        }
-      });
+      final u = await AuthService.getCurrentUser();
+      if (mounted && u != null) {
+        setState(() => _currentUser = u);
+      }
     }
+    await _loadStatus();
+  }
+
+  Future<void> _loadStatus() async {
+    if (!mounted) return;
+    setState(() => _loadingStatus = true);
+    try {
+      final status = await VerificationService.getStatus();
+      if (mounted) {
+        setState(() {
+          _statusData = status;
+          _loadingStatus = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _loadingStatus = false);
+      }
+    }
+  }
+
+  CreatorApplication? get _pendingApp =>
+      _statusData?.pendingApplication ??
+      (_statusData?.latestApplication?.status == 'pending'
+          ? _statusData?.latestApplication
+          : null);
+
+  CreatorApplication? get _latestApp => _statusData?.latestApplication;
+
+  bool get _isCreator {
+    final u = _currentUser ?? widget.user;
+    if (u == null) return false;
+    return u.isCreator || u.role == 'creator';
+  }
+
+  bool get _isVerified {
+    final u = _currentUser ?? widget.user;
+    final userIsClientVerified =
+        u?.isVerified == true && u?.verificationType == 'client';
+    final statusIsClientVerified =
+        _statusData?.isVerified == true &&
+        _statusData?.verificationType == 'client';
+    final latestApproved = _statusData?.latestApplication?.status == 'approved' &&
+        _statusData?.latestApplication?.type == 'client_verification';
+    return userIsClientVerified || statusIsClientVerified || latestApproved;
+  }
+
+  bool get _hasPending {
+    if (_isVerified) return false;
+    if (_statusData?.hasPending == true) return true;
+    if (_pendingApp != null) return true;
+    return false;
+  }
+
+  bool get _isRejected {
+    if (_hasPending || _isVerified) return false;
+    return _latestApp != null && _latestApp!.status == 'rejected';
+  }
+
+  String _maskNik(String nik) {
+    if (nik.length < 8) return nik;
+    return '${nik.substring(0, 4)}********${nik.substring(nik.length - 4)}';
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '-';
+    try {
+      final dt = DateTime.parse(dateStr).toLocal();
+      final months = [
+        'Januari',
+        'Februari',
+        'Maret',
+        'April',
+        'Mei',
+        'Juni',
+        'Juli',
+        'Agustus',
+        'September',
+        'Oktober',
+        'November',
+        'Desember'
+      ];
+      return '${dt.day} ${months[dt.month - 1]} ${dt.year}, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} WIB';
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  Widget _buildBreadcrumbs(BuildContext context) {
+    return AppBreadcrumbs(
+      items: [
+        BreadcrumbItem(
+          label: 'Beranda',
+          icon: Icons.home_rounded,
+          onTap: () {
+            if (_currentUser != null || widget.user != null) {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MainNavigation(
+                    initialUser: (_currentUser ?? widget.user)!,
+                    initialIndex: 0,
+                  ),
+                ),
+                (r) => false,
+              );
+            }
+          },
+        ),
+        BreadcrumbItem(
+          label: 'Pengaturan',
+          icon: Icons.settings_rounded,
+          onTap: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else if (_currentUser != null || widget.user != null) {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MainNavigation(
+                    initialUser: (_currentUser ?? widget.user)!,
+                    initialIndex: 8,
+                  ),
+                ),
+                (r) => false,
+              );
+            }
+          },
+        ),
+        const BreadcrumbItem(
+          label: 'Verifikasi Identitas',
+          icon: Icons.badge_rounded,
+        ),
+      ],
+    );
   }
 
   @override
@@ -134,6 +282,32 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
     );
   }
 
+  Future<void> _openSelfieCamera() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => KtpCameraView(
+          onImageCaptured: (String imagePath) async {
+            Navigator.of(context).pop();
+            if (!kIsWeb) {
+              try {
+                final bytes = await io.File(imagePath).readAsBytes();
+                final b64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+                if (mounted) {
+                  setState(() {
+                    _selfieBase64 = b64;
+                    _selfieFile = null;
+                  });
+                }
+              } catch (_) {}
+            }
+          },
+          onCancel: () => Navigator.of(context).pop(),
+        ),
+      ),
+    );
+  }
+
   Future<void> _pickBirthDate() async {
     final now = DateTime.now();
     final picked = await showDatePicker(
@@ -150,6 +324,10 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
   Future<void> _submit() async {
     if (_ktpBase64 == null) {
       AppSnackbar.error(context, 'Foto KTP wajib diupload.');
+      return;
+    }
+    if (_selfieBase64 == null) {
+      AppSnackbar.error(context, 'Foto selfie sambil memegang KTP wajib diupload untuk membuktikan bahwa KTP adalah hak milik sah Anda.');
       return;
     }
 
@@ -180,7 +358,12 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
         'Pengajuan verifikasi berhasil dikirim! Tim kami akan meninjau dalam 1-3 hari kerja.',
       );
       widget.onSuccess?.call();
-      Navigator.pop(context, true);
+      await _loadStatus();
+      if (mounted) {
+        setState(() {
+          _isReapplying = false;
+        });
+      }
     } else {
       AppSnackbar.error(
         context,
@@ -189,17 +372,27 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
     }
   }
 
-  bool get _isAlreadyVerified {
-    final u = _currentUser ?? widget.user;
-    return u?.isVerified == true && u?.verificationType == 'client';
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 900;
+
+    Widget body;
+    if (_loadingStatus) {
+      body = _buildLoadingState(isDark);
+    } else if (_isCreator) {
+      body = _buildCreatorNoticeState(isDark, isDesktop);
+    } else if (_isVerified) {
+      body = _buildVerifiedState(isDark, isDesktop);
+    } else if (_hasPending) {
+      body = _buildPendingState(isDark, isDesktop);
+    } else if (_isRejected && !_isReapplying) {
+      body = _buildRejectedState(isDark, isDesktop);
+    } else {
+      body = _buildForm(isDark, isDesktop);
+    }
 
     final content = Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -213,9 +406,7 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
       ),
-      body: _isAlreadyVerified
-          ? _buildVerifiedState(isDark)
-          : _buildForm(isDark, isDesktop),
+      body: body,
     );
 
     if (isDesktop && _currentUser != null) {
@@ -229,90 +420,853 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
     return content;
   }
 
-  Widget _buildVerifiedState(bool isDark) {
+  Widget _buildLoadingState(bool isDark) {
     return Center(
-      child: Container(
-        margin: const EdgeInsets.all(32),
-        padding: const EdgeInsets.all(32),
-        constraints: const BoxConstraints(maxWidth: 440),
-        decoration: BoxDecoration(
-          color: isDark ? AppTheme.cardDark : Colors.white,
-          borderRadius: BorderRadius.circular(AppTheme.radiusLG),
-          border: Border.all(
-            color: const Color(0xFF22C55E).withValues(alpha: 0.3),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(
+            width: 36,
+            height: 36,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryPurple),
+            ),
           ),
-          boxShadow: isDark ? null : AppTheme.cardShadowLight,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [Color(0xFF22C55E), Color(0xFF16A34A)],
-                ),
-              ),
-              child: const Icon(
-                Icons.verified_rounded,
-                color: Colors.white,
-                size: 36,
-              ),
+          const SizedBox(height: 16),
+          Text(
+            'Memeriksa status verifikasi...',
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Identitas Sudah Terverifikasi',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : const Color(0xFF1E293B),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Akun Anda telah memiliki badge verifikasi identitas (centang biru). '
-              'Anda dapat membuat proyek dan menggunakan semua fitur klien.',
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 28),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.verified_rounded,
-                    color: Color(0xFF3B82F6),
-                    size: 18,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCreatorNoticeState(bool isDark, bool isDesktop) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        isDesktop ? 40 : 16,
+        16,
+        isDesktop ? 40 : 16,
+        80,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 620),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildBreadcrumbs(context),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.cardDark : Colors.white,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                  border: Border.all(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.3),
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Klien Terverifikasi',
-                    style: const TextStyle(
-                      color: Color(0xFF3B82F6),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
+                  boxShadow: isDark ? null : AppTheme.cardShadowLight,
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 76,
+                      height: 76,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF10B981), Color(0xFF059669)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.workspace_premium_rounded,
+                        color: Colors.white,
+                        size: 38,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Fitur Khusus Akun Klien',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Akun Anda saat ini terdaftar sebagai Kreator Kreavana. Fitur verifikasi KTP klien ini dinonaktifkan karena verifikasi identitas Anda telah dikelola secara terpisah melalui status kreator.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.5,
+                        color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.verified_rounded,
+                            color: Color(0xFF10B981),
+                            size: 18,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Kreator Aktif & Terverifikasi (Centang Hijau)',
+                            style: TextStyle(
+                              color: Color(0xFF10B981),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                        label: const Text('Kembali ke Pengaturan'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: BorderSide(
+                            color: isDark ? AppTheme.inputBorder : AppTheme.dividerLight,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                          ),
+                        ),
+                        onPressed: () {
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVerifiedState(bool isDark, bool isDesktop) {
+    final app = _statusData?.latestApplication;
+    final verifiedDate = _statusData?.verifiedAt ?? app?.appliedAt;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        isDesktop ? 40 : 16,
+        16,
+        isDesktop ? 40 : 16,
+        80,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 620),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildBreadcrumbs(context),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.cardDark : Colors.white,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                  border: Border.all(
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                  ),
+                  boxShadow: isDark ? null : AppTheme.cardShadowLight,
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 76,
+                      height: 76,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.verified_rounded,
+                        color: Colors.white,
+                        size: 38,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Identitas Sudah Terverifikasi',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Akun Klien Anda telah memiliki centang biru resmi dari Kreavana. Anda bebas membuat proyek dan menggunakan seluruh fasilitas klien.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.5,
+                        color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.verified_rounded,
+                            color: Color(0xFF3B82F6),
+                            size: 16,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'Badge Centang Biru Aktif',
+                            style: TextStyle(
+                              color: Color(0xFF3B82F6),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    _buildHistoryDetailBox(
+                      isDark: isDark,
+                      statusBadge: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle_rounded, size: 14, color: Color(0xFF10B981)),
+                            SizedBox(width: 4),
+                            Text(
+                              'Disetujui Admin',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF10B981),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      items: [
+                        if (app?.fullNameKtp != null || _currentUser?.name != null)
+                          _HistoryRowData('Nama Lengkap (KTP)', app?.fullNameKtp ?? _currentUser?.name ?? '-'),
+                        if (app?.nik != null)
+                          _HistoryRowData('Nomor NIK', _maskNik(app!.nik!)),
+                        if (verifiedDate != null)
+                          _HistoryRowData('Tanggal Diverifikasi', _formatDate(verifiedDate)),
+                      ],
+                    ),
+                    const SizedBox(height: 28),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                        label: const Text('Kembali ke Pengaturan'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: BorderSide(
+                            color: isDark ? AppTheme.inputBorder : AppTheme.dividerLight,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                          ),
+                        ),
+                        onPressed: () {
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPendingState(bool isDark, bool isDesktop) {
+    final app = _pendingApp ?? _latestApp;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        isDesktop ? 40 : 16,
+        16,
+        isDesktop ? 40 : 16,
+        80,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 620),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildBreadcrumbs(context),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.cardDark : Colors.white,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                  border: Border.all(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                  ),
+                  boxShadow: isDark ? null : AppTheme.cardShadowLight,
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 76,
+                      height: 76,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.hourglass_top_rounded,
+                        color: Colors.white,
+                        size: 38,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Verifikasi Sedang Menunggu Tinjauan',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Pengajuan verifikasi identitas KTP Anda telah diterima dan saat ini sedang menunggu peninjauan oleh tim Admin Kreavana.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.5,
+                        color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSM),
+                        border: Border.all(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            color: Color(0xFFF59E0B),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Anda tidak dapat mengajukan verifikasi baru selama pengajuan saat ini masih dalam proses peninjauan (biasanya 1-3 hari kerja). Notifikasi akan dikirimkan segera setelah peninjauan selesai.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.4,
+                                color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    _buildHistoryDetailBox(
+                      isDark: isDark,
+                      statusBadge: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.schedule_rounded, size: 14, color: Color(0xFFF59E0B)),
+                            SizedBox(width: 4),
+                            Text(
+                              'Menunggu Review Admin',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFF59E0B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      items: [
+                        if (app?.appliedAt != null)
+                          _HistoryRowData('Waktu Pengajuan', _formatDate(app!.appliedAt)),
+                        if (app?.fullNameKtp != null)
+                          _HistoryRowData('Nama Lengkap (KTP)', app!.fullNameKtp!),
+                        if (app?.nik != null)
+                          _HistoryRowData('Nomor NIK', _maskNik(app!.nik!)),
+                        if (app?.birthPlace != null || app?.birthDate != null)
+                          _HistoryRowData(
+                            'Tempat, Tanggal Lahir',
+                            '${app?.birthPlace ?? ''}${app?.birthPlace != null && app?.birthDate != null ? ', ' : ''}${app?.birthDate ?? ''}',
+                          ),
+                        const _HistoryRowData(
+                          'Dokumen Dilampirkan',
+                          'Foto KTP & Foto Selfie Memegang KTP',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 28),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.refresh_rounded, size: 18),
+                            label: const Text('Periksa Status'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: BorderSide(
+                                color: isDark ? AppTheme.inputBorder : AppTheme.dividerLight,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                              ),
+                            ),
+                            onPressed: _loadStatus,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryPurple,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                              ),
+                            ),
+                            onPressed: () {
+                              if (Navigator.canPop(context)) {
+                                Navigator.pop(context);
+                              }
+                            },
+                            child: const Text(
+                              'Kembali',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRejectedState(bool isDark, bool isDesktop) {
+    final app = _latestApp;
+    final reason = app?.adminNote?.isNotEmpty == true
+        ? app!.adminNote!
+        : 'Dokumen KTP atau foto selfie tidak memenuhi persyaratan keaslian/kejelasan data.';
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        isDesktop ? 40 : 16,
+        16,
+        isDesktop ? 40 : 16,
+        80,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 620),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildBreadcrumbs(context),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.cardDark : Colors.white,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+                  border: Border.all(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.3),
+                  ),
+                  boxShadow: isDark ? null : AppTheme.cardShadowLight,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 76,
+                      height: 76,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFEF4444).withValues(alpha: 0.3),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.cancel_rounded,
+                        color: Colors.white,
+                        size: 38,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Pengajuan Verifikasi Ditolak',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Pengajuan verifikasi identitas KTP Anda sebelumnya belum disetujui oleh tim Admin Kreavana.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.5,
+                        color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                        border: Border.all(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.report_problem_rounded,
+                                color: Color(0xFFEF4444),
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Alasan Penolakan dari Admin:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                  color: isDark
+                                      ? const Color(0xFFFCA5A5)
+                                      : const Color(0xFFB91C1C),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            reason,
+                            style: TextStyle(
+                              fontSize: 14,
+                              height: 1.5,
+                              fontWeight: FontWeight.w500,
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF1E293B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildHistoryDetailBox(
+                      isDark: isDark,
+                      statusBadge: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFFEF4444).withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.cancel_rounded, size: 14, color: Color(0xFFEF4444)),
+                            SizedBox(width: 4),
+                            Text(
+                              'Ditolak',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFEF4444),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      items: [
+                        if (app?.appliedAt != null)
+                          _HistoryRowData('Waktu Pengajuan', _formatDate(app!.appliedAt)),
+                        if (app?.fullNameKtp != null)
+                          _HistoryRowData('Nama Lengkap (KTP)', app!.fullNameKtp!),
+                        if (app?.nik != null)
+                          _HistoryRowData('Nomor NIK', _maskNik(app!.nik!)),
+                      ],
+                    ),
+                    const SizedBox(height: 28),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: BorderSide(
+                                color: isDark ? AppTheme.inputBorder : AppTheme.dividerLight,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                              ),
+                            ),
+                            onPressed: () {
+                              if (Navigator.canPop(context)) {
+                                Navigator.pop(context);
+                              }
+                            },
+                            child: const Text('Kembali'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.refresh_rounded, size: 18),
+                            label: const Text(
+                              'Ajukan Ulang Verifikasi',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryPurple,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                              ),
+                            ),
+                            onPressed: () {
+                              if (app != null) {
+                                if (app.nik != null) _nikController.text = app.nik!;
+                                if (app.fullNameKtp != null) _nameController.text = app.fullNameKtp!;
+                                if (app.birthPlace != null) _birthPlaceController.text = app.birthPlace!;
+                                if (app.addressKtp != null) _addressController.text = app.addressKtp!;
+                                if (app.birthDate != null) {
+                                  try {
+                                    _selectedBirthDate = DateTime.parse(app.birthDate!);
+                                  } catch (_) {}
+                                }
+                              }
+                              setState(() {
+                                _isReapplying = true;
+                                _currentStep = 0;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHistoryDetailBox({
+    required bool isDark,
+    required Widget statusBadge,
+    required List<_HistoryRowData> items,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1B30) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : AppTheme.dividerLight,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Riwayat Pengajuan',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : const Color(0xFF1E293B),
+                ),
+              ),
+              statusBadge,
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(
+            height: 1,
+            color: isDark ? AppTheme.inputBorder : AppTheme.dividerLight,
+          ),
+          const SizedBox(height: 12),
+          ...items.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 140,
+                    child: Text(
+                      item.label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item.value,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -333,52 +1287,45 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AppBreadcrumbs(
-                  items: [
-                    BreadcrumbItem(
-                      label: 'Beranda',
-                      icon: Icons.home_rounded,
-                      onTap: () {
-                        if (widget.user != null) {
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => MainNavigation(
-                                initialUser: widget.user!,
-                                initialIndex: 0,
-                              ),
+                _buildBreadcrumbs(context),
+                if (_isReapplying) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSM),
+                      border: Border.all(
+                        color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.replay_rounded,
+                          color: Color(0xFF8B5CF6),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Mode Pengajuan Ulang: Periksa kembali data Anda dan upload foto KTP serta selfie baru yang jelas sesuai instruksi.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              height: 1.4,
+                              color: isDark ? Colors.white70 : const Color(0xFF4C1D95),
                             ),
-                            (r) => false,
-                          );
-                        }
-                      },
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Batal pengajuan ulang',
+                          icon: const Icon(Icons.close, size: 16),
+                          onPressed: () => setState(() => _isReapplying = false),
+                        ),
+                      ],
                     ),
-                    BreadcrumbItem(
-                      label: 'Pengaturan',
-                      icon: Icons.settings_rounded,
-                      onTap: () {
-                        if (Navigator.canPop(context)) {
-                          Navigator.pop(context);
-                        } else if (widget.user != null) {
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => MainNavigation(
-                                initialUser: widget.user!,
-                                initialIndex: 8,
-                              ),
-                            ),
-                            (r) => false,
-                          );
-                        }
-                      },
-                    ),
-                    const BreadcrumbItem(
-                      label: 'Verifikasi Identitas',
-                      icon: Icons.badge_rounded,
-                    ),
-                  ],
-                ),
+                  ),
+                ],
                 _InfoBanner(isDark: isDark),
                 const SizedBox(height: 24),
                 _StepIndicator(currentStep: _currentStep, isDark: isDark),
@@ -524,11 +1471,11 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
                   const SizedBox(height: 20),
                   _SectionCard(
                     isDark: isDark,
-                    title: 'Selfie dengan KTP',
+                    title: 'Selfie dengan KTP (Wajib)',
                     icon: Icons.face_outlined,
                     children: [
                       Text(
-                        'Upload foto selfie sambil memegang KTP Anda. Pastikan wajah dan KTP terlihat jelas.',
+                        'Upload foto selfie sambil memegang KTP Anda. Hal ini wajib untuk membuktikan keaslian dan memastikan bahwa KTP tersebut adalah hak milik sah Anda.',
                         style: TextStyle(
                           fontSize: 13,
                           color: isDark
@@ -545,6 +1492,7 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
                         fileName: _selfieFile?.name,
                         isDark: isDark,
                         onPickFile: _pickSelfie,
+                        onOpenCamera: _openSelfieCamera,
                         previewBase64: _selfieBase64,
                       ),
                     ],
@@ -557,6 +1505,10 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
                     onNext: () {
                       if (_ktpBase64 == null) {
                         AppSnackbar.error(context, 'Foto KTP wajib diupload.');
+                        return;
+                      }
+                      if (_selfieBase64 == null) {
+                        AppSnackbar.error(context, 'Foto selfie sambil memegang KTP wajib diupload untuk membuktikan kepemilikan KTP.');
                         return;
                       }
                       setState(() => _currentStep = 2);
@@ -614,13 +1566,14 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
                             label: 'Foto KTP',
                             ok: _ktpBase64 != null,
                             isDark: isDark,
+                            optional: false,
                           ),
                           const SizedBox(width: 8),
                           _StatusChip(
-                            label: 'Selfie',
+                            label: 'Selfie + KTP',
                             ok: _selfieBase64 != null,
                             isDark: isDark,
-                            optional: true,
+                            optional: false,
                           ),
                         ],
                       ),

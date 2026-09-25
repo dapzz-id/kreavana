@@ -273,7 +273,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const StorageManagementScreen(),
+                    builder: (_) => StorageManagementScreen(user: widget.user),
                   ),
                 ),
               ),
@@ -302,20 +302,24 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                 // Client Verification tile
                 _buildNavTile(
                   icon: Icons.badge_outlined,
-                  iconColor: const Color(0xFF3B82F6),
+                  iconColor: widget.user!.isCreator
+                      ? const Color(0xFF10B981)
+                      : const Color(0xFF3B82F6),
                   title: 'Verifikasi Identitas (KTP)',
-                  subtitle: widget.user!.isVerified
-                      ? 'Terverifikasi · Badge centang biru aktif'
-                      : 'Diperlukan untuk membuat proyek — upload KTP & selfie',
+                  subtitle: widget.user!.isCreator
+                      ? 'Khusus akun Klien · Anda sudah terverifikasi sebagai Kreator (Centang Hijau)'
+                      : (widget.user!.isVerified
+                          ? 'Terverifikasi · Badge centang biru aktif'
+                          : 'Diperlukan untuk membuat proyek — upload KTP & selfie'),
                   isDark: isDark,
-                  trailing: widget.user!.isVerified
+                  trailing: widget.user!.isCreator
                       ? Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
+                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Row(
@@ -323,35 +327,72 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                             children: [
                               Icon(
                                 Icons.verified_rounded,
-                                color: Color(0xFF3B82F6),
+                                color: Color(0xFF10B981),
                                 size: 13,
                               ),
                               SizedBox(width: 4),
                               Text(
-                                'Aktif',
+                                'Kreator Aktif',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF3B82F6),
+                                  color: Color(0xFF10B981),
                                 ),
                               ),
                             ],
                           ),
                         )
-                      : null,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ClientVerificationPage(
-                        user: widget.user!,
-                        onSuccess: () {
-                          if (widget.onUserUpdated != null) {
-                            // trigger refresh
-                          }
-                        },
-                      ),
-                    ),
-                  ),
+                      : (widget.user!.isVerified
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.verified_rounded,
+                                    color: Color(0xFF3B82F6),
+                                    size: 13,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Aktif',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF3B82F6),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : null),
+                  onTap: widget.user!.isCreator
+                      ? () {
+                          AppSnackbar.info(
+                            context,
+                            'Akun Anda sudah terverifikasi sebagai Kreator resmi (Centang Hijau). Verifikasi Identitas Klien dinonaktifkan.',
+                          );
+                        }
+                      : () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ClientVerificationPage(
+                              user: widget.user!,
+                              onSuccess: () {
+                                if (widget.onUserUpdated != null) {
+                                  // trigger refresh
+                                }
+                              },
+                            ),
+                          ),
+                        ),
                 ),
                 // Creator Application tile — only for non-creator users
                 if (widget.user!.role != 'admin')
