@@ -387,7 +387,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    _isCreator ? '✦ KREATOR' : '✦ KLIEN',
+                    widget.user.isGuest
+                        ? '✦ MODE TAMU'
+                        : (_isCreator ? '✦ KREATOR' : '✦ KLIEN'),
                     style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
