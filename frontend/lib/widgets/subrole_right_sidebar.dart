@@ -12,6 +12,7 @@ import '../screens/profile_screen.dart';
 import 'package:go_router/go_router.dart';
 import '../services/app_router.dart';
 import '../services/profile_completeness_service.dart';
+import 'auth_guard_dialog.dart';
 
 class SubRoleRightSidebar extends StatelessWidget {
   final UserModel user;
@@ -95,7 +96,7 @@ class SubRoleRightSidebar extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      subRoleLabel,
+                      user.isGuest ? 'Mode Tamu' : subRoleLabel,
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
@@ -109,6 +110,13 @@ class SubRoleRightSidebar extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () {
+                  if (user.isGuest) {
+                    AuthGuardDialog.show(
+                      context,
+                      actionName: 'mengakses profil akun',
+                    );
+                    return;
+                  }
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -131,98 +139,180 @@ class SubRoleRightSidebar extends StatelessWidget {
                     vertical: 4,
                   ),
                 ),
-                child: const Text(
-                  'Profil',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                child: Text(
+                  user.isGuest ? 'Masuk' : 'Profil',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Builder(
-            builder: (context) {
-              final completeness = ProfileCompleteness.calculate(user);
-              return Column(
+          if (user.isGuest) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: accentColor.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  GestureDetector(
-                    onTap: () => ProfileCompleteness.showChecklistModal(
-                      context,
-                      user,
-                      onRefresh: () => onUserUpdated?.call(user),
-                    ),
-                    child: Column(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: LinearProgressIndicator(
-                            value: completeness.percentage / 100.0,
-                            minHeight: 7,
-                            backgroundColor: accentColor.withValues(
-                              alpha: 0.12,
-                            ),
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              accentColor,
-                            ),
-                          ),
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 15, color: accentColor),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Akses Tamu Terbatas',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: accentColor,
                         ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Kelengkapan profil',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isDark
-                                    ? AppTheme.textMuted
-                                    : AppTheme.textMutedLight,
-                              ),
-                            ),
-                            Text(
-                              '${completeness.percentage}%',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: accentColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Masuk atau daftar akun untuk membuka profil lengkap, verifikasi identitas, dan transaksi proyek.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                      height: 1.4,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: () => ProfileCompleteness.showChecklistModal(
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => context.go(AppRoutes.login),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accentColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text(
+                  'Masuk Sekarang',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => context.go(AppRoutes.register),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  side: BorderSide(
+                    color: accentColor.withValues(alpha: 0.4),
+                  ),
+                  foregroundColor: accentColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text(
+                  'Daftar Baru',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 16),
+            Builder(
+              builder: (context) {
+                final completeness = ProfileCompleteness.calculate(user);
+                return Column(
+                  children: [
+                    GestureDetector(
+                      onTap: () => ProfileCompleteness.showChecklistModal(
                         context,
                         user,
                         onRefresh: () => onUserUpdated?.call(user),
                       ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        side: BorderSide(
-                          color: accentColor.withValues(alpha: 0.4),
-                        ),
-                        foregroundColor: accentColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                      child: Column(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: LinearProgressIndicator(
+                              value: completeness.percentage / 100.0,
+                              minHeight: 7,
+                              backgroundColor: accentColor.withValues(
+                                alpha: 0.12,
+                              ),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                accentColor,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Kelengkapan profil',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark
+                                      ? AppTheme.textMuted
+                                      : AppTheme.textMutedLight,
+                                ),
+                              ),
+                              Text(
+                                '${completeness.percentage}%',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: accentColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      child: const Text(
-                        'Lengkapi Profil',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () => ProfileCompleteness.showChecklistModal(
+                          context,
+                          user,
+                          onRefresh: () => onUserUpdated?.call(user),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          side: BorderSide(
+                            color: accentColor.withValues(alpha: 0.4),
+                          ),
+                          foregroundColor: accentColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Lengkapi Profil',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              );
-            },
-          ),
+                  ],
+                );
+              },
+            ),
+          ],
         ],
       ),
     );
@@ -293,6 +383,13 @@ class SubRoleRightSidebar extends StatelessWidget {
                 onTap: () {
                   final label = action['label'] as String;
                   if (label == 'Buat Kebutuhan') {
+                    if (user.isGuest) {
+                      AuthGuardDialog.show(
+                        context,
+                        actionName: 'membuat kebutuhan proyek',
+                      );
+                      return;
+                    }
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -310,6 +407,13 @@ class SubRoleRightSidebar extends StatelessWidget {
                   } else if (label == 'Bandingkan' ||
                       label == 'Setujui Proyek' ||
                       label == 'Kirim Proposal') {
+                    if (user.isGuest) {
+                      AuthGuardDialog.show(
+                        context,
+                        actionName: 'mengakses daftar proyek',
+                      );
+                      return;
+                    }
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -317,8 +421,22 @@ class SubRoleRightSidebar extends StatelessWidget {
                       ),
                     );
                   } else if (label == 'Atur Jadwal') {
+                    if (user.isGuest) {
+                      AuthGuardDialog.show(
+                        context,
+                        actionName: 'mengatur kapasitas & jadwal',
+                      );
+                      return;
+                    }
                     context.go(AppRoutes.kapasitasJadwal);
                   } else if (label == 'Bayar DP' || label == 'Tarik Dana') {
+                    if (user.isGuest) {
+                      AuthGuardDialog.show(
+                        context,
+                        actionName: 'mengakses dompet & pembayaran',
+                      );
+                      return;
+                    }
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -329,6 +447,13 @@ class SubRoleRightSidebar extends StatelessWidget {
                       ),
                     );
                   } else if (label == 'Laporan') {
+                    if (user.isGuest) {
+                      AuthGuardDialog.show(
+                        context,
+                        actionName: 'melihat laporan transaksi',
+                      );
+                      return;
+                    }
                     Navigator.push(
                       context,
                       MaterialPageRoute(

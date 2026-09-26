@@ -1612,8 +1612,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      widget.user.subRole ??
-                          (_isCreator ? 'Content Creator' : 'Klien'),
+                      widget.user.isGuest
+                          ? 'Mode Tamu'
+                          : (widget.user.subRole ??
+                              (_isCreator ? 'Content Creator' : 'Klien')),
                       style: TextStyle(
                         fontSize: 11,
                         color: isDark
@@ -1625,97 +1627,195 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
               ),
               TextButton(
-                onPressed: () => _navigateTo('Lihat Profil'),
+                onPressed: () {
+                  if (widget.user.isGuest) {
+                    AuthGuardDialog.show(
+                      context,
+                      actionName: 'mengakses profil akun',
+                    );
+                    return;
+                  }
+                  _navigateTo('Lihat Profil');
+                },
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                 ),
-                child: const Text('Profil', style: TextStyle(fontSize: 11)),
+                child: Text(
+                  widget.user.isGuest ? 'Masuk' : 'Profil',
+                  style: const TextStyle(fontSize: 11),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Builder(
-            builder: (context) {
-              final completeness = ProfileCompleteness.calculate(widget.user);
-              return Column(
+          if (widget.user.isGuest) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryPurple.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.primaryPurple.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  GestureDetector(
-                    onTap: () => ProfileCompleteness.showChecklistModal(
-                      context,
-                      widget.user,
-                    ),
-                    child: Column(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: LinearProgressIndicator(
-                            value: completeness.percentage / 100.0,
-                            minHeight: 6,
-                            backgroundColor: isDark
-                                ? AppTheme.inputBorder
-                                : AppTheme.dividerLight,
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                              AppTheme.primaryPurple,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Kelengkapan profil',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: isDark
-                                    ? AppTheme.textMuted
-                                    : AppTheme.textMutedLight,
-                              ),
-                            ),
-                            Text(
-                              '${completeness.percentage}%',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.primaryPurple,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: () => ProfileCompleteness.showChecklistModal(
-                        context,
-                        widget.user,
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 15,
+                        color: AppTheme.primaryPurple,
                       ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        side: BorderSide(
-                          color: AppTheme.primaryPurple.withValues(alpha: 0.4),
-                        ),
-                        foregroundColor: AppTheme.primaryPurple,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text(
-                        'Lengkapi Profil',
+                      const SizedBox(width: 6),
+                      const Text(
+                        'Akses Tamu Terbatas',
                         style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryPurple,
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Masuk atau daftar akun untuk membuka profil lengkap, verifikasi identitas, dan transaksi proyek.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                      height: 1.4,
                     ),
                   ),
                 ],
-              );
-            },
-          ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => context.go(AppRoutes.login),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text(
+                  'Masuk Sekarang',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => context.go(AppRoutes.register),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  side: BorderSide(
+                    color: AppTheme.primaryPurple.withValues(alpha: 0.4),
+                  ),
+                  foregroundColor: AppTheme.primaryPurple,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text(
+                  'Daftar Baru',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 14),
+            Builder(
+              builder: (context) {
+                final completeness = ProfileCompleteness.calculate(widget.user);
+                return Column(
+                  children: [
+                    GestureDetector(
+                      onTap: () => ProfileCompleteness.showChecklistModal(
+                        context,
+                        widget.user,
+                      ),
+                      child: Column(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: LinearProgressIndicator(
+                              value: completeness.percentage / 100.0,
+                              minHeight: 6,
+                              backgroundColor: isDark
+                                  ? AppTheme.inputBorder
+                                  : AppTheme.dividerLight,
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                AppTheme.primaryPurple,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Kelengkapan profil',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: isDark
+                                      ? AppTheme.textMuted
+                                      : AppTheme.textMutedLight,
+                                ),
+                              ),
+                              Text(
+                                '${completeness.percentage}%',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primaryPurple,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () => ProfileCompleteness.showChecklistModal(
+                          context,
+                          widget.user,
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          side: BorderSide(
+                            color: AppTheme.primaryPurple.withValues(alpha: 0.4),
+                          ),
+                          foregroundColor: AppTheme.primaryPurple,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Lengkapi Profil',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
         ],
       ),
     );
@@ -1992,27 +2092,29 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           ),
           const SizedBox(width: 12),
-          ListenableBuilder(
-            listenable: BadgeService(),
-            builder: (_, _) => _NotifIconBtn(
-              icon: Icons.notifications_none_outlined,
-              count: BadgeService().unreadNotifications,
-              onTap: () => _navigateTo('Notifikasi'),
-              isDark: isDark,
+          if (!widget.user.isGuest) ...[
+            ListenableBuilder(
+              listenable: BadgeService(),
+              builder: (_, _) => _NotifIconBtn(
+                icon: Icons.notifications_none_outlined,
+                count: BadgeService().unreadNotifications,
+                onTap: () => _navigateTo('Notifikasi'),
+                isDark: isDark,
+              ),
             ),
-          ),
-          const SizedBox(width: 2),
-          // Chat
-          ListenableBuilder(
-            listenable: BadgeService(),
-            builder: (_, _) => _NotifIconBtn(
-              icon: Icons.chat_bubble_outline,
-              count: BadgeService().unreadMessages,
-              onTap: () => _navigateTo('Pesan'),
-              isDark: isDark,
+            const SizedBox(width: 2),
+            // Chat
+            ListenableBuilder(
+              listenable: BadgeService(),
+              builder: (_, _) => _NotifIconBtn(
+                icon: Icons.chat_bubble_outline,
+                count: BadgeService().unreadMessages,
+                onTap: () => _navigateTo('Pesan'),
+                isDark: isDark,
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
+            const SizedBox(width: 8),
+          ],
           // Theme toggle
           Builder(
             builder: (btnCtx) => IconButton(
@@ -2043,61 +2145,102 @@ class _DashboardScreenState extends State<DashboardScreen>
               },
             ),
           ),
-          // Avatar
-          GestureDetector(
-            onTap: () => _navigateTo('Lihat Profil'),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 17,
-                  backgroundColor: AppTheme.primaryPurple.withValues(
-                    alpha: 0.15,
-                  ),
-                  backgroundImage: widget.user.avatarUrl?.isNotEmpty == true
-                      ? CachedNetworkImageProvider(
-                          ApiService.resolveAssetUrl(widget.user.avatarUrl!),
-                        )
-                      : null,
-                  child: widget.user.avatarUrl?.isNotEmpty != true
-                      ? Icon(
-                          Icons.person,
-                          color: AppTheme.primaryPurple,
-                          size: 18,
-                        )
-                      : null,
+          if (widget.user.isGuest) ...[
+            const SizedBox(width: 8),
+            OutlinedButton(
+              onPressed: () => context.go(AppRoutes.login),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                minimumSize: const Size(0, 36),
+                side: BorderSide(
+                  color: isDark
+                      ? AppTheme.inputBorder
+                      : AppTheme.primaryPurple.withValues(alpha: 0.5),
                 ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      widget.user.name.split(' ').first,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      widget.user.subRole ?? (_isCreator ? 'Creator' : 'Klien'),
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: isDark
-                            ? AppTheme.textMuted
-                            : AppTheme.textMutedLight,
-                      ),
-                    ),
-                  ],
+                foregroundColor: isDark ? Colors.white : AppTheme.primaryPurple,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.keyboard_arrow_down,
-                  size: 16,
-                  color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
-                ),
-              ],
+              ),
+              child: const Text(
+                'Masuk',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
             ),
-          ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: () => context.go(AppRoutes.register),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryPurple,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                minimumSize: const Size(0, 36),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              child: const Text(
+                'Daftar',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ] else ...[
+            // Avatar
+            GestureDetector(
+              onTap: () => _navigateTo('Lihat Profil'),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 17,
+                    backgroundColor: AppTheme.primaryPurple.withValues(
+                      alpha: 0.15,
+                    ),
+                    backgroundImage: widget.user.avatarUrl?.isNotEmpty == true
+                        ? CachedNetworkImageProvider(
+                            ApiService.resolveAssetUrl(widget.user.avatarUrl!),
+                          )
+                        : null,
+                    child: widget.user.avatarUrl?.isNotEmpty != true
+                        ? Icon(
+                            Icons.person,
+                            color: AppTheme.primaryPurple,
+                            size: 18,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        widget.user.name.split(' ').first,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        widget.user.subRole ?? (_isCreator ? 'Creator' : 'Klien'),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isDark
+                              ? AppTheme.textMuted
+                              : AppTheme.textMutedLight,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 16,
+                    color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
       bottom: (widget.user.role == 'creator' && widget.user.isCreatorApproved)
