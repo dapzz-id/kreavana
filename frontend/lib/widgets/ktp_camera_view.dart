@@ -1,15 +1,20 @@
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class KtpCameraView extends StatefulWidget {
   final Function(String imagePath) onImageCaptured;
   final VoidCallback onCancel;
+  final String? title;
+  final bool isFrontCamera;
 
   const KtpCameraView({
     super.key,
     required this.onImageCaptured,
     required this.onCancel,
+    this.title,
+    this.isFrontCamera = false,
   });
 
   @override
@@ -30,13 +35,19 @@ class _KtpCameraViewState extends State<KtpCameraView> {
   }
 
   Future<void> _initializeCamera() async {
-    // Request camera permission
-    final status = await Permission.camera.request();
-    if (!status.isGranted) {
-      setState(() {
-        _errorMessage = 'Izin kamera diperlukan untuk mengambil foto KTP';
-      });
-      return;
+    // Request camera permission on native platforms
+    if (!kIsWeb) {
+      try {
+        final status = await Permission.camera.request();
+        if (!status.isGranted) {
+          setState(() {
+            _errorMessage = 'Izin kamera diperlukan untuk mengambil foto';
+          });
+          return;
+        }
+      } catch (e) {
+        debugPrint('Camera permission check skipped: $e');
+      }
     }
 
     try {
@@ -48,14 +59,18 @@ class _KtpCameraViewState extends State<KtpCameraView> {
         return;
       }
 
-      // Use back camera
-      final backCamera = _cameras!.firstWhere(
-        (camera) => camera.lensDirection == CameraLensDirection.back,
+      // Choose camera based on direction
+      final targetDirection = widget.isFrontCamera
+          ? CameraLensDirection.front
+          : CameraLensDirection.back;
+
+      final selectedCamera = _cameras!.firstWhere(
+        (camera) => camera.lensDirection == targetDirection,
         orElse: () => _cameras!.first,
       );
 
       _controller = CameraController(
-        backCamera,
+        selectedCamera,
         ResolutionPreset.high,
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.jpeg,
@@ -63,17 +78,24 @@ class _KtpCameraViewState extends State<KtpCameraView> {
 
       await _controller!.initialize();
 
-      // Set focus mode to auto
-      await _controller!.setFocusMode(FocusMode.auto);
+      // Set focus mode to auto if supported (camera_web throws UnimplementedError)
+      try {
+        await _controller!.setFocusMode(FocusMode.auto);
+      } catch (e) {
+        debugPrint('setFocusMode not supported on this platform: $e');
+      }
+
       if (mounted) {
         setState(() {
           _isInitialized = true;
         });
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Gagal menginisialisasi kamera: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Gagal menginisialisasi kamera: $e';
+        });
+      }
     }
   }
 
@@ -116,11 +138,13 @@ class _KtpCameraViewState extends State<KtpCameraView> {
 
   @override
   Widget build(BuildContext context) {
+    final pageTitle = widget.title ?? (widget.isFrontCamera ? 'Ambil Foto Selfie' : 'Ambil Foto KTP');
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: const Text('Ambil Foto KTP'),
+        title: Text(pageTitle),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(icon: const Icon(Icons.close), onPressed: widget.onCancel),
@@ -165,7 +189,7 @@ class _KtpCameraViewState extends State<KtpCameraView> {
 
   Widget _buildCameraView() {
     final size = MediaQuery.of(context).size;
-    final scale = 1.0;
+    const scale = 1.0;
 
     return Stack(
       fit: StackFit.expand,
@@ -177,12 +201,60 @@ class _KtpCameraViewState extends State<KtpCameraView> {
             child: CameraPreview(_controller!),
           ),
         ),
-        // KTP frame overlay
-        _buildKtpFrameOverlay(size),
+        // Frame overlay (KTP frame for back camera, oval/guide for selfie)
+        if (!widget.isFrontCamera)
+          _buildKtpFrameOverlay(size)
+        else
+          _buildSelfieFrameOverlay(size),
         // Guidance text
         _buildGuidanceText(size),
         // Capture button
         _buildCaptureButton(size),
+      ],
+    );
+  }
+
+  Widget _buildSelfieFrameOverlay(Size size) {
+    final frameWidth = size.width * 0.75;
+    final frameHeight = frameWidth * 1.3;
+    final frameTop = size.height * 0.20;
+
+    return Stack(
+      children: [
+        Column(
+          children: [
+            Container(
+              height: frameTop,
+              color: Colors.black.withValues(alpha: 0.35),
+            ),
+            SizedBox(
+              height: frameHeight,
+              child: Row(
+                children: [
+                  Container(
+                    width: (size.width - frameWidth) / 2,
+                    color: Colors.black.withValues(alpha: 0.35),
+                  ),
+                  Container(
+                    width: frameWidth,
+                    height: frameHeight,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.white, width: 3),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                  Container(
+                    width: (size.width - frameWidth) / 2,
+                    color: Colors.black.withValues(alpha: 0.35),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Container(color: Colors.black.withValues(alpha: 0.35)),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -202,7 +274,7 @@ class _KtpCameraViewState extends State<KtpCameraView> {
               color: Colors.black.withValues(alpha: 0.3),
             ),
 
-            // 2. Middle section (Kunci tinggi total section ini sebesar frameHeight)
+            // 2. Middle section
             SizedBox(
               height: frameHeight,
               child: Row(
@@ -212,7 +284,7 @@ class _KtpCameraViewState extends State<KtpCameraView> {
                     width: (size.width - frameWidth) / 2,
                     color: Colors.black.withValues(alpha: 0.3),
                   ),
-                  // Clear area for KTP (Sekarang tingginya akan pas!)
+                  // Clear area for KTP
                   Container(
                     width: frameWidth,
                     height: frameHeight,
@@ -221,10 +293,8 @@ class _KtpCameraViewState extends State<KtpCameraView> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Stack(
-                      clipBehavior:
-                          Clip.none, // Agar marker corner tidak terpotong
+                      clipBehavior: Clip.none,
                       children: [
-                        // Corner markers (Menggunakan penyesuaian posisi agar pas di sudut)
                         _buildCornerMarker(-2, -2, 0),
                         _buildCornerMarker(frameWidth - 28, -2, 90),
                         _buildCornerMarker(
@@ -245,7 +315,7 @@ class _KtpCameraViewState extends State<KtpCameraView> {
               ),
             ),
 
-            // 3. Bottom overlay (Sisanya otomatis menutup ke bawah)
+            // 3. Bottom overlay
             Expanded(
               child: Container(color: Colors.black.withValues(alpha: 0.3)),
             ),
@@ -273,25 +343,32 @@ class _KtpCameraViewState extends State<KtpCameraView> {
   }
 
   Widget _buildGuidanceText(Size size) {
+    final titleText = widget.isFrontCamera
+        ? 'Posisikan wajah & KTP terlihat jelas'
+        : 'Posisikan KTP dalam bingkai';
+    final subText = widget.isFrontCamera
+        ? 'Pegang KTP Anda dan pastikan wajah tidak tertutup'
+        : 'Pastikan semua teks terbaca jelas';
+
     return Positioned(
-      top: size.height * 0.15,
+      top: size.height * 0.12,
       left: 0,
       right: 0,
-      child: const Column(
+      child: Column(
         children: [
           Text(
-            'Posisikan KTP dalam bingkai',
-            style: TextStyle(
+            titleText,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.center,
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
-            'Pastikan semua teks terbaca jelas',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
+            subText,
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
             textAlign: TextAlign.center,
           ),
         ],

@@ -865,7 +865,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarItem(
           icon: Icons.verified_user_outlined,
           activeIcon: Icons.verified_user,
-          label: 'Verifikasi Kreator',
+          label: 'Verifikasi Akun',
           index: 1,
           theme: theme,
           isDark: isDark,

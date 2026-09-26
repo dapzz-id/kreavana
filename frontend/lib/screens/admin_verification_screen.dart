@@ -19,6 +19,7 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
   List<CreatorApplication> _pendingApps = [];
   List<CreatorApplication> _approvedApps = [];
   List<CreatorApplication> _rejectedApps = [];
+  String _typeFilter = 'all'; // 'all', 'client', 'creator'
 
   final _rejectNoteController = TextEditingController();
 
@@ -58,16 +59,29 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
     }
   }
 
-  void _handleApprove(String? id) async {
+  List<CreatorApplication> _filterApps(List<CreatorApplication> apps) {
+    if (_typeFilter == 'client') {
+      return apps.where((a) => a.type == 'client_verification').toList();
+    } else if (_typeFilter == 'creator') {
+      return apps.where((a) => a.type != 'client_verification').toList();
+    }
+    return apps;
+  }
+
+  void _handleApprove(CreatorApplication app) async {
+    final id = app.id;
     if (id == null) return;
     setState(() => _isLoading = true);
     final result = await AdminService.approveApplication(id);
     if (mounted) {
       setState(() => _isLoading = false);
       if (result['success'] == true) {
+        final successMsg = app.type == 'client_verification'
+            ? 'Verifikasi KTP Klien berhasil disetujui. Akun kini memiliki Centang Biru!'
+            : 'Pengajuan kreator berhasil disetujui. Akun telah ditingkatkan ke status Kreator!';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pengajuan kreator berhasil disetujui.'),
+          SnackBar(
+            content: Text(successMsg),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
@@ -79,28 +93,34 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
     }
   }
 
-  void _showRejectDialog(String? id) {
+  void _showRejectDialog(CreatorApplication app) {
+    final id = app.id;
     if (id == null) return;
     _rejectNoteController.clear();
+    final isClient = app.type == 'client_verification';
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Tolak Pengajuan Kreator'),
+        title: Text(isClient ? 'Tolak Verifikasi KTP Klien' : 'Tolak Pengajuan Kreator'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Berikan alasan mengapa pengajuan ini ditolak:',
-              style: TextStyle(fontSize: 13, color: Colors.grey),
+            Text(
+              isClient
+                  ? 'Berikan alasan mengapa verifikasi KTP ini ditolak (misal: foto buram, NIK tidak sesuai):'
+                  : 'Berikan alasan mengapa pengajuan kreator ini ditolak:',
+              style: const TextStyle(fontSize: 13, color: Colors.grey),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _rejectNoteController,
               maxLines: 3,
               decoration: InputDecoration(
-                hintText:
-                    'Misal: Link portofolio tidak aktif atau data tidak valid...',
+                hintText: isClient
+                    ? 'Misal: Foto KTP terpotong atau teks NIK tidak terbaca jelas...'
+                    : 'Misal: Link portofolio tidak aktif atau data tidak valid...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -121,7 +141,7 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
                 return;
               }
               Navigator.pop(context);
-              _handleReject(id, note);
+              _handleReject(app, note);
             },
             child: const Text('Tolak', style: TextStyle(color: Colors.red)),
           ),
@@ -130,15 +150,20 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
     );
   }
 
-  void _handleReject(String id, String note) async {
+  void _handleReject(CreatorApplication app, String note) async {
+    final id = app.id;
+    if (id == null) return;
     setState(() => _isLoading = true);
     final result = await AdminService.rejectApplication(id, note);
     if (mounted) {
       setState(() => _isLoading = false);
       if (result['success'] == true) {
+        final rejectMsg = app.type == 'client_verification'
+            ? 'Verifikasi KTP Klien berhasil ditolak.'
+            : 'Pengajuan kreator berhasil ditolak.';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pengajuan kreator berhasil ditolak.'),
+          SnackBar(
+            content: Text(rejectMsg),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -166,6 +191,7 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final isClient = app.type == 'client_verification';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -173,7 +199,10 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
         color: isDark ? AppTheme.cardBg : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+          color: isClient
+              ? Colors.blue.withValues(alpha: 0.3)
+              : (isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+          width: isClient ? 1.5 : 1.0,
         ),
       ),
       child: Column(
@@ -183,15 +212,15 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: (app.type == 'client_verification'
+                backgroundColor: (isClient
                         ? Colors.blue
                         : theme.colorScheme.primary)
                     .withValues(alpha: 0.12),
                 child: Icon(
-                  app.type == 'client_verification'
+                  isClient
                       ? Icons.verified_user_rounded
                       : Icons.palette_rounded,
-                  color: app.type == 'client_verification'
+                  color: isClient
                       ? Colors.blue.shade700
                       : Colors.teal.shade700,
                 ),
@@ -205,28 +234,28 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
+                            horizontal: 8,
+                            vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: app.type == 'client_verification'
+                            color: isClient
                                 ? Colors.blue.shade50
                                 : Colors.teal.shade50,
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(6),
                             border: Border.all(
-                              color: app.type == 'client_verification'
+                              color: isClient
                                   ? Colors.blue.shade300
                                   : Colors.teal.shade300,
                             ),
                           ),
                           child: Text(
-                            app.type == 'client_verification'
-                                ? 'VERIFIKASI KLIEN (KTP)'
-                                : 'UPGRADE KREATOR (${app.subRoleCategory.toUpperCase()})',
+                            isClient
+                                ? '🔵 VERIFIKASI KLIEN (KTP)'
+                                : '🟢 UPGRADE KREATOR (${app.subRoleCategory.toUpperCase()})',
                             style: TextStyle(
-                              fontSize: 9,
+                              fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: app.type == 'client_verification'
+                              color: isClient
                                   ? Colors.blue.shade800
                                   : Colors.teal.shade800,
                             ),
@@ -256,14 +285,24 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
                         ],
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
-                      'Nama Pemohon: (ID ${app.userId})',
+                      app.fullNameKtp ?? app.userName ?? 'Pengguna (ID: ${app.userId?.substring(0, 8) ?? '-'})',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                        fontSize: 15,
                       ),
                     ),
+                    if (app.userEmail != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        app.userEmail!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.white60 : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -293,7 +332,7 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
             ],
           ),
           const Divider(height: 24),
-          if (app.type == 'client_verification') ...[
+          if (isClient) ...[
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
@@ -399,8 +438,8 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
                     color: Colors.grey.shade200,
                     child: Center(
                       child: Text(
-                        'Dokumen NIB: ${app.nibFileUrl}',
-                        style: const TextStyle(fontSize: 11),
+                        'Gagal memuat dokumen NIB',
+                        style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                       ),
                     ),
                   ),
@@ -408,95 +447,137 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
               ),
             ],
           ],
-          if (app.nik != null || app.fullNameKtp != null) ...[
+          if (app.nik != null && app.nik!.isNotEmpty) ...[
             const Divider(height: 24),
-            Row(
-              children: [
-                Icon(Icons.badge, size: 18, color: Colors.teal.shade700),
-                const SizedBox(width: 8),
-                Text(
-                  app.reusedKtp
-                      ? 'Verifikasi KTP (Riwayat Tersimpan)'
-                      : 'Verifikasi KTP',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                ),
-              ],
+            Text(
+              'Data Identitas KTP Pemohon:',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade600,
+              ),
             ),
             const SizedBox(height: 8),
-            if (app.fullNameKtp != null)
-              Text(
-                'Nama: ${app.fullNameKtp}',
-                style: const TextStyle(fontSize: 12),
-              ),
-            if (app.nik != null)
-              Text('NIK: ${app.nik}', style: const TextStyle(fontSize: 12)),
-            if (app.birthPlace != null || app.birthDate != null)
-              Text(
-                'Lahir: ${app.birthPlace ?? ''}${app.birthDate != null ? ', ${app.birthDate}' : ''}',
-                style: const TextStyle(fontSize: 12),
-              ),
-            if (app.addressKtp != null)
-              Text(
-                'Alamat: ${app.addressKtp}',
-                style: const TextStyle(fontSize: 12),
-              ),
-            if (app.ktpPhotoUrl != null && app.ktpPhotoUrl!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              const Text(
-                'Foto KTP:',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
                 ),
               ),
-              const SizedBox(height: 4),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  app.ktpPhotoUrl!,
-                  height: 140,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 80,
-                    color: Colors.grey.shade200,
-                    child: const Center(
-                      child: Text('Foto KTP tidak dapat dimuat'),
+              child: Column(
+                children: [
+                  _buildDataRow('NIK', app.nik!),
+                  _buildDataRow('Nama Lengkap', app.fullNameKtp ?? '-'),
+                  if (app.birthPlace != null || app.birthDate != null)
+                    _buildDataRow(
+                      'Tempat, Tgl Lahir',
+                      '${app.birthPlace ?? '-'}, ${app.birthDate ?? '-'}',
+                    ),
+                  if (app.addressKtp != null)
+                    _buildDataRow('Alamat KTP', app.addressKtp!),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                if (app.ktpPhotoUrl != null && app.ktpPhotoUrl!.isNotEmpty)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Foto KTP:',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        GestureDetector(
+                          onTap: () => _showImageDialog(app.ktpPhotoUrl!, 'Foto KTP'),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              app.ktpPhotoUrl!,
+                              height: 120,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                height: 120,
+                                color: Colors.grey.shade200,
+                                child: Center(
+                                  child: Text(
+                                    'Gagal memuat foto',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ),
-            ],
-            if (app.selfiePhotoUrl != null &&
-                app.selfiePhotoUrl!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              const Text(
-                'Foto Selfie + KTP:',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 4),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  app.selfiePhotoUrl!,
-                  height: 140,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 80,
-                    color: Colors.grey.shade200,
-                    child: const Center(
-                      child: Text('Foto Selfie tidak dapat dimuat'),
+                if (app.ktpPhotoUrl != null &&
+                    app.selfiePhotoUrl != null &&
+                    app.selfiePhotoUrl!.isNotEmpty)
+                  const SizedBox(width: 12),
+                if (app.selfiePhotoUrl != null &&
+                    app.selfiePhotoUrl!.isNotEmpty)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Foto Selfie + KTP:',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        GestureDetector(
+                          onTap: () => _showImageDialog(
+                            app.selfiePhotoUrl!,
+                            'Foto Selfie + KTP',
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              app.selfiePhotoUrl!,
+                              height: 120,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                height: 120,
+                                color: Colors.grey.shade200,
+                                child: Center(
+                                  child: Text(
+                                    'Gagal memuat foto',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ],
           if (app.adminNote != null && app.adminNote!.isNotEmpty) ...[
             const SizedBox(height: 12),
@@ -522,7 +603,7 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 OutlinedButton(
-                  onPressed: () => _showRejectDialog(app.id),
+                  onPressed: () => _showRejectDialog(app),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.red,
                     side: const BorderSide(color: Colors.red),
@@ -534,7 +615,7 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton(
-                  onPressed: () => _handleApprove(app.id),
+                  onPressed: () => _handleApprove(app),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
@@ -553,37 +634,187 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
     );
   }
 
+  Widget _buildDataRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showImageDialog(String imageUrl, String title) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            InteractiveViewer(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    padding: const EdgeInsets.all(24),
+                    color: Colors.black,
+                    child: const Text(
+                      'Gagal memuat gambar',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.white, size: 28),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChips(List<CreatorApplication> apps) {
+    final clientCount = apps.where((a) => a.type == 'client_verification').length;
+    final creatorCount = apps.where((a) => a.type != 'client_verification').length;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _buildFilterChip(
+              label: 'Semua (${apps.length})',
+              isSelected: _typeFilter == 'all',
+              isDark: isDark,
+              onTap: () => setState(() => _typeFilter = 'all'),
+            ),
+            const SizedBox(width: 8),
+            _buildFilterChip(
+              label: '🔵 Verifikasi Klien ($clientCount)',
+              isSelected: _typeFilter == 'client',
+              isDark: isDark,
+              onTap: () => setState(() => _typeFilter = 'client'),
+            ),
+            const SizedBox(width: 8),
+            _buildFilterChip(
+              label: '🟢 Upgrade Kreator ($creatorCount)',
+              isSelected: _typeFilter == 'creator',
+              isDark: isDark,
+              onTap: () => setState(() => _typeFilter = 'creator'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip({
+    required String label,
+    required bool isSelected,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppTheme.primaryPurple
+              : (isDark ? const Color(0xFF1E1C2B) : Colors.grey.shade100),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? AppTheme.primaryPurple
+                : (isDark ? AppTheme.inputBorder : Colors.grey.shade300),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            color: isSelected
+                ? Colors.white
+                : (isDark ? Colors.white70 : Colors.grey.shade800),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildAppList(
     List<CreatorApplication> apps, {
     bool showActions = false,
   }) {
-    if (apps.isEmpty) {
-      return Center(
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.inbox_outlined, color: Colors.grey.shade400, size: 64),
-              const SizedBox(height: 12),
-              const Text(
-                'Tidak ada pengajuan dalam daftar ini.',
-                style: TextStyle(color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+    final filtered = _filterApps(apps);
 
-    return ListView.separated(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      itemCount: apps.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 16),
-      itemBuilder: (context, index) =>
-          _buildApplicationCard(apps[index], showActions: showActions),
+    return Column(
+      children: [
+        _buildFilterChips(apps),
+        Expanded(
+          child: filtered.isEmpty
+              ? Center(
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.inbox_outlined, color: Colors.grey.shade400, size: 64),
+                        const SizedBox(height: 12),
+                        Text(
+                          _typeFilter == 'all'
+                              ? 'Tidak ada pengajuan dalam daftar ini.'
+                              : 'Tidak ada pengajuan untuk kategori ini.',
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  itemCount: filtered.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 16),
+                  itemBuilder: (context, index) =>
+                      _buildApplicationCard(filtered[index], showActions: showActions),
+                ),
+        ),
+      ],
     );
   }
 
@@ -597,9 +828,19 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
         toolbarHeight: 80,
         titleSpacing: isDesktop ? 32 : 16,
         elevation: 0,
-        title: const Text(
-          'Verifikasi Akun Kreator',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Verifikasi Akun & Identitas',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 2),
+            Text(
+              'Kelola verifikasi KTP Klien (Centang Biru) dan Upgrade Kreator (Centang Hijau)',
+              style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.normal),
+            ),
+          ],
         ),
         bottom: TabBar(
           controller: _tabController,

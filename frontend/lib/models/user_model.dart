@@ -238,6 +238,8 @@ class SubRoleCategory {
 class CreatorApplication {
   final String? id;
   final String? userId;
+  final String? userName;
+  final String? userEmail;
   final String subRoleCategory;
   final String skillDescription;
   final String? portfolioLink;
@@ -260,6 +262,8 @@ class CreatorApplication {
   CreatorApplication({
     this.id,
     this.userId,
+    this.userName,
+    this.userEmail,
     this.type = 'creator_upgrade',
     required this.subRoleCategory,
     required this.skillDescription,
@@ -286,6 +290,8 @@ class CreatorApplication {
     return CreatorApplication(
       id: json['id']?.toString(),
       userId: json['user_id']?.toString(),
+      userName: json['user']?['name'] ?? json['full_name_ktp'],
+      userEmail: json['user']?['email'],
       type: json['type']?.toString() ?? 'creator_upgrade',
       subRoleCategory: json['sub_role_category'] ?? '',
       skillDescription: json['skill_description'] ?? '',

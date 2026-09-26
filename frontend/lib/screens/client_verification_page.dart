@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io' as io;
+import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
@@ -7,6 +7,7 @@ import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/verification_service.dart';
 import '../utils/app_errors.dart';
+import '../utils/image_compressor.dart';
 import '../widgets/app_breadcrumbs.dart';
 import '../widgets/ktp_camera_view.dart';
 import '../widgets/desktop_sidebar_layout.dart';
@@ -248,13 +249,20 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
     );
     if (result != null && result.files.isNotEmpty) {
       final file = result.files.first;
-      if (file.bytes != null) {
-        final b64 =
-            'data:image/${file.extension ?? 'jpg'};base64,${base64Encode(file.bytes!)}';
-        setState(() {
-          _ktpFile = file;
-          _ktpBase64 = b64;
-        });
+      Uint8List? bytes = file.bytes;
+      if (bytes == null && file.path != null) {
+        try {
+          bytes = await XFile(file.path!).readAsBytes();
+        } catch (_) {}
+      }
+      if (bytes != null) {
+        final b64 = await ImageCompressor.compressToBase64(bytes);
+        if (mounted) {
+          setState(() {
+            _ktpFile = file;
+            _ktpBase64 = b64;
+          });
+        }
       }
     }
   }
@@ -267,13 +275,20 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
     );
     if (result != null && result.files.isNotEmpty) {
       final file = result.files.first;
-      if (file.bytes != null) {
-        final b64 =
-            'data:image/${file.extension ?? 'jpg'};base64,${base64Encode(file.bytes!)}';
-        setState(() {
-          _selfieFile = file;
-          _selfieBase64 = b64;
-        });
+      Uint8List? bytes = file.bytes;
+      if (bytes == null && file.path != null) {
+        try {
+          bytes = await XFile(file.path!).readAsBytes();
+        } catch (_) {}
+      }
+      if (bytes != null) {
+        final b64 = await ImageCompressor.compressToBase64(bytes);
+        if (mounted) {
+          setState(() {
+            _selfieFile = file;
+            _selfieBase64 = b64;
+          });
+        }
       }
     }
   }
@@ -283,19 +298,21 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
       context,
       MaterialPageRoute(
         builder: (_) => KtpCameraView(
+          title: 'Ambil Foto KTP',
+          isFrontCamera: false,
           onImageCaptured: (String imagePath) async {
             Navigator.of(context).pop();
-            if (!kIsWeb) {
-              try {
-                final bytes = await io.File(imagePath).readAsBytes();
-                final b64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
-                if (mounted) {
-                  setState(() {
-                    _ktpBase64 = b64;
-                    _ktpFile = null;
-                  });
-                }
-              } catch (_) {}
+            try {
+              final bytes = await XFile(imagePath).readAsBytes();
+              final b64 = await ImageCompressor.compressToBase64(bytes);
+              if (mounted) {
+                setState(() {
+                  _ktpBase64 = b64;
+                  _ktpFile = null;
+                });
+              }
+            } catch (e) {
+              debugPrint('Error processing captured KTP: $e');
             }
           },
           onCancel: () => Navigator.of(context).pop(),
@@ -309,19 +326,21 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
       context,
       MaterialPageRoute(
         builder: (_) => KtpCameraView(
+          title: 'Ambil Foto Selfie',
+          isFrontCamera: true,
           onImageCaptured: (String imagePath) async {
             Navigator.of(context).pop();
-            if (!kIsWeb) {
-              try {
-                final bytes = await io.File(imagePath).readAsBytes();
-                final b64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
-                if (mounted) {
-                  setState(() {
-                    _selfieBase64 = b64;
-                    _selfieFile = null;
-                  });
-                }
-              } catch (_) {}
+            try {
+              final bytes = await XFile(imagePath).readAsBytes();
+              final b64 = await ImageCompressor.compressToBase64(bytes);
+              if (mounted) {
+                setState(() {
+                  _selfieBase64 = b64;
+                  _selfieFile = null;
+                });
+              }
+            } catch (e) {
+              debugPrint('Error processing captured selfie: $e');
             }
           },
           onCancel: () => Navigator.of(context).pop(),
