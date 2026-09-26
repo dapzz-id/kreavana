@@ -38,7 +38,12 @@ class OpportunityRepository extends BaseRepository
             $query->where(function ($q) use ($searchTerm) {
                 $q->whereRaw('LOWER(title) LIKE ?', [$searchTerm])
                   ->orWhereRaw('LOWER(description) LIKE ?', [$searchTerm])
-                  ->orWhereRaw('LOWER(location) LIKE ?', [$searchTerm]);
+                  ->orWhereRaw('LOWER(location) LIKE ?', [$searchTerm])
+                  ->orWhereRaw('LOWER(COALESCE(address, \'\')) LIKE ?', [$searchTerm])
+                  ->orWhereHas('requirements', function ($rq) use ($searchTerm) {
+                      $rq->whereRaw('LOWER(COALESCE(notes, \'\')) LIKE ?', [$searchTerm])
+                         ->orWhereRaw('LOWER(sub_role_slug) LIKE ?', [$searchTerm]);
+                  });
             });
         }
 
@@ -100,6 +105,20 @@ class OpportunityRepository extends BaseRepository
             'requirements',
             'approvedApplications.creator:id,name,username,avatar_url,sub_role',
         ])->find($id);
+    }
+
+    public function getMyOpportunities(string $userId, int $limit = 50)
+    {
+        return $this->model->with([
+            'requirements',
+            'approvedApplications.creator:id,name,username,avatar_url,sub_role',
+            'user:id,name,username,avatar_url,sub_role',
+        ])
+        ->withCount('applications')
+        ->where('posted_by', $userId)
+        ->orderBy('created_at', 'desc')
+        ->limit($limit)
+        ->get();
     }
 
     public function getByUser(string $userId, ?string $status = null, string $orderBy = 'created_at', string $direction = 'desc', int $limit = 5)

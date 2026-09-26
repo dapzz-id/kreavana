@@ -22,6 +22,13 @@ class UserModel {
   final String? publicKey;
   final String? bio;
   final String? location;
+  final bool isVerified;
+  final String? verificationType;
+  final String? nik;
+  final String? fullNameKtp;
+  final String? ktpPhotoUrl;
+  final String? nibNumber;
+  final String? nibFileUrl;
 
   UserModel({
     this.id,
@@ -35,6 +42,13 @@ class UserModel {
     this.role = 'user',
     this.subRole,
     this.isCreatorApproved = false,
+    this.isVerified = false,
+    this.verificationType,
+    this.nik,
+    this.fullNameKtp,
+    this.ktpPhotoUrl,
+    this.nibNumber,
+    this.nibFileUrl,
     this.createdAt,
     this.balance = 0.0,
     this.followersCount = 0,
@@ -48,6 +62,10 @@ class UserModel {
     this.maxVideoCallDurationSeconds = 1800,
     this.performanceBoost = 1.0,
   });
+
+  bool get isClient => role == 'user';
+  bool get isClientVerified => isClient && isVerified;
+  bool get isCreatorVerified => isCreator && (isVerified || isCreatorApproved);
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
@@ -67,6 +85,16 @@ class UserModel {
           json['is_creator_approved'] == 1 ||
           json['is_creator_approved'] == true ||
           json['is_creator_approved'] == '1',
+      isVerified:
+          json['is_verified'] == 1 ||
+          json['is_verified'] == true ||
+          json['is_verified'] == '1',
+      verificationType: json['verification_type']?.toString(),
+      nik: json['nik']?.toString(),
+      fullNameKtp: json['full_name_ktp']?.toString(),
+      ktpPhotoUrl: json['ktp_photo_url']?.toString(),
+      nibNumber: json['nib_number']?.toString(),
+      nibFileUrl: json['nib_file_url']?.toString(),
       createdAt: json['created_at'],
       balance: json['balance'] != null
           ? double.parse(json['balance'].toString())
@@ -221,6 +249,10 @@ class CreatorApplication {
   final String? birthPlace;
   final String? birthDate;
   final String? addressKtp;
+  final String type; // 'client_verification' or 'creator_upgrade'
+  final String? nibNumber;
+  final String? nibFileUrl;
+  final bool reusedKtp;
   final String status;
   final String? adminNote;
   final String? appliedAt;
@@ -228,6 +260,7 @@ class CreatorApplication {
   CreatorApplication({
     this.id,
     this.userId,
+    this.type = 'creator_upgrade',
     required this.subRoleCategory,
     required this.skillDescription,
     this.portfolioLink,
@@ -239,15 +272,21 @@ class CreatorApplication {
     this.birthPlace,
     this.birthDate,
     this.addressKtp,
+    this.nibNumber,
+    this.nibFileUrl,
+    this.reusedKtp = false,
     this.status = 'pending',
     this.adminNote,
     this.appliedAt,
   });
 
+  bool get isClientVerification => type == 'client_verification';
+
   factory CreatorApplication.fromJson(Map<String, dynamic> json) {
     return CreatorApplication(
       id: json['id']?.toString(),
       userId: json['user_id']?.toString(),
+      type: json['type']?.toString() ?? 'creator_upgrade',
       subRoleCategory: json['sub_role_category'] ?? '',
       skillDescription: json['skill_description'] ?? '',
       portfolioLink: json['portfolio_link'],
@@ -259,6 +298,9 @@ class CreatorApplication {
       birthPlace: json['birth_place'],
       birthDate: json['birth_date']?.toString(),
       addressKtp: json['address_ktp'],
+      nibNumber: json['nib_number'],
+      nibFileUrl: json['nib_file_url'],
+      reusedKtp: json['reused_ktp'] == true || json['reused_ktp'] == 1,
       status: json['status'] ?? 'pending',
       adminNote: json['admin_note'],
       appliedAt: json['applied_at'],

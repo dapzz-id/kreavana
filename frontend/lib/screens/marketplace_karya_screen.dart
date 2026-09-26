@@ -197,7 +197,10 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => MarketplaceDetailScreen(itemId: item.id),
+        builder: (_) => MarketplaceDetailScreen(
+          itemId: item.id,
+          user: widget.user,
+        ),
       ),
     );
   }
@@ -205,7 +208,9 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
   Future<void> _openJualKarya() async {
     final created = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => const JualKaryaScreen()),
+      MaterialPageRoute(
+        builder: (_) => JualKaryaScreen(user: widget.user),
+      ),
     );
     if (created == true) {
       _loadAll();
@@ -240,24 +245,34 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
             : null,
       ),
       appBar: AppBar(
-        toolbarHeight: 75,
-        title: const Text(
-          'Marketplace Karya',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(0),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
+        automaticallyImplyLeading: Navigator.canPop(context),
+        toolbarHeight: 84,
+        titleSpacing: isWide ? 32 : 16,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Marketplace Karya',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : AppTheme.textDark,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
               'Temukan kreator lokal terbaik dan karya yang siap membantu kebutuhan promosi bisnismu.',
               style: TextStyle(
                 fontSize: 13,
-                color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
+                fontWeight: FontWeight.normal,
+                color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
               ),
             ),
-          ),
+          ],
         ),
       ),
       body: _isLoading

@@ -56,9 +56,26 @@ class OpportunityController extends Controller
         return $this->successResponse('Detail peluang berhasil diambil', $opp);
     }
 
+    public function myOpportunities(Request $request)
+    {
+        $user = Auth::guard('api')->user() ?? $request->user();
+        if (!$user) {
+            return $this->errorResponse('Unauthenticated.', 401);
+        }
+
+        $limit = (int) $request->query('limit', 50);
+        $opportunities = $this->opportunityService->getUserOpportunities($user->id, $limit);
+
+        return $this->successResponse('Daftar kebutuhan/proyek saya berhasil diambil', $opportunities->toArray());
+    }
+
     public function store(StoreOpportunityRequest $request)
     {
         $user = Auth::guard('api')->user();
+        if ($user && $user->role->value === 'user' && !$user->is_verified) {
+            return $this->errorResponse('Klien wajib melakukan verifikasi KTP terlebih dahulu sebelum mempublikasikan kebutuhan proyek.', 403);
+        }
+
         $posterFile = $request->file('poster');
         
         $opp = $this->opportunityService->createOpportunity($user->id, $request->validated(), $posterFile);
@@ -209,6 +226,79 @@ class OpportunityController extends Controller
         } catch (\Exception $e) {
             $statusCode = $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface ? $e->getStatusCode() : 500;
             return $this->errorResponse($e->getMessage(), $statusCode);
+        }
+    }
+
+    public function startEvent(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+
+        try {
+            $opp = $this->opportunityService->startEvent($id, $user->id);
+            return $this->successResponse('Acara berhasil dimulai! Status proyek kini berlangsung dan pendaftaran ditutup.', $opp);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function updateProgress(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        $validated = $request->validate([
+            'progress' => 'required|integer|min:0|max:100',
+        ]);
+
+        try {
+            $opp = $this->opportunityService->updateProgress($id, $user->id, (int) $validated['progress']);
+            return $this->successResponse('Progress acara berhasil diperbarui.', $opp);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function submitDocuments(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        $validated = $request->validate([
+            'documents' => 'required|array',
+            'documents.*.title' => 'required|string|max:150',
+            'documents.*.url' => 'required|string|max:500',
+            'documents.*.notes' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $result = $this->opportunityService->submitDocuments($id, $user->id, $validated['documents']);
+            return $this->successResponse('Dokumen / link berhasil dikirimkan.', $result);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function scheduleMeeting(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        $validated = $request->validate([
+            'meeting_date' => 'required|date',
+            'meeting_time' => 'required|string|max:30',
+            'meeting_location' => 'required|string|max:255',
+            'meeting_lat' => 'nullable|numeric',
+            'meeting_lng' => 'nullable|numeric',
+            'meeting_notes' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $opp = $this->opportunityService->scheduleMeeting($id, $user->id, $validated);
+            return $this->successResponse('Jadwal pertemuan dengan pihak Kreavana berhasil diajukan.', $opp);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
         }
     }
 }

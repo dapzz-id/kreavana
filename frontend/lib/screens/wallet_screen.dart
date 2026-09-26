@@ -8,6 +8,8 @@ import 'transfer_screen.dart';
 import 'withdraw_screen.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/wallet_pin_dialog.dart';
+import '../widgets/app_breadcrumbs.dart';
+import 'main_navigation.dart';
 
 class WalletScreen extends StatefulWidget {
   final UserModel user;
@@ -68,12 +70,18 @@ class _WalletScreenState extends State<WalletScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 900;
+
     final content = Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        automaticallyImplyLeading: Navigator.canPop(context),
+        toolbarHeight: 80,
+        titleSpacing: isDesktop ? 32 : 16,
         title: const Text(
           'Dompet Kreavana',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -82,21 +90,55 @@ class _WalletScreenState extends State<WalletScreen> {
             icon: const Icon(Icons.refresh_rounded),
             onPressed: _loadWalletData,
           ),
+          SizedBox(width: isDesktop ? 24 : 8),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadWalletData,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          child: !_hasPin
-              ? _buildActivationUI(theme)
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 1. Premium Wallet Card with Linear Gradient
-                    Container(
-                      width: double.infinity,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1040),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  isDesktop ? 32 : 16,
+                  16,
+                  isDesktop ? 32 : 16,
+                  isDesktop ? 48 : 24,
+                ),
+                child: !_hasPin
+                    ? _buildActivationUI(theme)
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AppBreadcrumbs(
+                            items: [
+                              BreadcrumbItem(
+                                label: 'Beranda',
+                                icon: Icons.home_rounded,
+                                onTap: () => Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => MainNavigation(
+                                      initialUser: _currentUser,
+                                      initialIndex: 0,
+                                    ),
+                                  ),
+                                  (r) => false,
+                                ),
+                              ),
+                              const BreadcrumbItem(
+                                label: 'Dompet & Pembayaran',
+                                icon: Icons.account_balance_wallet_rounded,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          // 1. Premium Wallet Card with Linear Gradient
+                          Container(
+                            width: double.infinity,
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -493,6 +535,9 @@ class _WalletScreenState extends State<WalletScreen> {
                           ),
                   ],
                 ),
+              ),
+            ),
+          ),
         ),
       ),
     );

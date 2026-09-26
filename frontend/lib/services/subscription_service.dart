@@ -31,14 +31,40 @@ class SubscriptionPlan {
       isFree: (json['price'] as num).toInt() == 0,
     );
   }
+  SubscriptionPlan copyWith({
+    String? tier,
+    String? name,
+    int? price,
+    String? label,
+    List<String>? features,
+    bool? isPopular,
+    bool? isFree,
+  }) {
+    return SubscriptionPlan(
+      tier: tier ?? this.tier,
+      name: name ?? this.name,
+      price: price ?? this.price,
+      label: label ?? this.label,
+      features: features ?? this.features,
+      isPopular: isPopular ?? this.isPopular,
+      isFree: isFree ?? this.isFree,
+    );
+  }
 }
 
 class SubscriptionService {
   /// Fetch all available plans from the backend.
   /// Prices come from the server — never hardcode them in the UI.
-  static Future<List<SubscriptionPlan>> getPlans() async {
+  static Future<List<SubscriptionPlan>> getPlans({String? role}) async {
     try {
-      final response = await ApiService.get('subscription/plans');
+      final queryParams = <String, dynamic>{};
+      if (role != null) {
+        queryParams['role'] = role;
+      }
+      final response = await ApiService.get(
+        'subscription/plans',
+        queryParams: queryParams.isNotEmpty ? queryParams : null,
+      );
       final List<dynamic> data = response['data'] ?? [];
       return data
           .whereType<Map<String, dynamic>>()

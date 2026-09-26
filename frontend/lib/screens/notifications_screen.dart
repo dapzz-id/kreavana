@@ -196,17 +196,21 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final unreadCount = _notifications.where((n) => !n.isRead).length;
+    final isDesktop = MediaQuery.of(context).size.width > 900;
 
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 70,
+        automaticallyImplyLeading: Navigator.canPop(context),
+        toolbarHeight: 80,
+        titleSpacing: isDesktop ? 32 : 16,
+        elevation: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text(
               'Notifikasi',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             if (unreadCount > 0)
               Text(
@@ -533,7 +537,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                                       chatId,
                                       true,
                                     );
-                                    if (context.mounted) {
+                                    if (mounted) {
                                       AppSnackbar.success(
                                         context,
                                         'Berhasil bergabung dengan grup!',
@@ -576,7 +580,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                                       chatId,
                                       false,
                                     );
-                                    if (context.mounted) {
+                                    if (mounted) {
                                       AppSnackbar.info(
                                         context,
                                         'Undangan grup ditolak',

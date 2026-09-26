@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'access_ttl_minutes' => (int) env('JWT_TTL', 10),
+    'access_ttl_minutes' => (int) env('JWT_TTL', 10080),
 
     'jwt' => [
         'production_algo' => 'RS256',

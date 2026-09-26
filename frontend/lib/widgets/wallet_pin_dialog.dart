@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app/theme.dart';
+import '../services/user_store.dart';
 import '../services/wallet_service.dart';
+import '../widgets/auth_guard_dialog.dart';
 
 /// Reusable Wallet PIN dialog — mirip ShopeePay.
 ///
@@ -34,6 +36,14 @@ class WalletPinDialog extends StatefulWidget {
     String subtitle = 'Masukkan PIN wallet kamu untuk melanjutkan.',
     bool checkPinFirst = true,
   }) async {
+    final user = currentUserNotifier.value;
+    if (user == null || user.isGuest) {
+      if (context.mounted) {
+        AuthGuardDialog.show(context, actionName: 'melakukan transaksi dompet');
+      }
+      return null;
+    }
+
     if (checkPinFirst) {
       // Lightweight check: does user have a wallet PIN?
       final hasPinSetup = await WalletService.hasPin();

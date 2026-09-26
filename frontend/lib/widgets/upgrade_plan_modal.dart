@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../app/theme.dart';
+import '../models/user_model.dart';
 import '../services/subscription_service.dart';
+import '../services/user_store.dart';
+import '../widgets/auth_guard_dialog.dart';
 import '../widgets/wallet_pin_dialog.dart';
 
 // ─── Responsive breakpoints ───────────────────────────────────────────────────
@@ -12,10 +15,11 @@ import '../widgets/wallet_pin_dialog.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 class UpgradePlanModal extends StatelessWidget {
-  const UpgradePlanModal({super.key});
+  final UserModel? user;
+  const UpgradePlanModal({super.key, this.user});
 
   // ── Static show helper ─────────────────────────────────────────────────────
-  static void show(BuildContext context) {
+  static void show(BuildContext context, {UserModel? user}) {
     final mq = MediaQuery.of(context);
     final sw = mq.size.width;
     final isMobile = sw < 600;
@@ -32,7 +36,7 @@ class UpgradePlanModal extends StatelessWidget {
           maxChildSize: 0.97,
           expand: false,
           builder: (_, scrollController) =>
-              _ModalBody(scrollController: scrollController),
+              _ModalBody(user: user, scrollController: scrollController),
         ),
       );
     } else {
@@ -53,7 +57,7 @@ class UpgradePlanModal extends StatelessWidget {
                 maxWidth: dialogMaxWidth,
                 maxHeight: mq.size.height * 0.92,
               ),
-              child: const _ModalBody(),
+              child: _ModalBody(user: user),
             ),
           );
         },
@@ -62,13 +66,14 @@ class UpgradePlanModal extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => const _ModalBody();
+  Widget build(BuildContext context) => _ModalBody(user: user);
 }
 
 // ─── Internal modal body (stateful — loads plans from backend) ────────────────
 class _ModalBody extends StatefulWidget {
+  final UserModel? user;
   final ScrollController? scrollController;
-  const _ModalBody({this.scrollController});
+  const _ModalBody({this.user, this.scrollController});
 
   @override
   State<_ModalBody> createState() => _ModalBodyState();
@@ -87,10 +92,26 @@ class _ModalBodyState extends State<_ModalBody> {
 
   Future<void> _loadPlans() async {
     try {
-      final plans = await SubscriptionService.getPlans();
+      final currentUser = widget.user ?? currentUserNotifier.value;
+      final role = currentUser?.role.toLowerCase();
+      final isCreator = role == 'creator' || (currentUser?.isCreator ?? false);
+
+      final plans = await SubscriptionService.getPlans(
+        role: isCreator ? 'creator' : 'user',
+      );
       if (mounted) {
         setState(() {
-          _plans = plans;
+          _plans = plans.map((plan) {
+            if (!isCreator) {
+              // Boost akun hanya untuk role creator; hilangkan dari user dan client
+              return plan.copyWith(
+                features: plan.features
+                    .where((f) => !f.toLowerCase().contains('boost'))
+                    .toList(),
+              );
+            }
+            return plan;
+          }).toList();
           _isLoading = false;
         });
       }
@@ -249,6 +270,15 @@ class _ModalBodyState extends State<_ModalBody> {
 
   // ── Purchase handler ───────────────────────────────────────────────────────
   Future<void> _handlePurchase(SubscriptionPlan plan) async {
+    final currentUser = widget.user ?? currentUserNotifier.value;
+    if (currentUser == null || currentUser.isGuest) {
+      AuthGuardDialog.show(
+        context,
+        actionName: 'berlangganan Paket ${plan.name}',
+      );
+      return;
+    }
+
     if (plan.isFree) {
       Navigator.pop(context);
       return;

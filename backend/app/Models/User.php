@@ -13,7 +13,7 @@ use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-#[Fillable(['name', 'username', 'email', 'password', 'avatar_url', 'phone', 'role', 'sub_role', 'is_creator_approved', 'max_work_capacity', 'balance', 'last_online', 'used_storage_bytes', 'public_key', 'performance_boost', 'email_verified_at', 'email_verification_code_hash', 'email_verification_expires_at', 'email_verification_attempts'])]
+#[Fillable(['name', 'username', 'email', 'password', 'avatar_url', 'phone', 'role', 'sub_role', 'is_creator_approved', 'is_verified', 'verification_type', 'verified_at', 'nik', 'full_name_ktp', 'ktp_photo_url', 'selfie_photo_url', 'nib_number', 'nib_file_url', 'max_work_capacity', 'balance', 'last_online', 'used_storage_bytes', 'public_key', 'performance_boost', 'email_verified_at', 'email_verification_code_hash', 'email_verification_expires_at', 'email_verification_attempts'])]
 #[Hidden(['password', 'remember_token', 'wallet_pin'])]
 class User extends Authenticatable implements JWTSubject
 {
@@ -30,10 +30,13 @@ class User extends Authenticatable implements JWTSubject
         return [
             'email_verified_at' => 'datetime',
             'email_verification_expires_at' => 'datetime',
+            'verified_at' => 'datetime',
             'last_online' => 'datetime',
             'password' => 'hashed',
             'max_work_capacity' => 'integer',
             'role' => \App\Enums\RoleType::class,
+            'is_verified' => 'boolean',
+            'is_creator_approved' => 'boolean',
         ];
     }
 
@@ -93,7 +96,7 @@ class User extends Authenticatable implements JWTSubject
         if ($tier === 'super') return 20 * 1024 * 1024 * 1024; // 20GB
         if ($tier === 'pro') return 10 * 1024 * 1024 * 1024; // 10GB
         if ($tier === 'plus') return 3 * 1024 * 1024 * 1024; // 3GB
-        return 1 * 1024 * 1024 * 1024; // 1GB free
+        return 512 * 1024 * 1024; // 512MB free
     }
 
     public function getMaxVoiceCallDurationSecondsAttribute()
@@ -186,5 +189,15 @@ class User extends Authenticatable implements JWTSubject
     public function portfolioItems()
     {
         return $this->hasMany(PortfolioItem::class, 'user_id');
+    }
+
+    public function opportunities()
+    {
+        return $this->hasMany(Opportunity::class, 'posted_by');
+    }
+
+    public function creatorApplications()
+    {
+        return $this->hasMany(CreatorApplication::class, 'user_id');
     }
 }

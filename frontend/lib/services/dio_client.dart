@@ -45,10 +45,8 @@ class DioClient {
     final headers = <String, dynamic>{
       'Accept': 'application/json',
       'ngrok-skip-browser-warning': 'true',
+      'X-Client-Type': 'mobile',
     };
-    if (!kIsWeb) {
-      headers['X-Client-Type'] = 'mobile';
-    }
 
     dio = Dio(
       BaseOptions(
@@ -137,11 +135,8 @@ class DioClient {
 
     try {
       dynamic requestData;
-      if (!kIsWeb) {
-        final rToken = await _secureStorage.getRefreshToken();
-        if (rToken == null || rToken.isEmpty) {
-          throw Exception("No refresh token available on mobile");
-        }
+      final rToken = await _secureStorage.getRefreshToken();
+      if (rToken != null && rToken.isNotEmpty) {
         requestData = {'refresh_token': rToken};
       }
 
@@ -151,7 +146,7 @@ class DioClient {
           extra: const {'withCredentials': true},
           headers: {
             'Accept': 'application/json',
-            if (!kIsWeb) 'X-Client-Type': 'mobile',
+            'X-Client-Type': 'mobile',
           },
         ),
       );
@@ -171,11 +166,9 @@ class DioClient {
 
         await _secureStorage.saveToken(accessToken);
 
-        if (!kIsWeb) {
-          final newRefreshToken = resData['refresh_token'];
-          if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
-            await _secureStorage.saveRefreshToken(newRefreshToken);
-          }
+        final newRefreshToken = resData['refresh_token'];
+        if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
+          await _secureStorage.saveRefreshToken(newRefreshToken);
         }
 
         _refreshCompleter!.complete(true);

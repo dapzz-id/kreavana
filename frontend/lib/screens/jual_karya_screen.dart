@@ -5,13 +5,18 @@ import 'package:kreavana/services/marketplace_service.dart';
 import '../app/theme.dart';
 import '../app/app_animations.dart';
 import '../utils/app_errors.dart';
+import '../models/user_model.dart';
 import '../widgets/animated_input_field.dart';
 import '../widgets/gradient_button.dart';
+import '../widgets/app_breadcrumbs.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 
 /// Form untuk user membuat karya/layanan baru di marketplace.
 /// Data dikirim sungguhan ke backend (POST /marketplace).
 class JualKaryaScreen extends StatefulWidget {
-  const JualKaryaScreen({super.key});
+  final UserModel? user;
+
+  const JualKaryaScreen({super.key, this.user});
 
   @override
   State<JualKaryaScreen> createState() => _JualKaryaScreenState();
@@ -93,25 +98,47 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
+    final isDesktop = MediaQuery.of(context).size.width > 900;
+
+    final content = Scaffold(
       appBar: AppBar(
-        toolbarHeight: 75,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: Navigator.canPop(context),
+        toolbarHeight: 80,
+        titleSpacing: isDesktop ? 32 : 16,
+        elevation: 0,
         title: const Text(
           'Jual Karya',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        padding: EdgeInsets.fromLTRB(
+          isDesktop ? 32 : 20,
+          16,
+          isDesktop ? 32 : 20,
+          32,
+        ),
         child: Form(
           key: _formKey,
           child: EntranceList(
             stepDelay: const Duration(milliseconds: 60),
             children: [
+              if (isDesktop) ...[
+                AppBreadcrumbs(
+                  items: [
+                    BreadcrumbItem(
+                      label: 'Portofolio',
+                      icon: Icons.photo_library_outlined,
+                      onTap: () => Navigator.pop(context),
+                    ),
+                    const BreadcrumbItem(
+                      label: 'Jual / Tambah Karya',
+                      icon: Icons.add_photo_alternate_outlined,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -230,11 +257,13 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
                   keyboardType: TextInputType.number,
                   textInputAction: TextInputAction.next,
                   validator: (val) {
-                    if (val == null || val.trim().isEmpty)
+                    if (val == null || val.trim().isEmpty) {
                       return 'Harga wajib diisi';
+                    }
                     final num = double.tryParse(val.trim());
-                    if (num == null || num <= 0)
+                    if (num == null || num <= 0) {
                       return 'Format harga tidak valid';
+                    }
                     return null;
                   },
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -334,6 +363,16 @@ class _JualKaryaScreenState extends State<JualKaryaScreen> {
         ),
       ),
     );
+
+    if (isDesktop && widget.user != null) {
+      return DesktopSidebarLayout(
+        user: widget.user!,
+        activeRoute: 'portofolio',
+        child: content,
+      );
+    }
+
+    return content;
   }
 }
 

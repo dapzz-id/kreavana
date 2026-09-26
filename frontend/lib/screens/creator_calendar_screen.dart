@@ -322,16 +322,19 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 900;
 
     return Scaffold(
       backgroundColor: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
       appBar: AppBar(
         automaticallyImplyLeading: Navigator.canPop(context),
-        toolbarHeight: 70,
+        toolbarHeight: 80,
+        titleSpacing: isDesktop ? 32 : 16,
         title: Text(
           'Jadwal & Ketersediaan',
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 22,
             fontWeight: FontWeight.bold,
             color: isDark ? Colors.white : AppTheme.textDark,
           ),
@@ -342,7 +345,7 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
             onPressed: _loadSchedules,
             tooltip: 'Perbarui Jadwal',
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: isDesktop ? 24 : 8),
         ],
         backgroundColor: isDark ? AppTheme.cardDark : AppTheme.cardLight,
         elevation: 0,
@@ -380,7 +383,12 @@ class _CreatorCalendarScreenState extends State<CreatorCalendarScreen> {
                   'Tambahkan override jadwal jika Anda ingin mengatur hari libur atau kapasitas maksimal harian.',
             )
           : ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.fromLTRB(
+                isDesktop ? 32 : 16,
+                16,
+                isDesktop ? 32 : 16,
+                24,
+              ),
               itemCount: _schedules.length,
               itemBuilder: (context, index) {
                 final s = _schedules[index];

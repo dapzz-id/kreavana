@@ -55,24 +55,24 @@ class _DaftarKebutuhanScreenState extends State<DaftarKebutuhanScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final isDesktop = MediaQuery.of(context).size.width > 900;
 
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 75,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: Navigator.canPop(context),
+        toolbarHeight: 80,
+        titleSpacing: isDesktop ? 32 : 16,
+        elevation: 0,
         title: const Text(
           'Daftar Kebutuhan',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
       ),
-      body: _buildBody(isDark),
+      body: _buildBody(isDark, isDesktop),
     );
   }
 
-  Widget _buildBody(bool isDark) {
+  Widget _buildBody(bool isDark, bool isDesktop) {
     if (_loading) {
       return const AppLoadingState(message: 'Memuat kebutuhan...');
     }
@@ -128,7 +128,12 @@ class _DaftarKebutuhanScreenState extends State<DaftarKebutuhanScreen> {
       onRefresh: _load,
       color: AppTheme.primaryPurple,
       child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: EdgeInsets.fromLTRB(
+          isDesktop ? 32 : 16,
+          16,
+          isDesktop ? 32 : 16,
+          24,
+        ),
         itemCount: _items.length,
         itemBuilder: (ctx, i) {
           return AnimatedEntrance(

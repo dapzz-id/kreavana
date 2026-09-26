@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../app/theme.dart'; // Make sure to import AppTheme
+import '../app/theme.dart';
 
+/// Alternative skeleton loader with a horizontal sweep gradient.
+/// Useful for larger content blocks like cards or sections.
 class SkeletonLoader extends StatefulWidget {
   final double height;
   final double? width;
@@ -41,6 +43,11 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Use AppTheme colors for brand consistency
+    final baseColor = isDark ? AppTheme.cardDark2 : const Color(0xFFE8E5F3);
+    final highlightColor = isDark ? AppTheme.inputDark : AppTheme.surfaceLight;
+
     return AnimatedBuilder(
       animation: _ctrl,
       builder: (context, child) {
@@ -51,11 +58,7 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(widget.borderRadius),
             gradient: LinearGradient(
-              colors: [
-                (isDark ? AppTheme.cardDark2 : AppTheme.inputLight),
-                (isDark ? AppTheme.inputDark : Colors.white),
-                (isDark ? AppTheme.cardDark2 : AppTheme.inputLight),
-              ],
+              colors: [baseColor, highlightColor, baseColor],
               stops: [
                 (_ctrl.value - 0.3).clamp(0.0, 1.0),
                 _ctrl.value,

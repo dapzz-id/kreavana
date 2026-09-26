@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/creator_sidebar_menus.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../models/opportunity_model.dart';
@@ -45,10 +46,14 @@ class _ExploreScreenState extends State<ExploreScreen>
     {'slug': 'videographer', 'name': 'Videografer'},
   ];
 
+  bool get _isCreator => CreatorSidebarMenus.isCreatorUser(widget.user);
+
+  int get _tabCount => _isCreator ? 4 : 3;
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: _tabCount, vsync: this);
     _loadOpportunities();
     _searchController.addListener(_onSearchChanged);
   }
@@ -95,7 +100,14 @@ class _ExploreScreenState extends State<ExploreScreen>
                 (op) =>
                     op.title.toLowerCase().contains(query) ||
                     (op.description?.toLowerCase().contains(query) ?? false) ||
-                    (op.location?.toLowerCase().contains(query) ?? false),
+                    (op.location?.toLowerCase().contains(query) ?? false) ||
+                    (op.address?.toLowerCase().contains(query) ?? false) ||
+                    op.subRoleSlug.toLowerCase().contains(query) ||
+                    op.allTags.any((t) => t.toLowerCase().contains(query)) ||
+                    op.requirements.any((r) =>
+                        r.subRoleSlug.toLowerCase().contains(query) ||
+                        r.subRoleTitle.toLowerCase().contains(query) ||
+                        (r.notes?.toLowerCase().contains(query) ?? false)),
               )
               .toList();
         }
@@ -160,10 +172,13 @@ class _ExploreScreenState extends State<ExploreScreen>
 
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 75,
+        automaticallyImplyLeading: Navigator.canPop(context),
+        toolbarHeight: 80,
+        titleSpacing: isDesktop ? 32 : 16,
+        elevation: 0,
         title: const Text(
           'Jelajahi Kolaborasi',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
         ),
         bottom: TabBar(
           controller: _tabController,
@@ -171,17 +186,18 @@ class _ExploreScreenState extends State<ExploreScreen>
             fontWeight: FontWeight.bold,
             fontSize: 13,
           ),
-          tabs: const [
-            Tab(
+          tabs: [
+            const Tab(
               icon: Icon(Icons.map_outlined, size: 18),
               text: 'Peluang Lokasi',
             ),
-            Tab(
-              icon: Icon(Icons.work_outline, size: 18),
-              text: 'Peluang Proyek',
-            ),
-            Tab(icon: Icon(Icons.grid_view, size: 18), text: 'Semua'),
-            Tab(icon: Icon(Icons.person_search, size: 18), text: 'Kreator'),
+            if (_isCreator)
+              const Tab(
+                icon: Icon(Icons.work_outline, size: 18),
+                text: 'Peluang Proyek',
+              ),
+            const Tab(icon: Icon(Icons.grid_view, size: 18), text: 'Semua'),
+            const Tab(icon: Icon(Icons.person_search, size: 18), text: 'Kreator'),
           ],
         ),
       ),
@@ -189,9 +205,14 @@ class _ExploreScreenState extends State<ExploreScreen>
         controller: _tabController,
         children: [
           PeluangLokasiScreen(user: widget.user, subRoleSlug: _selectedSubRole),
-          PeluangProyekScreen(user: widget.user, subRoleSlug: _selectedSubRole),
-          Column(
-            children: [
+          if (_isCreator)
+            PeluangProyekScreen(user: widget.user, subRoleSlug: _selectedSubRole),
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1240),
+              child: Column(
+                children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: SearchBar(
@@ -336,9 +357,11 @@ class _ExploreScreenState extends State<ExploreScreen>
               ),
             ],
           ),
-          const RecommendedCreatorsSection(),
-        ],
+        ),
       ),
-    );
+      const RecommendedCreatorsSection(),
+    ],
+  ),
+);
   }
 }

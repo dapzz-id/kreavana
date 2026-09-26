@@ -1459,10 +1459,12 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
       final recorder = _record!;
       final hasPermission = await recorder.hasPermission();
       if (!hasPermission) {
-        AppSnackbar.error(
-          context,
-          'Izin mikrofon diperlukan untuk voice note.',
-        );
+        if (mounted) {
+          AppSnackbar.error(
+            context,
+            'Izin mikrofon diperlukan untuk voice note.',
+          );
+        }
         return;
       }
 
@@ -1505,7 +1507,9 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         }
       });
     } catch (e) {
-      AppSnackbar.error(context, AppErrors.friendly(e));
+      if (mounted) {
+        AppSnackbar.error(context, AppErrors.friendly(e));
+      }
     }
   }
 
@@ -3961,20 +3965,28 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
 
     final myMember = members.firstWhere(
       (m) {
-        if (m['name'] == 'Anda') return true;
+        if (m['name'] == 'Anda') {
+          return true;
+        }
         if (widget.currentUser != null) {
           final cId = widget.currentUser?.id?.toString();
           final cEmail = widget.currentUser?.email?.toString().toLowerCase();
-          if (cId != null && m['id']?.toString() == cId) return true;
-          if (cEmail != null && m['email']?.toString().toLowerCase() == cEmail)
+          if (cId != null && m['id']?.toString() == cId) {
             return true;
+          }
+          if (cEmail != null && m['email']?.toString().toLowerCase() == cEmail) {
+            return true;
+          }
         }
         if (_currentUser != null) {
           final cId = _currentUser?.id?.toString();
           final cEmail = _currentUser?.email.toString().toLowerCase();
-          if (cId != null && m['id']?.toString() == cId) return true;
-          if (cEmail != null && m['email']?.toString().toLowerCase() == cEmail)
+          if (cId != null && m['id']?.toString() == cId) {
             return true;
+          }
+          if (cEmail != null && m['email']?.toString().toLowerCase() == cEmail) {
+            return true;
+          }
         }
         return false;
       },

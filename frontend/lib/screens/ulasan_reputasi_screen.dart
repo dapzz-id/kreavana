@@ -4,6 +4,8 @@ import '../app/subrole_theme_engine.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
 import '../widgets/skeleton/skeleton_list.dart';
+import '../widgets/app_breadcrumbs.dart';
+import 'main_navigation.dart';
 
 class UlasanReputasiScreen extends StatefulWidget {
   final UserModel? user;
@@ -198,12 +200,17 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
       return true;
     }).toList();
 
+    final isDesktop = MediaQuery.of(context).size.width > 900;
+
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 70,
+        automaticallyImplyLeading: Navigator.canPop(context),
+        toolbarHeight: 80,
+        titleSpacing: isDesktop ? 32 : 18,
+        elevation: 0,
         title: const Text(
           'Ulasan & Reputasi',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
@@ -211,17 +218,47 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
             onPressed: _fetchRealtimeReviews,
             tooltip: 'Perbarui Data Realtime',
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: isDesktop ? 24 : 8),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _fetchRealtimeReviews,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          padding: EdgeInsets.symmetric(
+            horizontal: isDesktop ? 32 : 18,
+            vertical: 16,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              AppBreadcrumbs(
+                items: [
+                  BreadcrumbItem(
+                    label: 'Beranda',
+                    icon: Icons.home_rounded,
+                    onTap: () {
+                      if (widget.user != null) {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => MainNavigation(
+                              initialUser: widget.user!,
+                              initialIndex: 0,
+                            ),
+                          ),
+                          (r) => false,
+                        );
+                      }
+                    },
+                  ),
+                  const BreadcrumbItem(
+                    label: 'Ulasan & Reputasi',
+                    icon: Icons.star_rounded,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
               // ── 1. Hero Reputation Banner ──
               _buildReputationBanner(accentColor, isDark),
               const SizedBox(height: 18),

@@ -38,7 +38,7 @@ class StorageService extends BaseService
         return DB::transaction(function () use ($user, $file, $category, $visibility, $size, $mimeType, $originalName, $disk, $path, $storedName) {
             // Lock user row for update to prevent concurrent quota race condition
             $lockedUser = User::where('id', $user->id)->lockForUpdate()->first();
-            $limit = $lockedUser->storage_limit_bytes ?: (10 * 1024 * 1024 * 1024);
+            $limit = $lockedUser->storage_limit_bytes ?: (512 * 1024 * 1024);
             $currentUsed = $lockedUser->used_storage_bytes ?: 0;
 
             if (($currentUsed + $size) > $limit) {
@@ -93,63 +93,35 @@ class StorageService extends BaseService
     }
 
     /**
-     * Delete a storage file and restore quota. Idempotent. Soft deletes the record.
+     * Soft delete a storage file into Trash. Quota is RETAINED while in trash.
      */
-    public function delete(StorageFile $storageFile, User $user, ?string $reason = null, ?string $ip = null, ?string $userAgent = null): void
+    public function softDelete(StorageFile $storageFile, User $user, ?string $reason = null, ?string $ip = null, ?string $userAgent = null): void
     {
         if ($storageFile->user_id !== $user->id) {
             throw new Exception("Unauthorized to delete this file.", 403);
         }
 
         DB::transaction(function () use ($storageFile, $user, $reason, $ip, $userAgent) {
-            // Lock file to prevent concurrent deletes
             $lockedFile = StorageFile::where('id', $storageFile->id)->lockForUpdate()->first();
             if (!$lockedFile) {
-                return; // Already deleted fully
+                return;
             }
 
-            // Lock user to safely update quota
-            $lockedUser = User::where('id', $user->id)->lockForUpdate()->first();
-
-            // Delete ownership reference for this file
-            StorageFileReference::where('storage_file_id', $lockedFile->id)
-                ->where('owner_id', $user->id)
-                ->delete();
-
-            // Delete physical file ONLY IF there are no other active references to this path (deduplication garbage collection)
-            // Wait, we need to find if any other active StorageFile sharing the same physical path has active references.
-            // But since StorageFile ID maps 1-1 to a StorageFileReference (for purchasers, they clone the StorageFile so they have their own StorageFile ID but same path),
-            // We just need to check if ANY StorageFile with this path has active references, OR we can just check if any StorageFile with this path is NOT soft-deleted.
-            // Actually, the new architecture says: "Cukup reference_count == 0 baru hapus fisik".
-            // So we find all StorageFiles with the same path, and count their total references.
-            $samePathFileIds = StorageFile::where('path', $lockedFile->path)->pluck('id');
-            $activeReferences = StorageFileReference::whereIn('storage_file_id', $samePathFileIds)->count();
-            
-            if ($activeReferences === 0) {
-                if (Storage::disk($lockedFile->disk)->exists($lockedFile->path)) {
-                    Storage::disk($lockedFile->disk)->delete($lockedFile->path);
-                }
-            }
-
-            // Decrement quota exactly once using actual size
-            $lockedUser->used_storage_bytes = max(0, $lockedUser->used_storage_bytes - $lockedFile->size);
-            $lockedUser->save();
-
-            // Record Audit Log
+            // Record Audit Log for move to trash
             FileDeletionLog::create([
                 'storage_file_id' => $lockedFile->id,
                 'deleted_by' => $user->id,
-                'reason' => $reason,
+                'reason' => $reason ?: 'Dipindahkan ke tempat sampah',
                 'ip_address' => $ip,
                 'user_agent' => $userAgent,
                 'category' => $lockedFile->category,
                 'file_size' => $lockedFile->size,
             ]);
 
-            // Handle KYC verification rollback if KYC is deleted
+            // Handle KYC verification rollback if KYC is moved to trash
             if ($lockedFile->category === 'kyc') {
-                $lockedUser->is_creator_approved = false;
-                $lockedUser->save();
+                $user->is_creator_approved = false;
+                $user->save();
                 
                 CreatorApplication::where('user_id', $user->id)
                     ->whereIn('status', ['pending', 'approved'])
@@ -159,9 +131,123 @@ class StorageService extends BaseService
                     ]);
             }
 
-            // Soft delete metadata
+            // Soft delete: sets deleted_at timestamp. Quota is RETAINED until permanently cleared!
             $lockedFile->delete();
         });
+    }
+
+    /**
+     * Restore a soft-deleted storage file from Trash back to active.
+     */
+    public function restoreFile(StorageFile $storageFile, User $user): void
+    {
+        if ($storageFile->user_id !== $user->id) {
+            throw new Exception("Unauthorized to restore this file.", 403);
+        }
+
+        $storageFile->restore();
+    }
+
+    /**
+     * Permanently delete a storage file and release its quota.
+     */
+    public function forceDelete(StorageFile $storageFile, User $user, ?string $ip = null, ?string $userAgent = null): void
+    {
+        if ($storageFile->user_id !== $user->id) {
+            throw new Exception("Unauthorized to delete this file permanently.", 403);
+        }
+
+        DB::transaction(function () use ($storageFile, $user, $ip, $userAgent) {
+            $lockedFile = StorageFile::withTrashed()->where('id', $storageFile->id)->lockForUpdate()->first();
+            if (!$lockedFile) {
+                return;
+            }
+
+            $lockedUser = User::where('id', $user->id)->lockForUpdate()->first();
+
+            // Delete ownership reference
+            StorageFileReference::where('storage_file_id', $lockedFile->id)
+                ->where('owner_id', $user->id)
+                ->delete();
+
+            // Delete physical file ONLY IF no other StorageFiles share this path
+            $samePathFileIds = StorageFile::withTrashed()
+                ->where('path', $lockedFile->path)
+                ->where('id', '!=', $lockedFile->id)
+                ->pluck('id');
+            $activeReferences = StorageFileReference::whereIn('storage_file_id', $samePathFileIds)->count();
+
+            if ($activeReferences === 0) {
+                if (Storage::disk($lockedFile->disk)->exists($lockedFile->path)) {
+                    Storage::disk($lockedFile->disk)->delete($lockedFile->path);
+                }
+            }
+
+            // Free quota upon PERMANENT deletion
+            $lockedUser->used_storage_bytes = max(0, $lockedUser->used_storage_bytes - $lockedFile->size);
+            $lockedUser->save();
+
+            // Permanent delete from database
+            $lockedFile->forceDelete();
+        });
+    }
+
+    /**
+     * Clear all trashed files for a user permanently and release the quota.
+     */
+    public function emptyTrash(User $user, ?string $ip = null, ?string $userAgent = null): int
+    {
+        return DB::transaction(function () use ($user, $ip, $userAgent) {
+            $trashedFiles = StorageFile::onlyTrashed()
+                ->where('user_id', $user->id)
+                ->lockForUpdate()
+                ->get();
+
+            if ($trashedFiles->isEmpty()) {
+                return 0;
+            }
+
+            $lockedUser = User::where('id', $user->id)->lockForUpdate()->first();
+            $freedBytes = 0;
+            $count = 0;
+
+            foreach ($trashedFiles as $file) {
+                // Delete ownership reference
+                StorageFileReference::where('storage_file_id', $file->id)
+                    ->where('owner_id', $user->id)
+                    ->delete();
+
+                // Check physical file
+                $samePathFileIds = StorageFile::withTrashed()
+                    ->where('path', $file->path)
+                    ->where('id', '!=', $file->id)
+                    ->pluck('id');
+                $activeReferences = StorageFileReference::whereIn('storage_file_id', $samePathFileIds)->count();
+
+                if ($activeReferences === 0) {
+                    if (Storage::disk($file->disk)->exists($file->path)) {
+                        Storage::disk($file->disk)->delete($file->path);
+                    }
+                }
+
+                $freedBytes += $file->size;
+                $file->forceDelete();
+                $count++;
+            }
+
+            $lockedUser->used_storage_bytes = max(0, $lockedUser->used_storage_bytes - $freedBytes);
+            $lockedUser->save();
+
+            return $count;
+        });
+    }
+
+    /**
+     * Default delete forwards to softDelete (moves to Trash).
+     */
+    public function delete(StorageFile $storageFile, User $user, ?string $reason = null, ?string $ip = null, ?string $userAgent = null): void
+    {
+        $this->softDelete($storageFile, $user, $reason, $ip, $userAgent);
     }
 
     /**

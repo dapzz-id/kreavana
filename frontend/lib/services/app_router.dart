@@ -4,7 +4,6 @@ import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/email_verification_screen.dart';
 import '../screens/main_navigation.dart';
-import '../screens/landing_page_screen.dart';
 import '../models/user_model.dart';
 import 'user_store.dart';
 import 'auth_session_state.dart';
@@ -35,9 +34,11 @@ class AppRoutes {
   static const adminDashboard = '/dashboard';
   static const adminVerification = '/verifikasi';
   static const adminResolution = '/resolusi';
+  static const adminSystemSettings = '/admin-settings';
   static const verifyEmail = '/verify-email';
   static const peluangProyek = '/peluang-proyek';
   static const kapasitasJadwal = '/kapasitas-jadwal';
+  static const aiAssistant = '/ai';
 }
 
 const _routeIndexMap = {
@@ -55,14 +56,16 @@ const _routeIndexMap = {
   AppRoutes.pesan: 11,
   AppRoutes.peluangProyek: 12,
   AppRoutes.kapasitasJadwal: 13,
+  AppRoutes.aiAssistant: 14,
 };
 
 const _adminRouteIndexMap = {
   AppRoutes.adminDashboard: 0,
   AppRoutes.adminVerification: 1,
   AppRoutes.adminResolution: 2,
-  AppRoutes.notifikasi: 3,
-  AppRoutes.profil: 4,
+  AppRoutes.adminSystemSettings: 3,
+  AppRoutes.notifikasi: 4,
+  AppRoutes.profil: 5,
 };
 
 /// Route-route yang dapat diakses oleh publik/tamu tanpa login.
@@ -75,12 +78,13 @@ const _publicRoutes = [
   AppRoutes.explore,
   AppRoutes.peluangProyek,
   AppRoutes.marketplaceKarya,
+  AppRoutes.aiAssistant,
 ];
 
 /// GoRouter instance global aplikasi.
 final GoRouter appRouter = GoRouter(
   navigatorKey: navigatorKey,
-  initialLocation: AppRoutes.login,
+  initialLocation: AppRoutes.beranda,
   debugLogDiagnostics: kDebugMode,
   refreshListenable: Listenable.merge([
     currentUserNotifier,
@@ -92,30 +96,28 @@ final GoRouter appRouter = GoRouter(
     final currentPath = state.matchedLocation;
     final isPublic = _publicRoutes.contains(currentPath);
 
-    // Belum login & mencoba akses halaman terlindungi → redirect ke /login
+    // Belum login & mencoba akses halaman terlindungi via URL bar → redirect ke /login
     if ((user == null || isSignedOut) && !isPublic) {
       return AppRoutes.login;
     }
 
     // Sudah login & membuka halaman login/register → arahkan ke beranda
-    if (user != null && !isSignedOut && (currentPath == AppRoutes.login || currentPath == AppRoutes.register)) {
+    if (user != null &&
+        !isSignedOut &&
+        (currentPath == AppRoutes.login || currentPath == AppRoutes.register)) {
       return AppRoutes.beranda;
     }
 
     return null; // Tidak ada redirect
   },
   routes: [
-    // ── Public Landing Page ──────────────────────────────────────────────
+    // ── Public Landing / Beranda ─────────────────────────────────────────
     GoRoute(
       path: AppRoutes.landing,
       name: 'landing',
       builder: (context, state) {
-        final user = currentUserNotifier.value;
-        final isSignedOut = authSignedOutNotifier.value;
-        if (user != null && !isSignedOut) {
-          return MainNavigation(initialUser: user, initialIndex: 0);
-        }
-        return const LandingPageScreen();
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return MainNavigation(initialUser: user, initialIndex: 0);
       },
     ),
 

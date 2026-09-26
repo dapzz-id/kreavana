@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../models/recommendation_creator_model.dart';
 import '../app/theme.dart';
 import '../services/app_router.dart';
+import 'auth_guard_dialog.dart';
 
 class CreatorRecommendationCard extends StatelessWidget {
   final RecommendationCreatorModel creator;
@@ -32,11 +33,14 @@ class CreatorRecommendationCard extends StatelessWidget {
       color: isDark ? AppTheme.cardBg : Colors.white,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () {
-          // Navigating to existing profile route using user/creator ID.
-          // Note: If AppRoutes.profil expects an extra or path param, adapt this accordingly.
-          // For now, assuming push to profil route is safe as requested: "navigate ke existing creator profile"
-          context.push('${AppRoutes.profil}?id=${creator.id}');
+        onTap: () async {
+          final isAllowed = await AuthGuardDialog.check(
+            context,
+            actionName: 'melihat profil dan booking kreator ${creator.name}',
+          );
+          if (isAllowed && context.mounted) {
+            context.push('${AppRoutes.profil}?id=${creator.id}');
+          }
         },
         child: Padding(
           padding: const EdgeInsets.all(16.0),

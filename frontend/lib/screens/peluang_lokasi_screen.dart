@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -26,6 +27,7 @@ class PeluangLokasiScreen extends StatefulWidget {
 class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
     with TickerProviderStateMixin {
   final MapController _mapController = MapController();
+  AnimationController? _mapAnimationController;
   bool _isLoading = true;
   bool _isLocating = false;
   List<OpportunityModel> _locations = [];
@@ -77,6 +79,14 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
     _detectUserLocation(autoCenter: true);
   }
 
+  @override
+  void dispose() {
+    _mapAnimationController?.stop();
+    _mapAnimationController?.dispose();
+    _mapController.dispose();
+    super.dispose();
+  }
+
   void _selectCity(Map<String, dynamic>? city) {
     if (city == null) {
       setState(() {
@@ -95,7 +105,11 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
       _selectedCityName = city['name'] as String;
       _userLocation = loc;
     });
-    _animatedMapMove(loc, 13.0);
+    if (_selectedRadiusKm != null) {
+      _fitMapToRadius(_selectedRadiusKm!, loc);
+    } else {
+      _animatedMapMove(loc, 13.0);
+    }
     _loadLocations();
   }
 
@@ -227,7 +241,11 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
         });
 
         if (autoCenter) {
-          _animatedMapMove(loc, 13.0);
+          if (_selectedRadiusKm != null) {
+            _fitMapToRadius(_selectedRadiusKm!, loc);
+          } else {
+            _animatedMapMove(loc, 13.0);
+          }
         }
 
         // Re-load locations if radius filter is active
@@ -244,6 +262,9 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
     try {
+      _mapAnimationController?.stop();
+      _mapAnimationController?.dispose();
+
       final camera = _mapController.camera;
       final latTween = Tween<double>(
         begin: camera.center.latitude,
@@ -259,9 +280,11 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
       );
 
       final controller = AnimationController(
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 350),
         vsync: this,
       );
+      _mapAnimationController = controller;
+
       final Animation<double> animation = CurvedAnimation(
         parent: controller,
         curve: Curves.easeInOutCubic,
@@ -278,6 +301,9 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
         if (status == AnimationStatus.completed ||
             status == AnimationStatus.dismissed) {
           controller.dispose();
+          if (_mapAnimationController == controller) {
+            _mapAnimationController = null;
+          }
         }
       });
 
@@ -285,6 +311,50 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
     } catch (_) {
       _mapController.move(destLocation, destZoom);
     }
+  }
+
+  double _calculateZoomForRadius(double radiusKm, LatLng center) {
+    try {
+      final camera = _mapController.camera;
+      final size = camera.nonRotatedSize;
+      if (size.width > 100 && size.height > 100) {
+        const distance = Distance();
+        final north = distance.offset(center, radiusKm * 1000, 0);
+        final south = distance.offset(center, radiusKm * 1000, 180);
+        final east = distance.offset(center, radiusKm * 1000, 90);
+        final west = distance.offset(center, radiusKm * 1000, 270);
+        final bounds = LatLngBounds(
+          LatLng(south.latitude, west.longitude),
+          LatLng(north.latitude, east.longitude),
+        );
+
+        final fitted = CameraFit.bounds(
+          bounds: bounds,
+          padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 72),
+          minZoom: 3.0,
+          maxZoom: 18.0,
+        ).fit(camera);
+
+        if (!fitted.zoom.isNaN && !fitted.zoom.isInfinite && fitted.zoom > 0) {
+          return fitted.zoom.clamp(3.0, 18.0);
+        }
+      }
+    } catch (_) {}
+
+    // Fallback based on standard Web Mercator projection
+    final latRad = center.latitude * math.pi / 180.0;
+    final cosLat = math.cos(latRad).abs().clamp(0.1, 1.0);
+    final paddedDiameterMeters = radiusKm * 2000.0 * 1.45;
+    const assumedViewportHeight = 500.0;
+    final targetZoom = math.log((assumedViewportHeight * 40075016.686 * cosLat) /
+            (256.0 * paddedDiameterMeters)) /
+        math.ln2;
+    return targetZoom.clamp(3.0, 18.0);
+  }
+
+  void _fitMapToRadius(double radiusKm, LatLng center) {
+    final targetZoom = _calculateZoomForRadius(radiusKm, center);
+    _animatedMapMove(center, targetZoom);
   }
 
   void _zoomIn() {
@@ -299,7 +369,11 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
 
   void _resetCenter(bool isMobile) {
     if (_userLocation != null) {
-      _animatedMapMove(_userLocation!, 13.0);
+      if (_selectedRadiusKm != null) {
+        _fitMapToRadius(_selectedRadiusKm!, _userLocation!);
+      } else {
+        _animatedMapMove(_userLocation!, 13.0);
+      }
     } else {
       _animatedMapMove(const LatLng(-2.5, 118.0), isMobile ? 4.5 : 5.0);
     }
@@ -412,7 +486,10 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
 
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: isMobile ? 60 : 75,
+        automaticallyImplyLeading: Navigator.canPop(context),
+        toolbarHeight: isMobile ? 65 : 80,
+        titleSpacing: isMobile ? 16 : 32,
+        elevation: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -420,14 +497,16 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
               'Peluang Lokasi',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: isMobile ? 16 : 18,
+                fontSize: isMobile ? 18 : 22,
               ),
             ),
+            const SizedBox(height: 2),
             Text(
               'Content Opportunity Map',
               style: TextStyle(
-                fontSize: isMobile ? 10 : 11,
+                fontSize: isMobile ? 11 : 12,
                 fontWeight: FontWeight.normal,
+                color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
               ),
             ),
           ],
@@ -437,6 +516,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
             icon: const Icon(Icons.refresh),
             onPressed: _loadLocations,
           ),
+          SizedBox(width: isMobile ? 8 : 24),
         ],
       ),
       body: Column(
@@ -446,7 +526,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
             height: isMobile ? 40 : 44,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 32),
               itemCount: _categories.length,
               itemBuilder: (context, index) {
                 final cat = _categories[index];
@@ -612,12 +692,18 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                           selected: isSelected,
                           selectedColor: Colors.teal.shade100,
                           onSelected: (_) {
+                            final radius = opt['value'] as double?;
                             setState(() {
-                              _selectedRadiusKm = opt['value'] as double?;
+                              _selectedRadiusKm = radius;
                             });
-                            if (_userLocation == null && _selectedRadiusKm != null) {
+                            if (_userLocation == null && radius != null) {
                               _detectUserLocation(autoCenter: true);
                             } else {
+                              if (radius != null && _userLocation != null) {
+                                _fitMapToRadius(radius, _userLocation!);
+                              } else if (radius == null && _userLocation != null) {
+                                _animatedMapMove(_userLocation!, 13.0);
+                              }
                               _loadLocations();
                             }
                           },
@@ -1056,51 +1142,56 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
       {'slug': 'talent', 'label': '💃 Model & Talent'},
     ];
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => DraggableScrollableSheet(
-          initialChildSize: 0.85,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          builder: (_, scrollController) => Container(
-            decoration: BoxDecoration(
-              color: isDark ? AppTheme.cardBg : Colors.white,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
+    final isDesktop = MediaQuery.of(context).size.width >= 600;
+
+    Widget buildLocationForm(
+      BuildContext ctx,
+      StateSetter setModalState,
+      ScrollController? scrollController, {
+      bool inDialog = false,
+    }) {
+      return ListView(
+        controller: scrollController,
+        padding: EdgeInsets.fromLTRB(20, inDialog ? 20 : 12, 20, 32),
+        children: [
+          if (!inDialog) ...[
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-            child: ListView(
-              controller: scrollController,
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade400,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+            const SizedBox(height: 16),
+          ],
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '📍 Tambah Lokasi Kolaborasi',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              if (inDialog)
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20),
+                  onPressed: () => Navigator.pop(ctx),
+                  tooltip: 'Tutup',
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  '📍 Tambah Lokasi Kolaborasi',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Isi data di bawah agar klien / creator lain dapat menemukan Anda di peta.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                // Sub-role
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Isi data di bawah agar klien / creator lain dapat menemukan Anda di peta.',
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Sub-role
                 const Text(
                   'Posisi / Sub-Role Anda',
                   style: TextStyle(fontWeight: FontWeight.bold),
@@ -1322,11 +1413,61 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                     ),
                   ),
                 ),
-              ],
+        ],
+      );
+    }
+
+    if (isDesktop) {
+      showDialog(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setModalState) => Dialog(
+            backgroundColor: Colors.transparent,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 620,
+                maxHeight: MediaQuery.of(ctx).size.height * 0.88,
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.cardBg : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: buildLocationForm(ctx, setModalState, null, inDialog: true),
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setModalState) => DraggableScrollableSheet(
+            initialChildSize: 0.85,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            builder: (_, scrollController) => Container(
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.cardBg : Colors.white,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
+              ),
+              child: buildLocationForm(ctx, setModalState, scrollController, inDialog: false),
+            ),
+          ),
+        ),
+      );
+    }
   }
 }

@@ -18,6 +18,8 @@ class AppTheme {
   static const Color inputBorder = Color(0xFF2D2A3E);
   static const Color dividerDark = Color(0xFF252238);
 
+  static const Color surfaceDarkElevated = cardDark2;
+
   // ── Light surface colors ─────────────────────────────────────────────────────
   static const Color surfaceLight = Color(0xFFF5F3FF);
   static const Color cardLight = Color(0xFFFFFFFF);
@@ -30,6 +32,8 @@ class AppTheme {
   static const Color textMutedLight = Color(0xFF64748B);
   static const Color textWhite = Color(0xFFF9FAFB);
   static const Color textDark = Color(0xFF0F0A2A);
+  static const Color textPrimary = textDark;
+  static const Color textSecondary = textMutedLight;
 
   // ── Semantic colors ──────────────────────────────────────────────────────────
   static const Color success = Color(0xFF10B981);
@@ -62,6 +66,18 @@ class AppTheme {
     end: Alignment.bottomRight,
   );
 
+  static const LinearGradient successGradient = LinearGradient(
+    colors: [Color(0xFF059669), Color(0xFF10B981), Color(0xFF34D399)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient warmGradient = LinearGradient(
+    colors: [Color(0xFFEC4899), Color(0xFFF59E0B)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
   // ── Radius ───────────────────────────────────────────────────────────────────
   static const double radiusXS = 6.0;
   static const double radiusSM = 10.0;
@@ -76,6 +92,69 @@ class AppTheme {
   static const double spacingMD = 16.0;
   static const double spacingLG = 24.0;
   static const double spacingXL = 32.0;
+
+  // ── Typography Scale ─────────────────────────────────────────────────────────
+  /// Page-level headline, e.g. "Dashboard", "Wallet"
+  static const TextStyle headlineLarge = TextStyle(
+    fontSize: 28,
+    fontWeight: FontWeight.w800,
+    letterSpacing: -0.5,
+    height: 1.2,
+  );
+
+  /// Section headline, e.g. "Proyek Aktif", "Statistik"
+  static const TextStyle headlineMedium = TextStyle(
+    fontSize: 22,
+    fontWeight: FontWeight.bold,
+    letterSpacing: -0.3,
+    height: 1.3,
+  );
+
+  /// Card title / widget title
+  static const TextStyle titleLarge = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -0.2,
+    height: 1.3,
+  );
+
+  /// Sub-title / list item title
+  static const TextStyle titleMedium = TextStyle(
+    fontSize: 15,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.1,
+    height: 1.4,
+  );
+
+  /// Body text
+  static const TextStyle bodyLarge = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+  );
+
+  /// Secondary body text / descriptions
+  static const TextStyle bodyMedium = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+  );
+
+  /// Captions, labels, timestamps
+  static const TextStyle caption = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0.2,
+    height: 1.4,
+  );
+
+  /// Overline / badge labels
+  static const TextStyle overline = TextStyle(
+    fontSize: 10,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.8,
+    height: 1.4,
+  );
 
   // ── Elevation / Shadows ──────────────────────────────────────────────────────
   static List<BoxShadow> cardShadowLight = [
@@ -120,6 +199,154 @@ class AppTheme {
       offset: const Offset(0, 2),
     ),
   ];
+
+  static List<BoxShadow> elevatedShadow(bool isDark) => isDark
+      ? [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ]
+      : [
+          BoxShadow(
+            color: primaryPurple.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ];
+
+  // ── Helper: Glass card decoration ────────────────────────────────────────────
+  /// Glassmorphism card style for premium look
+  static BoxDecoration glassCard(bool isDark, {Color? tint}) {
+    final baseColor = tint ?? primaryPurple;
+    return BoxDecoration(
+      color: isDark
+          ? baseColor.withValues(alpha: 0.08)
+          : baseColor.withValues(alpha: 0.04),
+      borderRadius: BorderRadius.circular(radiusMD),
+      border: Border.all(
+        color: isDark
+            ? baseColor.withValues(alpha: 0.15)
+            : baseColor.withValues(alpha: 0.12),
+        width: 1,
+      ),
+    );
+  }
+
+  /// Standard card decoration using theme tokens
+  static BoxDecoration cardDecoration(bool isDark, {Color? accentBorder}) {
+    return BoxDecoration(
+      color: isDark ? cardDark : cardLight,
+      borderRadius: BorderRadius.circular(radiusMD),
+      border: Border.all(
+        color: accentBorder?.withValues(alpha: 0.3) ??
+            (isDark ? inputBorder : inputBorderLight),
+        width: 1,
+      ),
+      boxShadow: isDark ? cardShadowDark : cardShadowLight,
+    );
+  }
+
+  /// Elevated card with glow shadow for important items
+  static BoxDecoration elevatedCard(bool isDark, {Color? glowColor}) {
+    final glow = glowColor ?? primaryPurple;
+    return BoxDecoration(
+      color: isDark ? cardDark : cardLight,
+      borderRadius: BorderRadius.circular(radiusLG),
+      border: Border.all(
+        color: glow.withValues(alpha: isDark ? 0.2 : 0.15),
+        width: 1.5,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: glow.withValues(alpha: isDark ? 0.15 : 0.1),
+          blurRadius: 24,
+          offset: const Offset(0, 8),
+        ),
+        BoxShadow(
+          color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    );
+  }
+
+  // ── Helper: Section header widget ────────────────────────────────────────────
+  /// Builds a consistent section header with title, optional subtitle, and optional action
+  static Widget sectionHeader({
+    required String title,
+    String? subtitle,
+    Widget? trailing,
+    EdgeInsets padding = const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+  }) {
+    return Builder(
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Padding(
+          padding: padding,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: titleLarge.copyWith(
+                        color: isDark ? textWhite : textDark,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: bodyMedium.copyWith(
+                          color: isDark ? textMuted : textMutedLight,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (trailing != null) trailing,
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Helper: Status color getter ──────────────────────────────────────────────
+  static Color statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+      case 'approved':
+      case 'completed':
+      case 'done':
+      case 'success':
+        return success;
+      case 'pending':
+      case 'waiting':
+      case 'proposed':
+      case 'draft':
+        return warning;
+      case 'error':
+      case 'failed':
+      case 'rejected':
+      case 'cancelled':
+        return error;
+      default:
+        return info;
+    }
+  }
 
   // ── Light Theme ──────────────────────────────────────────────────────────────
   static ThemeData get lightTheme {

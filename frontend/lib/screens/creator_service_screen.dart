@@ -3412,21 +3412,34 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
   }
 
   String _getActivityCount(String key) {
-    if (key.contains('antrian') || key.contains('proyek')) return '8 Proyek';
-    if (key.contains('booking') || key.contains('jadwal')) return '6 Agenda';
-    if (key.contains('portofolio') || key.contains('galeri'))
+    if (key.contains('antrian') || key.contains('proyek')) {
+      return '8 Proyek';
+    }
+    if (key.contains('booking') || key.contains('jadwal')) {
+      return '6 Agenda';
+    }
+    if (key.contains('portofolio') || key.contains('galeri')) {
       return '24 Tayangan';
-    if (key.contains('harga') || key.contains('paket') || key.contains('tarif'))
+    }
+    if (key.contains('harga') || key.contains('paket') || key.contains('tarif')) {
       return '4 Paket';
+    }
     return '5 Item';
   }
 
   String _getAchievementBadge(String key) {
-    if (key.contains('spesialisasi')) return 'Expert ✨';
-    if (key.contains('portofolio') || key.contains('galeri'))
+    if (key.contains('spesialisasi')) {
+      return 'Expert ✨';
+    }
+    if (key.contains('portofolio') || key.contains('galeri')) {
       return 'Top Rated ⭐';
-    if (key.contains('vendor') || key.contains('partner')) return 'Trusted 🛡️';
-    if (key.contains('timeline')) return 'On Track 📈';
+    }
+    if (key.contains('vendor') || key.contains('partner')) {
+      return 'Trusted 🛡️';
+    }
+    if (key.contains('timeline')) {
+      return 'On Track 📈';
+    }
     return 'Pro Player 💎';
   }
 
@@ -7666,8 +7679,9 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                 i++
                                               ) {
                                                 if (i > 0 &&
-                                                    (s.length - i) % 3 == 0)
+                                                    (s.length - i) % 3 == 0) {
                                                   out += '.';
+                                                }
                                                 out += s[i];
                                               }
                                               return 'Rp $out';

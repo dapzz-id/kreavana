@@ -82,6 +82,20 @@ class OpportunityService {
     return [];
   }
 
+  static Future<List<OpportunityModel>> getMyOpportunities() async {
+    try {
+      final result = await ApiService.get('opportunities/my');
+      if (result['status'] == true && result['data'] != null) {
+        final list = (result['data'] as List)
+            .map((item) => OpportunityModel.fromJson(item))
+            .toList();
+        return list;
+      }
+    } catch (_) {}
+
+    return [];
+  }
+
   static Future<List<OpportunityModel>> getMapLocations({
     String subRole = 'all',
     double? lat,
@@ -253,6 +267,7 @@ class OpportunityService {
     required String type,
     String? description,
     String? posterUrl,
+    String? bannerUrl,
     String? location,
     double? latitude,
     double? longitude,
@@ -260,9 +275,17 @@ class OpportunityService {
     String? address,
     String? deadline,
     String? eventDate,
+    String? eventStartDate,
+    String? eventEndDate,
     String? eventStartTime,
     String? eventEndTime,
     String? budgetRange,
+    String? meetingDate,
+    String? meetingTime,
+    String? meetingLocation,
+    double? meetingLat,
+    double? meetingLng,
+    String? meetingNotes,
     List<Map<String, dynamic>>? requirements,
     OpportunityPoster? poster,
   }) async {
@@ -273,6 +296,7 @@ class OpportunityService {
         'type': type,
         'description': description,
         'poster_url': posterUrl,
+        'banner_url': bannerUrl,
         'location': location,
         'latitude': latitude,
         'longitude': longitude,
@@ -280,9 +304,17 @@ class OpportunityService {
         'address': address,
         'deadline': deadline,
         'event_date': eventDate,
+        'event_start_date': eventStartDate,
+        'event_end_date': eventEndDate,
         'event_start_time': eventStartTime,
         'event_end_time': eventEndTime,
         'budget_range': budgetRange,
+        if (meetingDate != null) 'meeting_date': meetingDate,
+        if (meetingTime != null) 'meeting_time': meetingTime,
+        if (meetingLocation != null) 'meeting_location': meetingLocation,
+        if (meetingLat != null) 'meeting_lat': meetingLat,
+        if (meetingLng != null) 'meeting_lng': meetingLng,
+        if (meetingNotes != null) 'meeting_notes': meetingNotes,
         if (requirements != null) 'requirements': requirements,
       });
 
@@ -300,6 +332,7 @@ class OpportunityService {
       title: title,
       description: description,
       posterUrl: posterUrl,
+      bannerUrl: bannerUrl,
       subRoleSlug: subRoleSlug,
       type: type,
       location: location ?? 'Indonesia',
@@ -309,9 +342,23 @@ class OpportunityService {
       address: address,
       deadline: deadline,
       eventDate: eventDate,
+      eventStartDate: eventStartDate,
+      eventEndDate: eventEndDate,
       eventStartTime: eventStartTime,
       eventEndTime: eventEndTime,
       budgetRange: budgetRange,
+      meetingDate: meetingDate,
+      meetingTime: meetingTime,
+      meetingLocation: meetingLocation,
+      meetingLat: meetingLat,
+      meetingLng: meetingLng,
+      meetingNotes: meetingNotes,
+      meetingStatus: (budgetRange != null && (budgetRange.contains('20.000.000') || budgetRange.contains('MoU')))
+          ? 'pending_marketing_review'
+          : 'not_required',
+      escrowStatus: (budgetRange != null && (budgetRange.contains('20.000.000') || budgetRange.contains('MoU')))
+          ? 'none'
+          : 'pending_deposit',
       status: 'open',
       poster: poster,
     );
@@ -325,5 +372,124 @@ class OpportunityService {
       'message': 'Peluang proyek berhasil disimpan!',
       'data': newModel,
     };
+  }
+
+  static Future<Map<String, dynamic>> startEvent(String opportunityId) async {
+    try {
+      final res = await ApiService.post('opportunities/$opportunityId/start-event', {});
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Acara resmi dimulai!',
+        'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateProgress(String opportunityId, int progress) async {
+    try {
+      final res = await ApiService.post('opportunities/$opportunityId/update-progress', {
+        'progress': progress,
+      });
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Progress acara berhasil diperbarui.',
+        'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> submitDocuments({
+    required String applicationId,
+    required List<Map<String, dynamic>> documents,
+  }) async {
+    try {
+      final res = await ApiService.post('opportunities/applications/$applicationId/submit-documents', {
+        'documents': documents,
+      });
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Dokumen / link berhasil dikirimkan.',
+        'data': res['data'],
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> scheduleMeeting({
+    required String opportunityId,
+    required String meetingDate,
+    required String meetingTime,
+    required String meetingLocation,
+    double? meetingLat,
+    double? meetingLng,
+    String? meetingNotes,
+  }) async {
+    try {
+      final res = await ApiService.post('opportunities/$opportunityId/schedule-meeting', {
+        'meeting_date': meetingDate,
+        'meeting_time': meetingTime,
+        'meeting_location': meetingLocation,
+        if (meetingLat != null) 'meeting_lat': meetingLat,
+        if (meetingLng != null) 'meeting_lng': meetingLng,
+        if (meetingNotes != null) 'meeting_notes': meetingNotes,
+      });
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Jadwal pertemuan diajukan ke tim Marketing.',
+        'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> confirmOpportunityPayment({
+    required String opportunityId,
+    String? notes,
+  }) async {
+    try {
+      final res = await ApiService.post('marketing/opportunities/$opportunityId/confirm-payment', {
+        if (notes != null) 'notes': notes,
+      });
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Dana dan MoU berhasil dikonfirmasi oleh Marketing.',
+        'data': res['data'],
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<OpportunityModel?> getOpportunityById(String opportunityId) async {
+    try {
+      final res = await ApiService.get('opportunities/$opportunityId');
+      if (res['data'] != null) {
+        return OpportunityModel.fromJson(res['data']);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 }

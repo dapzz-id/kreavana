@@ -13,6 +13,7 @@ class CreatorApplication extends Model
     
     protected $fillable = [
         'user_id',
+        'type',
         'sub_role_slug',
         'skill_description',
         'portfolio_link',
@@ -24,6 +25,9 @@ class CreatorApplication extends Model
         'birth_place',
         'birth_date',
         'address_ktp',
+        'nib_number',
+        'nib_file_url',
+        'reused_ktp',
         'status',
         'admin_note',
         'applied_at',
@@ -34,6 +38,7 @@ class CreatorApplication extends Model
         'applied_at' => 'datetime',
         'reviewed_at' => 'datetime',
         'birth_date' => 'date',
+        'reused_ktp' => 'boolean',
     ];
 
     public function user()

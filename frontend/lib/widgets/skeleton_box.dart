@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import '../app/theme.dart';
 
+/// Shimmer skeleton placeholder with a smooth gradient animation.
+/// Use as building block for all skeleton loading states.
 class SkeletonBox extends StatefulWidget {
   final double? width;
   final double? height;
@@ -28,10 +31,12 @@ class _SkeletonBoxState extends State<SkeletonBox>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
 
-    _animation = Tween<double>(begin: 0.3, end: 0.7).animate(_controller);
+    _animation = Tween<double>(begin: 0.3, end: 0.7).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -42,11 +47,11 @@ class _SkeletonBoxState extends State<SkeletonBox>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final baseColor = isDark ? Colors.grey[800]! : Colors.grey[300]!;
-    final highlightColor = isDark ? Colors.grey[700]! : Colors.grey[100]!;
+    // Use theme colors for consistent look
+    final baseColor = isDark ? AppTheme.cardDark2 : const Color(0xFFE8E5F3);
+    final highlightColor = isDark ? AppTheme.inputDark : const Color(0xFFF5F3FF);
 
     return AnimatedBuilder(
       animation: _controller,
@@ -91,19 +96,11 @@ class FeatureCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? const Color(0xFF2D2D3D) : Colors.grey.shade200,
-          width: 1,
-        ),
-      ),
+      decoration: AppTheme.cardDecoration(isDark),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -126,7 +123,7 @@ class FeatureCardSkeleton extends StatelessWidget {
             const SkeletonBox(width: 200, height: 16, borderRadius: 4),
             const SizedBox(height: 14),
             Divider(
-              color: isDark ? const Color(0xFF2D2D3D) : Colors.grey.shade100,
+              color: isDark ? AppTheme.dividerDark : AppTheme.dividerLight,
               height: 1,
             ),
             const SizedBox(height: 12),
@@ -149,22 +146,13 @@ class StatCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
     final isCompact = screenWidth < 360;
 
     return Container(
       padding: EdgeInsets.all(isCompact ? 10 : 16),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isDark ? const Color(0xFF2D2D3D) : Colors.grey.shade200,
-          width: 1,
-        ),
-      ),
+      decoration: AppTheme.cardDecoration(isDark),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -229,13 +217,7 @@ class NotificationSkeleton extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? const Color(0xFF2D2D3D) : Colors.grey.shade200,
-        ),
-      ),
+      decoration: AppTheme.cardDecoration(isDark),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -271,8 +253,6 @@ class ProfileSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDark ? const Color(0xFF1E1E2C) : Colors.white;
-    final borderColor = isDark ? const Color(0xFF2D2D3D) : Colors.grey.shade200;
 
     return Center(
       child: ConstrainedBox(
@@ -289,11 +269,7 @@ class ProfileSkeleton extends StatelessWidget {
               const SizedBox(height: 24),
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: borderColor),
-                ),
+                decoration: AppTheme.cardDecoration(isDark),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [_statBlock(), _statBlock(), _statBlock()],
@@ -303,11 +279,7 @@ class ProfileSkeleton extends StatelessWidget {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: borderColor),
-                ),
+                decoration: AppTheme.cardDecoration(isDark),
                 child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -350,13 +322,7 @@ class AdminAppSkeleton extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? const Color(0xFF2D2D3D) : Colors.grey.shade200,
-        ),
-      ),
+      decoration: AppTheme.cardDecoration(isDark),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

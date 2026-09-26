@@ -5,6 +5,8 @@ import '../models/user_model.dart';
 import '../services/job_contract_service.dart';
 
 import '../widgets/skeleton/skeleton_list.dart';
+import '../widgets/app_breadcrumbs.dart';
+import 'main_navigation.dart';
 
 class AgendaScreen extends StatefulWidget {
   final UserModel? user;
@@ -100,12 +102,17 @@ class _AgendaScreenState extends State<AgendaScreen> {
       return true;
     }).toList();
 
+    final isDesktop = MediaQuery.of(context).size.width > 900;
+
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 75,
+        automaticallyImplyLeading: Navigator.canPop(context),
+        toolbarHeight: 80,
+        titleSpacing: isDesktop ? 32 : 16,
+        elevation: 0,
         title: const Text(
           'Agenda Kegiatan',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
@@ -113,16 +120,49 @@ class _AgendaScreenState extends State<AgendaScreen> {
             onPressed: _fetchRealtimeAgenda,
             tooltip: 'Refresh Realtime',
           ),
+          SizedBox(width: isDesktop ? 24 : 8),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _fetchRealtimeAgenda,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(
+            isDesktop ? 32 : 16,
+            16,
+            isDesktop ? 32 : 16,
+            24,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              AppBreadcrumbs(
+                items: [
+                  BreadcrumbItem(
+                    label: 'Beranda',
+                    icon: Icons.home_rounded,
+                    onTap: () {
+                      if (widget.user != null) {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => MainNavigation(
+                              initialUser: widget.user!,
+                              initialIndex: 0,
+                            ),
+                          ),
+                          (r) => false,
+                        );
+                      }
+                    },
+                  ),
+                  const BreadcrumbItem(
+                    label: 'Agenda',
+                    icon: Icons.calendar_today_rounded,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
               // ── Top Summary Header Card ──
               _buildAgendaHeader(accentColor, isDark),
               const SizedBox(height: 20),
@@ -588,24 +628,31 @@ class _AgendaScreenState extends State<AgendaScreen> {
                           setState(() {
                             final now = DateTime.now();
                             Color getTypeColor(String type) {
-                              if (type == 'Online' || type == 'Client')
+                              if (type == 'Online' || type == 'Client') {
                                 return const Color(0xFF3B82F6);
-                              if (type == 'Offline')
+                              }
+                              if (type == 'Offline') {
                                 return const Color(0xFFF97316);
-                              if (type == 'Deadline' || type == 'Review')
+                              }
+                              if (type == 'Deadline' || type == 'Review') {
                                 return const Color(0xFFEF4444);
+                              }
                               return Colors.grey.shade600; // Lainnya
                             }
 
                             IconData getTypeIcon(String type) {
-                              if (type == 'Online' || type == 'Client')
+                              if (type == 'Online' || type == 'Client') {
                                 return Icons.videocam_outlined;
-                              if (type == 'Offline')
+                              }
+                              if (type == 'Offline') {
                                 return Icons.location_on_outlined;
-                              if (type == 'Deadline')
+                              }
+                              if (type == 'Deadline') {
                                 return Icons.alarm_outlined;
-                              if (type == 'Review')
+                              }
+                              if (type == 'Review') {
                                 return Icons.rate_review_outlined;
+                              }
                               return Icons.event_note_outlined; // Lainnya
                             }
 

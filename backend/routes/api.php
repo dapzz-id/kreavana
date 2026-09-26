@@ -12,7 +12,7 @@ use App\Http\Controllers\{
     PortfolioController, SubscriptionController,
     StorageController, DisputeController, OpportunityReviewController,
     AiController, JobContractController, JobContractTransitionController,
-    MarketingController
+    MarketingController, AdminSystemSettingController
 };
 
 // Public: serve avatar images with CORS headers (for Flutter Web)
@@ -33,6 +33,10 @@ Route::get('/user', function (Request $request) {
 
 // Roles endpoints
 Route::get('roles/creator/sub-roles', [RoleController::class, 'getCreatorSubRoles']);
+
+// Public System Statuses
+Route::get('system/module-statuses', [AdminSystemSettingController::class, 'getPublicModuleStatuses'])
+    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
 
 // Auth (Public)
 Route::prefix('auth')->withoutMiddleware(\App\Http\Middleware\ValidateJti::class)->group(function () {
@@ -96,6 +100,16 @@ Route::middleware('auth:api')->group(function () {
         Route::post('apply-creator', [ProfileController::class, 'applyCreator'])->middleware('role:user');
     });
 
+    // Verification
+    Route::prefix('verification')->group(function () {
+        Route::get('status', [ProfileController::class, 'getVerificationStatus']);
+        Route::post('client', [ProfileController::class, 'applyClientVerification'])->middleware('role:user');
+    });
+
+    // Public User Profile
+    Route::get('users/{id}/profile', [ProfileController::class, 'getPublicProfile'])
+        ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
+
     Route::put('user/public-key', [ProfileController::class, 'updatePublicKey'])->middleware('auth:api');
 
     // Follows
@@ -125,6 +139,7 @@ Route::middleware('auth:api')->group(function () {
 
     // Opportunities (Write & Applications)
     Route::prefix('opportunities')->group(function () {
+        Route::get('my', [OpportunityController::class, 'myOpportunities']);
         Route::post('/', [OpportunityController::class, 'store'])->middleware('permission:create_opportunity');
         Route::post('report', [OpportunityController::class, 'submitReport'])->middleware('permission:submit_report');
         Route::post('{id}/reviews', [OpportunityReviewController::class, 'store']);
@@ -132,6 +147,10 @@ Route::middleware('auth:api')->group(function () {
         Route::get('{id}/applications', [OpportunityController::class, 'applications']);
         Route::post('applications/{id}/approve', [OpportunityController::class, 'approveApplication']);
         Route::post('applications/{id}/reject', [OpportunityController::class, 'rejectApplication']);
+        Route::post('{id}/start-event', [OpportunityController::class, 'startEvent']);
+        Route::post('{id}/update-progress', [OpportunityController::class, 'updateProgress']);
+        Route::post('{id}/schedule-meeting', [OpportunityController::class, 'scheduleMeeting']);
+        Route::post('applications/{id}/submit-documents', [OpportunityController::class, 'submitDocuments']);
     });
 
     // Marketing (High-Value Deals & Reviews)
@@ -142,6 +161,8 @@ Route::middleware('auth:api')->group(function () {
         Route::post('transactions/{id}/verify', [MarketingController::class, 'verify']);
         Route::post('transactions/{id}/approve', [MarketingController::class, 'approve']);
         Route::post('transactions/{id}/reject', [MarketingController::class, 'reject']);
+        Route::get('opportunities', [MarketingController::class, 'listHighValueOpportunities']);
+        Route::post('opportunities/{id}/confirm-payment', [MarketingController::class, 'confirmOpportunityPayment']);
     });
 
     // Job Contracts
@@ -247,7 +268,16 @@ Route::middleware('auth:api')->group(function () {
         Route::post('disputes/{id}/decision-refund', [DisputeController::class, 'adminDecideRefund']);
         Route::post('disputes/{id}/settle-refund', [DisputeController::class, 'adminSettleRefund']);
         Route::post('disputes/{id}/decision-cancellation', [DisputeController::class, 'adminDecideCancellation']);
+
+        // System Modules & AI Engine Settings
+        Route::get('modules', [AdminSystemSettingController::class, 'getModules']);
+        Route::put('modules/{key}', [AdminSystemSettingController::class, 'updateModule']);
+        Route::get('ai-config', [AdminSystemSettingController::class, 'getAiConfig']);
+        Route::post('ai-config', [AdminSystemSettingController::class, 'updateAiConfig']);
+        Route::post('ai-config/test', [AdminSystemSettingController::class, 'testAiConnection']);
     });
+
+
 
     // Disputes
     Route::prefix('disputes')->group(function () {
@@ -301,21 +331,37 @@ Route::middleware('auth:api')->group(function () {
     // Storage Management
     Route::prefix('storage')->group(function () {
         Route::get('history', [StorageController::class, 'history']);
+        Route::post('batch-delete', [StorageController::class, 'batchDestroy']);
+        Route::post('clear-trash', [StorageController::class, 'clearTrash']);
+        Route::post('batch-restore', [StorageController::class, 'batchRestore']);
+        Route::post('batch-permanent-delete', [StorageController::class, 'batchForceDestroy']);
+        Route::post('{id}/restore', [StorageController::class, 'restore']);
+        Route::delete('{id}/permanent', [StorageController::class, 'forceDestroy']);
         Route::delete('{id}', [StorageController::class, 'destroy']);
+        Route::get('{id}/download', [StorageController::class, 'download']);
+        Route::get('{id}/view', [StorageController::class, 'view']);
         Route::post('purchased/{id}/retry', [StorageController::class, 'retryPurchasedClone']);
         Route::get('purchased/{id}/download', [StorageController::class, 'downloadPurchasedAsset']);
     });
 
-    // AI Service (Protected, Requires Pro/Super subscription tier)
+    // AI Service (Protected)
     Route::prefix('ai')->group(function () {
         Route::post('summarize-report', [AiController::class, 'summarizeReport']);
         Route::post('recommendations', [AiController::class, 'getRecommendations']);
         Route::post('message-assistant', [AiController::class, 'messageAssistant']);
+        Route::get('chat-sessions', [AiController::class, 'getChatSessions']);
+        Route::post('chat-sessions', [AiController::class, 'syncChatSession']);
+        Route::delete('chat-sessions/{sessionId}', [AiController::class, 'deleteChatSession']);
+        Route::delete('chat-sessions', [AiController::class, 'clearChatSessions']);
     });
 });
 
-// Storage Management (Public Read for Status)
+// Storage Management (Public Read for Status, View, and Download)
 Route::get('storage/file/{id}/status', [StorageController::class, 'status']);
+Route::get('storage/file/{id}/view', [StorageController::class, 'view']);
+Route::get('storage/file/{id}/download', [StorageController::class, 'download']);
+Route::get('storage/{id}/view', [StorageController::class, 'view']);
+Route::get('storage/{id}/download', [StorageController::class, 'download']);
 
 // Marketplace (public read)
 Route::prefix('marketplace')->group(function () {
@@ -350,4 +396,6 @@ Route::prefix('opportunities')->group(function () {
 
 // Public Client Dashboard Overview (Guest Browsing)
 Route::get('client-dashboard/overview', [DashboardController::class, 'overview']);
+
+
 
