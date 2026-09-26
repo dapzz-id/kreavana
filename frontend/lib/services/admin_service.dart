@@ -1,4 +1,5 @@
 import 'api_service.dart';
+import 'system_settings_service.dart';
 import '../models/user_model.dart';
 
 class AdminService {
@@ -131,6 +132,9 @@ class AdminService {
       final response = await ApiService.put('admin/modules/$key', {
         'enabled': enabled,
       });
+      if (response['status'] == true) {
+        SystemSettingsService.updateLocalModule(key, enabled);
+      }
       return response;
     } catch (e) {
       return {'status': false, 'message': e.toString()};

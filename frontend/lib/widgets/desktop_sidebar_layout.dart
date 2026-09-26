@@ -20,6 +20,7 @@ import '../screens/profile_screen.dart';
 import '../screens/tim_hak_akses_screen.dart';
 import 'creator_sidebar_menus.dart';
 import 'kreavana_ai_floating_widget.dart';
+import '../services/system_settings_service.dart';
 
 class DesktopSidebarLayout extends StatefulWidget {
   final Widget child;
@@ -49,6 +50,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   @override
   void initState() {
     super.initState();
+    SystemSettingsService.moduleStatuses.addListener(_onModuleStatusesChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _sidebarScrollController.hasClients) {
         _sidebarScrollController.jumpTo(_savedSidebarScrollOffset);
@@ -58,8 +60,13 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
 
   @override
   void dispose() {
+    SystemSettingsService.moduleStatuses.removeListener(_onModuleStatusesChanged);
     _sidebarScrollController.dispose();
     super.dispose();
+  }
+
+  void _onModuleStatusesChanged() {
+    if (mounted) setState(() {});
   }
 
   bool get _hasSpecificCreatorSubRole =>
@@ -314,6 +321,36 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   }
 
   void _pushLink(String route) {
+    if (!widget.user.isAdmin) {
+      if (route == 'marketplace' && !SystemSettingsService.isMarketplaceEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Fitur Marketplace sedang dinonaktifkan oleh administrator.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+        return;
+      }
+      if (route == 'kolaborasi' && !SystemSettingsService.isCollaborationEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Fitur Kolaborasi sedang dinonaktifkan oleh administrator.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+        return;
+      }
+      if (route == 'pembayaran' && !SystemSettingsService.isWalletEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Fitur Pembayaran/Dompet sedang dinonaktifkan oleh administrator.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+        return;
+      }
+    }
+
     // Routes that are in MainNavigation's IndexedStack — go to index instead
     switch (route) {
       case 'kolaborasi':
@@ -777,15 +814,16 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                           isDark: isDark,
                           isCollapsed: collapsed,
                         ),
-                        _buildNavRow(
-                          icon: Icons.auto_awesome_outlined,
-                          label: 'Kreavana AI',
-                          onTap: () => _goToMain(14),
-                          isSelected: _isRouteActive('kreavana_ai') || _isRouteActive('ai'),
-                          isDark: isDark,
-                          isCollapsed: collapsed,
-                          activeColor: const Color(0xFF8B5CF6),
-                        ),
+                        if (SystemSettingsService.isAiEnabled || widget.user.isAdmin)
+                          _buildNavRow(
+                            icon: Icons.auto_awesome_outlined,
+                            label: 'Kreavana AI',
+                            onTap: () => _goToMain(14),
+                            isSelected: _isRouteActive('kreavana_ai') || _isRouteActive('ai'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                            activeColor: const Color(0xFF8B5CF6),
+                          ),
                         if (_isCreatorUser) _buildNavRow(
                           icon: Icons.explore_outlined,
                           label: 'Rekomendasi Peluang',
@@ -995,7 +1033,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                           ] else ...[
                             const SizedBox(height: 8),
                           ],
-                          if (showKolaborasi) ...[
+                          if (showKolaborasi &&
+                              (SystemSettingsService.isCollaborationEnabled || widget.user.isAdmin)) ...[
                             _buildNavRow(
                               icon: Icons.handshake_outlined,
                               label: 'Kolaborasi',
@@ -1023,14 +1062,15 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
-                          _buildNavRow(
-                            icon: Icons.payment_outlined,
-                            label: 'Pembayaran',
-                            onTap: () => _pushLink('pembayaran'),
-                            isSelected: _isRouteActive('pembayaran'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                          ),
+                          if (SystemSettingsService.isWalletEnabled || widget.user.isAdmin)
+                            _buildNavRow(
+                              icon: Icons.payment_outlined,
+                              label: 'Pembayaran',
+                              onTap: () => _pushLink('pembayaran'),
+                              isSelected: _isRouteActive('pembayaran'),
+                              isDark: isDark,
+                              isCollapsed: collapsed,
+                            ),
                           _buildNavRow(
                             icon: Icons.workspace_premium_outlined,
                             label: 'Upgrade Plan / Paket',
@@ -1181,7 +1221,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     return Stack(
       children: [
         layoutScaffold,
-        const KreavanaAiFloatingWidget(hasPageFab: false),
+        if (SystemSettingsService.isAiEnabled || widget.user.isAdmin)
+          const KreavanaAiFloatingWidget(hasPageFab: false),
       ],
     );
   }
