@@ -1,10 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'dart:typed_data';
 import '../app/theme.dart';
 import '../models/user_model.dart';
+import '../services/api_service.dart';
+import '../utils/app_errors.dart';
 import '../widgets/creator_availability_widget.dart';
 import '../widgets/desktop_sidebar_layout.dart';
+
+const _reviewableCreatorPackageKeys = {
+  'foto_paket',
+  'video_paket',
+  'mua_paket',
+  'wo_paket',
+  'eo_paket',
+  'desain_paket',
+  'drone_paket',
+  'konten_paket',
+};
 
 class CreatorServiceItem {
   final String title;
@@ -15,6 +31,7 @@ class CreatorServiceItem {
   final bool active;
   final List<Color>? gradient;
   final String? id;
+  final String? thumbnailUrl;
 
   const CreatorServiceItem({
     required this.title,
@@ -25,6 +42,7 @@ class CreatorServiceItem {
     this.active = true,
     this.gradient,
     this.id,
+    this.thumbnailUrl,
   });
 
   Map<String, dynamic> toJson() => {
@@ -40,6 +58,7 @@ class CreatorServiceItem {
     'gradientColorsHex': gradient
         ?.map((c) => '#${c.toARGB32().toRadixString(16).padLeft(8, '0')}')
         .toList(),
+    'thumbnailUrl': thumbnailUrl,
   };
 
   static CreatorServiceItem fromJson(Map<String, dynamic> j) {
@@ -61,6 +80,7 @@ class CreatorServiceItem {
       value: j['value']?.toString(),
       active: (j['active'] as bool?) ?? true,
       gradient: grad,
+      thumbnailUrl: j['thumbnailUrl']?.toString(),
     );
   }
 }
@@ -1389,34 +1409,12 @@ class CreatorServiceData {
       icon: Icons.festival_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
       stats: [
-        ('3', 'Paket Aktif', Icons.card_membership_outlined),
-        ('80+', 'Event', Icons.event_available_outlined),
-        ('4.8', 'Rating', Icons.star_rounded),
+        ('0', 'Tayang Publik', Icons.public_outlined),
+        ('0', 'Menunggu Review', Icons.pending_actions_outlined),
+        ('0', 'Total Paket', Icons.card_membership_outlined),
       ],
-      actionLabel: 'Pilih Paket',
-      items: [
-        CreatorServiceItem(
-          title: 'Paket Corporate',
-          subtitle: 'Seminar & gathering • 200 peserta',
-          icon: Icons.business_outlined,
-          tag: 'Populer',
-          value: 'Rp 35.000.000',
-        ),
-        CreatorServiceItem(
-          title: 'Paket Festival',
-          subtitle: 'Festival & konser • 1000+ pengunjung',
-          icon: Icons.festival_outlined,
-          tag: 'Premium',
-          value: 'Rp 75.000.000',
-        ),
-        CreatorServiceItem(
-          title: 'Paket Private',
-          subtitle: 'Ultah & gathering privat • 100 tamu',
-          icon: Icons.celebration_outlined,
-          tag: 'Intimate',
-          value: 'Rp 15.000.000',
-        ),
-      ],
+      actionLabel: 'Ajukan Paket',
+      items: [],
     ),
     'eo_jadwal': CreatorServiceData(
       key: 'eo_jadwal',
@@ -2425,6 +2423,8 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
   final Set<int> _savedItems = {};
   final Set<int> _likedItems = {};
   final Map<String, List<CreatorServiceItem>> _extraItems = {};
+  List<CreatorServiceItem> _eoPackages = [];
+  bool _isLoadingEoPackages = true;
 
   late final AnimationController _fadeController;
   late final AnimationController _staggerController;
@@ -2433,6 +2433,19 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
   CreatorServiceData? get _data {
     final base = CreatorServiceData.of(widget.serviceKey);
     if (base == null) return null;
+    if (_reviewableCreatorPackageKeys.contains(base.key)) {
+      return CreatorServiceData(
+        key: base.key,
+        title: base.title,
+        subtitle: base.subtitle,
+        icon: base.icon,
+        gradient: base.gradient,
+        stats: base.stats,
+        items: _eoPackages,
+        isGrid: base.isGrid,
+        actionLabel: base.actionLabel,
+      );
+    }
     final extras = _extraItems[base.key] ?? const [];
     if (extras.isEmpty) return base;
     return CreatorServiceData(
@@ -2455,6 +2468,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
   }
 
   UserModel get _user => widget.user;
+  bool get _isEoMenu => widget.serviceKey.startsWith('eo_');
+  bool get _isCreatorPackage =>
+      _reviewableCreatorPackageKeys.contains(widget.serviceKey);
   double get _personalRating => (_user.followersCount > 500)
       ? 4.95
       : ((_user.followersCount * 0.0035) + 4.2).clamp(4.2, 4.95);
@@ -2569,6 +2585,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
 
   Future<void> _loadPersistedState() async {
     try {
+      if (_reviewableCreatorPackageKeys.contains(widget.serviceKey)) {
+        await _loadCreatorPackages();
+      }
       final extras = await CreatorLocalStorage.getExtraItems(widget.serviceKey);
       final saved = await CreatorLocalStorage.getSavedItems();
       final submitted = await CreatorLocalStorage.getSubmittedItems();
@@ -2591,6 +2610,97 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
         });
       }
     } catch (_) {}
+  }
+
+  Future<void> _loadCreatorPackages() async {
+    try {
+      final response = await ApiService.get(
+        'creator-services/mine',
+        queryParams: {
+          'category': 'creator_package',
+          'package_type': widget.serviceKey,
+        },
+      );
+      if (response['status'] != true || response['data'] is! List) {
+        if (mounted) setState(() => _isLoadingEoPackages = false);
+        return;
+      }
+
+      final packages = (response['data'] as List).map((raw) {
+        final json = Map<String, dynamic>.from(raw as Map);
+        final status = json['status']?.toString() ?? 'pending';
+        final tag = switch (status) {
+          'active' => 'Tayang Publik',
+          'rejected' => 'Ditolak',
+          _ => 'Menunggu Review',
+        };
+        final price = double.tryParse(json['price']?.toString() ?? '') ?? 0;
+        final priceText = price.round().toString().replaceAllMapped(
+          RegExp(r'\B(?=(\d{3})+(?!\d))'),
+          (_) => '.',
+        );
+        final reviewNote = json['review_note']?.toString();
+        final description = json['description']?.toString() ?? '';
+
+        return CreatorServiceItem(
+          id: json['id']?.toString(),
+          title: json['title']?.toString() ?? 'Paket Event',
+          subtitle: status == 'rejected' && reviewNote != null
+              ? '$description • Catatan admin: $reviewNote'
+              : description,
+          icon: Icons.festival_outlined,
+          tag: tag,
+          value: 'Rp $priceText',
+          active: status == 'active',
+          thumbnailUrl: json['thumbnail_url']?.toString(),
+        );
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          _eoPackages = packages;
+          _isLoadingEoPackages = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingEoPackages = false);
+    }
+  }
+
+  Future<String?> _submitCreatorPackage(
+    CreatorServiceItem item,
+    PlatformFile? thumbnail,
+    Uint8List? thumbnailBytes,
+  ) async {
+    if (thumbnail == null || thumbnailBytes == null) {
+      return 'Pilih foto thumbnail terlebih dahulu.';
+    }
+    final price =
+        double.tryParse(item.value?.replaceAll(RegExp(r'[^0-9]'), '') ?? '') ??
+        0;
+    final formData = FormData.fromMap({
+      'title': item.title,
+      'description': item.subtitle,
+      'category': 'creator_package',
+      'package_type': widget.serviceKey,
+      'price': price,
+      'duration_info': '',
+      'thumbnail': MultipartFile.fromBytes(
+        thumbnailBytes,
+        filename: thumbnail.name,
+      ),
+    });
+    final response = await ApiService.postFormData(
+      'creator-services',
+      formData,
+    );
+
+    if (response['status'] != true) {
+      return response['message']?.toString() ?? 'Paket gagal diajukan.';
+    }
+
+    await _loadCreatorPackages();
+    return null;
   }
 
   @override
@@ -2627,299 +2737,829 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
   }
 
   Widget _buildContent(BuildContext context, CreatorServiceData data) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
+      backgroundColor: _isEoMenu
+          ? (isDark ? AppTheme.surfaceDark : const Color(0xFFF4F6F8))
+          : null,
       appBar: AppBar(
-        toolbarHeight: 75,
-        title: Row(
-          children: [
-            Text(
-              data.title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(width: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                gradient: AppTheme.primaryGradient,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: AppTheme.cardShadowLight,
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
+        toolbarHeight: _isEoMenu ? 64 : 75,
+        backgroundColor: _isEoMenu
+            ? (isDark ? AppTheme.cardDark : Colors.white)
+            : null,
+        surfaceTintColor: Colors.transparent,
+        title: _isEoMenu
+            ? Text(
+                data.title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              )
+            : Row(
                 children: [
-                  Icon(
-                    Icons.auto_awesome_rounded,
-                    size: 12,
-                    color: Colors.white,
-                  ),
-                  SizedBox(width: 4),
                   Text(
-                    'Premium',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.white,
+                    data.title,
+                    style: const TextStyle(
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.primaryGradient,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: AppTheme.cardShadowLight,
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.auto_awesome_rounded,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'Premium',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          _buildActionChip(
-            icon: Icons.notifications_outlined,
-            label: null,
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: AppTheme.primaryPurple,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  content: Row(
-                    children: [
-                      const Icon(
-                        Icons.notifications_active_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
+        actions: _isEoMenu
+            ? const []
+            : [
+                _buildActionChip(
+                  icon: Icons.notifications_outlined,
+                  label: null,
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: AppTheme.primaryPurple,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        content: Row(
                           children: [
-                            const Text(
-                              'Notifikasi',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 13,
-                              ),
+                            const Icon(
+                              Icons.notifications_active_rounded,
+                              color: Colors.white,
+                              size: 18,
                             ),
-                            Text(
-                              '${(_user.followersCount ~/ 18).clamp(2, 47)} notifikasi baru untuk Anda',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 11,
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    'Notifikasi',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${(_user.followersCount ~/ 18).clamp(2, 47)} notifikasi baru untuk Anda',
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
+                        duration: const Duration(seconds: 2),
                       ),
-                    ],
-                  ),
-                  duration: const Duration(seconds: 2),
+                    );
+                  },
+                  hasBadge: true,
                 ),
-              );
-            },
-            hasBadge: true,
-          ),
-          _buildActionChip(
-            icon: Icons.star_rounded,
-            label: _ratingDisplay,
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  title: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: const Color(
-                            0xFFF59E0B,
-                          ).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
+                _buildActionChip(
+                  icon: Icons.star_rounded,
+                  label: _ratingDisplay,
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(22),
                         ),
-                        child: const Icon(
-                          Icons.star_rounded,
-                          color: Color(0xFFF59E0B),
-                          size: 22,
+                        title: Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFFF59E0B,
+                                ).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.star_rounded,
+                                color: Color(0xFFF59E0B),
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Text(
+                                'Rating & Reputasi',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'Rating & Reputasi',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                          ),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  _ratingDisplay,
+                                  style: const TextStyle(
+                                    fontSize: 42,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFFF59E0B),
+                                    letterSpacing: -1,
+                                  ),
+                                ),
+                                const Padding(
+                                  padding: EdgeInsets.only(bottom: 12),
+                                  child: Text(
+                                    '/5.0',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFFF59E0B),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: List.generate(
+                                5,
+                                (i) => Icon(
+                                  i < _personalRating.round()
+                                      ? Icons.star_rounded
+                                      : Icons.star_border_rounded,
+                                  size: 18,
+                                  color: const Color(0xFFF59E0B),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              'Berdasarkan ${(_user.followersCount * 0.7).round()} ulasan dari klien & mitra Kreavana',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: Colors.grey.shade600,
+                                height: 1.45,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            _ratingDisplay,
-                            style: const TextStyle(
-                              fontSize: 42,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFFF59E0B),
-                              letterSpacing: -1,
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text(
+                              'Tutup',
+                              style: TextStyle(fontWeight: FontWeight.w700),
                             ),
                           ),
-                          const Padding(
-                            padding: EdgeInsets.only(bottom: 12),
-                            child: Text(
-                              '/5.0',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFFF59E0B),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  behavior: SnackBarBehavior.floating,
+                                  backgroundColor: AppTheme.primaryPurple,
+                                  content: Text(
+                                    'Melihat halaman reputasi...',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryPurple,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
+                            ),
+                            child: const Text(
+                              'Lihat Reputasi',
+                              style: TextStyle(fontWeight: FontWeight.w800),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(
-                          5,
-                          (i) => Icon(
-                            i < _personalRating.round()
-                                ? Icons.star_rounded
-                                : Icons.star_border_rounded,
-                            size: 18,
-                            color: const Color(0xFFF59E0B),
-                          ),
-                        ),
+                    );
+                  },
+                  hasBadge: false,
+                ),
+                const SizedBox(width: 16),
+              ],
+      ),
+      body: _isEoMenu || _isCreatorPackage
+          ? _buildEoMenuBody(context, data)
+          : FadeTransition(
+              opacity: Tween<double>(begin: 0, end: 1).animate(_fadeController),
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(child: _buildHeader(context, data)),
+                  SliverToBoxAdapter(child: _buildQuickStatsRow(context, data)),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
                       ),
-                      const SizedBox(height: 14),
-                      Text(
-                        'Berdasarkan ${(_user.followersCount * 0.7).round()} ulasan dari klien & mitra Kreavana',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: Colors.grey.shade600,
-                          height: 1.45,
-                        ),
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text(
-                        'Tutup',
-                        style: TextStyle(fontWeight: FontWeight.w700),
+                      child: CreatorAvailabilityWidget(
+                        creatorId: _user.id ?? '',
                       ),
                     ),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            behavior: SnackBarBehavior.floating,
-                            backgroundColor: AppTheme.primaryPurple,
-                            content: Text(
-                              'Melihat halaman reputasi...',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
+                  ),
+                  SliverToBoxAdapter(child: _buildSearchBar(context, data)),
+                  SliverToBoxAdapter(child: _buildFilterSortBar(context, data)),
+                  if (_filteredItems.isEmpty)
+                    SliverToBoxAdapter(child: _buildEmptyState(context))
+                  else if (data.isGrid)
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                      sliver: SliverGrid(
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 340,
+                              mainAxisSpacing: 16,
+                              crossAxisSpacing: 16,
+                              childAspectRatio: 0.78,
                             ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => _buildAnimatedGridItem(
+                            context,
+                            data,
+                            _filteredItems[index],
+                            index,
                           ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryPurple,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          childCount: _filteredItems.length,
                         ),
                       ),
-                      child: const Text(
-                        'Lihat Reputasi',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => _buildAnimatedListItem(
+                            context,
+                            data,
+                            _filteredItems[index],
+                            index,
+                          ),
+                          childCount: _filteredItems.length,
+                        ),
                       ),
+                    ),
+                ],
+              ),
+            ),
+      floatingActionButton: _isEoMenu || _isCreatorPackage
+          ? FloatingActionButton.extended(
+              onPressed: () => _showDetail(context, data, null),
+              backgroundColor: AppTheme.primaryPurple,
+              foregroundColor: Colors.white,
+              elevation: 2,
+              icon: const Icon(Icons.add),
+              label: Text(
+                _isCreatorPackage ? 'Ajukan Paket' : data.actionLabel,
+              ),
+            )
+          : _buildFAB(context, data),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    );
+  }
+
+  Widget _buildEoMenuBody(BuildContext context, CreatorServiceData data) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mutedColor = isDark ? AppTheme.textMuted : Colors.grey.shade600;
+    final stats = _reviewableCreatorPackageKeys.contains(data.key)
+        ? [
+            (
+              '${_eoPackages.where((item) => item.active).length}',
+              'Tayang Publik',
+              Icons.public_outlined,
+            ),
+            (
+              '${_eoPackages.where((item) => item.tag == 'Menunggu Review').length}',
+              'Menunggu Review',
+              Icons.pending_actions_outlined,
+            ),
+            (
+              '${_eoPackages.length}',
+              'Total Paket',
+              Icons.card_membership_outlined,
+            ),
+          ]
+        : data.stats;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final contentWidth = constraints.maxWidth < 800
+            ? constraints.maxWidth
+            : 1160.0;
+
+        return Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: contentWidth,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 96),
+              children: [
+                Text(
+                  switch (data.key) {
+                    'eo_paket' => 'Kelola penawaran event',
+                    'eo_jadwal' => 'Pantau agenda acara',
+                    'eo_vendor' => 'Kelola mitra vendor',
+                    'eo_timeline' => 'Pantau progres persiapan',
+                    _ => data.title,
+                  },
+                  style: TextStyle(
+                    fontSize: constraints.maxWidth < 600 ? 20 : 24,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : AppTheme.textDark,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  data.subtitle,
+                  style: TextStyle(fontSize: 14, color: mutedColor),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.cardBg : Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isDark
+                          ? AppTheme.inputBorder
+                          : const Color(0xFFE7E9ED),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < stats.length; i++) ...[
+                        if (i > 0)
+                          Container(
+                            width: 1,
+                            height: 38,
+                            margin: const EdgeInsets.symmetric(horizontal: 16),
+                            color: isDark
+                                ? AppTheme.inputBorder
+                                : const Color(0xFFE1E4E8),
+                          ),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Icon(
+                                stats[i].$3,
+                                size: 18,
+                                color: isDark
+                                    ? AppTheme.textMuted
+                                    : const Color(0xFF60717D),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      stats[i].$1,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark
+                                            ? Colors.white
+                                            : AppTheme.textDark,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      stats[i].$2,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: mutedColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                TextField(
+                  controller: _searchController,
+                  onChanged: (value) => setState(() => _query = value),
+                  decoration: InputDecoration(
+                    hintText: 'Cari ${data.title.toLowerCase()}...',
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    isDense: true,
+                    filled: true,
+                    fillColor: isDark ? AppTheme.cardBg : Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: isDark
+                            ? AppTheme.inputBorder
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: isDark
+                            ? AppTheme.inputBorder
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        data.key == 'eo_jadwal'
+                            ? 'Daftar jadwal'
+                            : data.key == 'eo_timeline'
+                            ? 'Tahapan pekerjaan'
+                            : data.key == 'eo_vendor'
+                            ? 'Daftar vendor'
+                            : 'Daftar paket',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : AppTheme.textDark,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${_filteredItems.length} item',
+                      style: TextStyle(fontSize: 12, color: mutedColor),
                     ),
                   ],
                 ),
-              );
-            },
-            hasBadge: false,
-          ),
-          const SizedBox(width: 16),
-        ],
-      ),
-      body: FadeTransition(
-        opacity: Tween<double>(begin: 0, end: 1).animate(_fadeController),
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(child: _buildHeader(context, data)),
-            SliverToBoxAdapter(child: _buildQuickStatsRow(context, data)),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: CreatorAvailabilityWidget(creatorId: _user.id ?? ''),
-              ),
+                const SizedBox(height: 4),
+                if (_isLoadingEoPackages &&
+                    _reviewableCreatorPackageKeys.contains(data.key))
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 32),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (_filteredItems.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32),
+                    child: Text(
+                      _reviewableCreatorPackageKeys.contains(data.key)
+                          ? 'Belum ada paket. Ajukan paket baru untuk mulai.'
+                          : 'Tidak ada data yang cocok dengan pencarian.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: mutedColor),
+                    ),
+                  )
+                else
+                  ..._filteredItems.indexed.map(
+                    (entry) => _buildEoListItem(
+                      context,
+                      data,
+                      entry.$2,
+                      entry.$1,
+                      isDark,
+                    ),
+                  ),
+              ],
             ),
-            SliverToBoxAdapter(child: _buildSearchBar(context, data)),
-            SliverToBoxAdapter(child: _buildFilterSortBar(context, data)),
-            if (_filteredItems.isEmpty)
-              SliverToBoxAdapter(child: _buildEmptyState(context))
-            else if (data.isGrid)
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 340,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    childAspectRatio: 0.78,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => _buildAnimatedGridItem(
-                      context,
-                      data,
-                      _filteredItems[index],
-                      index,
-                    ),
-                    childCount: _filteredItems.length,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEoListItem(
+    BuildContext context,
+    CreatorServiceData data,
+    CreatorServiceItem item,
+    int index,
+    bool isDark,
+  ) {
+    final status = item.tag?.toLowerCase() ?? '';
+
+    // Enhanced tag colors with gradients
+    Color tagColor;
+    Color tagBgColor;
+    IconData? tagIcon;
+
+    if (status.contains('populer') || status.contains('best value')) {
+      tagColor = const Color(0xFF8B5CF6);
+      tagBgColor = const Color(0xFF8B5CF6);
+      tagIcon = Icons.local_fire_department;
+    } else if (status.contains('premium') || status.contains('eksklusif')) {
+      tagColor = const Color(0xFFEC4899);
+      tagBgColor = const Color(0xFFEC4899);
+      tagIcon = Icons.workspace_premium;
+    } else if (status.contains('intimate') || status.contains('personal')) {
+      tagColor = const Color(0xFF10B981);
+      tagBgColor = const Color(0xFF10B981);
+      tagIcon = Icons.favorite;
+    } else if (status.contains('selesai') || status.contains('aktif')) {
+      tagColor = const Color(0xFF27845A);
+      tagBgColor = const Color(0xFF27845A);
+      tagIcon = Icons.check_circle;
+    } else if (status.contains('berjalan') || status.contains('persiapan')) {
+      tagColor = const Color(0xFF9A6A16);
+      tagBgColor = const Color(0xFF9A6A16);
+      tagIcon = Icons.pending;
+    } else {
+      tagColor = isDark ? AppTheme.textMuted : Colors.grey.shade600;
+      tagBgColor = isDark ? AppTheme.textMuted : Colors.grey.shade600;
+      tagIcon = null;
+    }
+
+    // Enhanced icon background with gradient
+    final iconGradient = LinearGradient(
+      colors: isDark
+          ? [AppTheme.cardDark2, AppTheme.cardDark2.withValues(alpha: 0.8)]
+          : [const Color(0xFFF1F4F6), const Color(0xFFE8EBF0)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+
+    // Card shadow
+    final cardShadow = isDark
+        ? [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ]
+        : [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+            BoxShadow(
+              color: AppTheme.primaryPurple.withValues(alpha: 0.04),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ];
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        hoverColor: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : AppTheme.primaryPurple.withValues(alpha: 0.05),
+        splashColor: isDark
+            ? Colors.white.withValues(alpha: 0.08)
+            : AppTheme.primaryPurple.withValues(alpha: 0.08),
+        onTap: () => _showDetail(context, data, item),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.cardBg : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark ? AppTheme.inputBorder : const Color(0xFFE8EBF0),
+              width: 1.5,
+            ),
+            boxShadow: cardShadow,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Enhanced icon container
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  gradient: iconGradient,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? AppTheme.inputBorder
+                        : const Color(0xFFE0E4E8),
+                    width: 1,
                   ),
                 ),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => _buildAnimatedListItem(
-                      context,
-                      data,
-                      _filteredItems[index],
-                      index,
+                child: item.thumbnailUrl != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(11),
+                        child: Image.network(
+                          ApiService.resolveAssetUrl(item.thumbnailUrl),
+                          width: 42,
+                          height: 42,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Icon(
+                            item.icon,
+                            size: 22,
+                            color: isDark
+                                ? AppTheme.primaryPurple
+                                : AppTheme.deepPurple,
+                          ),
+                        ),
+                      )
+                    : data.key == 'eo_timeline'
+                    ? Center(
+                        child: Text(
+                          '${index + 1}'.padLeft(2, '0'),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : AppTheme.textDark,
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        item.icon,
+                        size: 22,
+                        color: isDark
+                            ? AppTheme.primaryPurple
+                            : AppTheme.deepPurple,
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : AppTheme.textDark,
+                        letterSpacing: -0.2,
+                      ),
                     ),
-                    childCount: _filteredItems.length,
-                  ),
+                    const SizedBox(height: 4),
+                    Text(
+                      item.subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark
+                            ? AppTheme.textMuted
+                            : Colors.grey.shade600,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        if (item.tag != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  tagBgColor.withValues(alpha: 0.15),
+                                  tagBgColor.withValues(alpha: 0.08),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: tagBgColor.withValues(alpha: 0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (tagIcon != null) ...[
+                                  Icon(tagIcon, size: 10, color: tagColor),
+                                  const SizedBox(width: 3),
+                                ],
+                                Text(
+                                  item.tag!,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: tagColor,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (item.tag != null && item.value != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: Text(
+                              '·',
+                              style: TextStyle(
+                                color: isDark
+                                    ? AppTheme.textMuted
+                                    : Colors.grey.shade400,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        if (item.value != null)
+                          Flexible(
+                            child: Text(
+                              item.value!,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: data.key == 'eo_paket'
+                                    ? FontWeight.w700
+                                    : FontWeight.w600,
+                                color: data.key == 'eo_paket'
+                                    ? (isDark
+                                          ? AppTheme.primaryPurple
+                                          : AppTheme.deepPurple)
+                                    : (isDark
+                                          ? Colors.white70
+                                          : Colors.grey.shade700),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-          ],
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.cardDark2 : const Color(0xFFF5F7FA),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      floatingActionButton: _buildFAB(context, data),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -3421,7 +4061,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     if (key.contains('portofolio') || key.contains('galeri')) {
       return '24 Tayangan';
     }
-    if (key.contains('harga') || key.contains('paket') || key.contains('tarif')) {
+    if (key.contains('harga') ||
+        key.contains('paket') ||
+        key.contains('tarif')) {
       return '4 Paket';
     }
     return '5 Item';
@@ -4260,31 +4902,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                         Positioned(
                           top: 12,
                           left: 12,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.92),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.08),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Text(
-                              item.tag!,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                color: AppTheme.primaryPurple,
-                              ),
-                            ),
-                          ),
+                          child: _buildEnhancedTag(item.tag!, isDark),
                         ),
                       Positioned(
                         top: 12,
@@ -4773,37 +5391,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                   if (item.tag != null &&
                                       !isPricing &&
                                       !isTimeline)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            AppTheme.primaryPurple.withValues(
-                                              alpha: 0.1,
-                                            ),
-                                            AppTheme.lightPurple.withValues(
-                                              alpha: 0.1,
-                                            ),
-                                          ],
-                                        ),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: AppTheme.primaryPurple
-                                              .withValues(alpha: 0.2),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        item.tag!,
-                                        style: const TextStyle(
-                                          fontSize: 9.5,
-                                          fontWeight: FontWeight.w800,
-                                          color: AppTheme.primaryPurple,
-                                        ),
-                                      ),
-                                    ),
+                                    _buildEnhancedTag(item.tag!, isDark),
                                   if (isTimeline && item.tag != null)
                                     _buildTimelineStatusPill(item.tag!),
                                   const SizedBox(height: 6),
@@ -5125,6 +5713,82 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildEnhancedTag(String tag, bool isDark) {
+    final status = tag.toLowerCase();
+
+    // Enhanced tag colors with gradients
+    Color tagColor;
+    Color tagBgColor;
+    IconData? tagIcon;
+
+    if (status.contains('populer') || status.contains('best value')) {
+      tagColor = const Color(0xFF8B5CF6);
+      tagBgColor = const Color(0xFF8B5CF6);
+      tagIcon = Icons.local_fire_department;
+    } else if (status.contains('premium') || status.contains('eksklusif')) {
+      tagColor = const Color(0xFFEC4899);
+      tagBgColor = const Color(0xFFEC4899);
+      tagIcon = Icons.workspace_premium;
+    } else if (status.contains('intimate') || status.contains('personal')) {
+      tagColor = const Color(0xFF10B981);
+      tagBgColor = const Color(0xFF10B981);
+      tagIcon = Icons.favorite;
+    } else if (status.contains('selesai') || status.contains('aktif')) {
+      tagColor = const Color(0xFF27845A);
+      tagBgColor = const Color(0xFF27845A);
+      tagIcon = Icons.check_circle;
+    } else if (status.contains('berjalan') || status.contains('persiapan')) {
+      tagColor = const Color(0xFF9A6A16);
+      tagBgColor = const Color(0xFF9A6A16);
+      tagIcon = Icons.pending;
+    } else {
+      tagColor = isDark ? AppTheme.textMuted : Colors.grey.shade600;
+      tagBgColor = isDark ? AppTheme.textMuted : Colors.grey.shade600;
+      tagIcon = null;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            tagBgColor.withValues(alpha: 0.15),
+            tagBgColor.withValues(alpha: 0.08),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: tagBgColor.withValues(alpha: 0.3), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: tagBgColor.withValues(alpha: 0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (tagIcon != null) ...[
+            Icon(tagIcon, size: 10, color: tagColor),
+            const SizedBox(width: 3),
+          ],
+          Text(
+            tag,
+            style: TextStyle(
+              fontSize: 9.5,
+              fontWeight: FontWeight.w800,
+              color: tagColor,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -5808,12 +6472,16 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      barrierColor: data.key.startsWith('eo_') ? Colors.transparent : null,
       builder: (ctx) => _ServiceDetailSheet(
         data: data,
         item: item,
         actionLabel: data.actionLabel,
         user: widget.user,
         onAddItem: (newItem) => _addItem(data.key, newItem),
+        onSubmitCreatorPackage: _reviewableCreatorPackageKeys.contains(data.key)
+            ? _submitCreatorPackage
+            : null,
       ),
     );
   }
@@ -5885,6 +6553,8 @@ class _ServiceDetailSheet extends StatefulWidget {
   final String actionLabel;
   final UserModel user;
   final ValueChanged<CreatorServiceItem>? onAddItem;
+  final Future<String?> Function(CreatorServiceItem, PlatformFile?, Uint8List?)?
+  onSubmitCreatorPackage;
 
   const _ServiceDetailSheet({
     required this.data,
@@ -5892,6 +6562,7 @@ class _ServiceDetailSheet extends StatefulWidget {
     required this.actionLabel,
     required this.user,
     this.onAddItem,
+    this.onSubmitCreatorPackage,
   });
 
   @override
@@ -5908,11 +6579,17 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
   final Set<int> _likedReviews = {};
   int _selectedFilterReview = 0;
 
+  // State untuk menampilkan detail konten di dalam modal yang sama
+  String? _expandedDetailTitle;
+  String? _expandedDetailContent;
+
   String _formName = '';
   String _formDesc = '';
   String _formTag = '';
   String _formPrice = '';
   IconData? _formIcon;
+  PlatformFile? _formThumbnailFile;
+  Uint8List? _formThumbnailBytes;
   DateTime? _formDate;
 
   final List<
@@ -5929,6 +6606,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
   _customReviews = [];
   bool _itemSubmitted = false;
   bool _itemSaved = false;
+  bool _isSubmitting = false;
 
   final List<String> _availableFormTags = const [
     'Video Editing',
@@ -6464,6 +7142,35 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
     );
   }
 
+  Future<void> _openThumbnailPicker() async {
+    final file = await FilePicker.pickFile(type: FileType.image);
+    if (!mounted || file == null) return;
+    if (file.size > 5 * 1024 * 1024) {
+      AppSnackbar.warning(
+        context,
+        'Ukuran foto maksimal 5 MB.',
+        title: 'Ukuran foto terlalu besar',
+      );
+      return;
+    }
+
+    try {
+      final bytes = await file.readAsBytes();
+      if (!mounted) return;
+      setState(() {
+        _formThumbnailFile = file;
+        _formThumbnailBytes = bytes;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackbar.error(
+        context,
+        'Foto tidak dapat dibaca. Silakan pilih file gambar lain.',
+        title: 'Gagal membaca foto',
+      );
+    }
+  }
+
   Future<void> _openDatePicker(ValueChanged<DateTime> onSave) async {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final now = DateTime.now();
@@ -6579,7 +7286,11 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
         );
         break;
       case 4:
-        _openIconPicker((v) => setState(() => _formIcon = v));
+        if (_reviewableCreatorPackageKeys.contains(widget.data.key)) {
+          _openThumbnailPicker();
+        } else {
+          _openIconPicker((v) => setState(() => _formIcon = v));
+        }
         break;
       case 5:
         _openDatePicker((v) => setState(() => _formDate = v));
@@ -7054,7 +7765,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
     return GestureDetector(
       onTap: () => Navigator.pop(context),
       child: Container(
-        color: Colors.black.withValues(alpha: 0.55),
+        color: Colors.transparent,
         child: GestureDetector(
           onTap: () {},
           child: FadeTransition(
@@ -7109,13 +7820,28 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                     ),
                                   ],
                                 ),
-                                child: Icon(
-                                  isNew
-                                      ? Icons.add_rounded
-                                      : (item?.icon ?? widget.data.icon),
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: !isNew && item?.thumbnailUrl != null
+                                    ? Image.network(
+                                        ApiService.resolveAssetUrl(
+                                          item!.thumbnailUrl,
+                                        ),
+                                        width: 46,
+                                        height: 46,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, _, _) => Icon(
+                                          item.icon,
+                                          color: Colors.white,
+                                          size: 22,
+                                        ),
+                                      )
+                                    : Icon(
+                                        isNew
+                                            ? Icons.add_rounded
+                                            : (item?.icon ?? widget.data.icon),
+                                        color: Colors.white,
+                                        size: 22,
+                                      ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -7655,11 +8381,32 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                         borderRadius: BorderRadius.circular(16),
                                         onTap: () {
                                           final item = widget.item;
+                                          final isCreatorPackage =
+                                              _reviewableCreatorPackageKeys
+                                                  .contains(widget.data.key);
                                           final actionName = isNew
-                                              ? 'Buat Baru'
-                                              : widget.actionLabel;
+                                              ? (isCreatorPackage
+                                                    ? 'Ajukan untuk Review'
+                                                    : 'Buat Baru')
+                                              : (isCreatorPackage
+                                                    ? item?.tag ??
+                                                          'Status Paket'
+                                                    : widget.actionLabel);
                                           final targetName =
                                               item?.title ?? widget.data.title;
+                                          if (isCreatorPackage && !isNew) {
+                                            AppSnackbar.info(
+                                              context,
+                                              item?.tag == 'Tayang Publik'
+                                                  ? 'Paket ini sudah tampil di publik.'
+                                                  : item?.tag == 'Ditolak'
+                                                  ? 'Lihat catatan admin pada detail paket untuk memperbaiki pengajuan.'
+                                                  : 'Paket ini sedang menunggu review admin.',
+                                              title:
+                                                  item?.tag ?? 'Status Paket',
+                                            );
+                                            return;
+                                          }
                                           if (isNew) {
                                             String fmtIDR(String raw) {
                                               final n =
@@ -7730,6 +8477,25 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                               );
                                               return;
                                             }
+                                            if (isCreatorPackage &&
+                                                _formPrice.trim().isEmpty) {
+                                              AppSnackbar.warning(
+                                                context,
+                                                'Isi harga paket sebelum mengirim pengajuan.',
+                                                title: 'Harga belum diisi',
+                                              );
+                                              return;
+                                            }
+                                            if (isCreatorPackage &&
+                                                _formThumbnailFile == null) {
+                                              AppSnackbar.warning(
+                                                context,
+                                                'Pilih foto thumbnail sebelum mengirim pengajuan.',
+                                                title:
+                                                    'Thumbnail belum dipilih',
+                                              );
+                                              return;
+                                            }
                                             showDialog(
                                               context: context,
                                               builder: (dctx) => AlertDialog(
@@ -7776,7 +8542,9 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                       CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
-                                                      'Item berikut akan ditambahkan ke ${widget.data.title}:',
+                                                      isCreatorPackage
+                                                          ? 'Paket akan dikirim ke admin untuk ditinjau sebelum tampil di publik:'
+                                                          : 'Item berikut akan ditambahkan ke ${widget.data.title}:',
                                                       style: TextStyle(
                                                         fontSize: 12,
                                                         color: Colors
@@ -7821,14 +8589,29 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                                         10,
                                                                       ),
                                                                 ),
-                                                                child: Icon(
-                                                                  _formIcon ??
-                                                                      Icons
-                                                                          .edit_outlined,
-                                                                  size: 15,
-                                                                  color: Colors
-                                                                      .white,
-                                                                ),
+                                                                clipBehavior: Clip
+                                                                    .antiAlias,
+                                                                child:
+                                                                    _formThumbnailBytes !=
+                                                                            null &&
+                                                                        _reviewableCreatorPackageKeys.contains(
+                                                                          widget
+                                                                              .data
+                                                                              .key,
+                                                                        )
+                                                                    ? Image.memory(
+                                                                        _formThumbnailBytes!,
+                                                                        fit: BoxFit
+                                                                            .cover,
+                                                                      )
+                                                                    : Icon(
+                                                                        _formIcon ??
+                                                                            Icons.edit_outlined,
+                                                                        size:
+                                                                            15,
+                                                                        color: Colors
+                                                                            .white,
+                                                                      ),
                                                               ),
                                                               const SizedBox(
                                                                 width: 8,
@@ -8016,7 +8799,8 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                     ),
                                                   ),
                                                   ElevatedButton(
-                                                    onPressed: () {
+                                                    onPressed: () async {
+                                                      if (_isSubmitting) return;
                                                       final finalName =
                                                           _formName.trim();
                                                       final finalDesc =
@@ -8050,59 +8834,56 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                             active: true,
                                                             gradient: finalGrad,
                                                           );
+                                                      if (widget
+                                                              .onSubmitCreatorPackage !=
+                                                          null) {
+                                                        setState(() {
+                                                          _isSubmitting = true;
+                                                        });
+                                                        final error =
+                                                            await widget
+                                                                .onSubmitCreatorPackage!(
+                                                              newItem,
+                                                              _formThumbnailFile,
+                                                              _formThumbnailBytes,
+                                                            );
+                                                        if (!mounted ||
+                                                            !dctx.mounted ||
+                                                            !context.mounted) {
+                                                          return;
+                                                        }
+                                                        setState(() {
+                                                          _isSubmitting = false;
+                                                        });
+                                                        if (error != null) {
+                                                          AppSnackbar.error(
+                                                            context,
+                                                            error,
+                                                            title:
+                                                                'Pengajuan gagal',
+                                                          );
+                                                          return;
+                                                        }
+                                                        Navigator.pop(dctx);
+                                                        Navigator.pop(context);
+                                                        AppSnackbar.success(
+                                                          context,
+                                                          '"$finalName" masuk antrean review admin.',
+                                                          title:
+                                                              'Menunggu Review',
+                                                        );
+                                                        return;
+                                                      }
                                                       widget.onAddItem?.call(
                                                         newItem,
                                                       );
                                                       Navigator.pop(dctx);
                                                       Navigator.pop(context);
-                                                      ScaffoldMessenger.of(
+                                                      AppSnackbar.success(
                                                         context,
-                                                      ).showSnackBar(
-                                                        SnackBar(
-                                                          behavior:
-                                                              SnackBarBehavior
-                                                                  .floating,
-                                                          backgroundColor:
-                                                              Colors
-                                                                  .green
-                                                                  .shade600,
-                                                          shape: RoundedRectangleBorder(
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  14,
-                                                                ),
-                                                          ),
-                                                          content: Row(
-                                                            children: [
-                                                              Icon(
-                                                                Icons
-                                                                    .add_task_rounded,
-                                                                color: Colors
-                                                                    .white,
-                                                                size: 18,
-                                                              ),
-                                                              const SizedBox(
-                                                                width: 10,
-                                                              ),
-                                                              Expanded(
-                                                                child: Text(
-                                                                  '"$finalName" berhasil ditambahkan ke ${widget.data.title} 🎉',
-                                                                  style: const TextStyle(
-                                                                    color: Colors
-                                                                        .white,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w700,
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                          duration:
-                                                              const Duration(
-                                                                seconds: 2,
-                                                              ),
-                                                        ),
+                                                        '"$finalName" berhasil ditambahkan ke ${widget.data.title}.',
+                                                        title:
+                                                            'Berhasil ditambahkan',
                                                       );
                                                     },
                                                     style: ElevatedButton.styleFrom(
@@ -8123,7 +8904,9 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                           ),
                                                     ),
                                                     child: Text(
-                                                      actionName,
+                                                      _isSubmitting
+                                                          ? 'Mengirim...'
+                                                          : actionName,
                                                       style: const TextStyle(
                                                         fontWeight:
                                                             FontWeight.w800,
@@ -8135,46 +8918,11 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                             );
                                           } else {
                                             if (_itemSubmitted) {
-                                              ScaffoldMessenger.of(
+                                              AppSnackbar.info(
                                                 context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  behavior:
-                                                      SnackBarBehavior.floating,
-                                                  backgroundColor:
-                                                      Colors.blue.shade700,
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          14,
-                                                        ),
-                                                  ),
-                                                  content: const Row(
-                                                    children: [
-                                                      Icon(
-                                                        Icons
-                                                            .info_outline_rounded,
-                                                        color: Colors.white,
-                                                        size: 17,
-                                                      ),
-                                                      SizedBox(width: 8),
-                                                      Expanded(
-                                                        child: Text(
-                                                          'Item sudah diajukan sebelumnya. Menunggu proses review.',
-                                                          style: TextStyle(
-                                                            color: Colors.white,
-                                                            fontWeight:
-                                                                FontWeight.w700,
-                                                            fontSize: 12,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  duration: const Duration(
-                                                    milliseconds: 1800,
-                                                  ),
-                                                ),
+                                                'Item ini sudah berstatus Menunggu Review.',
+                                                title:
+                                                    'Pengajuan sudah dicatat',
                                               );
                                               return;
                                             }
@@ -8208,7 +8956,9 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                     const SizedBox(width: 12),
                                                     Expanded(
                                                       child: Text(
-                                                        'Konfirmasi $actionName',
+                                                        isCreatorPackage
+                                                            ? 'Konfirmasi Pengajuan Paket'
+                                                            : 'Konfirmasi $actionName',
                                                         style: const TextStyle(
                                                           fontSize: 15,
                                                           fontWeight:
@@ -8225,7 +8975,9 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                       CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
-                                                      'Anda akan $actionName untuk item berikut:',
+                                                      isCreatorPackage
+                                                          ? 'Ajukan paket ini untuk ditinjau?'
+                                                          : 'Anda akan $actionName untuk item berikut:',
                                                       style: TextStyle(
                                                         fontSize: 12,
                                                         color: Colors
@@ -8338,7 +9090,9 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                           width: 5,
                                                         ),
                                                         Text(
-                                                          'Estimasi review: 1-2 hari kerja',
+                                                          isCreatorPackage
+                                                              ? 'Status paket akan menjadi Menunggu Review.'
+                                                              : 'Estimasi review: 1-2 hari kerja',
                                                           style: TextStyle(
                                                             fontSize: 10.5,
                                                             fontWeight:
@@ -8365,7 +9119,9 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                         ),
                                                         Expanded(
                                                           child: Text(
-                                                            'Setelah disetujui, item akan tampil di halaman publik.',
+                                                            isCreatorPackage
+                                                                ? 'Pengajuan hanya ditandai di halaman ini.'
+                                                                : 'Setelah disetujui, item akan tampil di halaman publik.',
                                                             style: TextStyle(
                                                               fontSize: 10.5,
                                                               fontWeight:
@@ -8401,56 +9157,14 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                         _itemSubmitted = true;
                                                       });
                                                       Navigator.pop(dctx);
-                                                      ScaffoldMessenger.of(
+                                                      AppSnackbar.success(
                                                         context,
-                                                      ).showSnackBar(
-                                                        SnackBar(
-                                                          behavior:
-                                                              SnackBarBehavior
-                                                                  .floating,
-                                                          backgroundColor:
-                                                              Colors
-                                                                  .green
-                                                                  .shade600,
-                                                          shape: RoundedRectangleBorder(
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  14,
-                                                                ),
-                                                          ),
-                                                          content: Row(
-                                                            children: [
-                                                              Icon(
-                                                                Icons
-                                                                    .local_post_office_rounded,
-                                                                color: Colors
-                                                                    .white,
-                                                                size: 17,
-                                                              ),
-                                                              const SizedBox(
-                                                                width: 8,
-                                                              ),
-                                                              Expanded(
-                                                                child: Text(
-                                                                  '"$targetName" berhasil diajukan 📤 Menunggu review tim.',
-                                                                  style: const TextStyle(
-                                                                    color: Colors
-                                                                        .white,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w700,
-                                                                    fontSize:
-                                                                        12,
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                          duration:
-                                                              const Duration(
-                                                                seconds: 2,
-                                                              ),
-                                                        ),
+                                                        isCreatorPackage
+                                                            ? '"$targetName" ditandai Menunggu Review di halaman ini.'
+                                                            : '"$targetName" berhasil diajukan. Menunggu review tim.',
+                                                        title: isCreatorPackage
+                                                            ? 'Status diperbarui'
+                                                            : 'Pengajuan dicatat',
                                                       );
                                                     },
                                                     style: ElevatedButton.styleFrom(
@@ -8589,15 +9303,15 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
     final updatedDate = DateTime(now.year, now.month, now.day - 1);
     String fmtPrice(String raw) {
       if (raw.isEmpty) return '';
-      final n = int.tryParse(raw.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-      if (n == 0) return raw;
-      final s = n.toString();
-      String out = '';
-      for (int i = 0; i < s.length; i++) {
-        if (i > 0 && (s.length - i) % 3 == 0) out += '.';
-        out += s[i];
+      final amount = int.tryParse(raw.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      if (amount == 0) return raw;
+      final digits = amount.toString();
+      final formatted = StringBuffer();
+      for (var i = 0; i < digits.length; i++) {
+        if (i > 0 && (digits.length - i) % 3 == 0) formatted.write('.');
+        formatted.write(digits[i]);
       }
-      return 'Rp $out';
+      return 'Rp $formatted';
     }
 
     final detailValues = isNew
@@ -8634,17 +9348,21 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
               _formPrice.isEmpty
                   ? 'Klik untuk memasukkan nilai harga'
                   : fmtPrice(_formPrice),
-              _formPrice.isNotEmpty
-                  ? fmtPrice(_formPrice).replaceAll('Rp ', 'Rp ')
-                  : '',
+              _formPrice.isNotEmpty ? fmtPrice(_formPrice) : '',
             ),
             (
-              'Thumbnail / Icon',
+              _reviewableCreatorPackageKeys.contains(widget.data.key)
+                  ? 'Foto Thumbnail'
+                  : 'Thumbnail / Icon',
               Icons.image_outlined,
-              _formIcon == null
-                  ? 'Klik untuk memilih icon thumbnail'
-                  : 'Icon terpilih',
-              _formIcon != null ? 'Terpilih' : '',
+              _reviewableCreatorPackageKeys.contains(widget.data.key)
+                  ? (_formThumbnailFile?.name ?? 'Pilih foto thumbnail paket')
+                  : (_formIcon == null
+                        ? 'Klik untuk memilih icon thumbnail'
+                        : 'Icon terpilih'),
+              _reviewableCreatorPackageKeys.contains(widget.data.key)
+                  ? (_formThumbnailFile != null ? 'Foto dipilih' : 'Wajib')
+                  : (_formIcon != null ? 'Terpilih' : ''),
             ),
             (
               'Tanggal dibuat',
@@ -8655,7 +9373,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
               _formDate != null ? 'Terjadwal' : '',
             ),
           ]
-        : [
+        : <(String, IconData, String, String)>[
             (
               'Detail Lengkap',
               Icons.info_outline_rounded,
@@ -8693,25 +9411,91 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
               '2 Orang',
             ),
           ];
+
+    // Jika ada detail yang diperluas, tampilkan kontennya
+    if (_expandedDetailTitle != null && _expandedDetailContent != null) {
+      return ListView(
+        controller: scrollCtrl,
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        children: [
+          // Header untuk kembali
+          InkWell(
+            onTap: () {
+              setState(() {
+                _expandedDetailTitle = null;
+                _expandedDetailContent = null;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.cardDark2 : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.arrow_back_rounded,
+                    size: 18,
+                    color: isDark ? Colors.white : AppTheme.textDark,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Kembali',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : AppTheme.textDark,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Judul detail
+          Text(
+            _expandedDetailTitle!,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: isDark ? Colors.white : AppTheme.textDark,
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Konten detail
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardDark2 : Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+              ),
+            ),
+            child: Text(
+              _expandedDetailContent!,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.6,
+                color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     return ListView(
       controller: scrollCtrl,
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       children: [
         if (item != null) ...[
-          Text(
-            'Ringkasan',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              color: isDark ? Colors.white : AppTheme.textDark,
-            ),
-          ),
-          const SizedBox(height: 10),
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: isDark ? AppTheme.cardDark2 : Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
               ),
@@ -8719,13 +9503,13 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
             child: Text(
               item.subtitle,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 13,
                 height: 1.5,
                 color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
               ),
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
         ],
         Text(
           isNew ? 'Kolom yang Akan Diisi' : 'Detail & Metadata',
@@ -8735,178 +9519,113 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
             color: isDark ? Colors.white : AppTheme.textDark,
           ),
         ),
-        const SizedBox(height: 10),
-        ...List.generate(detailValues.length, (i) {
-          final f = detailValues[i];
-          return TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: 1),
-            duration: Duration(milliseconds: 400 + (i * 80)),
-            curve: Curves.easeOutCubic,
-            builder: (_, val, child) {
-              return Opacity(
-                opacity: val.clamp(0.0, 1.0),
-                child: Transform.translate(
-                  offset: Offset(0, (1 - val) * 10),
-                  child: child,
-                ),
-              );
-            },
-            child: InkWell(
-              borderRadius: BorderRadius.circular(14),
-              onTap: () {
-                if (isNew) {
-                  _handleFormTap(i);
-                } else {
-                  if (i == 3) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        backgroundColor: AppTheme.primaryPurple,
-                        content: const Text(
-                          'Riwayat revisi sedang dimuat...',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        duration: const Duration(milliseconds: 1200),
-                      ),
-                    );
-                  } else if (i == 4) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        backgroundColor: AppTheme.primaryPurple,
-                        content: Text(
-                          'Membuka lampiran ${f.$1}...',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        duration: const Duration(milliseconds: 1200),
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        backgroundColor: AppTheme.primaryPurple,
-                        content: Text(
-                          '${f.$1} disalin ke clipboard ✓',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        duration: const Duration(milliseconds: 1200),
-                      ),
-                    );
-                  }
-                }
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isDark ? AppTheme.cardDark2 : Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppTheme.primaryPurple.withValues(alpha: 0.12),
-                            AppTheme.lightPurple.withValues(alpha: 0.12),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        f.$2,
-                        size: 16,
-                        color: AppTheme.primaryPurple,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            f.$1,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: isDark ? Colors.white : AppTheme.textDark,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            f.$3,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              color: isDark
-                                  ? AppTheme.textMuted
-                                  : Colors.grey.shade500,
-                            ),
-                          ),
-                          if (f.$4.isNotEmpty) ...[
-                            const SizedBox(height: 3),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryPurple.withValues(
-                                  alpha: 0.08,
-                                ),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                f.$4,
-                                style: TextStyle(
-                                  fontSize: 9.5,
-                                  color: AppTheme.primaryPurple,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      size: 18,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
-                    ),
+        const SizedBox(height: 12),
+        for (var i = 0; i < detailValues.length; i++)
+          _buildDetailItem(detailValues[i], i, isDark, isNew),
+      ],
+    );
+  }
+
+  Widget _buildDetailItem(
+    (String, IconData, String, String) f,
+    int index,
+    bool isDark,
+    bool isNew,
+  ) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () {
+        if (isNew) {
+          _handleFormTap(index);
+        } else {
+          // Tampilkan detail di dalam modal yang sama
+          setState(() {
+            _expandedDetailTitle = f.$1;
+            _expandedDetailContent = f.$3;
+          });
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.cardDark2 : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppTheme.primaryPurple.withValues(alpha: 0.12),
+                    AppTheme.lightPurple.withValues(alpha: 0.12),
                   ],
                 ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(f.$2, size: 16, color: AppTheme.primaryPurple),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    f.$1,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : AppTheme.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    f.$3,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                    ),
+                  ),
+                  if (f.$4.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryPurple.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        f.$4,
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          color: AppTheme.primaryPurple,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-          );
-        }),
-      ],
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
+            ),
+          ],
+        ),
+      ),
     );
   }
 

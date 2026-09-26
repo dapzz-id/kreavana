@@ -2,6 +2,46 @@ import 'api_service.dart';
 import '../models/user_model.dart';
 
 class AdminService {
+  static Future<List<Map<String, dynamic>>> getCreatorServices({
+    String? status,
+    String? packageType,
+  }) async {
+    try {
+      final response = await ApiService.get(
+        'admin/creator-services',
+        queryParams: {
+          if (status != null) 'status': status,
+          if (packageType != null) 'package_type': packageType,
+        },
+      );
+      if (response['status'] != true) return [];
+      return List<Map<String, dynamic>>.from(response['data'] ?? const []);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<Map<String, dynamic>> approveCreatorService(String id) async {
+    try {
+      return await ApiService.post('admin/creator-services/$id/approve', {});
+    } catch (error) {
+      return {'status': false, 'message': error.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> rejectCreatorService(
+    String id,
+    String note,
+  ) async {
+    try {
+      return await ApiService.post('admin/creator-services/$id/reject', {
+        'review_note': note,
+      });
+    } catch (error) {
+      return {'status': false, 'message': error.toString()};
+    }
+  }
+
   /// Mendapatkan daftar pengajuan creator, bisa difilter status
   static Future<List<CreatorApplication>> getApplications({
     String? status,

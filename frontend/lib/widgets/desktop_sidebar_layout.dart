@@ -618,7 +618,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     final collapsed = _isSidebarCollapsed;
 
     final showTopPortofolioAgenda =
-        _isCreatorUser && !_hasSpecificCreatorSubRole;
+      _isCreatorUser && !_isGovernment && !_hasSpecificCreatorSubRole;
     final layananTitle = CreatorSidebarMenus.layananSectionTitle(
       widget.user.subRole,
     );
@@ -786,7 +786,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                           isCollapsed: collapsed,
                           activeColor: const Color(0xFF8B5CF6),
                         ),
-                        if (_isCreatorUser) _buildNavRow(
+                        if (_isCreatorUser && !_isGovernment) _buildNavRow(
                           icon: Icons.explore_outlined,
                           label: 'Rekomendasi Peluang',
                           onTap: () => _goToMain(1),
@@ -794,14 +794,15 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                           isDark: isDark,
                           isCollapsed: collapsed,
                         ),
-                        _buildNavRow(
-                          icon: Icons.folder_outlined,
-                          label: 'Proyek Saya',
-                          onTap: () => _goToMain(2),
-                          isSelected: _isRouteActive('proyek_saya'),
-                          isDark: isDark,
-                          isCollapsed: collapsed,
-                        ),
+                        if (!_isGovernment)
+                          _buildNavRow(
+                            icon: Icons.folder_outlined,
+                            label: 'Proyek Saya',
+                            onTap: () => _goToMain(2),
+                            isSelected: _isRouteActive('proyek_saya'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
                         if (showTopPortofolioAgenda) ...[
                           _buildNavRow(
                             icon: Icons.photo_library_outlined,
@@ -874,14 +875,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             const SizedBox(height: 8),
                           ],
                           _buildNavRow(
-                            icon: Icons.work_outline,
-                            label: 'Proyek Aktif',
-                            onTap: () => _pushLink('proyek_saya'),
-                            isSelected: _isRouteActive('proyek_saya'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                          ),
-                          _buildNavRow(
                             icon: Icons.summarize_outlined,
                             label: 'Laporan Kegiatan',
                             onTap: () => _pushLink('laporan'),
@@ -911,14 +904,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                           ] else ...[
                             const SizedBox(height: 8),
                           ],
-                          _buildNavRow(
-                            icon: Icons.badge_outlined,
-                            label: 'Data Kreator',
-                            onTap: () => _pushLink('explore'),
-                            isSelected: _isRouteActive('explore'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                          ),
                           _buildNavRow(
                             icon: Icons.folder_outlined,
                             label: 'Dokumen Instansi',
@@ -1181,7 +1166,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     return Stack(
       children: [
         layoutScaffold,
-        const KreavanaAiFloatingWidget(hasPageFab: false),
+        if (!widget.activeRoute.startsWith('eo_'))
+          const KreavanaAiFloatingWidget(hasPageFab: false),
       ],
     );
   }

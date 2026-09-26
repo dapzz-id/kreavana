@@ -80,6 +80,14 @@ Route::middleware('auth:api')->group(function () {
         Route::delete('{id}', [UserAddressController::class, 'destroy']);
     });
 
+    // Institution workspace resources
+    Route::prefix('institution/resources')->group(function () {
+        Route::get('/', [\App\Http\Controllers\InstitutionResourceController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\InstitutionResourceController::class, 'store']);
+        Route::put('{id}', [\App\Http\Controllers\InstitutionResourceController::class, 'update']);
+        Route::delete('{id}', [\App\Http\Controllers\InstitutionResourceController::class, 'destroy']);
+    });
+
     // Portfolio
     Route::prefix('portfolio')->group(function () {
         Route::get('/', [PortfolioController::class, 'index']);
@@ -264,6 +272,9 @@ Route::middleware('auth:api')->group(function () {
         Route::get('applications', [AdminController::class, 'getApplications']);
         Route::post('applications/{id}/approve', [AdminController::class, 'approveApplication']);
         Route::post('applications/{id}/reject', [AdminController::class, 'rejectApplication']);
+        Route::get('creator-services', [\App\Http\Controllers\AdminCreatorServiceController::class, 'index']);
+        Route::post('creator-services/{id}/approve', [\App\Http\Controllers\AdminCreatorServiceController::class, 'approve']);
+        Route::post('creator-services/{id}/reject', [\App\Http\Controllers\AdminCreatorServiceController::class, 'reject']);
         Route::get('system-logs', [AdminController::class, 'getSystemLogs']);
         Route::get('assigned-disputes', [DisputeController::class, 'assignedDisputes']);
         Route::post('disputes/{id}/decision-refund', [DisputeController::class, 'adminDecideRefund']);
@@ -288,7 +299,7 @@ Route::middleware('auth:api')->group(function () {
     });
 
     Route::get('/creators/{creatorId}/availability', [App\Http\Controllers\CreatorAvailabilityController::class, 'getAvailability']);
-    
+
     // Protected creator profile endpoints
     Route::middleware('auth:api')->group(function () {
         Route::get('/profile', [App\Http\Controllers\ProfileController::class, 'getProfile']);
@@ -296,7 +307,7 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/profile/identity', [App\Http\Controllers\ProfileController::class, 'identity']);
         Route::get('/profile/permissions', [App\Http\Controllers\ProfileController::class, 'permissions']);
         Route::get('/profile/history', [App\Http\Controllers\ProfileController::class, 'history']);
-        
+
         // Creator Calendar
         Route::get('/profile/calendar', [App\Http\Controllers\CreatorCalendarController::class, 'index']);
         Route::post('/profile/calendar', [App\Http\Controllers\CreatorCalendarController::class, 'storeOrUpdate']);
@@ -318,6 +329,7 @@ Route::middleware('auth:api')->group(function () {
 
     // Creator Services (write operations)
     Route::prefix('creator-services')->group(function () {
+        Route::get('mine', [\App\Http\Controllers\CreatorServiceController::class, 'mine']);
         Route::post('/', [\App\Http\Controllers\CreatorServiceController::class, 'store']);
         Route::put('{id}', [\App\Http\Controllers\CreatorServiceController::class, 'update']);
         Route::delete('{id}', [\App\Http\Controllers\CreatorServiceController::class, 'destroy']);
@@ -373,10 +385,16 @@ Route::prefix('marketplace')->group(function () {
 });
 
 // Recommendations (Public Read)
+Route::get('institution/announcements', [\App\Http\Controllers\InstitutionResourceController::class, 'publicAnnouncements']);
 Route::get('creators/recommendations', [\App\Http\Controllers\RecommendationController::class, 'getCreatorRecommendations']);
 Route::get('creators/recommendations/categories', [\App\Http\Controllers\RecommendationController::class, 'getServiceCategories']);
 
 // Creator Services (public read)
+Route::get('creator-service-thumbnails/{filename}', [\App\Http\Controllers\CreatorServiceController::class, 'showThumbnail'])
+    ->where('filename', '[A-Za-z0-9._-]+')
+    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class)
+    ->withoutMiddleware(\App\Http\Middleware\TouchLastOnline::class);
+
 Route::prefix('creator-services')->group(function () {
     Route::get('/', [\App\Http\Controllers\CreatorServiceController::class, 'index']);
     Route::get('{id}', [\App\Http\Controllers\CreatorServiceController::class, 'show']);
