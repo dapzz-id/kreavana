@@ -19,17 +19,56 @@ class UlasanReputasiScreen extends StatefulWidget {
 
 class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
   bool _isLoading = true;
+  bool _isLoadingSummary = false;
   String _selectedFilter = 'Semua';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
   List<Map<String, dynamic>> _reviews = [];
   Map<String, dynamic>? _dbStats;
+  double _avgRating = 0.0;
+  int _onTimePct = 0;
+  Map<int, int> _distribution = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
+  int _totalReviews = 0;
 
   @override
   void initState() {
     super.initState();
     _fetchRealtimeReviews();
+    _fetchReviewSummary();
+  }
+
+  String? get _currentUserId {
+    final u = widget.user;
+    if (u == null) return null;
+    return u.id;
+  }
+
+  Future<void> _fetchReviewSummary() async {
+    final uid = _currentUserId;
+    if (uid == null) return;
+    setState(() => _isLoadingSummary = true);
+    try {
+      final res = await ApiService.get('creators/$uid/reviews/summary');
+      if (res['status'] == true && res['data'] != null) {
+        final d = Map<String, dynamic>.from(res['data']);
+        final dist = d['distribution'];
+        setState(() {
+          _avgRating = (d['average_rating'] as num?)?.toDouble() ?? 0.0;
+          _onTimePct = (d['on_time_percentage'] as num?)?.toInt() ?? 0;
+          _totalReviews = (d['total_reviews'] as num?)?.toInt() ?? 0;
+          if (dist is Map) {
+            for (var i = 5; i >= 1; i--) {
+              final v = dist['$i'] ?? dist[i];
+              _distribution[i] = (v as num?)?.toInt() ?? 0;
+            }
+          }
+        });
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isLoadingSummary = false);
+    }
   }
 
   @override
@@ -39,18 +78,38 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
   }
 
   Future<void> _fetchRealtimeReviews() async {
+    final uid = _currentUserId;
+    if (uid == null) return;
     setState(() => _isLoading = true);
     try {
-      final queryParams = <String, dynamic>{};
-      if (widget.user != null) {
-        queryParams['user_id'] = widget.user!.id;
-      }
-      final res = await ApiService.get('reviews', queryParams: queryParams);
+      final res = await ApiService.get('creators/$uid/reviews');
       if (res['status'] == true && res['data'] != null) {
-        final list = List<Map<String, dynamic>>.from(res['data']);
+        final payload = Map<String, dynamic>.from(res['data']);
+        final list = List<dynamic>.from(payload['items'] ?? []);
         if (mounted) {
           setState(() {
-            _reviews = list;
+            _reviews = list.map((raw) {
+              final item = Map<String, dynamic>.from(raw as Map);
+              final reviewer = item['reviewer'] as Map<String, dynamic>?;
+              final source = item['source'] as String?;
+              final reviewerName = reviewer?['name']?.toString() ?? 'Pengguna Kreavana';
+              final reviewerRole = reviewer?['sub_role']?.toString().replaceAll('_', ' ') ?? 'Kreator';
+              return {
+                'id': item['id'],
+                'name': reviewerName,
+                'role': reviewerRole,
+                'company': reviewer?['company']?.toString() ?? 'Klien Kreavana',
+                'project': source == 'opportunity' ? 'Kontrak Proyek' : 'Produk Marketplace',
+                'rating': (item['rating'] as num?)?.toDouble() ?? 0.0,
+                'comment': item['comment']?.toString() ?? '',
+                'verified': source == 'opportunity' || (reviewer?['is_client_verified'] == true),
+                'date': item['created_at']?.toString() ?? '',
+                'is_on_time': item['is_on_time'],
+                'helpfulCount': (item['helpful_count'] as num?)?.toInt() ?? 0,
+                'isHelpful': false,
+                'avatar_url': reviewer?['avatar_url']?.toString(),
+              };
+            }).toList();
             if (res['stats'] != null) {
               _dbStats = Map<String, dynamic>.from(res['stats']);
             }
@@ -59,7 +118,7 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
         return;
       }
     } catch (e) {
-      debugPrint('Error fetching reviews from database: $e');
+      debugPrint('Error fetching reviews: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -217,25 +276,29 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
 
   // ── Hero Reputation Banner ─────────────────────────────────────────────────
   Widget _buildReputationBanner(Color accentColor, bool isDark) {
-    final total = _dbStats?['total_reviews'] != null
-        ? (_dbStats!['total_reviews'] as num).toInt()
-        : _reviews.length;
-    double avgRating = 0.0;
-    if (total > 0) {
-      if (_dbStats?['average_rating'] != null) {
-        avgRating = (_dbStats!['average_rating'] as num).toDouble();
-      } else if (_reviews.isNotEmpty) {
-        final sum = _reviews.fold<double>(
-          0.0,
-          (prev, r) => prev + ((r['rating'] as num?)?.toDouble() ?? 0.0),
-        );
-        avgRating = sum / _reviews.length;
-      }
+    final total = _totalReviews > 0
+        ? _totalReviews
+        : (_dbStats?['total_reviews'] != null
+            ? (_dbStats!['total_reviews'] as num).toInt()
+            : _reviews.length);
+    double avgRating = _avgRating > 0
+        ? _avgRating
+        : (_dbStats?['average_rating'] != null
+            ? (_dbStats!['average_rating'] as num).toDouble()
+            : 0.0);
+    if (avgRating == 0.0 && _reviews.isNotEmpty) {
+      final sum = _reviews.fold<double>(
+        0.0,
+        (prev, r) => prev + ((r['rating'] as num?)?.toDouble() ?? 0.0),
+      );
+      avgRating = sum / _reviews.length;
     }
 
-    final onTimeStr = total > 0
-        ? (_dbStats?['on_time_rate'] != null ? '${_dbStats!['on_time_rate']}%' : '100%')
-        : '0%';
+    final onTimeStr = _onTimePct > 0
+        ? '$_onTimePct%'
+        : (total > 0
+            ? (_dbStats?['on_time_rate'] != null ? '${_dbStats!['on_time_rate']}%' : '100%')
+            : '0%');
     final satisfactionStr = total > 0
         ? (_dbStats?['satisfaction_rate'] != null ? '${_dbStats!['satisfaction_rate']}%' : '100%')
         : '0%';
@@ -297,7 +360,9 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
                         color: Colors.amber, size: 28),
                     const SizedBox(width: 8),
                     Text(
-                      total > 0 ? avgRating.toStringAsFixed(1) : '0.0',
+                      _isLoadingSummary
+                          ? '—'
+                          : (total > 0 ? avgRating.toStringAsFixed(1) : '0.0'),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 26,
@@ -440,64 +505,29 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
 
   // ── Rating Breakdown Bars ──────────────────────────────────────────────────
   Widget _buildRatingBreakdown(Color accentColor, bool isDark) {
-    final total = _reviews.length;
+    final distTotal = _distribution.values.fold<int>(0, (s, v) => s + v);
+    final total = distTotal > 0 ? distTotal : _reviews.length;
     final breakdownMap = _dbStats?['breakdown'] as Map<String, dynamic>?;
 
-    final count5 = breakdownMap != null && breakdownMap['5'] != null
-        ? (breakdownMap['5'] as num).toInt()
-        : _reviews.where((r) => ((r['rating'] as num?)?.toDouble() ?? 5.0) >= 4.9).length;
-    final count4 = breakdownMap != null && breakdownMap['4'] != null
-        ? (breakdownMap['4'] as num).toInt()
-        : _reviews.where((r) {
-            final rtg = (r['rating'] as num?)?.toDouble() ?? 5.0;
-            return rtg >= 4.0 && rtg < 4.9;
-          }).length;
-    final count3 = breakdownMap != null && breakdownMap['3'] != null
-        ? (breakdownMap['3'] as num).toInt()
-        : _reviews.where((r) {
-            final rtg = (r['rating'] as num?)?.toDouble() ?? 5.0;
-            return rtg >= 3.0 && rtg < 4.0;
-          }).length;
-    final count2 = breakdownMap != null && breakdownMap['2'] != null
-        ? (breakdownMap['2'] as num).toInt()
-        : _reviews.where((r) {
-            final rtg = (r['rating'] as num?)?.toDouble() ?? 5.0;
-            return rtg >= 2.0 && rtg < 3.0;
-          }).length;
-    final count1 = breakdownMap != null && breakdownMap['1'] != null
-        ? (breakdownMap['1'] as num).toInt()
-        : _reviews.where((r) {
-            final rtg = (r['rating'] as num?)?.toDouble() ?? 5.0;
-            return rtg < 2.0;
-          }).length;
-
-    final breakdown = [
-      {
-        'star': '5 ★',
-        'pct': total > 0 ? (count5 / total) : 0.0,
-        'count': '$count5',
-      },
-      {
-        'star': '4 ★',
-        'pct': total > 0 ? (count4 / total) : 0.0,
-        'count': '$count4',
-      },
-      {
-        'star': '3 ★',
-        'pct': total > 0 ? (count3 / total) : 0.0,
-        'count': '$count3',
-      },
-      {
-        'star': '2 ★',
-        'pct': total > 0 ? (count2 / total) : 0.0,
-        'count': '$count2',
-      },
-      {
-        'star': '1 ★',
-        'pct': total > 0 ? (count1 / total) : 0.0,
-        'count': '$count1',
-      },
-    ];
+    final List<Map<String, dynamic>> breakdown = [5, 4, 3, 2, 1].map((star) {
+      int count = 0;
+      if (distTotal > 0 && (_distribution[star] ?? 0) > 0) {
+        count = _distribution[star] ?? 0;
+      } else if (breakdownMap != null && breakdownMap['$star'] != null) {
+        count = (breakdownMap['$star'] as num).toInt();
+      } else {
+        count = _reviews.where((r) {
+          final rtg = (r['rating'] as num?)?.toDouble() ?? 5.0;
+          return rtg >= (star - 0.5) && rtg < (star + 0.5);
+        }).length;
+      }
+      final pct = total > 0 ? (count / total) : 0.0;
+      return {
+        'star': '$star★',
+        'pct': pct,
+        'count': '$count',
+      };
+    }).toList();
 
     return Container(
       padding: const EdgeInsets.all(18),

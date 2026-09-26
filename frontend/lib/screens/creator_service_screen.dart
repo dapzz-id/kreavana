@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../app/theme.dart';
 import '../models/user_model.dart';
+import '../services/api_service.dart';
 import '../widgets/creator_availability_widget.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 
@@ -2426,6 +2427,12 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
   final Set<int> _likedItems = {};
   final Map<String, List<CreatorServiceItem>> _extraItems = {};
 
+  bool _isLoadingReviewSummary = false;
+  double _avgRating = 0.0;
+  int _onTimePct = 0;
+  int _totalReviews = 0;
+  Map<int, int> _reviewDistribution = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
+
   late final AnimationController _fadeController;
   late final AnimationController _staggerController;
   late final List<Animation<double>> _itemAnimations;
@@ -2455,10 +2462,18 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
   }
 
   UserModel get _user => widget.user;
-  double get _personalRating => (_user.followersCount > 500)
-      ? 4.95
-      : ((_user.followersCount * 0.0035) + 4.2).clamp(4.2, 4.95);
-  String get _ratingDisplay => _personalRating.toStringAsFixed(1);
+
+  double get _personalRating => _avgRating;
+  String get _ratingDisplay {
+    if (_isLoadingReviewSummary && _avgRating == 0.0) return '—';
+    if (_totalReviews == 0) return '—';
+    return _personalRating.toStringAsFixed(1);
+  }
+  String get _onTimeDisplay {
+    if (_isLoadingReviewSummary && _onTimePct == 0) return '—';
+    if (_totalReviews == 0) return '—';
+    return '$_onTimePct%';
+  }
 
   List<String> get _availableFilters {
     final data = _data;
@@ -2561,10 +2576,40 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       );
     });
     _loadPersistedState();
+    _fetchReviewSummary();
     Future.delayed(Duration.zero, () {
       _fadeController.forward();
       _staggerController.forward();
     });
+  }
+
+  Future<void> _fetchReviewSummary() async {
+    final uid = widget.user.id;
+    if (uid == null || uid.isEmpty) return;
+    setState(() => _isLoadingReviewSummary = true);
+    try {
+      final res = await ApiService.get('creators/$uid/reviews/summary');
+      if (res['status'] == true && res['data'] != null) {
+        final d = Map<String, dynamic>.from(res['data']);
+        final dist = d['distribution'];
+        if (mounted) {
+          setState(() {
+            _avgRating = (d['average_rating'] as num?)?.toDouble() ?? 0.0;
+            _onTimePct = (d['on_time_percentage'] as num?)?.toInt() ?? 0;
+            _totalReviews = (d['total_reviews'] as num?)?.toInt() ?? 0;
+            if (dist is Map) {
+              for (var i = 5; i >= 1; i--) {
+                final v = dist['$i'] ?? dist[i];
+                _reviewDistribution[i] = (v as num?)?.toInt() ?? 0;
+              }
+            }
+          });
+        }
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isLoadingReviewSummary = false);
+    }
   }
 
   Future<void> _loadPersistedState() async {
@@ -8993,37 +9038,39 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
       ),
     ];
     final reviews = [..._customReviews, ...baseReviews];
-    final totalReviewsBase = user.followersCount > 0
-        ? (user.followersCount ~/ 2).clamp(24, 248)
-        : 124;
-    final totalReviews = totalReviewsBase + _customReviews.length;
-    var fiveStar = (totalReviewsBase * 0.72).round();
-    var fourStar = (totalReviewsBase * 0.18).round();
-    var threeStar = (totalReviewsBase * 0.07).round();
-    var twoStar = (totalReviewsBase * 0.02).round();
-    var oneStar = totalReviewsBase - fiveStar - fourStar - threeStar - twoStar;
-    for (final r in _customReviews) {
-      if (r.stars == 5) {
-        fiveStar++;
-      } else if (r.stars == 4) {
-        fourStar++;
-      } else if (r.stars == 3) {
-        threeStar++;
-      } else if (r.stars == 2) {
-        twoStar++;
-      } else {
-        oneStar++;
-      }
-    }
-    final rating = totalReviews > 0
-        ? ((5 * fiveStar +
-                      4 * fourStar +
-                      3 * threeStar +
-                      2 * twoStar +
-                      1 * oneStar) /
-                  totalReviews)
-              .toStringAsFixed(1)
-        : '4.9';
+    final hasRealData = _totalReviews > 0;
+    final totalReviews = hasRealData
+        ? _totalReviews
+        : reviews.length;
+    final counts = hasRealData
+        ? [
+            _reviewDistribution[5] ?? 0,
+            _reviewDistribution[4] ?? 0,
+            _reviewDistribution[3] ?? 0,
+            _reviewDistribution[2] ?? 0,
+            _reviewDistribution[1] ?? 0,
+          ]
+        : reviews.fold<List<int>>([0, 0, 0, 0, 0], (acc, r) {
+            final idx = 5 - (r.stars.clamp(1, 5));
+            if (idx >= 0 && idx < 5) acc[idx]++;
+            return acc;
+          });
+    final fiveStar = counts[0];
+    final fourStar = counts[1];
+    final threeStar = counts[2];
+    final twoStar = counts[3];
+    final oneStar = counts[4];
+    final rating = hasRealData
+        ? (_avgRating > 0 ? _avgRating.toStringAsFixed(1) : '—')
+        : (totalReviews > 0
+            ? ((5 * fiveStar +
+                          4 * fourStar +
+                          3 * threeStar +
+                          2 * twoStar +
+                          1 * oneStar) /
+                      totalReviews)
+                  .toStringAsFixed(1)
+            : '—');
     final filterLabels = const ['Semua', '5 Bintang', 'Dengan Foto', 'Terbaru'];
     return ListView(
       controller: scrollCtrl,

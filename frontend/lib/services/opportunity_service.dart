@@ -289,6 +289,9 @@ class OpportunityService {
     List<Map<String, dynamic>>? requirements,
     OpportunityPoster? poster,
   }) async {
+    OpportunityModel? apiResult;
+    String? errorMessage;
+
     try {
       final res = await ApiService.post('opportunities', {
         'title': title,
@@ -319,58 +322,67 @@ class OpportunityService {
       });
 
       if (res['status'] == true && res['data'] != null) {
-        return {
-          'status': true,
-          'message': 'Peluang proyek berhasil dipublikasikan!',
-          'data': OpportunityModel.fromJson(res['data']),
-        };
+        try {
+          apiResult = OpportunityModel.fromJson(res['data']);
+        } catch (_) {}
+      } else if (res['message'] != null) {
+        errorMessage = res['message'] as String;
       }
-    } catch (_) {}
+    } catch (e) {
+      errorMessage =
+          e is Map && e['message'] != null ? e['message'] as String : e.toString();
+    }
 
-    final newModel = OpportunityModel(
-      id: 'local_${DateTime.now().millisecondsSinceEpoch}',
-      title: title,
-      description: description,
-      posterUrl: posterUrl,
-      bannerUrl: bannerUrl,
-      subRoleSlug: subRoleSlug,
-      type: type,
-      location: location ?? 'Indonesia',
-      latitude: latitude ?? -6.2088,
-      longitude: longitude ?? 106.8456,
-      locationCategory: locationCategory ?? 'urban',
-      address: address,
-      deadline: deadline,
-      eventDate: eventDate,
-      eventStartDate: eventStartDate,
-      eventEndDate: eventEndDate,
-      eventStartTime: eventStartTime,
-      eventEndTime: eventEndTime,
-      budgetRange: budgetRange,
-      meetingDate: meetingDate,
-      meetingTime: meetingTime,
-      meetingLocation: meetingLocation,
-      meetingLat: meetingLat,
-      meetingLng: meetingLng,
-      meetingNotes: meetingNotes,
-      meetingStatus: (budgetRange != null && (budgetRange.contains('20.000.000') || budgetRange.contains('MoU')))
-          ? 'pending_marketing_review'
-          : 'not_required',
-      escrowStatus: (budgetRange != null && (budgetRange.contains('20.000.000') || budgetRange.contains('MoU')))
-          ? 'none'
-          : 'pending_deposit',
-      status: 'open',
-      poster: poster,
-    );
+    final newModel = apiResult ??
+        OpportunityModel(
+          id: 'local_${DateTime.now().millisecondsSinceEpoch}',
+          title: title,
+          description: description,
+          posterUrl: posterUrl,
+          bannerUrl: bannerUrl,
+          subRoleSlug: subRoleSlug,
+          type: type,
+          location: location ?? 'Indonesia',
+          latitude: latitude ?? -6.2088,
+          longitude: longitude ?? 106.8456,
+          locationCategory: locationCategory ?? 'urban',
+          address: address,
+          deadline: deadline,
+          eventDate: eventDate,
+          eventStartDate: eventStartDate,
+          eventEndDate: eventEndDate,
+          eventStartTime: eventStartTime,
+          eventEndTime: eventEndTime,
+          budgetRange: budgetRange,
+          meetingDate: meetingDate,
+          meetingTime: meetingTime,
+          meetingLocation: meetingLocation,
+          meetingLat: meetingLat,
+          meetingLng: meetingLng,
+          meetingNotes: meetingNotes,
+          meetingStatus: (budgetRange != null && (budgetRange.contains('20.000.000') || budgetRange.contains('MoU')))
+              ? 'pending_marketing_review'
+              : 'not_required',
+          escrowStatus: (budgetRange != null && (budgetRange.contains('20.000.000') || budgetRange.contains('MoU')))
+              ? 'none'
+              : 'pending_deposit',
+          status: 'open',
+          poster: poster,
+        );
 
-    await _loadLocalLocations();
-    _userCreatedLocations.insert(0, newModel);
-    await _saveLocalLocations();
+    if (apiResult == null) {
+      await _loadLocalLocations();
+      _userCreatedLocations.insert(0, newModel);
+      await _saveLocalLocations();
+    }
 
     return {
-      'status': true,
-      'message': 'Peluang proyek berhasil disimpan!',
+      'status': apiResult != null,
+      'message': apiResult != null
+          ? 'Peluang proyek berhasil dipublikasikan!'
+          : (errorMessage ?? 'Gagal menyimpan ke server. Data tersimpan lokal sementara.'),
       'data': newModel,
+      'is_local': apiResult == null,
     };
   }
 

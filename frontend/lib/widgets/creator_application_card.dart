@@ -91,17 +91,23 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
   ];
 
   final List<Map<String, String>> _categories = [
-    {'slug': 'institution', 'name': 'Institution'},
-    {'slug': 'government', 'name': 'Government'},
+    {'slug': 'institution', 'name': 'Institusi'},
+    {'slug': 'government', 'name': 'Pemerintah'},
+    {'slug': 'community', 'name': 'Komunitas'},
     {'slug': 'mc', 'name': 'MC'},
-    {'slug': 'singer', 'name': 'Singer'},
+    {'slug': 'singer', 'name': 'Penyanyi'},
     {'slug': 'wedding_organizer', 'name': 'Wedding Organizer'},
     {'slug': 'event_organizer', 'name': 'Event Organizer'},
-    {'slug': 'community', 'name': 'Community'},
     {'slug': 'makeup_artist', 'name': 'Makeup Artist'},
-    {'slug': 'photographer', 'name': 'Photographer'},
+    {'slug': 'photographer', 'name': 'Fotografer'},
     {'slug': 'editor', 'name': 'Editor'},
-    {'slug': 'videographer', 'name': 'Videographer'},
+    {'slug': 'videographer', 'name': 'Videografer'},
+    {'slug': 'content_creator', 'name': 'Content Creator'},
+    {'slug': 'animator', 'name': 'Animator'},
+    {'slug': 'designer', 'name': 'Desainer'},
+    {'slug': 'musician', 'name': 'Musisi'},
+    {'slug': 'talent', 'name': 'Talent'},
+    {'slug': 'drone_pilot', 'name': 'Drone Pilot'},
   ];
 
   @override

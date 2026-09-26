@@ -1400,165 +1400,226 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
     final locCtrl = TextEditingController();
     final isDesktop = MediaQuery.of(context).size.width >= 600;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    bool submitting = false;
 
     Widget buildFormContent(BuildContext ctx, {bool inDialog = false}) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!inDialog) ...[
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade400,
-                  borderRadius: BorderRadius.circular(2),
+      return StatefulBuilder(
+        builder: (ctx, setSheetState) => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!inDialog) ...[
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
+              const SizedBox(height: 16),
+            ],
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Ajukan Kolaborasi Baru',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                if (inDialog)
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    onPressed: () => Navigator.pop(ctx),
+                    tooltip: 'Tutup',
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Publikasikan proyek tim Anda agar kreator lain dapat mengajukan diri.',
+              style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
             ),
             const SizedBox(height: 16),
-          ],
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Ajukan Kolaborasi Baru',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            TextField(
+              controller: titleCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nama Proyek / Campaign *',
+                hintText: 'Contoh: Shooting Video Klip Musik Indie',
+                border: OutlineInputBorder(),
               ),
-              if (inDialog)
-                IconButton(
-                  icon: const Icon(Icons.close, size: 20),
-                  onPressed: () => Navigator.pop(ctx),
-                  tooltip: 'Tutup',
-                ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Publikasikan proyek tim Anda agar kreator lain dapat mengajukan diri.',
-            style: TextStyle(
-                fontSize: 12,
-                color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: titleCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Nama Proyek / Campaign *',
-              hintText: 'Contoh: Shooting Video Klip Musik Indie',
-              border: OutlineInputBorder(),
             ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: roleCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Peran yang Dibutuhkan (Pisahkan koma) *',
-              hintText: 'Contoh: Videografer, MUA, Sound Engineer',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: budgetCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Estimasi Budget / Pembagian Fee',
-              hintText: 'Contoh: Rp 10.000.000 (Bagi Hasil)',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: locCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Lokasi Eksekusi',
-              hintText: 'Contoh: Jakarta / Remote',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: descCtrl,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Deskripsi & Tujuan Proyek',
-              hintText: 'Ceritakan detail proyek dan kualifikasi yang dicari...',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: accentColor,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: roleCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Peran yang Dibutuhkan (Pisahkan koma) *',
+                hintText: 'Contoh: Videografer, MUA, Sound Engineer',
+                border: OutlineInputBorder(),
               ),
-              onPressed: () {
-                if (titleCtrl.text.trim().isEmpty) return;
-
-                final roles = roleCtrl.text.isNotEmpty
-                    ? roleCtrl.text
-                        .split(',')
-                        .map((e) => e.trim())
-                        .where((e) => e.isNotEmpty)
-                        .toList()
-                    : ['Partner Kreatif'];
-
-                setState(() {
-                  _collabs.insert(0, {
-                    'id': 'collab-',
-                    'name': widget.user?.name ?? 'Kreator Mandiri',
-                    'role': widget.user?.subRole != null
-                        ? widget.user!.subRole!.toUpperCase()
-                        : 'Kreator',
-                    'project': titleCtrl.text.trim(),
-                    'desc': descCtrl.text.trim().isNotEmpty
-                        ? descCtrl.text.trim()
-                        : 'Proyek kolaborasi baru yang siap dieksekusi bersama tim terpercaya.',
-                    'neededRoles': roles,
-                    'budget': budgetCtrl.text.trim().isNotEmpty
-                        ? budgetCtrl.text.trim()
-                        : 'Sesuai Kesepakatan',
-                    'compensationType': 'Escrow Aman',
-                    'status': 'Menunggu',
-                    'statusColor': const Color(0xFFF59E0B),
-                    'avatar': Icons.person_pin_rounded,
-                    'membersCount': 1,
-                    'maxMembers': roles.length + 1,
-                    'date': 'September 2026',
-                    'location': locCtrl.text.trim().isNotEmpty
-                        ? locCtrl.text.trim()
-                        : 'Indonesia',
-                    'tags': ['New', 'Collaboration'],
-                  });
-                });
-
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Proyek kolaborasi berhasil diajukan dan dipublikasikan!',
-                    ),
-                    backgroundColor: Colors.green,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: budgetCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Estimasi Budget / Pembagian Fee',
+                hintText: 'Contoh: Rp 10.000.000 (Bagi Hasil)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: locCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Lokasi Eksekusi',
+                hintText: 'Contoh: Jakarta / Remote',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: descCtrl,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Deskripsi & Tujuan Proyek',
+                hintText: 'Ceritakan detail proyek dan kualifikasi yang dicari...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accentColor,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                );
-              },
-              child: const Text(
-                'Publikasikan Kolaborasi',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
                 ),
+                onPressed: submitting
+                    ? null
+                    : () async {
+                        if (titleCtrl.text.trim().isEmpty) return;
+                        setSheetState(() => submitting = true);
+                        try {
+                          final now = DateTime.now();
+                          final monthNames = [
+                            'Januari', 'Februari', 'Maret', 'April',
+                            'Mei', 'Juni', 'Juli', 'Agustus',
+                            'September', 'Oktober', 'November', 'Desember'
+                          ];
+                          final dateLabel =
+                              '${monthNames[now.month - 1]} ${now.year}';
+                          final roles = roleCtrl.text.isNotEmpty
+                              ? roleCtrl.text
+                                  .split(',')
+                                  .map((e) => e.trim())
+                                  .where((e) => e.isNotEmpty)
+                                  .toList()
+                              : ['Partner Kreatif'];
+
+                          final res = await ApiService.post(
+                            'collaborations',
+                            {
+                              'project_title': titleCtrl.text.trim(),
+                              'description': descCtrl.text.trim().isNotEmpty
+                                  ? descCtrl.text.trim()
+                                  : 'Peran yang dibutuhkan: ${roles.join(', ')}',
+                              'budget': budgetCtrl.text.trim(),
+                              'location': locCtrl.text.trim(),
+                              'invitees': widget.user != null
+                                  ? [
+                                      {
+                                        'user_id': widget.user!.id,
+                                        'role': roles.first,
+                                      }
+                                    ]
+                                  : [],
+                            },
+                          );
+                          final created = res['data'];
+                          if (mounted) {
+                            setState(() {
+                              _collabs.insert(0, {
+                                'id': created?['id'] ??
+                                    'collab-${now.millisecondsSinceEpoch}',
+                                'name': widget.user?.name ?? 'Kreator Mandiri',
+                                'role': widget.user?.subRole != null
+                                    ? widget.user!.subRole!.toUpperCase()
+                                    : (roles.isNotEmpty ? roles.first : 'Kreator'),
+                                'project': titleCtrl.text.trim(),
+                                'desc': descCtrl.text.trim().isNotEmpty
+                                    ? descCtrl.text.trim()
+                                    : 'Proyek kolaborasi baru yang siap dieksekusi bersama tim terpercaya.',
+                                'neededRoles': roles,
+                                'budget': budgetCtrl.text.trim().isNotEmpty
+                                    ? budgetCtrl.text.trim()
+                                    : 'Sesuai Kesepakatan',
+                                'compensationType': 'Escrow Aman',
+                                'status': 'Menunggu',
+                                'statusColor': const Color(0xFFF59E0B),
+                                'avatar': Icons.person_pin_rounded,
+                                'membersCount':
+                                    (created?['members'] as List?)?.length ?? 1,
+                                'maxMembers': roles.length + 1,
+                                'date': dateLabel,
+                                'location': locCtrl.text.trim().isNotEmpty
+                                    ? locCtrl.text.trim()
+                                    : 'Indonesia',
+                                'tags': ['New', 'Collaboration'],
+                              });
+                            });
+                          }
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Proyek kolaborasi berhasil diajukan dan dipublikasikan!',
+                                ),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(
+                                content: Text('Gagal mengirim pengajuan: $e'),
+                              ),
+                            );
+                          }
+                        } finally {
+                          if (ctx.mounted) {
+                            setSheetState(() => submitting = false);
+                          }
+                        }
+                      },
+                child: submitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Publikasikan Kolaborasi',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
     }
 

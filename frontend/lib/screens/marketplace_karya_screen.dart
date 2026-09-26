@@ -27,21 +27,13 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
 
   List<MarketplaceItem> _items = [];
   List<MarketplaceItem> _featured = [];
+  List<String> _allCategories = ['Semua'];
   String _selectedCategory = 'Semua';
   String _sortBy = 'latest';
   bool _isLoading = true;
   bool _isLoadingMore = false;
   int _currentPage = 1;
   bool _hasMore = true;
-
-  static const _allCategories = [
-    'Semua',
-    'Fotografi',
-    'Videografi',
-    'Desain',
-    'Konten',
-    'Branding',
-  ];
 
   Timer? _debounce;
 
@@ -105,7 +97,19 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                 .toList();
           }
           if (catRes['status'] == true && catRes['data'] != null) {
-            // Categories loaded (used for future filter expansion)
+            final raw = catRes['data'];
+            final List<dynamic> catList = raw is List ? raw : (raw['data'] ?? []);
+            final fetched = <String>['Semua'];
+            for (final c in catList) {
+              final name = (c is Map ? (c['name'] ?? c['title'] ?? c['slug']) : c)?.toString();
+              if (name != null && name.isNotEmpty) fetched.add(name);
+            }
+            if (fetched.length > 1) {
+              _allCategories = fetched;
+              if (!_allCategories.contains(_selectedCategory)) {
+                _selectedCategory = 'Semua';
+              }
+            }
           }
           _parseItems(itemsRes);
           _isLoading = false;

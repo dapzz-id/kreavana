@@ -16,10 +16,12 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _isLoading = false;
-  final int _totalUsers = 120;
-  int _activeCreators = 45;
+  int _totalUsers = 0;
+  int _activeCreators = 0;
   int _pendingVerifications = 0;
-  final int _completedProjects = 88;
+  int _completedProjects = 0;
+  int _activeOpportunities = 0;
+  int _openDisputes = 0;
   List<Map<String, dynamic>> _systemLogs = [];
 
   @override
@@ -31,15 +33,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Future<void> _loadAdminStats() async {
     setState(() => _isLoading = true);
     try {
-      final pendingApps = await AdminService.getApplications(status: 'pending');
-      final approvedApps = await AdminService.getApplications(
-        status: 'approved',
-      );
-      final logs = await AdminService.getSystemLogs();
+      final results = await Future.wait([
+        AdminService.getDashboardSummary(),
+        AdminService.getApplications(status: 'pending'),
+        AdminService.getSystemLogs(),
+      ]);
+      final summary = results[0] as Map<String, dynamic>;
+      final pendingApps = results[1] as List;
+      final logs = results[2] as List<Map<String, dynamic>>;
       if (mounted) {
         setState(() {
-          _pendingVerifications = pendingApps.length;
-          _activeCreators = 35 + approvedApps.length; // baseline + verified
+          _totalUsers = (summary['total_users'] as num?)?.toInt() ?? 0;
+          _activeCreators = (summary['active_creators'] as num?)?.toInt() ?? 0;
+          _completedProjects = (summary['completed_projects'] as num?)?.toInt() ?? 0;
+          _activeOpportunities = (summary['active_opportunities'] as num?)?.toInt() ?? 0;
+          _openDisputes = (summary['open_disputes'] as num?)?.toInt() ?? 0;
+          _pendingVerifications =
+              (summary['pending_applications'] as num?)?.toInt() ?? pendingApps.length;
           _systemLogs = logs;
           _isLoading = false;
         });

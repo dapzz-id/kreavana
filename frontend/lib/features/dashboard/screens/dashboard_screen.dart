@@ -850,6 +850,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                           budgetRange: item['price']?.toString() ?? 'Sesuaikan',
                           status: 'open',
                           postedBy: 'admin',
+                          // Placeholder onboarding: poster admin default untuk
+                          // card demo rekomendasi saat user pertama kali buka
+                          // dashboard. User klik → akan tampil detail sample.
                           poster: OpportunityPoster(
                             id: 'admin',
                             name: 'Kreavana Verified Client',
