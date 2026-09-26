@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:kreavana/services/secure_storage_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter/foundation.dart';
 import 'auth_session_state.dart';
 import 'encryption_service.dart';
 
@@ -29,16 +28,11 @@ class DioClient {
       if (dotenv.isInitialized) {
         final envUrl = dotenv.env['API_BASE_URL'];
         if (envUrl != null && envUrl.isNotEmpty) {
-          if (kIsWeb &&
-              Uri.base.scheme == 'https' &&
-              (envUrl.startsWith('http://127.0.0.1') || envUrl.startsWith('http://localhost'))) {
-            return 'https://670a-114-10-72-54.ngrok-free.app/api';
-          }
           return envUrl;
         }
       }
     } catch (_) {}
-    return 'https://670a-114-10-72-54.ngrok-free.app/api';
+    return 'http://127.0.0.1:8000/api';
   }
 
   DioClient._internal() {
