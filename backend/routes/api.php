@@ -150,7 +150,7 @@ Route::middleware('auth:api')->group(function () {
         Route::get('opportunities', [DashboardController::class, 'opportunities']);
     });
     // Wallet
-    Route::prefix('wallet')->middleware('permission:manage_own_profile')->group(function () {
+    Route::prefix('wallet')->middleware(['permission:manage_own_profile', 'module:wallet_enabled'])->group(function () {
         Route::get('info', [WalletController::class, 'info']);
         Route::get('has-pin', [WalletController::class, 'hasPin']);
         Route::post('set-pin', [WalletController::class, 'setPin']);
@@ -343,7 +343,7 @@ Route::middleware('auth:api')->group(function () {
     });
 
     // Marketplace (write operations)
-    Route::prefix('marketplace')->group(function () {
+    Route::prefix('marketplace')->middleware('module:marketplace_enabled')->group(function () {
         Route::post('/', [MarketplaceController::class, 'store']);
         Route::put('{id}', [MarketplaceController::class, 'update']);
         Route::delete('{id}', [MarketplaceController::class, 'destroy']);
@@ -384,7 +384,7 @@ Route::middleware('auth:api')->group(function () {
     });
 
     // AI Service (Protected)
-    Route::prefix('ai')->group(function () {
+    Route::prefix('ai')->middleware('module:ai_features_enabled')->group(function () {
         Route::post('summarize-report', [AiController::class, 'summarizeReport']);
         Route::post('recommendations', [AiController::class, 'getRecommendations']);
         Route::post('message-assistant', [AiController::class, 'messageAssistant']);
@@ -403,7 +403,7 @@ Route::get('storage/{id}/view', [StorageController::class, 'view']);
 Route::get('storage/{id}/download', [StorageController::class, 'download']);
 
 // Marketplace (public read)
-Route::prefix('marketplace')->group(function () {
+Route::prefix('marketplace')->middleware('module:marketplace_enabled')->group(function () {
     Route::get('/', [MarketplaceController::class, 'index']);
     Route::get('featured', [MarketplaceController::class, 'featured']);
     Route::get('categories', [MarketplaceController::class, 'categories']);

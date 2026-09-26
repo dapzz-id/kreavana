@@ -12,6 +12,7 @@ import 'services/push_notification_service.dart';
 import 'services/call_service.dart';
 import 'services/badge_service.dart';
 import 'services/user_store.dart';
+import 'services/system_settings_service.dart';
 import 'services/app_router.dart';
 import 'services/encryption_service.dart';
 import 'services/secure_storage_service.dart';
@@ -91,7 +92,8 @@ void main() async {
     ),
   );
 
-  // Inisialisasi notifikasi di background — jangan blokir splash/login.
+  // Inisialisasi status modul & notifikasi di background — jangan blokir splash/login.
+  unawaited(SystemSettingsService.loadModuleStatuses());
   unawaited(PushNotificationService.initialize());
 
   // Error handling global Flutter.
