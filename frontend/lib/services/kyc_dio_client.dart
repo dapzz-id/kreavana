@@ -113,6 +113,14 @@ class KycDioClient {
               return handler.next(error);
             }
 
+            // Jika user belum pernah login / tamu tanpa token, jangan paksa logout
+            final currentToken = await _secureStorage.getToken();
+            final rToken = await _secureStorage.getRefreshToken();
+            if ((currentToken == null || currentToken.isEmpty) &&
+                (rToken == null || rToken.isEmpty)) {
+              return handler.next(error);
+            }
+
             final isRefreshed = await _refreshToken();
             if (isRefreshed) {
               try {

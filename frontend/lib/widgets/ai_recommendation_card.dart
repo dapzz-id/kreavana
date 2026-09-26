@@ -7,6 +7,7 @@ import '../widgets/auth_guard_dialog.dart';
 import '../widgets/upgrade_plan_modal.dart';
 import '../widgets/opportunity_detail_sheet.dart';
 import '../screens/explore_screen.dart';
+import '../services/user_store.dart';
 
 /// Monochromatic Violet AI Recommendation Card Widget.
 /// Allows Plus, Pro, and Super subscribers to get tailored AI recommendations
@@ -82,7 +83,8 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
 
   Future<void> _fetchRecommendations() async {
     // 1. Intercept Guest user
-    if (widget.user?.isGuest == true) {
+    final currentUser = widget.user ?? currentUserNotifier.value;
+    if (currentUser == null || currentUser.isGuest) {
       AuthGuardDialog.show(context, actionName: 'mengakses Rekomendasi AI Pintar');
       return;
     }
