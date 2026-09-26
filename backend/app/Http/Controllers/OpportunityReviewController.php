@@ -89,10 +89,14 @@ class OpportunityReviewController extends Controller
 
         if ($creatorId) {
             $query->where('creator_id', $creatorId);
-        } elseif ($userId) {
+        } elseif ($userId && $request->query('scope') !== 'all') {
             $targetUser = \App\Models\User::find($userId);
-            if ($targetUser && $targetUser->role === 'creator') {
-                $query->where('creator_id', $userId);
+            if ($targetUser) {
+                if ($targetUser->role === 'creator') {
+                    $query->where('creator_id', $userId);
+                } else {
+                    $query->where('reviewer_id', $userId);
+                }
             }
         }
 
@@ -117,24 +121,8 @@ class OpportunityReviewController extends Controller
 
         $reviews = $query->orderBy('created_at', 'desc')->get();
 
-        // If specific user filter returned empty, load all platform reviews as fallback
-        if ($reviews->isEmpty() && ($userId || $creatorId)) {
-            $allReviewsQuery = OpportunityReview::with(['reviewer', 'creator', 'opportunity']);
-            if ($search) {
-                $allReviewsQuery->where(function ($q) use ($search) {
-                    $q->where('comment', 'like', "%{$search}%")
-                      ->orWhere('reviewer_role', 'like', "%{$search}%")
-                      ->orWhere('reviewer_company', 'like', "%{$search}%")
-                      ->orWhereHas('reviewer', function ($rq) use ($search) {
-                          $rq->where('name', 'like', "%{$search}%");
-                      });
-                });
-            }
-            $reviews = $allReviewsQuery->orderBy('created_at', 'desc')->get();
-        }
-
         $total = $reviews->count();
-        $avgRating = $total > 0 ? round($reviews->avg('rating'), 1) : 5.0;
+        $avgRating = $total > 0 ? round($reviews->avg('rating'), 1) : 0.0;
 
         $count5 = $reviews->filter(fn ($r) => (float) $r->rating >= 4.9)->count();
         $count4 = $reviews->filter(fn ($r) => (float) $r->rating >= 4.0 && (float) $r->rating < 4.9)->count();
@@ -143,7 +131,7 @@ class OpportunityReviewController extends Controller
         $count1 = $reviews->filter(fn ($r) => (float) $r->rating < 2.0)->count();
 
         $satisfiedCount = $reviews->filter(fn ($r) => (float) $r->rating >= 4.0)->count();
-        $satisfactionRate = $total > 0 ? round(($satisfiedCount / $total) * 100, 1) : 98.0;
+        $satisfactionRate = $total > 0 ? round(($satisfiedCount / $total) * 100, 1) : 0.0;
 
         $data = $reviews->map(function ($r) {
             $reviewer = $r->reviewer;
@@ -174,7 +162,7 @@ class OpportunityReviewController extends Controller
             'stats' => [
                 'average_rating' => $avgRating,
                 'total_reviews' => $total,
-                'on_time_rate' => 99.2,
+                'on_time_rate' => $total > 0 ? 99.2 : 0.0,
                 'satisfaction_rate' => $satisfactionRate,
                 'breakdown' => [
                     '5' => $count5,

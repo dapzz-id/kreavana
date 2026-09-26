@@ -220,23 +220,37 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
     final total = _dbStats?['total_reviews'] != null
         ? (_dbStats!['total_reviews'] as num).toInt()
         : _reviews.length;
-    double avgRating = 5.0;
-    if (_dbStats?['average_rating'] != null) {
-      avgRating = (_dbStats!['average_rating'] as num).toDouble();
-    } else if (_reviews.isNotEmpty) {
-      final sum = _reviews.fold<double>(
-        0.0,
-        (prev, r) => prev + ((r['rating'] as num?)?.toDouble() ?? 5.0),
-      );
-      avgRating = sum / _reviews.length;
+    double avgRating = 0.0;
+    if (total > 0) {
+      if (_dbStats?['average_rating'] != null) {
+        avgRating = (_dbStats!['average_rating'] as num).toDouble();
+      } else if (_reviews.isNotEmpty) {
+        final sum = _reviews.fold<double>(
+          0.0,
+          (prev, r) => prev + ((r['rating'] as num?)?.toDouble() ?? 0.0),
+        );
+        avgRating = sum / _reviews.length;
+      }
     }
 
-    final onTimeStr = _dbStats?['on_time_rate'] != null
-        ? '${_dbStats!['on_time_rate']}%'
-        : '99.2%';
-    final satisfactionStr = _dbStats?['satisfaction_rate'] != null
-        ? '${_dbStats!['satisfaction_rate']}%'
-        : '98%';
+    final onTimeStr = total > 0
+        ? (_dbStats?['on_time_rate'] != null ? '${_dbStats!['on_time_rate']}%' : '100%')
+        : '0%';
+    final satisfactionStr = total > 0
+        ? (_dbStats?['satisfaction_rate'] != null ? '${_dbStats!['satisfaction_rate']}%' : '100%')
+        : '0%';
+
+    final isCreator = widget.user?.isCreator ?? false;
+    final isVerified = isCreator
+        ? (widget.user?.isCreatorVerified ?? false)
+        : (widget.user?.isClientVerified ?? false);
+
+    // Color and label according to Kreavana VerificationBadge rules:
+    // Creator: Green (0xFF10B981) -> "Kreator Terverifikasi"
+    // Client: Blue (0xFF2563EB) -> "Klien Terverifikasi"
+    final badgeColor = isCreator ? const Color(0xFF10B981) : const Color(0xFF2563EB);
+    final verifiedLabel = isCreator ? 'Kreator Terverifikasi' : 'Klien Terverifikasi';
+    final unverifiedLabel = isCreator ? 'Kreator Belum Terverifikasi' : 'Klien Belum Terverifikasi';
 
     final isMobile = MediaQuery.of(context).size.width < 600;
 
@@ -283,7 +297,7 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
                         color: Colors.amber, size: 28),
                     const SizedBox(width: 8),
                     Text(
-                      avgRating.toStringAsFixed(1),
+                      total > 0 ? avgRating.toStringAsFixed(1) : '0.0',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 26,
@@ -303,34 +317,62 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
                 ),
               ),
               const Spacer(),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.verified_rounded, size: 16, color: accentColor),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Kreator Terverifikasi',
-                      style: TextStyle(
-                        color: accentColor,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
+              if (isVerified)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 8,
                       ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.verified_rounded, size: 16, color: badgeColor),
+                      const SizedBox(width: 6),
+                      Text(
+                        verifiedLabel,
+                        style: TextStyle(
+                          color: badgeColor,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.28),
                     ),
-                  ],
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.shield_outlined,
+                          size: 15, color: Colors.white70),
+                      const SizedBox(width: 6),
+                      Text(
+                        unverifiedLabel,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 20),
