@@ -14,6 +14,7 @@ import '../../../screens/proyek_saya_screen.dart';
 import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
 import '../../../screens/profile_screen.dart';
+import '../../../widgets/waving_hand_emoji.dart';
 
 class CompanyDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -376,12 +377,19 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Selamat datang, ${widget.user.name}! 👋',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    'Selamat datang, ${widget.user.name}!',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const WavingHandEmoji(fontSize: 24),
+                ],
               ),
               const SizedBox(height: 8),
               Text(
@@ -398,7 +406,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
         ElevatedButton.icon(
           onPressed: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const BuatKebutuhanScreen()),
+            MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: widget.user)),
           ),
           icon: const Icon(Icons.add, size: 18),
           label: const Text('Buat Paket / Event Baru'),
@@ -962,7 +970,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const BuatKebutuhanScreen(),
+                      builder: (_) => BuatKebutuhanScreen(user: widget.user),
                     ),
                   );
                 },

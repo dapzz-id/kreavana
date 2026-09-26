@@ -183,7 +183,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         }
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const BuatKebutuhanScreen()),
+          MaterialPageRoute(
+            builder: (_) => BuatKebutuhanScreen(user: widget.user),
+          ),
         );
         break;
       case 'Cari Kreator':
@@ -1914,6 +1916,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   PreferredSizeWidget _buildAppBar(bool isDark) {
     return AppBar(
       toolbarHeight: 70,
+      automaticallyImplyLeading: false,
       title: Row(
         children: [
           // Search bar

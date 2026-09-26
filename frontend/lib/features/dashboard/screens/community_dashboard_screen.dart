@@ -9,6 +9,7 @@ import '../../../screens/buat_kebutuhan_screen.dart';
 import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
 import '../../../screens/peluang_proyek_screen.dart';
+import '../../../widgets/waving_hand_emoji.dart';
 
 class CommunityDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -195,12 +196,19 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Selamat datang, ${widget.user.name}! 👋',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    'Selamat datang, ${widget.user.name}!',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const WavingHandEmoji(fontSize: 24),
+                ],
               ),
               const SizedBox(height: 8),
               Text(
@@ -217,7 +225,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
         ElevatedButton.icon(
           onPressed: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const BuatKebutuhanScreen()),
+            MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: widget.user)),
           ),
           icon: const Icon(Icons.add, size: 18),
           label: const Text('Buat Kegiatan / Proyek Baru'),
@@ -804,7 +812,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
                 onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const BuatKebutuhanScreen(),
+                    builder: (_) => BuatKebutuhanScreen(user: widget.user),
                   ),
                 ),
                 style: ElevatedButton.styleFrom(backgroundColor: _commPurple),

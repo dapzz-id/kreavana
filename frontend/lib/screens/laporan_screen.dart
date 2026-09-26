@@ -21,13 +21,10 @@ class LaporanScreen extends StatelessWidget {
     final content = Scaffold(
       appBar: AppBar(
         toolbarHeight: 75,
+        automaticallyImplyLeading: MediaQuery.of(context).size.width <= 900,
         title: const Text(
           'Laporan',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: ListView.builder(

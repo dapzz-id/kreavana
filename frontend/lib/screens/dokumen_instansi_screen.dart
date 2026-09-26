@@ -19,6 +19,7 @@ class DokumenInstansiScreen extends StatelessWidget {
     final content = Scaffold(
       appBar: AppBar(
         toolbarHeight: 75,
+        automaticallyImplyLeading: MediaQuery.of(context).size.width <= 900,
         title: const Text(
           'Dokumen Instansi',
           style: TextStyle(fontWeight: FontWeight.bold),

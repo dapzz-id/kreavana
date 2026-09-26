@@ -31,8 +31,16 @@ import '../models/user_model.dart';
 class DirectMessageScreen extends StatefulWidget {
   final UserModel? currentUser;
   final dynamic chatId;
+  final Map<String, dynamic>? initialChat;
+  final String? targetUserId;
 
-  const DirectMessageScreen({super.key, this.currentUser, this.chatId});
+  const DirectMessageScreen({
+    super.key,
+    this.currentUser,
+    this.chatId,
+    this.initialChat,
+    this.targetUserId,
+  });
 
   @override
   State<DirectMessageScreen> createState() => _DirectMessageScreenState();
@@ -48,6 +56,64 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
   void initState() {
     super.initState();
     BadgeService().markMessagesRead();
+    if (widget.initialChat != null) {
+      selectedChat = widget.initialChat;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && MediaQuery.of(context).size.width <= 800) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => Scaffold(
+                body: ChatDetailSection(
+                  chat: widget.initialChat!,
+                  isMobile: true,
+                  onMessageSent: () {
+                    chatListKey.currentState?.loadChats();
+                  },
+                  onChatLeft: () {
+                    chatListKey.currentState?.loadChats();
+                  },
+                ),
+              ),
+            ),
+          );
+        }
+      });
+    } else if (widget.targetUserId != null) {
+      _initTargetUserChat();
+    }
+  }
+
+  Future<void> _initTargetUserChat() async {
+    try {
+      final res = await ChatService.startPersonalChat(widget.targetUserId!);
+      if (res['status'] == true && res['data'] != null && mounted) {
+        final chat = Map<String, dynamic>.from(res['data']);
+        setState(() {
+          selectedChat = chat;
+        });
+        chatListKey.currentState?.loadChats();
+        if (MediaQuery.of(context).size.width <= 800) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => Scaffold(
+                body: ChatDetailSection(
+                  chat: chat,
+                  isMobile: true,
+                  onMessageSent: () {
+                    chatListKey.currentState?.loadChats();
+                  },
+                  onChatLeft: () {
+                    chatListKey.currentState?.loadChats();
+                  },
+                ),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -644,7 +710,10 @@ class ChatListSectionState extends State<ChatListSection> {
     final isGroup = chat['isGroup'] == true;
     final isTyping = chat['isTyping'] == true;
     final isOnline = chat['isOnline'] == true;
-    final name = chat['name']?.toString() ?? 'Unknown';
+    final rawName = chat['name']?.toString() ?? '';
+    final name = (rawName.isEmpty || rawName == 'null' || rawName.toLowerCase() == 'unknown')
+        ? (chat['username']?.toString() ?? 'Kreator Partner')
+        : rawName;
     final lastMessage = chat['lastMessage']?.toString() ?? '';
     final time = chat['time']?.toString() ?? '';
     final avatarUrl = ApiService.resolveAssetUrl(
@@ -912,6 +981,7 @@ class ChatListSectionState extends State<ChatListSection> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
+        automaticallyImplyLeading: MediaQuery.of(context).size.width <= 900,
         title: const Text(
           'Obrolan',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -2103,8 +2173,10 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     final isGroup = chat['isGroup'] == true;
     final isTyping = chat['isTyping'] == true;
     final isOnline = chat['isOnline'] == true;
-
-    final name = chat['name']?.toString() ?? 'Unknown';
+    final rawName = chat['name']?.toString() ?? '';
+    final name = (rawName.isEmpty || rawName == 'null' || rawName.toLowerCase() == 'unknown')
+        ? (chat['username']?.toString() ?? 'Kreator Partner')
+        : rawName;
     final username = chat['username']?.toString();
     final phone = chat['phone']?.toString() ?? '';
     final email = chat['email']?.toString();
@@ -2388,7 +2460,13 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.chat['name'] ?? 'Unknown',
+                      ((widget.chat['name']?.toString() ?? '').isEmpty ||
+                              widget.chat['name']?.toString() == 'null' ||
+                              widget.chat['name']?.toString().toLowerCase() ==
+                                  'unknown')
+                          ? (widget.chat['username']?.toString() ??
+                              'Kreator Partner')
+                          : widget.chat['name'].toString(),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

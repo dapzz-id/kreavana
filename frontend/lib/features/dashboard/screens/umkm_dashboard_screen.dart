@@ -14,6 +14,7 @@ import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
 import '../../../screens/buat_kebutuhan_screen.dart';
 import '../../../screens/peluang_proyek_screen.dart';
+import '../../../widgets/waving_hand_emoji.dart';
 
 class UmkmDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -282,13 +283,20 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          Text(
-            'Halo, ${widget.user.name}! 👋',
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-            ),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                'Halo, ${widget.user.name}!',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const WavingHandEmoji(fontSize: 22),
+            ],
           ),
           const SizedBox(height: 6),
           Text(

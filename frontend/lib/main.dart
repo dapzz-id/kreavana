@@ -162,6 +162,7 @@ class KreavanaApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: currentMode,
+          themeAnimationDuration: Duration.zero,
           builder: (context, child) {
             return Stack(
               children: [

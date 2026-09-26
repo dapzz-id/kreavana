@@ -33,13 +33,14 @@ class ChatService extends BaseService
         $chats = $this->chatRepo->getUserChats($userId);
 
         return $chats->map(function ($chat) use ($userId) {
+            $chatType = $chat->type instanceof \BackedEnum ? $chat->type->value : (string) $chat->type;
             $name = $chat->name;
             $otherUserId = null;
             $otherUsername = null;
             $otherAvatar = null;
             $lastOnline = null;
 
-            if ($chat->type === 'personal') {
+            if ($chatType === 'personal' || $chatType === 'direct') {
                 $otherParticipant = $chat->participants->firstWhere('user_id', '!=', $userId);
                 if ($otherParticipant && $otherParticipant->user) {
                     $name = $otherParticipant->user->name;
@@ -48,7 +49,7 @@ class ChatService extends BaseService
                     $otherAvatar = $otherParticipant->user->avatar_url;
                     $lastOnline = $otherParticipant->user->last_online;
                 } else {
-                    $name = 'Unknown';
+                    $name = !empty($chat->name) ? $chat->name : 'Unknown';
                 }
             }
 
@@ -60,11 +61,11 @@ class ChatService extends BaseService
                 'description' => $chat->description,
                 'user_id' => $otherUserId,
                 'username' => $otherUsername,
-                'avatar_url' => $chat->type === 'group' ? $chat->avatar_url : $otherAvatar,
+                'avatar_url' => $chatType === 'group' ? $chat->avatar_url : $otherAvatar,
                 'isOnline' => $lastOnline ? \Carbon\Carbon::parse($lastOnline)->diffInSeconds(now()) < 10 : false,
                 'last_online' => $lastOnline ? \Carbon\Carbon::parse($lastOnline)->diffForHumans() : null,
                 'last_online_raw' => $lastOnline,
-                'isGroup' => $chat->type === 'group',
+                'isGroup' => $chatType === 'group',
                 'onlyAdminCanAdd' => (bool) $chat->only_admin_can_add,
                 'lastMessage' => $lastMessage ? $lastMessage->message : 'Belum ada pesan',
                 'time' => $lastMessage ? $this->formatChatTime($lastMessage->created_at) : '',

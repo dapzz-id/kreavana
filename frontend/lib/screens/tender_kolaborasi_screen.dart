@@ -27,6 +27,7 @@ class _TenderKolaborasiScreenState extends State<TenderKolaborasiScreen> {
     final content = Scaffold(
       appBar: AppBar(
         toolbarHeight: 75,
+        automaticallyImplyLeading: MediaQuery.of(context).size.width <= 900,
         title: const Text(
           'Tender & Kolaborasi',
           style: TextStyle(fontWeight: FontWeight.bold),

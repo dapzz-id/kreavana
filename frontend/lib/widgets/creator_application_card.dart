@@ -1738,9 +1738,11 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
   }
 
   Widget _buildApprovedCard(bool isDark) {
+    final isCompact = MediaQuery.of(context).size.width < 600;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isCompact ? 14 : 20),
       decoration: BoxDecoration(
         color: Colors.green.shade50.withValues(alpha: isDark ? 0.1 : 0.9),
         borderRadius: BorderRadius.circular(16),
@@ -1751,23 +1753,29 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
         children: [
           Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.green.shade700, size: 28),
-              const SizedBox(width: 10),
-              Text(
-                'Kreator Aktif',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green.shade800,
+              Icon(
+                Icons.check_circle,
+                color: Colors.green.shade700,
+                size: isCompact ? 24 : 28,
+              ),
+              SizedBox(width: isCompact ? 8 : 10),
+              Expanded(
+                child: Text(
+                  'Kreator Aktif',
+                  style: TextStyle(
+                    fontSize: isCompact ? 16 : 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade800,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: isCompact ? 8 : 10),
           Text(
             'Akun Anda telah diverifikasi sebagai Creator.',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: isCompact ? 12.5 : 14,
               color: isDark ? Colors.white70 : Colors.green.shade900,
             ),
           ),

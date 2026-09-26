@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
-import '../main.dart' show themeNotifier;
 import '../features/auth/services/auth_service.dart';
 import '../utils/app_errors.dart';
 import 'profile_screen.dart';
@@ -15,6 +14,7 @@ import 'client_verification_page.dart';
 import 'creator_application_page.dart';
 import 'package:go_router/go_router.dart';
 import '../services/app_router.dart';
+import '../services/theme_transition_service.dart';
 import '../widgets/kreavana_image.dart';
 import '../widgets/app_breadcrumbs.dart';
 import 'main_navigation.dart';
@@ -531,7 +531,10 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                 isDark: isDark,
                 isLast: true,
                 onChanged: (v) {
-                  themeNotifier.value = v ? ThemeMode.dark : ThemeMode.light;
+                  ThemeTransitionService.animateToggle(
+                    origin: const Offset(0, 0),
+                    toDark: v,
+                  );
                 },
               ),
             ],

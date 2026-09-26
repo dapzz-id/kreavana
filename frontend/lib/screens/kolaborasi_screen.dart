@@ -3,6 +3,7 @@ import '../app/theme.dart';
 import '../app/subrole_theme_engine.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
+import '../services/chat_service.dart';
 import 'direct_message_screen.dart';
 import '../widgets/skeleton/skeleton_list.dart';
 import '../widgets/app_breadcrumbs.dart';
@@ -27,7 +28,10 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
   final List<Map<String, dynamic>> _defaultCollabs = [
     {
       'id': 'collab-1',
+      'user_id': '01a0d6c1-60a3-727c-b1da-3c7be8aad5bd',
       'name': 'Dimas Arya',
+      'email': 'dimas.arya@kreavana.id',
+      'username': 'dimas_arya',
       'role': 'Director & Produser',
       'avatar': Icons.videocam_rounded,
       'project': 'Produksi Video Iklan Pariwisata Wonderful Indonesia 2026',
@@ -46,7 +50,10 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
     },
     {
       'id': 'collab-2',
+      'user_id': '01a0d6c1-620b-70c9-a2c7-ba80501c8f12',
       'name': 'Sarah Putri',
+      'email': 'sarah.putri@kreavana.id',
+      'username': 'sarah_putri',
       'role': 'Brand Strategist',
       'avatar': Icons.palette_rounded,
       'project': 'Rebranding & Desain Kemasan UMKM Kopi Kintamani',
@@ -65,7 +72,10 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
     },
     {
       'id': 'collab-3',
+      'user_id': '01a0d6c1-636e-71dd-beb6-a4210fb07ffb',
       'name': 'Kevin Jonathan',
+      'email': 'kevin.jonathan@kreavana.id',
+      'username': 'kevin_jonathan',
       'role': 'Fashion Photographer',
       'avatar': Icons.camera_alt_rounded,
       'project': 'Photoshoot Editorial Fashion Raya Collection 2026',
@@ -84,7 +94,10 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
     },
     {
       'id': 'collab-4',
+      'user_id': '01a0d6c1-64d5-7196-9c3c-af3580eccef5',
       'name': 'Aditya Pratama',
+      'email': 'aditya.pratama@kreavana.id',
+      'username': 'aditya_pratama',
       'role': 'Sound Designer & Composer',
       'avatar': Icons.music_note_rounded,
       'project': 'Original Score & Sound Design Film Pendek "Suara Pesisir"',
@@ -103,7 +116,10 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
     },
     {
       'id': 'collab-5',
+      'user_id': '01a0d6c1-663b-7084-aaa9-b49fa038ad6c',
       'name': 'Nabila Zahra',
+      'email': 'nabila.zahra@kreavana.id',
+      'username': 'nabila_zahra',
       'role': 'Social Media Specialist',
       'avatar': Icons.campaign_rounded,
       'project': 'Campaign Konten Tiktok & Reels Kuliner Nusantara',
@@ -503,6 +519,131 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
     );
   }
 
+  // ── Helper Avatar Icon ─────────────────────────────────────────────────────
+  IconData _resolveAvatarIcon(dynamic avatar) {
+    if (avatar is IconData) return avatar;
+    if (avatar is String) {
+      switch (avatar.toLowerCase()) {
+        case 'videocam':
+          return Icons.videocam_rounded;
+        case 'palette':
+          return Icons.palette_rounded;
+        case 'camera':
+          return Icons.camera_alt_rounded;
+        case 'music':
+          return Icons.music_note_rounded;
+        case 'campaign':
+          return Icons.campaign_rounded;
+        default:
+          return Icons.person_rounded;
+      }
+    }
+    return Icons.person_rounded;
+  }
+
+  // ── Open Team / Lead Creator Chat ──────────────────────────────────────────
+  Future<void> _openTeamChat(BuildContext context, Map<String, dynamic> c) async {
+    final userId = (c['user_id'] ?? c['userId'])?.toString();
+    final creatorName = c['name']?.toString() ?? 'Kreator Partner';
+
+    if (userId == null || userId.isEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const DirectMessageScreen(),
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dCtx) => Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 16,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 30,
+                height: 30,
+                child: CircularProgressIndicator(strokeWidth: 3),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Menghubungkan ke $creatorName...',
+                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final res = await ChatService.startPersonalChat(userId);
+      if (!context.mounted) return;
+      Navigator.pop(context); // Tutup dialog loading
+
+      if (res['status'] == true && res['data'] != null) {
+        final chatData = Map<String, dynamic>.from(res['data']);
+        final isDesktop = MediaQuery.of(context).size.width > 800;
+
+        if (isDesktop) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DirectMessageScreen(
+                initialChat: chatData,
+                chatId: chatData['id'],
+              ),
+            ),
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => Scaffold(
+                body: ChatDetailSection(
+                  chat: chatData,
+                  isMobile: true,
+                ),
+              ),
+            ),
+          );
+        }
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DirectMessageScreen(targetUserId: userId),
+          ),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        Navigator.pop(context); // Tutup dialog jika error
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DirectMessageScreen(targetUserId: userId),
+          ),
+        );
+      }
+    }
+  }
+
   // ── Collaboration Card ─────────────────────────────────────────────────────
   Widget _buildCollabCard(
     Map<String, dynamic> c,
@@ -510,6 +651,7 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
     bool isDark,
   ) {
     final status = (c['status'] as String?) ?? 'Aktif';
+    final isFinished = status == 'Selesai';
     final statusColor = (c['statusColor'] as Color?) ??
         (status == 'Aktif'
             ? const Color(0xFF10B981)
@@ -549,7 +691,7 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
                 radius: 24,
                 backgroundColor: accentColor.withValues(alpha: 0.15),
                 child: Icon(
-                  (c['avatar'] as IconData?) ?? Icons.person_rounded,
+                  _resolveAvatarIcon(c['avatar']),
                   color: accentColor,
                   size: 24,
                 ),
@@ -658,24 +800,35 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.08),
+                    color: isFinished
+                        ? (isDark ? Colors.grey.shade800 : Colors.grey.shade200)
+                        : accentColor.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: accentColor.withValues(alpha: 0.2),
+                      color: isFinished
+                          ? Colors.grey.shade400.withValues(alpha: 0.3)
+                          : accentColor.withValues(alpha: 0.2),
                     ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.person_add_alt_1_rounded,
-                          size: 12, color: accentColor),
+                      Icon(
+                        isFinished
+                            ? Icons.check_circle_rounded
+                            : Icons.person_add_alt_1_rounded,
+                        size: 12,
+                        color: isFinished ? Colors.grey.shade500 : accentColor,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         r,
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: accentColor,
+                          color: isFinished
+                              ? (isDark ? Colors.white60 : Colors.grey.shade700)
+                              : accentColor,
                         ),
                       ),
                     ],
@@ -697,7 +850,9 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Kebutuhan Tim: $membersCount / $maxMembers Talenta',
+                          isFinished
+                              ? 'Status Tim: Selesai Dilaksanakan'
+                              : 'Kebutuhan Tim: $membersCount / $maxMembers Talenta',
                           style: TextStyle(
                             fontSize: 11,
                             color: isDark
@@ -707,11 +862,11 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
                           ),
                         ),
                         Text(
-                          '${(progress * 100).toInt()}%',
+                          isFinished ? '100%' : '${(progress * 100).toInt()}%',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: accentColor,
+                            color: isFinished ? statusColor : accentColor,
                           ),
                         ),
                       ],
@@ -720,12 +875,14 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
-                        value: progress,
+                        value: isFinished ? 1.0 : progress,
                         minHeight: 6,
                         backgroundColor: isDark
                             ? Colors.grey.shade800
                             : Colors.grey.shade200,
-                        valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          isFinished ? statusColor : accentColor,
+                        ),
                       ),
                     ),
                   ],
@@ -747,7 +904,8 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
             child: Row(
               children: [
                 Icon(Icons.account_balance_wallet_outlined,
-                    size: 15, color: Colors.green.shade600),
+                    size: 15,
+                    color: isFinished ? Colors.grey.shade500 : Colors.green.shade600),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -780,50 +938,78 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
 
           // Bottom Actions Row
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              OutlinedButton.icon(
-                onPressed: () => _showCollabDetailModal(context, c, accentColor),
-                icon: const Icon(Icons.info_outline_rounded, size: 15),
-                label: const Text('Detail Tim',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                style: OutlinedButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+              if (isFinished)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: (isDark ? Colors.grey.shade800 : Colors.grey.shade200)
+                        .withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  side: BorderSide(
-                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade300,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_outline_rounded,
+                          size: 14,
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Perekrutan Ditutup',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const DirectMessageScreen(),
+                )
+              else
+                const SizedBox.shrink(),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => _showCollabDetailModal(context, c, accentColor),
+                    icon: const Icon(Icons.info_outline_rounded, size: 15),
+                    label: const Text('Detail Tim',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      side: BorderSide(
+                        color: isDark ? AppTheme.inputBorder : Colors.grey.shade300,
+                      ),
                     ),
-                  );
-                },
-                icon: const Icon(Icons.chat_bubble_outline_rounded,
-                    size: 15, color: Colors.white),
-                label: const Text('Chat Tim',
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accentColor,
-                  elevation: 0,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
                   ),
-                ),
+                  if (!isFinished) ...[
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: () => _openTeamChat(context, c),
+                      icon: const Icon(Icons.chat_bubble_outline_rounded,
+                          size: 15, color: Colors.white),
+                      label: const Text('Chat Tim',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentColor,
+                        elevation: 0,
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
@@ -841,6 +1027,11 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isDesktop = MediaQuery.of(context).size.width >= 600;
     final neededRoles = (c['neededRoles'] as List?)?.cast<String>() ?? [];
+    final status = (c['status'] as String?) ?? 'Aktif';
+    final isFinished = status == 'Selesai';
+    final membersCount = (c['membersCount'] as int?) ?? 1;
+    final maxMembers = (c['maxMembers'] as int?) ?? 4;
+    final isFull = membersCount >= maxMembers;
 
     Widget buildModalContent(BuildContext ctx, {bool inDialog = false}) {
       return Column(
@@ -882,7 +1073,7 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
                     radius: 22,
                     backgroundColor: accentColor.withValues(alpha: 0.15),
                     child: Icon(
-                      (c['avatar'] as IconData?) ?? Icons.person_rounded,
+                      _resolveAvatarIcon(c['avatar']),
                       color: accentColor,
                     ),
                   ),
@@ -907,6 +1098,38 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
                       ],
                     ),
                   ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: (isFinished
+                              ? Colors.grey.shade600
+                              : (status == 'Aktif'
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFFF59E0B)))
+                          .withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: (isFinished
+                                ? Colors.grey.shade600
+                                : (status == 'Aktif'
+                                    ? const Color(0xFF10B981)
+                                    : const Color(0xFFF59E0B)))
+                            .withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Text(
+                      status,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: isFinished
+                            ? Colors.grey.shade600
+                            : (status == 'Aktif'
+                                ? const Color(0xFF10B981)
+                                : const Color(0xFFF59E0B)),
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -925,57 +1148,199 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Peran yang Masih Dibutuhkan:',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: neededRoles.map((r) {
-                  return Chip(
-                    label: Text(r),
-                    backgroundColor: accentColor.withValues(alpha: 0.1),
-                    labelStyle: TextStyle(
-                      color: accentColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Pengajuan bergabung ke "${c['project']}" berhasil dikirim ke ${c['name']}!',
-                        ),
-                        backgroundColor: Colors.green.shade700,
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.check_circle_outline_rounded,
-                      color: Colors.white),
-                  label: const Text(
-                    'Ajukan Diri untuk Bergabung',
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold),
+
+              if (isFinished) ...[
+                const Text(
+                  'Status Perekrutan Tim:',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: (isDark ? Colors.grey.shade800 : Colors.grey.shade200)
+                        .withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accentColor,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_rounded,
+                          size: 16, color: Colors.grey.shade500),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Proyek Telah Selesai • Seluruh Kuota Tim Terpenuhi',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white70 : Colors.grey.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: (isDark ? Colors.grey.shade800 : Colors.grey.shade100)
+                        .withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.lock_clock_rounded,
+                          size: 20,
+                          color: isDark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Proyek kolaborasi ini telah rampung. Perekrutan talenta baru dan permohonan bergabung sudah tidak menerima pengajuan.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            height: 1.4,
+                            color: isDark
+                                ? Colors.grey.shade300
+                                : Colors.grey.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: null, // Disabled!
+                    icon: const Icon(Icons.lock_rounded, size: 16),
+                    label: const Text(
+                      'Proyek Telah Selesai (Perekrutan Ditutup)',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      disabledBackgroundColor: isDark
+                          ? Colors.grey.shade800
+                          : Colors.grey.shade200,
+                      disabledForegroundColor:
+                          isDark ? Colors.white38 : Colors.grey.shade500,
                     ),
                   ),
                 ),
-              ),
+              ] else if (isFull) ...[
+                const Text(
+                  'Status Kuota Tim:',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: (isDark ? Colors.grey.shade800 : Colors.grey.shade200)
+                        .withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.group_rounded, size: 16, color: accentColor),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Kuota Tim Penuh ($membersCount / $maxMembers Talenta)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white70 : Colors.grey.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: null, // Disabled!
+                    icon: const Icon(Icons.people_outline_rounded, size: 16),
+                    label: const Text(
+                      'Kuota Tim Sudah Penuh',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      disabledBackgroundColor: isDark
+                          ? Colors.grey.shade800
+                          : Colors.grey.shade200,
+                      disabledForegroundColor:
+                          isDark ? Colors.white38 : Colors.grey.shade500,
+                    ),
+                  ),
+                ),
+              ] else ...[
+                const Text(
+                  'Peran yang Masih Dibutuhkan:',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: neededRoles.map((r) {
+                    return Chip(
+                      label: Text(r),
+                      backgroundColor: accentColor.withValues(alpha: 0.1),
+                      labelStyle: TextStyle(
+                        color: accentColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Pengajuan bergabung ke "${c['project']}" berhasil dikirim ke ${c['name']}!',
+                          ),
+                          backgroundColor: Colors.green.shade700,
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.check_circle_outline_rounded,
+                        color: Colors.white),
+                    label: const Text(
+                      'Ajukan Diri untuk Bergabung',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentColor,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           );
     }
