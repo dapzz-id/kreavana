@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             RemainingTablesSeeder::class,
             OpportunityLocationSeeder::class,
             DashboardMockSeeder::class,
+            ReviewSeeder::class,
         ]);
     }
 }

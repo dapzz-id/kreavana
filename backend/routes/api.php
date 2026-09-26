@@ -38,6 +38,12 @@ Route::get('roles/creator/sub-roles', [RoleController::class, 'getCreatorSubRole
 Route::get('system/module-statuses', [AdminSystemSettingController::class, 'getPublicModuleStatuses'])
     ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
 
+// Reviews & Reputation (Database driven)
+Route::get('reviews', [OpportunityReviewController::class, 'index'])
+    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
+Route::post('reviews/{id}/helpful', [OpportunityReviewController::class, 'helpful'])
+    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
+
 // Auth (Public)
 Route::prefix('auth')->withoutMiddleware(\App\Http\Middleware\ValidateJti::class)->group(function () {
     Route::post('register', [AuthController::class, 'register'])->middleware('throttle:auth-register');

@@ -15,10 +15,14 @@ class OpportunityReview extends Model
         'creator_id',
         'rating',
         'comment',
+        'reviewer_role',
+        'reviewer_company',
+        'helpful_count',
     ];
 
     protected $casts = [
         'rating' => 'decimal:2',
+        'helpful_count' => 'integer',
     ];
 
     public function opportunity()

@@ -49,13 +49,17 @@ class ApiService {
     return url;
   }
 
+  static String _normalizePath(String endpoint) {
+    return endpoint.startsWith('/') ? endpoint : '/$endpoint';
+  }
+
   static Future<Map<String, dynamic>> get(
     String endpoint, {
     Map<String, dynamic>? queryParams,
   }) async {
     try {
       final response = await _dio.get(
-        '/$endpoint',
+        _normalizePath(endpoint),
         queryParameters: queryParams,
       );
       return _formatResponse(response);
@@ -69,7 +73,7 @@ class ApiService {
     Map<String, dynamic> body,
   ) async {
     try {
-      final response = await _dio.post('/$endpoint', data: body);
+      final response = await _dio.post(_normalizePath(endpoint), data: body);
       return _formatResponse(response);
     } on DioException catch (e) {
       return _handleError(e);
@@ -81,7 +85,7 @@ class ApiService {
     FormData data,
   ) async {
     try {
-      final response = await _dio.post('/$endpoint', data: data);
+      final response = await _dio.post(_normalizePath(endpoint), data: data);
       return _formatResponse(response);
     } on DioException catch (e) {
       return _handleError(e);
@@ -93,7 +97,7 @@ class ApiService {
     Map<String, dynamic> body,
   ) async {
     try {
-      final response = await _dio.put('/$endpoint', data: body);
+      final response = await _dio.put(_normalizePath(endpoint), data: body);
       return _formatResponse(response);
     } on DioException catch (e) {
       return _handleError(e);
@@ -105,7 +109,7 @@ class ApiService {
     Map<String, dynamic> body,
   ) async {
     try {
-      final response = await _dio.patch('/$endpoint', data: body);
+      final response = await _dio.patch(_normalizePath(endpoint), data: body);
       return _formatResponse(response);
     } on DioException catch (e) {
       return _handleError(e);
@@ -117,7 +121,7 @@ class ApiService {
     Map<String, dynamic>? data,
   }) async {
     try {
-      final response = await _dio.delete('/$endpoint', data: data);
+      final response = await _dio.delete(_normalizePath(endpoint), data: data);
       return _formatResponse(response);
     } on DioException catch (e) {
       return _handleError(e);

@@ -18,105 +18,17 @@ class UlasanReputasiScreen extends StatefulWidget {
 }
 
 class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
-  bool _isLoading = false;
+  bool _isLoading = true;
   String _selectedFilter = 'Semua';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
-  final List<Map<String, dynamic>> _defaultReviews = [
-    {
-      'id': 'rev-1',
-      'name': 'Budi Wicaksono',
-      'role': 'Senior Marketing Lead',
-      'company': 'PT Gojek Indonesia',
-      'avatar': Icons.person_rounded,
-      'avatarColor': Colors.teal,
-      'rating': 5.0,
-      'verified': true,
-      'project': 'Video Commercial Peluncuran Fitur Baru 2026',
-      'category': 'Video Commercial',
-      'date': '14 September 2026',
-      'comment':
-          'Pengerjaan sangat profesional! Angle video sinematik dan color grading pas banget dengan brand guideline kami. Komunikasi tim responsif, cepat tanggap terhadap revisi minor, dan penyerahan file master 2 hari lebih cepat dari deadline.',
-      'helpfulCount': 12,
-      'isHelpful': false,
-    },
-    {
-      'id': 'rev-2',
-      'name': 'Maya Anggraini',
-      'role': 'Founder & CEO',
-      'company': 'Botanica Skincare Organic',
-      'avatar': Icons.person_outline_rounded,
-      'avatarColor': Colors.purple,
-      'rating': 5.0,
-      'verified': true,
-      'project': 'Fotografi Produk Komersial & Model Studio',
-      'category': 'Fotografi Komersial',
-      'date': '02 September 2026',
-      'comment':
-          'Kreator sangat memahami konsep visual clean and natural aesthetic. Penataan lighting di studio memukau dan retouching detailnya rapi. Konversi penjualan e-commerce kami naik 35% setelah pasang visual ini.',
-      'helpfulCount': 8,
-      'isHelpful': false,
-    },
-    {
-      'id': 'rev-3',
-      'name': 'Rian Pratama',
-      'role': 'Creative Director',
-      'company': 'Nusantara Media Agency',
-      'avatar': Icons.person_rounded,
-      'avatarColor': Colors.indigo,
-      'rating': 4.8,
-      'verified': true,
-      'project': 'Motion Graphics & 3D Bumper TVC',
-      'category': 'Motion & 3D Design',
-      'date': '22 Agustus 2026',
-      'comment':
-          'Kerja sama lintas kota berjalan tanpa kendala. Asset 3D beresolusi tinggi, format file rapi, dan sinkronisasi audio sound design sangat punchy. Pasti akan kerja sama lagi di project mendatang.',
-      'helpfulCount': 5,
-      'isHelpful': false,
-    },
-    {
-      'id': 'rev-4',
-      'name': 'Citra Kirana',
-      'role': 'Managing Director',
-      'company': 'Alana Wedding Organizer',
-      'avatar': Icons.person_outline_rounded,
-      'avatarColor': Colors.amber.shade800,
-      'rating': 5.0,
-      'verified': true,
-      'project': 'Dokumentasi Foto & Highlight Cinematic Wedding',
-      'category': 'Wedding & Event',
-      'date': '10 Agustus 2026',
-      'comment':
-          'Momen sakral akad dan kemeriahan resepsi tertangkap dengan penuh emosi. Kualitas video 4K jernih dan pilihan instrumen lagunya sangat menyentuh. Mempelai dan keluarga sangat puas!',
-      'helpfulCount': 15,
-      'isHelpful': false,
-    },
-    {
-      'id': 'rev-5',
-      'name': 'Hendro Santoso',
-      'role': 'Head of Brand Marketing',
-      'company': 'Kopi Kintamani Roastery',
-      'avatar': Icons.person_rounded,
-      'avatarColor': Colors.deepOrange,
-      'rating': 4.7,
-      'verified': true,
-      'project': 'Desain Identitas Kemasan Produk Ekspor',
-      'category': 'Branding & Packaging',
-      'date': '28 Juli 2026',
-      'comment':
-          'Konsep ilustrasi kemasan sangat berkarakter dan memiliki nilai filosofis lokal. File cetak lengkap dengan panduan warna CMYK dan spesifikasi bahan ramah lingkungan.',
-      'helpfulCount': 4,
-      'isHelpful': false,
-    },
-  ];
-
   List<Map<String, dynamic>> _reviews = [];
+  Map<String, dynamic>? _dbStats;
 
   @override
   void initState() {
     super.initState();
-    _reviews = List.from(_defaultReviews);
     _fetchRealtimeReviews();
   }
 
@@ -129,40 +41,47 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
   Future<void> _fetchRealtimeReviews() async {
     setState(() => _isLoading = true);
     try {
-      final res = await ApiService.get('/reviews');
-      if (res['status'] == true &&
-          res['data'] != null &&
-          (res['data'] as List).isNotEmpty) {
+      final queryParams = <String, dynamic>{};
+      if (widget.user != null) {
+        queryParams['user_id'] = widget.user!.id;
+      }
+      final res = await ApiService.get('reviews', queryParams: queryParams);
+      if (res['status'] == true && res['data'] != null) {
         final list = List<Map<String, dynamic>>.from(res['data']);
         if (mounted) {
           setState(() {
             _reviews = list;
+            if (res['stats'] != null) {
+              _dbStats = Map<String, dynamic>.from(res['stats']);
+            }
           });
         }
         return;
       }
-    } catch (_) {
-      // Graceful fallback to default reviews
+    } catch (e) {
+      debugPrint('Error fetching reviews from database: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-
-    if (mounted && _reviews.isEmpty) {
-      setState(() {
-        _reviews = List.from(_defaultReviews);
-      });
-    }
   }
 
-  void _toggleHelpful(int index) {
-    setState(() {
-      final item = _reviews[index];
-      final isHelpful = (item['isHelpful'] as bool?) ?? false;
-      final currentCount = (item['helpfulCount'] as int?) ?? 0;
+  Future<void> _toggleHelpful(int index) async {
+    final item = _reviews[index];
+    final isHelpful = (item['isHelpful'] as bool?) ?? false;
+    final currentCount = (item['helpfulCount'] as int?) ?? 0;
+    final reviewId = item['id'];
 
+    setState(() {
       item['isHelpful'] = !isHelpful;
-      item['helpfulCount'] = isHelpful ? currentCount - 1 : currentCount + 1;
+      item['helpfulCount'] =
+          isHelpful ? (currentCount > 0 ? currentCount - 1 : 0) : currentCount + 1;
     });
+
+    if (!isHelpful && reviewId != null) {
+      try {
+        await ApiService.post('reviews/$reviewId/helpful', {});
+      } catch (_) {}
+    }
   }
 
   @override
@@ -298,15 +217,26 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
 
   // ── Hero Reputation Banner ─────────────────────────────────────────────────
   Widget _buildReputationBanner(Color accentColor, bool isDark) {
-    final total = _reviews.length;
-    double avgRating = 4.9;
-    if (total > 0) {
+    final total = _dbStats?['total_reviews'] != null
+        ? (_dbStats!['total_reviews'] as num).toInt()
+        : _reviews.length;
+    double avgRating = 5.0;
+    if (_dbStats?['average_rating'] != null) {
+      avgRating = (_dbStats!['average_rating'] as num).toDouble();
+    } else if (_reviews.isNotEmpty) {
       final sum = _reviews.fold<double>(
         0.0,
         (prev, r) => prev + ((r['rating'] as num?)?.toDouble() ?? 5.0),
       );
-      avgRating = sum / total;
+      avgRating = sum / _reviews.length;
     }
+
+    final onTimeStr = _dbStats?['on_time_rate'] != null
+        ? '${_dbStats!['on_time_rate']}%'
+        : '99.2%';
+    final satisfactionStr = _dbStats?['satisfaction_rate'] != null
+        ? '${_dbStats!['satisfaction_rate']}%'
+        : '98%';
 
     final isMobile = MediaQuery.of(context).size.width < 600;
 
@@ -423,12 +353,12 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
                   height: 35,
                   color: Colors.white.withValues(alpha: 0.2)),
               _buildStatItem(
-                  '99.2%', 'Tepat Waktu', Icons.alarm_on_rounded),
+                  onTimeStr, 'Tepat Waktu', Icons.alarm_on_rounded),
               Container(
                   width: 1,
                   height: 35,
                   color: Colors.white.withValues(alpha: 0.2)),
-              _buildStatItem('98%', 'Klien Puas', Icons.thumb_up_alt_rounded),
+              _buildStatItem(satisfactionStr, 'Klien Puas', Icons.thumb_up_alt_rounded),
             ],
           ),
         ],
@@ -469,39 +399,50 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
   // ── Rating Breakdown Bars ──────────────────────────────────────────────────
   Widget _buildRatingBreakdown(Color accentColor, bool isDark) {
     final total = _reviews.length;
-    final count5 =
-        _reviews.where((r) => ((r['rating'] as num?)?.toDouble() ?? 5.0) >= 4.9).length;
-    final count4 = _reviews.where((r) {
-      final rtg = (r['rating'] as num?)?.toDouble() ?? 5.0;
-      return rtg >= 4.0 && rtg < 4.9;
-    }).length;
-    final count3 = _reviews.where((r) {
-      final rtg = (r['rating'] as num?)?.toDouble() ?? 5.0;
-      return rtg >= 3.0 && rtg < 4.0;
-    }).length;
-    final count2 = _reviews.where((r) {
-      final rtg = (r['rating'] as num?)?.toDouble() ?? 5.0;
-      return rtg >= 2.0 && rtg < 3.0;
-    }).length;
-    final count1 = _reviews.where((r) {
-      final rtg = (r['rating'] as num?)?.toDouble() ?? 5.0;
-      return rtg < 2.0;
-    }).length;
+    final breakdownMap = _dbStats?['breakdown'] as Map<String, dynamic>?;
+
+    final count5 = breakdownMap != null && breakdownMap['5'] != null
+        ? (breakdownMap['5'] as num).toInt()
+        : _reviews.where((r) => ((r['rating'] as num?)?.toDouble() ?? 5.0) >= 4.9).length;
+    final count4 = breakdownMap != null && breakdownMap['4'] != null
+        ? (breakdownMap['4'] as num).toInt()
+        : _reviews.where((r) {
+            final rtg = (r['rating'] as num?)?.toDouble() ?? 5.0;
+            return rtg >= 4.0 && rtg < 4.9;
+          }).length;
+    final count3 = breakdownMap != null && breakdownMap['3'] != null
+        ? (breakdownMap['3'] as num).toInt()
+        : _reviews.where((r) {
+            final rtg = (r['rating'] as num?)?.toDouble() ?? 5.0;
+            return rtg >= 3.0 && rtg < 4.0;
+          }).length;
+    final count2 = breakdownMap != null && breakdownMap['2'] != null
+        ? (breakdownMap['2'] as num).toInt()
+        : _reviews.where((r) {
+            final rtg = (r['rating'] as num?)?.toDouble() ?? 5.0;
+            return rtg >= 2.0 && rtg < 3.0;
+          }).length;
+    final count1 = breakdownMap != null && breakdownMap['1'] != null
+        ? (breakdownMap['1'] as num).toInt()
+        : _reviews.where((r) {
+            final rtg = (r['rating'] as num?)?.toDouble() ?? 5.0;
+            return rtg < 2.0;
+          }).length;
 
     final breakdown = [
       {
         'star': '5 ★',
-        'pct': total > 0 ? (count5 / total) : 0.85,
+        'pct': total > 0 ? (count5 / total) : 0.0,
         'count': '$count5',
       },
       {
         'star': '4 ★',
-        'pct': total > 0 ? (count4 / total) : 0.12,
+        'pct': total > 0 ? (count4 / total) : 0.0,
         'count': '$count4',
       },
       {
         'star': '3 ★',
-        'pct': total > 0 ? (count3 / total) : 0.03,
+        'pct': total > 0 ? (count3 / total) : 0.0,
         'count': '$count3',
       },
       {
@@ -699,7 +640,19 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
     final rating = (r['rating'] as num?)?.toDouble() ?? 5.0;
     final isHelpful = (r['isHelpful'] as bool?) ?? false;
     final helpfulCount = (r['helpfulCount'] as int?) ?? 0;
-    final avatarColor = (r['avatarColor'] as Color?) ?? accentColor;
+    final colors = [
+      Colors.teal,
+      Colors.purple,
+      Colors.indigo,
+      Colors.amber.shade800,
+      Colors.deepOrange,
+      Colors.blueAccent,
+    ];
+    final avatarColor =
+        (r['avatarColor'] as Color?) ?? colors[index % colors.length];
+    final avatarIcon = (r['avatar'] as IconData?) ??
+        (index % 2 == 0 ? Icons.person_rounded : Icons.person_outline_rounded);
+    final avatarUrl = r['avatar_url'] as String?;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -727,11 +680,16 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
               CircleAvatar(
                 radius: 22,
                 backgroundColor: avatarColor.withValues(alpha: 0.15),
-                child: Icon(
-                  (r['avatar'] as IconData?) ?? Icons.person_rounded,
-                  color: avatarColor,
-                  size: 22,
-                ),
+                backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
+                    ? NetworkImage(ApiService.resolveAssetUrl(avatarUrl))
+                    : null,
+                child: (avatarUrl == null || avatarUrl.isEmpty)
+                    ? Icon(
+                        avatarIcon,
+                        color: avatarColor,
+                        size: 22,
+                      )
+                    : null,
               ),
               const SizedBox(width: 12),
               Expanded(
