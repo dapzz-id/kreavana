@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../widgets/upgrade_plan_modal.dart';
+import '../widgets/auth_guard_dialog.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../features/auth/services/auth_service.dart';
@@ -457,7 +458,28 @@ class _MainNavigationState extends State<MainNavigation> {
     5: AppRoutes.profil,
   };
 
+  static const _protectedIndexActionMap = {
+    2: 'mengakses Manajemen Proyek',
+    4: 'mengakses Agenda & Jadwal',
+    5: 'mengakses Ruang Kolaborasi',
+    6: 'melihat Ulasan & Reputasi',
+    7: 'mengakses Dompet & Keuangan',
+    8: 'membuka Pengaturan Akun',
+    9: 'mengakses Profil Akun',
+    10: 'melihat Notifikasi',
+    11: 'mengakses Pesan & Chat',
+    13: 'mengakses Kapasitas & Jadwal',
+  };
+
   void _navigateToScreenIndex(int index) {
+    if (_currentUser.isGuest && _protectedIndexActionMap.containsKey(index)) {
+      AuthGuardDialog.show(
+        context,
+        actionName: _protectedIndexActionMap[index]!,
+      );
+      return;
+    }
+
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).popUntil((route) => route.isFirst);
     }

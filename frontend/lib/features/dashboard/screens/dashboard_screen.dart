@@ -177,6 +177,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   void _navigateTo(String feature) {
     switch (feature) {
       case 'Buat Kebutuhan':
+        if (widget.user.isGuest) {
+          AuthGuardDialog.show(context, actionName: 'membuat kebutuhan proyek');
+          return;
+        }
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const BuatKebutuhanScreen()),
@@ -191,6 +195,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         break;
       case 'Lengkapi Profil':
       case 'Lihat Profil':
+        if (widget.user.isGuest) {
+          AuthGuardDialog.show(context, actionName: 'mengakses profil akun');
+          return;
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -206,6 +214,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       case 'Lihat Semua Proyek':
       case 'Semua Proyek':
       case 'Semua Kebutuhan & Proyek':
+        if (widget.user.isGuest) {
+          AuthGuardDialog.show(context, actionName: 'melihat daftar proyek Anda');
+          return;
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -216,6 +228,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       case 'Lihat Semua Agenda':
       case 'Lihat Kalender':
       case 'Atur Jadwal':
+        if (widget.user.isGuest) {
+          AuthGuardDialog.show(context, actionName: 'mengakses kalender & agenda');
+          return;
+        }
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const AgendaScreen()),
@@ -223,7 +239,21 @@ class _DashboardScreenState extends State<DashboardScreen>
         break;
       case 'Lihat Semua Karya':
       case 'Buka Semua Aset':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MarketplaceKaryaScreen(
+              user: widget.user,
+              onUserUpdated: widget.onUserUpdated,
+            ),
+          ),
+        );
+        break;
       case 'Tambah Karya':
+        if (widget.user.isGuest) {
+          AuthGuardDialog.show(context, actionName: 'menambah karya baru');
+          return;
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -235,6 +265,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         );
         break;
       case 'Notifikasi':
+        if (widget.user.isGuest) {
+          AuthGuardDialog.show(context, actionName: 'melihat notifikasi');
+          return;
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -243,6 +277,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         );
         break;
       case 'Pesan':
+        if (widget.user.isGuest) {
+          AuthGuardDialog.show(context, actionName: 'mengakses pesan');
+          return;
+        }
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const DirectMessageScreen()),
@@ -642,6 +680,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
         const SizedBox(height: 12),
         AiRecommendationCard(
+          user: widget.user,
           role: _isCreator ? 'creator' : 'client',
           niche: _isCreator ? 'Fotografi & Video' : 'Kebutuhan Kreatif',
         ),
