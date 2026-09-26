@@ -25,125 +25,11 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
-  final List<Map<String, dynamic>> _defaultCollabs = [
-    {
-      'id': 'collab-1',
-      'user_id': '01a0d6c1-60a3-727c-b1da-3c7be8aad5bd',
-      'name': 'Dimas Arya',
-      'email': 'dimas.arya@kreavana.id',
-      'username': 'dimas_arya',
-      'role': 'Director & Produser',
-      'avatar': Icons.videocam_rounded,
-      'project': 'Produksi Video Iklan Pariwisata Wonderful Indonesia 2026',
-      'desc':
-          'Membutuhkan drone pilot bersertifikat FPV dan colorist DaVinci untuk shooting di Labuan Bajo & Bali selama 4 hari penuh.',
-      'neededRoles': ['Drone Pilot FPV', 'Colorist DaVinci', 'Audio Recordist'],
-      'budget': 'Rp 18.500.000',
-      'compensationType': 'Bagi Hasil & Fee Tetap',
-      'status': 'Aktif',
-      'statusColor': const Color(0xFF10B981),
-      'membersCount': 4,
-      'maxMembers': 6,
-      'date': '25 Sep - 10 Okt 2026',
-      'location': 'Bali & Labuan Bajo',
-      'tags': ['Cinematic', 'Travel', 'Commercial'],
-    },
-    {
-      'id': 'collab-2',
-      'user_id': '01a0d6c1-620b-70c9-a2c7-ba80501c8f12',
-      'name': 'Sarah Putri',
-      'email': 'sarah.putri@kreavana.id',
-      'username': 'sarah_putri',
-      'role': 'Brand Strategist',
-      'avatar': Icons.palette_rounded,
-      'project': 'Rebranding & Desain Kemasan UMKM Kopi Kintamani',
-      'desc':
-          'Mencari packaging illustrator dan 3D visualizer mockup produk untuk persiapan ekspor pasar Jepang & Australia.',
-      'neededRoles': ['Packaging Designer', '3D Artist', 'Copywriter'],
-      'budget': 'Rp 8.500.000',
-      'compensationType': 'Escrow Kreavana',
-      'status': 'Menunggu',
-      'statusColor': const Color(0xFFF59E0B),
-      'membersCount': 2,
-      'maxMembers': 3,
-      'date': '30 Sep 2026',
-      'location': 'Remote / Bali',
-      'tags': ['Branding', 'Packaging', 'Export'],
-    },
-    {
-      'id': 'collab-3',
-      'user_id': '01a0d6c1-636e-71dd-beb6-a4210fb07ffb',
-      'name': 'Kevin Jonathan',
-      'email': 'kevin.jonathan@kreavana.id',
-      'username': 'kevin_jonathan',
-      'role': 'Fashion Photographer',
-      'avatar': Icons.camera_alt_rounded,
-      'project': 'Photoshoot Editorial Fashion Raya Collection 2026',
-      'desc':
-          'Kolaborasi photoshoot lookbook busana muslim modern bersama brand lokal terkemuka di studio profesional.',
-      'neededRoles': ['MUA Editorial', 'Fashion Stylist', 'Lighting Assistant'],
-      'budget': 'Rp 14.000.000',
-      'compensationType': 'Kontrak Terproteksi',
-      'status': 'Aktif',
-      'statusColor': const Color(0xFF10B981),
-      'membersCount': 5,
-      'maxMembers': 5,
-      'date': '05 Okt 2026',
-      'location': 'Studio Kreavana Jakarta',
-      'tags': ['Fashion', 'Editorial', 'Lookbook'],
-    },
-    {
-      'id': 'collab-4',
-      'user_id': '01a0d6c1-64d5-7196-9c3c-af3580eccef5',
-      'name': 'Aditya Pratama',
-      'email': 'aditya.pratama@kreavana.id',
-      'username': 'aditya_pratama',
-      'role': 'Sound Designer & Composer',
-      'avatar': Icons.music_note_rounded,
-      'project': 'Original Score & Sound Design Film Pendek "Suara Pesisir"',
-      'desc':
-          'Proyek film pendek festival internasional. Membutuhkan pengisi instrumen tradisional dan mixing surround 5.1.',
-      'neededRoles': ['Mixing Engineer', 'Foley Artist'],
-      'budget': 'Rp 7.500.000',
-      'compensationType': 'Royalti & Fee',
-      'status': 'Menunggu',
-      'statusColor': const Color(0xFFF59E0B),
-      'membersCount': 2,
-      'maxMembers': 4,
-      'date': '15 Okt 2026',
-      'location': 'Remote / Yogyakarta',
-      'tags': ['FilmScore', 'Festival', 'Audio'],
-    },
-    {
-      'id': 'collab-5',
-      'user_id': '01a0d6c1-663b-7084-aaa9-b49fa038ad6c',
-      'name': 'Nabila Zahra',
-      'email': 'nabila.zahra@kreavana.id',
-      'username': 'nabila_zahra',
-      'role': 'Social Media Specialist',
-      'avatar': Icons.campaign_rounded,
-      'project': 'Campaign Konten Tiktok & Reels Kuliner Nusantara',
-      'desc':
-          'Produksi 30 video konten pendek review kuliner khas nusantara untuk sponsor e-commerce terkemuka.',
-      'neededRoles': ['Content Creator', 'Video Editor CapCut'],
-      'budget': 'Rp 12.000.000',
-      'compensationType': 'Selesai Dibayarkan',
-      'status': 'Selesai',
-      'statusColor': const Color(0xFF6B7280),
-      'membersCount': 4,
-      'maxMembers': 4,
-      'date': 'Selesai 10 Sep 2026',
-      'location': 'Jakarta & Bandung',
-      'tags': ['TikTok', 'Culinary', 'ViralContent'],
-    },
-  ];
-
   List<Map<String, dynamic>> _collabs = [];
 
   @override
   void initState() {
     super.initState();
-    _collabs = List.from(_defaultCollabs);
     _fetchRealtimeCollabs();
   }
 
@@ -156,28 +42,69 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
   Future<void> _fetchRealtimeCollabs() async {
     setState(() => _isLoading = true);
     try {
-      final res = await ApiService.get('/collaborations');
-      if (res['status'] == true &&
-          res['data'] != null &&
-          (res['data'] as List).isNotEmpty) {
-        final list = List<Map<String, dynamic>>.from(res['data']);
+      final res = await ApiService.get('collaborations');
+      if (res['status'] == true && res['data'] != null) {
+        final raw = res['data'];
+        final List<dynamic> list = raw is List ? raw : (raw['data'] ?? []);
+        final mapped = list.map((item) {
+          final m = Map<String, dynamic>.from(item as Map);
+          final rawAvatar = m['avatar'];
+          IconData avatarIcon = Icons.people_outline_rounded;
+          if (rawAvatar == 'videocam') {
+            avatarIcon = Icons.videocam_rounded;
+          } else if (rawAvatar == 'palette') {
+            avatarIcon = Icons.palette_rounded;
+          } else if (rawAvatar == 'camera') {
+            avatarIcon = Icons.camera_alt_rounded;
+          } else if (rawAvatar == 'music') {
+            avatarIcon = Icons.music_note_rounded;
+          } else if (rawAvatar == 'campaign') {
+            avatarIcon = Icons.campaign_rounded;
+          }
+
+          final status = m['status']?.toString() ?? 'Aktif';
+          Color statusColor = const Color(0xFF10B981);
+          if (status == 'Menunggu') {
+            statusColor = const Color(0xFFF59E0B);
+          } else if (status == 'Selesai') {
+            statusColor = const Color(0xFF6B7280);
+          }
+
+          return {
+            'id': m['id']?.toString() ?? '',
+            'user_id': m['user_id']?.toString() ?? '',
+            'name': m['name']?.toString() ?? 'Kreator Kreavana',
+            'email': m['email']?.toString() ?? '',
+            'username': m['username']?.toString() ?? '',
+            'role': m['role']?.toString() ?? 'Kreator',
+            'avatar': avatarIcon,
+            'avatar_url': (rawAvatar != null && rawAvatar.toString().startsWith('http')) ? rawAvatar.toString() : null,
+            'project': m['project']?.toString() ?? '',
+            'desc': m['desc']?.toString() ?? '',
+            'neededRoles': (m['neededRoles'] as List?)?.map((e) => e.toString()).toList() ?? <String>[],
+            'budget': m['budget']?.toString() ?? 'Sesuai Kesepakatan',
+            'compensationType': m['compensationType']?.toString() ?? 'Escrow Kreavana',
+            'status': status,
+            'statusColor': statusColor,
+            'membersCount': (m['membersCount'] as num?)?.toInt() ?? 1,
+            'maxMembers': (m['maxMembers'] as num?)?.toInt() ?? 4,
+            'date': m['date']?.toString() ?? '',
+            'location': m['location']?.toString() ?? 'Indonesia',
+            'tags': (m['tags'] as List?)?.map((e) => e.toString()).toList() ?? <String>['Kolaborasi'],
+            'members': m['members'] ?? [],
+          };
+        }).toList();
+
         if (mounted) {
           setState(() {
-            _collabs = list;
+            _collabs = mapped;
           });
         }
-        return;
       }
-    } catch (_) {
-      // Fallback to default realistic collaborations
+    } catch (e) {
+      debugPrint('Error fetching collaborations: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
-    }
-
-    if (mounted && _collabs.isEmpty) {
-      setState(() {
-        _collabs = List.from(_defaultCollabs);
-      });
     }
   }
 

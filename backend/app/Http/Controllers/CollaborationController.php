@@ -15,22 +15,100 @@ class CollaborationController extends Controller
     {
         $userId = Auth::id();
 
-        $collaborations = Collaboration::with(['requester:id,name,avatar_url,sub_role', 'members.user:id,name,avatar_url,sub_role'])
-            ->where(function ($q) use ($userId) {
-                $q->where('requester_id', $userId)
-                  ->orWhereHas('members', function ($m) use ($userId) {
-                      $m->where('user_id', $userId);
-                  });
+        $collaborations = Collaboration::with(['requester:id,name,avatar_url,sub_role,email,username', 'members.user:id,name,avatar_url,sub_role,email,username'])
+            ->when($request->boolean('my_only') && $userId, function ($q) use ($userId) {
+                $q->where(function ($sq) use ($userId) {
+                    $sq->where('requester_id', $userId)
+                      ->orWhereHas('members', function ($m) use ($userId) {
+                          $m->where('user_id', $userId);
+                      });
+                });
             })
-            ->when($request->filled('status'), function ($q) use ($request) {
-                $q->where('status', $request->status);
+            ->when($request->filled('status') && $request->status !== 'Semua', function ($q) use ($request) {
+                $statusMap = [
+                    'Aktif' => 'active',
+                    'Menunggu' => 'pending',
+                    'Selesai' => 'completed',
+                ];
+                $s = $statusMap[$request->status] ?? strtolower($request->status);
+                $q->where('status', $s);
             })
             ->orderByDesc('created_at')
-            ->paginate($request->input('per_page', 20));
+            ->paginate($request->input('per_page', 50));
+
+        $items = collect($collaborations->items())->map(function ($c) {
+            $notes = json_decode($c->notes, true) ?? [];
+            $neededRoles = $notes['neededRoles'] ?? [];
+            if (empty($neededRoles) && $c->description) {
+                if (preg_match('/Peran.*?: (.*)/i', $c->description, $matches)) {
+                    $neededRoles = array_map('trim', explode(',', $matches[1]));
+                }
+            }
+
+            $budgetStr = 'Rp ' . number_format($c->budget_min, 0, ',', '.');
+            if ($c->budget_max && $c->budget_max > $c->budget_min) {
+                $budgetStr .= ' - Rp ' . number_format($c->budget_max, 0, ',', '.');
+            }
+
+            $statusLabel = match ($c->status) {
+                'active' => 'Aktif',
+                'pending' => 'Menunggu',
+                'completed' => 'Selesai',
+                'rejected' => 'Ditolak',
+                'cancelled' => 'Dibatalkan',
+                default => ucfirst($c->status),
+            };
+
+            $statusColor = match ($c->status) {
+                'active' => '#10B981',
+                'pending' => '#F59E0B',
+                'completed' => '#6B7280',
+                default => '#EF4444',
+            };
+
+            $startDate = $c->start_date ? \Carbon\Carbon::parse($c->start_date)->translatedFormat('d M') : null;
+            $endDate = $c->end_date ? \Carbon\Carbon::parse($c->end_date)->translatedFormat('d M Y') : null;
+            $dateLabel = ($startDate && $endDate) ? "$startDate - $endDate" : ($endDate ?? $startDate ?? $c->created_at->translatedFormat('d M Y'));
+
+            return [
+                'id' => $c->id,
+                'user_id' => $c->requester_id,
+                'name' => $c->requester->name ?? 'Kreator Kreavana',
+                'email' => $c->requester->email ?? '',
+                'username' => $c->requester->username ?? '',
+                'role' => $c->requester->sub_role ? ucwords(str_replace('_', ' ', $c->requester->sub_role)) : 'Kreator',
+                'avatar' => $c->requester->avatar_url ?? null,
+                'project' => $c->project_title,
+                'desc' => $c->description ?? '',
+                'neededRoles' => $neededRoles,
+                'budget' => $budgetStr,
+                'compensationType' => $notes['compensationType'] ?? 'Escrow Kreavana',
+                'status' => $statusLabel,
+                'statusColor' => $statusColor,
+                'membersCount' => $c->members->where('status', 'active')->count() ?: 1,
+                'maxMembers' => $notes['maxMembers'] ?? max(count($neededRoles) + 1, 3),
+                'date' => $dateLabel,
+                'location' => $c->project_location ?? 'Indonesia',
+                'tags' => $notes['tags'] ?? ['Kolaborasi', 'Kreavana'],
+                'members' => $c->members->map(function ($m) {
+                    return [
+                        'user_id' => $m->user_id,
+                        'name' => $m->user->name ?? 'Member',
+                        'role' => $m->role,
+                        'status' => $m->status,
+                        'avatar' => $m->user->avatar_url ?? null,
+                    ];
+                }),
+            ];
+        });
 
         return response()->json([
             'status' => true,
-            'data' => $collaborations,
+            'data' => $items,
+            'meta' => [
+                'current_page' => $collaborations->currentPage(),
+                'total' => $collaborations->total(),
+            ],
         ]);
     }
 

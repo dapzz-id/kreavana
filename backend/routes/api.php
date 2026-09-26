@@ -149,7 +149,6 @@ Route::middleware('auth:api')->group(function () {
         Route::get('stats', [DashboardController::class, 'stats'])->middleware('permission:view_dashboard');
         Route::get('opportunities', [DashboardController::class, 'opportunities']);
     });
-    Route::get('collaborations', [DashboardController::class, 'collaborations']);
     // Wallet
     Route::prefix('wallet')->middleware('permission:manage_own_profile')->group(function () {
         Route::get('info', [WalletController::class, 'info']);
@@ -436,7 +435,7 @@ Route::prefix('opportunities')->group(function () {
 
 // Public Client Dashboard Overview (Guest Browsing)
 Route::get('client-dashboard/overview', [DashboardController::class, 'overview']);
-Route::get('collaborations', [DashboardController::class, 'collaborations']);
+Route::get('collaborations', [CollaborationController::class, 'index']);
 
 
 

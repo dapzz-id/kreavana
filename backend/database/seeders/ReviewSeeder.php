@@ -136,9 +136,9 @@ class ReviewSeeder extends Seeder
                 [
                     'rating' => $item['rating'],
                     'comment' => $item['comment'],
-                    'reviewer_role' => $item['reviewer_role'],
-                    'reviewer_company' => $item['reviewer_company'],
                     'helpful_count' => $item['helpful_count'],
+                    'is_on_time' => true,
+                    'delivery_days' => 2,
                     'created_at' => Carbon::parse($item['date']),
                     'updated_at' => Carbon::parse($item['date']),
                 ]
@@ -170,9 +170,9 @@ class ReviewSeeder extends Seeder
                 [
                     'rating' => 5.0,
                     'comment' => 'Kreator sangat profesional dan memahami kebutuhan bisnis kami dengan cepat. Hasil desain dan copywriting melampaui ekspektasi!',
-                    'reviewer_role' => 'Business Owner',
-                    'reviewer_company' => 'Kreavana Demo Client',
                     'helpful_count' => 7,
+                    'is_on_time' => true,
+                    'delivery_days' => 1,
                     'created_at' => Carbon::now()->subDays(5),
                     'updated_at' => Carbon::now()->subDays(5),
                 ]
