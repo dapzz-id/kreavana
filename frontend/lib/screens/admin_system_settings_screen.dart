@@ -21,6 +21,7 @@ class _AdminSystemSettingsScreenState extends State<AdminSystemSettingsScreen>
   // Modules State
   List<Map<String, dynamic>> _modules = [];
   final Map<String, bool> _updatingModules = {};
+  String _audienceFilter = 'all';
 
   // AI Config State
   String _aiProvider = 'gemini';
@@ -225,6 +226,16 @@ class _AdminSystemSettingsScreenState extends State<AdminSystemSettingsScreen>
 
   IconData _getIconForModule(String? iconName) {
     switch (iconName) {
+      case 'chat':
+        return Icons.chat_bubble_outline_rounded;
+      case 'call':
+        return Icons.call_outlined;
+      case 'videocam':
+        return Icons.videocam_outlined;
+      case 'work_outline':
+        return Icons.work_outline_rounded;
+      case 'verified_user':
+        return Icons.verified_user_outlined;
       case 'auto_awesome':
         return Icons.auto_awesome_rounded;
       case 'storefront':
@@ -236,12 +247,118 @@ class _AdminSystemSettingsScreenState extends State<AdminSystemSettingsScreen>
       case 'person_add':
         return Icons.person_add_alt_1_rounded;
       case 'verified':
-        return Icons.verified_user_rounded;
+        return Icons.verified_rounded;
       case 'build':
         return Icons.build_circle_rounded;
       default:
         return Icons.widgets_rounded;
     }
+  }
+
+  Widget _buildAudienceBadge(String? audience) {
+    Color bg;
+    Color text;
+    IconData icon;
+    String label;
+
+    switch (audience) {
+      case 'client':
+        bg = Colors.blue.withValues(alpha: 0.12);
+        text = Colors.blue.shade700;
+        icon = Icons.person_rounded;
+        label = 'KLIEN';
+        break;
+      case 'creator':
+        bg = const Color(0xFF10B981).withValues(alpha: 0.12);
+        text = const Color(0xFF059669);
+        icon = Icons.brush_rounded;
+        label = 'KREATOR';
+        break;
+      case 'system':
+        bg = Colors.amber.withValues(alpha: 0.12);
+        text = Colors.amber.shade900;
+        icon = Icons.public_rounded;
+        label = 'SISTEM GLOBAL';
+        break;
+      case 'both':
+      default:
+        bg = const Color(0xFF8B5CF6).withValues(alpha: 0.12);
+        text = const Color(0xFF7C3AED);
+        icon = Icons.people_alt_rounded;
+        label = 'KLIEN & KREATOR';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: text.withValues(alpha: 0.3), width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: text),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 9.5,
+              fontWeight: FontWeight.bold,
+              color: text,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, String value, bool isDark) {
+    final isSelected = _audienceFilter == value;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _audienceFilter = value;
+        });
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppTheme.primaryPurple
+              : (isDark ? const Color(0xFF1E293B) : Colors.white),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? AppTheme.primaryPurple
+                : (isDark ? AppTheme.inputBorder : Colors.grey.shade300),
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppTheme.primaryPurple.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  )
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected
+                ? Colors.white
+                : (isDark ? Colors.white70 : Colors.grey.shade700),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -348,113 +465,182 @@ class _AdminSystemSettingsScreenState extends State<AdminSystemSettingsScreen>
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _modules.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final module = _modules[index];
-                  final key = module['key'] as String;
-                  final isEnabled = module['enabled'] == true;
-                  final isUpdating = _updatingModules[key] == true;
-                  final isMaintenance = key == 'maintenance_mode';
+              const SizedBox(height: 18),
 
-                  return Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: isMaintenance && isEnabled
-                            ? Colors.red.shade400
-                            : (isDark ? AppTheme.inputBorder : Colors.grey.shade200),
-                        width: isMaintenance && isEnabled ? 1.5 : 1.0,
+              // Filter Target Audience Chips
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  children: [
+                    _buildFilterChip('Semua (${_modules.length})', 'all', isDark),
+                    const SizedBox(width: 8),
+                    _buildFilterChip(
+                      'Klien & Kreator (${_modules.where((m) => m['target_audience'] == 'both').length})',
+                      'both',
+                      isDark,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildFilterChip(
+                      'Khusus Klien (${_modules.where((m) => m['target_audience'] == 'client').length})',
+                      'client',
+                      isDark,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildFilterChip(
+                      'Khusus Kreator (${_modules.where((m) => m['target_audience'] == 'creator').length})',
+                      'creator',
+                      isDark,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildFilterChip(
+                      'Sistem Global (${_modules.where((m) => m['target_audience'] == 'system').length})',
+                      'system',
+                      isDark,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              if (_modules.where((m) => _audienceFilter == 'all' || m['target_audience'] == _audienceFilter).isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Tidak ada modul untuk kategori filter ini.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? Colors.white60 : Colors.grey.shade600,
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: (isMaintenance
-                                    ? Colors.red
-                                    : (isEnabled ? AppTheme.primaryPurple : Colors.grey))
-                                .withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(
-                            _getIconForModule(module['icon']),
-                            color: isMaintenance
-                                ? Colors.red
-                                : (isEnabled ? AppTheme.primaryPurple : Colors.grey),
-                            size: 24,
-                          ),
+                  ),
+                )
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _modules
+                      .where((m) => _audienceFilter == 'all' || m['target_audience'] == _audienceFilter)
+                      .length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final filtered = _modules
+                        .where((m) => _audienceFilter == 'all' || m['target_audience'] == _audienceFilter)
+                        .toList();
+                    final module = filtered[index];
+                    final key = module['key'] as String;
+                    final isEnabled = module['enabled'] == true;
+                    final isUpdating = _updatingModules[key] == true;
+                    final isMaintenance = key == 'maintenance_mode';
+                    final audience = module['target_audience']?.toString();
+
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isMaintenance && isEnabled
+                              ? Colors.red.shade400
+                              : (isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+                          width: isMaintenance && isEnabled ? 1.5 : 1.0,
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    module['name'] ?? key,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: isEnabled
-                                          ? Colors.green.withValues(alpha: 0.12)
-                                          : Colors.grey.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      isEnabled ? 'AKTIF' : 'NONAKTIF',
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: (isMaintenance
+                                      ? Colors.red
+                                      : (isEnabled ? AppTheme.primaryPurple : Colors.grey))
+                                  .withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              _getIconForModule(module['icon']),
+                              color: isMaintenance
+                                  ? Colors.red
+                                  : (isEnabled ? AppTheme.primaryPurple : Colors.grey),
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 4,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Text(
+                                      module['name'] ?? key,
                                       style: TextStyle(
-                                        fontSize: 9,
                                         fontWeight: FontWeight.bold,
-                                        color: isEnabled ? Colors.green : Colors.grey,
+                                        fontSize: 15,
+                                        color: isDark ? Colors.white : const Color(0xFF0F172A),
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                module['description'] ?? '',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: isDark ? Colors.white60 : Colors.grey.shade600,
+                                    _buildAudienceBadge(audience),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: isEnabled
+                                            ? Colors.green.withValues(alpha: 0.12)
+                                            : Colors.grey.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        isEnabled ? 'AKTIF' : 'NONAKTIF',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: isEnabled ? Colors.green : Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 5),
+                                Text(
+                                  module['description'] ?? '',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    height: 1.35,
+                                    color: isDark ? Colors.white60 : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        isUpdating
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : Switch(
-                                value: isEnabled,
-                                activeThumbColor: isMaintenance ? Colors.red : AppTheme.primaryPurple,
-                                onChanged: (val) => _toggleModule(key, isEnabled),
-                              ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+                          const SizedBox(width: 12),
+                          isUpdating
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : Switch(
+                                  value: isEnabled,
+                                  activeThumbColor: isMaintenance ? Colors.red : AppTheme.primaryPurple,
+                                  onChanged: (val) => _toggleModule(key, isEnabled),
+                                ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
             ],
           ),
         ),

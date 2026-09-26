@@ -127,7 +127,7 @@ Route::middleware('auth:api')->group(function () {
     // Verification
     Route::prefix('verification')->group(function () {
         Route::get('status', [ProfileController::class, 'getVerificationStatus']);
-        Route::post('client', [ProfileController::class, 'applyClientVerification'])->middleware('role:user');
+        Route::post('client', [ProfileController::class, 'applyClientVerification'])->middleware(['role:user', 'module:client_verification_enabled']);
     });
 
     // Public User Profile
@@ -258,7 +258,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('user/devices', [UserController::class, 'registerDevice'])->middleware('permission:use_chat');
 
     // Chats
-    Route::prefix('chats')->middleware('permission:use_chat')->group(function () {
+    Route::prefix('chats')->middleware(['permission:use_chat', 'module:direct_message_enabled'])->group(function () {
         Route::get('/', [ChatController::class, 'index']);
         Route::get('unread-count', [ChatController::class, 'unreadCount']);
         Route::post('personal', [ChatController::class, 'startPersonalChat']);

@@ -9,10 +9,15 @@ class SystemSettingsService {
   static const String _cacheKey = 'cached_system_module_statuses';
 
   static const Map<String, bool> _defaultStatuses = {
+    'direct_message_enabled': true,
+    'voice_call_enabled': true,
+    'video_call_enabled': true,
     'ai_features_enabled': true,
     'marketplace_enabled': true,
     'collaboration_enabled': true,
+    'opportunities_enabled': true,
     'wallet_enabled': true,
+    'client_verification_enabled': true,
     'user_registration_enabled': true,
     'creator_registration_enabled': true,
     'maintenance_mode': false,
@@ -21,6 +26,15 @@ class SystemSettingsService {
   /// Global notifier yang bisa di-listen oleh UI (Sidebar, Router, Screen, dll)
   static final ValueNotifier<Map<String, bool>> moduleStatuses =
       ValueNotifier<Map<String, bool>>(Map.from(_defaultStatuses));
+
+  static bool get isDirectMessageEnabled =>
+      moduleStatuses.value['direct_message_enabled'] ?? true;
+
+  static bool get isVoiceCallEnabled =>
+      moduleStatuses.value['voice_call_enabled'] ?? true;
+
+  static bool get isVideoCallEnabled =>
+      moduleStatuses.value['video_call_enabled'] ?? true;
 
   static bool get isMarketplaceEnabled =>
       moduleStatuses.value['marketplace_enabled'] ?? true;
@@ -31,8 +45,14 @@ class SystemSettingsService {
   static bool get isCollaborationEnabled =>
       moduleStatuses.value['collaboration_enabled'] ?? true;
 
+  static bool get isOpportunitiesEnabled =>
+      moduleStatuses.value['opportunities_enabled'] ?? true;
+
   static bool get isWalletEnabled =>
       moduleStatuses.value['wallet_enabled'] ?? true;
+
+  static bool get isClientVerificationEnabled =>
+      moduleStatuses.value['client_verification_enabled'] ?? true;
 
   static bool get isUserRegistrationEnabled =>
       moduleStatuses.value['user_registration_enabled'] ?? true;

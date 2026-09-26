@@ -26,11 +26,18 @@ class CallController extends Controller
 
         $data = $request->data ?? [];
         if ($request->type === 'offer') {
+            $isVideo = isset($request->data['video']) && ($request->data['video'] === true || $request->data['video'] === 'true' || $request->data['video'] === 1);
+            if ($isVideo && !\App\Models\SystemSetting::get('video_call_enabled', true)) {
+                return $this->errorResponse('Fitur Panggilan Video (Video Call) sedang dinonaktifkan oleh administrator.', 403);
+            }
+            if (!$isVideo && !\App\Models\SystemSetting::get('voice_call_enabled', true)) {
+                return $this->errorResponse('Fitur Panggilan Suara (Voice Call) sedang dinonaktifkan oleh administrator.', 403);
+            }
+
             $data['callerName'] = $caller->name;
             $data['callerAvatar'] = $caller->avatar_url ?? '';
             
             // Inject authoritative duration from backend
-            $isVideo = isset($request->data['video']) && $request->data['video'] === true;
             $data['max_duration'] = $isVideo 
                 ? $caller->max_video_call_duration_seconds 
                 : $caller->max_voice_call_duration_seconds;

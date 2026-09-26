@@ -65,6 +65,7 @@ import 'kreavana_ai_screen.dart';
 import 'admin_system_settings_screen.dart';
 import '../services/system_settings_service.dart';
 import '../widgets/feature_disabled_view.dart';
+import '../widgets/app_sweet_alert.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -498,38 +499,42 @@ class _MainNavigationState extends State<MainNavigation> {
 
     if (!_currentUser.isAdmin) {
       if (index == 3 && !SystemSettingsService.isMarketplaceEnabled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Fitur Marketplace sedang dinonaktifkan oleh administrator.'),
-            backgroundColor: Colors.redAccent,
-          ),
+        AppSweetAlert.warning(
+          context,
+          'Fitur Marketplace sedang dinonaktifkan oleh administrator.',
+          title: 'Fitur Dinonaktifkan',
         );
         return;
       }
       if (index == 14 && !SystemSettingsService.isAiEnabled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Fitur Kreavana AI sedang dinonaktifkan oleh administrator.'),
-            backgroundColor: Colors.redAccent,
-          ),
+        AppSweetAlert.warning(
+          context,
+          'Fitur Kreavana AI sedang dinonaktifkan oleh administrator.',
+          title: 'Fitur Dinonaktifkan',
         );
         return;
       }
       if (index == 5 && !SystemSettingsService.isCollaborationEnabled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Fitur Kolaborasi sedang dinonaktifkan oleh administrator.'),
-            backgroundColor: Colors.redAccent,
-          ),
+        AppSweetAlert.warning(
+          context,
+          'Fitur Kolaborasi sedang dinonaktifkan oleh administrator.',
+          title: 'Fitur Dinonaktifkan',
         );
         return;
       }
       if (index == 7 && !SystemSettingsService.isWalletEnabled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Fitur Pembayaran/Dompet sedang dinonaktifkan oleh administrator.'),
-            backgroundColor: Colors.redAccent,
-          ),
+        AppSweetAlert.warning(
+          context,
+          'Fitur Pembayaran/Dompet sedang dinonaktifkan oleh administrator.',
+          title: 'Fitur Dinonaktifkan',
+        );
+        return;
+      }
+      if (index == 11 && !SystemSettingsService.isDirectMessageEnabled) {
+        AppSweetAlert.warning(
+          context,
+          'Fitur Pesan Langsung sedang dinonaktifkan oleh administrator.',
+          title: 'Fitur Dinonaktifkan',
         );
         return;
       }
@@ -1012,6 +1017,17 @@ class _MainNavigationState extends State<MainNavigation> {
         isCollapsed: isCollapsed,
         isMobileDrawer: isMobileDrawer,
       ),
+      if (SystemSettingsService.isDirectMessageEnabled || _currentUser.isAdmin)
+        _buildSidebarItem(
+          icon: Icons.chat_bubble_outline_rounded,
+          activeIcon: Icons.chat_bubble_rounded,
+          label: 'Pesan Langsung',
+          index: 11,
+          theme: theme,
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isMobileDrawer: isMobileDrawer,
+        ),
       if (!_hasSpecificCreatorSubRole) ...[
         if (SystemSettingsService.isMarketplaceEnabled || _currentUser.isAdmin)
           _buildSidebarItem(
@@ -2024,10 +2040,16 @@ class _MainNavigationState extends State<MainNavigation> {
           onLogout: _onLogout,
         ),
       10 => NotificationsScreen(userId: _currentUser.id ?? ''),
-      11 => DirectMessageScreen(
-          key: ValueKey('messages_$_messageScreenVersion'),
-          currentUser: _currentUser,
-        ),
+      11 => (!SystemSettingsService.isDirectMessageEnabled && !_currentUser.isAdmin)
+          ? FeatureDisabledView(
+              featureName: 'Pesan Langsung (Direct Message)',
+              icon: Icons.chat_bubble_outline_rounded,
+              onBackToHome: () => _navigateToScreenIndex(0),
+            )
+          : DirectMessageScreen(
+              key: ValueKey('messages_$_messageScreenVersion'),
+              currentUser: _currentUser,
+            ),
       12 => PeluangProyekScreen(user: _currentUser),
       13 => CreatorCalendarScreen(
           user: _currentUser,

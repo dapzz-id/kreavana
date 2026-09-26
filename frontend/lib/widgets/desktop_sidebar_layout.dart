@@ -20,6 +20,7 @@ import '../screens/profile_screen.dart';
 import '../screens/tim_hak_akses_screen.dart';
 import 'creator_sidebar_menus.dart';
 import 'kreavana_ai_floating_widget.dart';
+import 'app_sweet_alert.dart';
 import '../services/system_settings_service.dart';
 
 class DesktopSidebarLayout extends StatefulWidget {
@@ -323,29 +324,34 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   void _pushLink(String route) {
     if (!widget.user.isAdmin) {
       if (route == 'marketplace' && !SystemSettingsService.isMarketplaceEnabled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Fitur Marketplace sedang dinonaktifkan oleh administrator.'),
-            backgroundColor: Colors.redAccent,
-          ),
+        AppSweetAlert.warning(
+          context,
+          'Fitur Marketplace sedang dinonaktifkan oleh administrator.',
+          title: 'Fitur Dinonaktifkan',
         );
         return;
       }
       if (route == 'kolaborasi' && !SystemSettingsService.isCollaborationEnabled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Fitur Kolaborasi sedang dinonaktifkan oleh administrator.'),
-            backgroundColor: Colors.redAccent,
-          ),
+        AppSweetAlert.warning(
+          context,
+          'Fitur Kolaborasi sedang dinonaktifkan oleh administrator.',
+          title: 'Fitur Dinonaktifkan',
         );
         return;
       }
       if (route == 'pembayaran' && !SystemSettingsService.isWalletEnabled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Fitur Pembayaran/Dompet sedang dinonaktifkan oleh administrator.'),
-            backgroundColor: Colors.redAccent,
-          ),
+        AppSweetAlert.warning(
+          context,
+          'Fitur Pembayaran/Dompet sedang dinonaktifkan oleh administrator.',
+          title: 'Fitur Dinonaktifkan',
+        );
+        return;
+      }
+      if ((route == 'pesan' || route == 'chat' || route == 'direct_message') && !SystemSettingsService.isDirectMessageEnabled) {
+        AppSweetAlert.warning(
+          context,
+          'Fitur Pesan Langsung sedang dinonaktifkan oleh administrator.',
+          title: 'Fitur Dinonaktifkan',
         );
         return;
       }
@@ -353,6 +359,11 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
 
     // Routes that are in MainNavigation's IndexedStack — go to index instead
     switch (route) {
+      case 'pesan':
+      case 'chat':
+      case 'direct_message':
+        _goToMain(11);
+        return;
       case 'kolaborasi':
         _goToMain(5);
         return;
@@ -840,6 +851,15 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                           isDark: isDark,
                           isCollapsed: collapsed,
                         ),
+                        if (SystemSettingsService.isDirectMessageEnabled || widget.user.isAdmin)
+                          _buildNavRow(
+                            icon: Icons.chat_bubble_outline_rounded,
+                            label: 'Pesan Langsung',
+                            onTap: () => _goToMain(11),
+                            isSelected: _isRouteActive('pesan') || _isRouteActive('chat') || _isRouteActive('direct_message'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
                         if (showTopPortofolioAgenda) ...[
                           _buildNavRow(
                             icon: Icons.photo_library_outlined,

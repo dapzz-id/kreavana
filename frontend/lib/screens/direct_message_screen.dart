@@ -27,6 +27,9 @@ import 'transfer_screen.dart';
 import 'contacts_screen.dart';
 
 import '../models/user_model.dart';
+import '../services/system_settings_service.dart';
+import '../widgets/feature_disabled_view.dart';
+import '../widgets/app_sweet_alert.dart';
 
 class DirectMessageScreen extends StatefulWidget {
   final UserModel? currentUser;
@@ -55,6 +58,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
   @override
   void initState() {
     super.initState();
+    SystemSettingsService.moduleStatuses.addListener(_onModuleStatusesChanged);
     BadgeService().markMessagesRead();
     if (widget.initialChat != null) {
       selectedChat = widget.initialChat;
@@ -67,6 +71,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                 body: ChatDetailSection(
                   chat: widget.initialChat!,
                   isMobile: true,
+                  currentUser: widget.currentUser,
                   onMessageSent: () {
                     chatListKey.currentState?.loadChats();
                   },
@@ -82,6 +87,16 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
     } else if (widget.targetUserId != null) {
       _initTargetUserChat();
     }
+  }
+
+  @override
+  void dispose() {
+    SystemSettingsService.moduleStatuses.removeListener(_onModuleStatusesChanged);
+    super.dispose();
+  }
+
+  void _onModuleStatusesChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _initTargetUserChat() async {
@@ -101,6 +116,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                 body: ChatDetailSection(
                   chat: chat,
                   isMobile: true,
+                  currentUser: widget.currentUser,
                   onMessageSent: () {
                     chatListKey.currentState?.loadChats();
                   },
@@ -118,6 +134,21 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!SystemSettingsService.isDirectMessageEnabled && !(widget.currentUser?.isAdmin == true)) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        appBar: AppBar(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          elevation: 0,
+          title: const Text('Pesan Langsung'),
+        ),
+        body: const FeatureDisabledView(
+          featureName: 'Pesan Langsung (Direct Message)',
+          icon: Icons.chat_bubble_outline_rounded,
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: LayoutBuilder(
@@ -153,6 +184,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                       : ChatDetailSection(
                           key: ValueKey(selectedChat!['id'].toString()),
                           chat: selectedChat!,
+                          currentUser: widget.currentUser,
                           onMessageSent: () {
                             chatListKey.currentState?.loadChats();
                           },
@@ -178,6 +210,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                       body: ChatDetailSection(
                         chat: chat,
                         isMobile: true,
+                        currentUser: widget.currentUser,
                         onMessageSent: () {
                           chatListKey.currentState?.loadChats();
                         },
@@ -1165,6 +1198,7 @@ class ChatDetailSection extends StatefulWidget {
   final bool isMobile;
   final VoidCallback? onMessageSent;
   final VoidCallback? onChatLeft;
+  final UserModel? currentUser;
 
   const ChatDetailSection({
     super.key,
@@ -1172,6 +1206,7 @@ class ChatDetailSection extends StatefulWidget {
     this.isMobile = false,
     this.onMessageSent,
     this.onChatLeft,
+    this.currentUser,
   });
 
   @override
@@ -1288,10 +1323,16 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     _presenceTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       if (mounted && !_isRefreshingPresence) _refreshPresence();
     });
+    SystemSettingsService.moduleStatuses.addListener(_onModuleStatusesChanged);
+  }
+
+  void _onModuleStatusesChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    SystemSettingsService.moduleStatuses.removeListener(_onModuleStatusesChanged);
     _pingTimer?.cancel();
     _presenceTimer?.cancel();
     _recordTimer?.cancel();
@@ -2125,6 +2166,28 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
   }
 
   Future<void> _startCall(bool video) async {
+    final isAdmin = widget.currentUser?.isAdmin == true;
+    if (video && !SystemSettingsService.isVideoCallEnabled && !isAdmin) {
+      if (mounted) {
+        AppSweetAlert.warning(
+          context,
+          'Fitur Panggilan Video (Video Call) sedang dinonaktifkan sementara oleh administrator.',
+          title: 'Fitur Dinonaktifkan',
+        );
+      }
+      return;
+    }
+    if (!video && !SystemSettingsService.isVoiceCallEnabled && !isAdmin) {
+      if (mounted) {
+        AppSweetAlert.warning(
+          context,
+          'Fitur Panggilan Suara (Voice Call) sedang dinonaktifkan sementara oleh administrator.',
+          title: 'Fitur Dinonaktifkan',
+        );
+      }
+      return;
+    }
+
     final userIdStr =
         _chat['user_id']?.toString() ?? _chat['userId']?.toString() ?? '';
     if (userIdStr.isEmpty) {
@@ -2292,30 +2355,34 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                           onTap: () => Navigator.pop(ctx),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _ContactAction(
-                          icon: Icons.call_rounded,
-                          label: 'Telepon',
-                          color: AppTheme.success,
-                          onTap: () {
-                            Navigator.pop(ctx);
-                            _startCall(false);
-                          },
+                      if (SystemSettingsService.isVoiceCallEnabled || (widget.currentUser?.isAdmin == true)) ...[
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _ContactAction(
+                            icon: Icons.call_rounded,
+                            label: 'Telepon',
+                            color: AppTheme.success,
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _startCall(false);
+                            },
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _ContactAction(
-                          icon: Icons.videocam_rounded,
-                          label: 'Video',
-                          color: AppTheme.accentPink,
-                          onTap: () {
-                            Navigator.pop(ctx);
-                            _startCall(true);
-                          },
+                      ],
+                      if (SystemSettingsService.isVideoCallEnabled || (widget.currentUser?.isAdmin == true)) ...[
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _ContactAction(
+                            icon: Icons.videocam_rounded,
+                            label: 'Video',
+                            color: AppTheme.accentPink,
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _startCall(true);
+                            },
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   )
                 else
@@ -2394,17 +2461,19 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                       label: const Text('Salin'),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        _startCall(false);
-                      },
-                      icon: const Icon(Icons.call_rounded, size: 18),
-                      label: const Text('Telepon'),
+                  if (SystemSettingsService.isVoiceCallEnabled || (widget.currentUser?.isAdmin == true)) ...[
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _startCall(false);
+                        },
+                        icon: const Icon(Icons.call_rounded, size: 18),
+                        label: const Text('Telepon'),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ],
@@ -2491,18 +2560,20 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         ),
         actions: [
           if (widget.chat['isGroup'] != true) ...[
-            _CallActionButton(
-              icon: Icons.call_rounded,
-              tooltip: 'Telepon',
-              color: AppTheme.success,
-              onPressed: () => _startCall(false),
-            ),
-            _CallActionButton(
-              icon: Icons.videocam_rounded,
-              tooltip: 'Video Call',
-              color: AppTheme.accentPink,
-              onPressed: () => _startCall(true),
-            ),
+            if (SystemSettingsService.isVoiceCallEnabled || (widget.currentUser?.isAdmin == true))
+              _CallActionButton(
+                icon: Icons.call_rounded,
+                tooltip: 'Telepon',
+                color: AppTheme.success,
+                onPressed: () => _startCall(false),
+              ),
+            if (SystemSettingsService.isVideoCallEnabled || (widget.currentUser?.isAdmin == true))
+              _CallActionButton(
+                icon: Icons.videocam_rounded,
+                tooltip: 'Video Call',
+                color: AppTheme.accentPink,
+                onPressed: () => _startCall(true),
+              ),
           ],
           IconButton(
             icon: const Icon(Icons.info_outline),
