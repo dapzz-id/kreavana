@@ -645,18 +645,20 @@ class _DashboardScreenState extends State<DashboardScreen>
           role: _isCreator ? 'creator' : 'client',
           niche: _isCreator ? 'Fotografi & Video' : 'Kebutuhan Kreatif',
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 260,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            clipBehavior: Clip.hardEdge,
-            itemCount: recommendations.length,
-            itemBuilder: (context, index) => _isCreator
-                ? _buildOpportunityCard(recommendations[index], isDark)
-                : _buildCreatorCard(recommendations[index], isDark),
+        if (recommendations.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 260,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.hardEdge,
+              itemCount: recommendations.length,
+              itemBuilder: (context, index) => _isCreator
+                  ? _buildOpportunityCard(recommendations[index], isDark)
+                  : _buildCreatorCard(recommendations[index], isDark),
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
