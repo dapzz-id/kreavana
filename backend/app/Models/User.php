@@ -182,4 +182,14 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasManyThrough(MarketplaceReview::class, MarketplaceItem::class);
     }
+
+    public function opportunityReviewsReceived()
+    {
+        return $this->hasMany(OpportunityReview::class, 'creator_id');
+    }
+
+    public function opportunityReviewsGiven()
+    {
+        return $this->hasMany(OpportunityReview::class, 'reviewer_id');
+    }
 }

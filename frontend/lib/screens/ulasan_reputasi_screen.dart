@@ -18,31 +18,90 @@ class UlasanReputasiScreen extends StatefulWidget {
 
 class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
   bool _isLoading = false;
+  bool _isLoadingSummary = false;
   String _selectedFilter = 'Semua';
   String _searchQuery = '';
 
   List<Map<String, dynamic>> _reviews = [];
+  double _avgRating = 0.0;
+  int _onTimePct = 0;
+  Map<int, int> _distribution = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
+  int _totalReviews = 0;
 
   @override
   void initState() {
     super.initState();
     _fetchRealtimeReviews();
+    _fetchReviewSummary();
+  }
+
+  String? get _currentUserId {
+    final u = widget.user;
+    if (u == null) return null;
+    return u.id;
+  }
+
+  Future<void> _fetchReviewSummary() async {
+    final uid = _currentUserId;
+    if (uid == null) return;
+    setState(() => _isLoadingSummary = true);
+    try {
+      final res = await ApiService.get('creators/$uid/reviews/summary');
+      if (res['status'] == true && res['data'] != null) {
+        final d = Map<String, dynamic>.from(res['data']);
+        final dist = d['distribution'];
+        setState(() {
+          _avgRating = (d['average_rating'] as num?)?.toDouble() ?? 0.0;
+          _onTimePct = (d['on_time_percentage'] as num?)?.toInt() ?? 0;
+          _totalReviews = (d['total_reviews'] as num?)?.toInt() ?? 0;
+          if (dist is Map) {
+            for (var i = 5; i >= 1; i--) {
+              final v = dist['$i'] ?? dist[i];
+              _distribution[i] = (v as num?)?.toInt() ?? 0;
+            }
+          }
+        });
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isLoadingSummary = false);
+    }
   }
 
   Future<void> _fetchRealtimeReviews() async {
+    final uid = _currentUserId;
+    if (uid == null) return;
     setState(() => _isLoading = true);
     try {
-      final res = await ApiService.get('/reviews');
+      final res = await ApiService.get('creators/$uid/reviews');
       if (res['status'] == true && res['data'] != null) {
-        final list = List<Map<String, dynamic>>.from(res['data']);
+        final payload = Map<String, dynamic>.from(res['data']);
+        final list = List<dynamic>.from(payload['items'] ?? []);
         if (mounted) {
           setState(() {
-            _reviews = list;
+            _reviews = list.map((raw) {
+              final item = Map<String, dynamic>.from(raw as Map);
+              final reviewer = item['reviewer'] as Map<String, dynamic>?;
+              final source = item['source'] as String?;
+              final reviewerName = reviewer?['name']?.toString() ?? 'Pengguna Kreavana';
+              final reviewerRole = reviewer?['sub_role']?.toString().replaceAll('_', ' ') ?? 'Kreator';
+              return {
+                'id': item['id'],
+                'name': reviewerName,
+                'role': reviewerRole,
+                'project': source == 'opportunity' ? 'Kontrak Proyek' : 'Produk Marketplace',
+                'rating': (item['rating'] as num?)?.toDouble() ?? 0.0,
+                'comment': item['comment']?.toString() ?? '',
+                'verified': source == 'opportunity' || true,
+                'date': item['created_at']?.toString(),
+                'is_on_time': item['is_on_time'],
+              };
+            }).toList();
           });
         }
       }
     } catch (_) {
-      // Keep rich mock data if backend not active
+      // Keep empty state
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -129,6 +188,14 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
   }
 
   Widget _buildReputationBanner(Color accentColor, bool isDark) {
+    final rating = _isLoadingSummary && _avgRating == 0.0
+        ? '—'
+        : _avgRating.toStringAsFixed(1);
+    final onTime = _isLoadingSummary && _onTimePct == 0
+        ? '—'
+        : '$_onTimePct%';
+    final total = _totalReviews > 0 ? _totalReviews : _reviews.length;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(22),
@@ -153,15 +220,15 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatItem('4.9', 'Rating Rata-rata', Icons.star_rounded),
+          _buildStatItem(rating, 'Rating Rata-rata', Icons.star_rounded),
           Container(width: 1, height: 45, color: Colors.white24),
           _buildStatItem(
-            '${_reviews.length}',
+            '$total',
             'Total Ulasan',
             Icons.rate_review_rounded,
           ),
           Container(width: 1, height: 45, color: Colors.white24),
-          _buildStatItem('98%', 'Tepat Waktu', Icons.verified_outlined),
+          _buildStatItem(onTime, 'Tepat Waktu', Icons.verified_outlined),
         ],
       ),
     );
@@ -190,7 +257,16 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
   }
 
   Widget _buildRatingBreakdown(Color accentColor, bool isDark) {
-    final List<Map<String, dynamic>> breakdown = [];
+    final total = _distribution.values.fold<int>(0, (s, v) => s + v);
+    final List<Map<String, dynamic>> breakdown = [5, 4, 3, 2, 1].map((star) {
+      final count = _distribution[star] ?? 0;
+      final pct = total > 0 ? count / total : 0.0;
+      return {
+        'star': '$star★',
+        'pct': pct,
+        'count': '$count',
+      };
+    }).toList();
 
     return Container(
       padding: const EdgeInsets.all(18),

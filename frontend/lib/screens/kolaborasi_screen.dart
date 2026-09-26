@@ -405,6 +405,7 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
   void _showNewCollabDialog(BuildContext context, Color accentColor) {
     final titleCtrl = TextEditingController();
     final roleCtrl = TextEditingController();
+    bool submitting = false;
 
     showModalBottomSheet(
       context: context,
@@ -420,63 +421,122 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
             20,
             MediaQuery.of(ctx).viewInsets.bottom + 20,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Ajukan Kolaborasi Baru',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: titleCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Nama Proyek / Campaign',
-                  border: OutlineInputBorder(),
+          child: StatefulBuilder(
+            builder: (ctx, setSheetState) => Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ajukan Kolaborasi Baru',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: roleCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Peran Tim yang Dibutuhkan',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accentColor,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: titleCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nama Proyek / Campaign',
+                    border: OutlineInputBorder(),
                   ),
-                  onPressed: () {
-                    if (titleCtrl.text.isNotEmpty) {
-                      setState(() {
-                        _collabs.insert(0, {
-                          'id': '${DateTime.now().millisecondsSinceEpoch}',
-                          'name': widget.user?.name ?? 'Kreator Partner',
-                          'role': roleCtrl.text.isEmpty
-                              ? 'Kreator'
-                              : roleCtrl.text,
-                          'project': titleCtrl.text,
-                          'status': 'Menunggu',
-                          'statusColor': const Color(0xFFF59E0B),
-                          'avatar': Icons.person_outline,
-                          'date': 'Agustus 2026',
-                          'membersCount': 1,
-                        });
-                      });
-                      Navigator.pop(ctx);
-                    }
-                  },
-                  child: const Text(
-                    'Kirim Pengajuan',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: roleCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Peran Tim yang Dibutuhkan',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentColor,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: submitting
+                        ? null
+                        : () async {
+                            if (titleCtrl.text.isEmpty) return;
+                            setSheetState(() => submitting = true);
+                            try {
+                              final now = DateTime.now();
+                              final monthNames = [
+                                'Januari', 'Februari', 'Maret', 'April',
+                                'Mei', 'Juni', 'Juli', 'Agustus',
+                                'September', 'Oktober', 'November', 'Desember'
+                              ];
+                              final dateLabel =
+                                  '${monthNames[now.month - 1]} ${now.year}';
+                              final res = await ApiService.post(
+                                'collaborations',
+                                {
+                                  'project_title': titleCtrl.text,
+                                  'description':
+                                      'Peran yang dibutuhkan: ${roleCtrl.text.isEmpty ? 'Kreator' : roleCtrl.text}',
+                                  'invitees': widget.user != null
+                                      ? [
+                                          {
+                                            'user_id': widget.user!.id,
+                                            'role': roleCtrl.text.isEmpty
+                                                ? 'Kreator'
+                                                : roleCtrl.text,
+                                          }
+                                        ]
+                                      : [],
+                                },
+                              );
+                              final created = res['data'];
+                              setState(() {
+                                _collabs.insert(0, {
+                                  'id': created?['id'] ??
+                                      '${now.millisecondsSinceEpoch}',
+                                  'name': widget.user?.name ??
+                                      'Kreator Partner',
+                                  'role': roleCtrl.text.isEmpty
+                                      ? 'Kreator'
+                                      : roleCtrl.text,
+                                  'project': titleCtrl.text,
+                                  'status': 'Menunggu',
+                                  'statusColor': const Color(0xFFF59E0B),
+                                  'avatar': Icons.person_outline,
+                                  'date': dateLabel,
+                                  'membersCount':
+                                      (created?['members'] as List?)
+                                              ?.length ??
+                                          1,
+                                });
+                              });
+                              if (ctx.mounted) Navigator.pop(ctx);
+                            } catch (e) {
+                              if (ctx.mounted) {
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        'Gagal mengirim pengajuan: $e'),
+                                  ),
+                                );
+                              }
+                            } finally {
+                              if (ctx.mounted) {
+                                setSheetState(() => submitting = false);
+                              }
+                            }
+                          },
+                    child: submitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Kirim Pengajuan',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),

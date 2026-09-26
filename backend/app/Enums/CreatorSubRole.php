@@ -15,6 +15,12 @@ enum CreatorSubRole: string
     case PHOTOGRAPHER = 'photographer';
     case EDITOR = 'editor';
     case VIDEOGRAPHER = 'videographer';
+    case CONTENT_CREATOR = 'content_creator';
+    case ANIMATOR = 'animator';
+    case DESIGNER = 'designer';
+    case MUSICIAN = 'musician';
+    case TALENT = 'talent';
+    case DRONE_PILOT = 'drone_pilot';
 
     public function label(): string
     {
@@ -30,6 +36,12 @@ enum CreatorSubRole: string
             self::PHOTOGRAPHER => 'Photographer',
             self::EDITOR => 'Editor',
             self::VIDEOGRAPHER => 'Videographer',
+            self::CONTENT_CREATOR => 'Content Creator',
+            self::ANIMATOR => 'Animator',
+            self::DESIGNER => 'Designer',
+            self::MUSICIAN => 'Musician',
+            self::TALENT => 'Talent',
+            self::DRONE_PILOT => 'Drone Pilot',
         };
     }
 }

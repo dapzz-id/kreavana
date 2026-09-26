@@ -8,10 +8,11 @@ use App\Http\Controllers\{
     DashboardController, ProfileController, NotificationController,
     CallController, AdminController, OpportunityController, WalletController,
     RoleController, FollowController, MarketplaceController,
-    PaymentMethodController, UserAddressController, AvatarController,
+    PaymentMethodController, PaymentProviderController, UserAddressController, AvatarController,
     PortfolioController, SubscriptionController,
     StorageController, DisputeController, OpportunityReviewController,
-    AiController, JobContractController, JobContractTransitionController
+    AiController, JobContractController, JobContractTransitionController,
+    CollaborationController
 };
 
 // Public: serve avatar images with CORS headers (for Flutter Web)
@@ -24,8 +25,20 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
+// Public creator profiles & reputation
+Route::prefix('creators')->group(function () {
+    Route::get('{id}/reviews', [OpportunityReviewController::class, 'listCreatorReviews']);
+    Route::get('{id}/reviews/summary', [OpportunityReviewController::class, 'getCreatorReviewSummary']);
+});
+
 // Roles endpoints
 Route::get('roles/creator/sub-roles', [RoleController::class, 'getCreatorSubRoles']);
+
+// Payment Providers — public list of supported banks & e-wallets
+Route::prefix('payment-providers')->group(function () {
+    Route::get('/', [PaymentProviderController::class, 'index']);
+    Route::get('{id}', [PaymentProviderController::class, 'show']);
+});
 
 // Auth (Public)
 Route::prefix('auth')->withoutMiddleware(\App\Http\Middleware\ValidateJti::class)->group(function () {
@@ -112,6 +125,7 @@ Route::middleware('auth:api')->group(function () {
         Route::get('has-pin', [WalletController::class, 'hasPin']);
         Route::post('set-pin', [WalletController::class, 'setPin']);
         Route::post('verify-pin', [WalletController::class, 'verifyPin']);
+        Route::get('fees', [WalletController::class, 'getFees']);
         Route::post('topup', [WalletController::class, 'topup']);
         Route::post('topup/simulate', [WalletController::class, 'simulatePay']);
         Route::post('transfer', [WalletController::class, 'transfer']);
@@ -127,6 +141,16 @@ Route::middleware('auth:api')->group(function () {
         Route::get('{id}', [OpportunityController::class, 'show'])->middleware('permission:view_opportunities');
         Route::get('{id}/poster', [OpportunityController::class, 'getPoster'])->middleware('permission:view_opportunities');
         Route::post('{id}/reviews', [OpportunityReviewController::class, 'store']);
+    });
+
+    // Collaborations
+    Route::prefix('collaborations')->group(function () {
+        Route::get('/', [CollaborationController::class, 'index']);
+        Route::post('/', [CollaborationController::class, 'store']);
+        Route::get('{id}', [CollaborationController::class, 'show']);
+        Route::post('{id}/respond', [CollaborationController::class, 'respond']);
+        Route::put('{id}', [CollaborationController::class, 'update']);
+        Route::delete('{id}', [CollaborationController::class, 'destroy']);
     });
 
     // Job Contracts
@@ -146,8 +170,11 @@ Route::middleware('auth:api')->group(function () {
         Route::delete('/', [NotificationController::class, 'destroyAll']);
     });
 
-    // Call Signaling
-    Route::post('call/signal', [CallController::class, 'signal']);
+    // Call Signaling & TURN credentials
+    Route::prefix('call')->group(function () {
+        Route::post('signal', [CallController::class, 'signal']);
+        Route::post('turn-credentials', [CallController::class, 'getTurnCredentials']);
+    });
 
     // Unread counts (combined - optimized single query)
     Route::get('unread-count', function (Request $request) {
@@ -221,6 +248,7 @@ Route::middleware('auth:api')->group(function () {
 
     // Admin
     Route::prefix('admin')->middleware('role:admin')->group(function () {
+        Route::get('stats/summary', [AdminController::class, 'getDashboardSummary']);
         Route::get('applications', [AdminController::class, 'getApplications']);
         Route::post('applications/{id}/approve', [AdminController::class, 'approveApplication']);
         Route::post('applications/{id}/reject', [AdminController::class, 'rejectApplication']);

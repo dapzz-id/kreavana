@@ -184,8 +184,11 @@ class OpportunityService {
     String? budgetRange,
     OpportunityPoster? poster,
   }) async {
+    OpportunityModel? apiResult;
+    String? errorMessage;
+
     try {
-      await ApiService.post('opportunities', {
+      final response = await ApiService.post('opportunities', {
         'title': title,
         'sub_role_slug': subRoleSlug,
         'type': type,
@@ -198,40 +201,50 @@ class OpportunityService {
         'deadline': deadline,
         'budget_range': budgetRange,
       });
-    } catch (_) {}
 
-    final newModel = OpportunityModel(
-      id: 'local_${DateTime.now().millisecondsSinceEpoch}',
-      title: title,
-      description: description,
-      subRoleSlug: subRoleSlug,
-      type: type,
-      location: location ?? 'Indonesia',
-      latitude: latitude ?? -6.2088,
-      longitude: longitude ?? 106.8456,
-      locationCategory: locationCategory ?? 'urban',
-      address: address,
-      deadline: deadline,
-      budgetRange: budgetRange,
-      status: 'open',
-      poster:
-          poster ??
-          OpportunityPoster(
-            id: '2',
-            name: 'Kreator Kreavana',
-            username: 'kreator_demo',
-            phone: '081299998888',
-          ),
-    );
+      if (response['status'] == true && response['data'] != null) {
+        try {
+          apiResult = OpportunityModel.fromJson(response['data']);
+        } catch (_) {}
+      } else if (response['message'] != null) {
+        errorMessage = response['message'] as String;
+      }
+    } catch (e) {
+      errorMessage =
+          e is Map && e['message'] != null ? e['message'] as String : e.toString();
+    }
 
-    await _loadLocalLocations();
-    _userCreatedLocations.insert(0, newModel);
-    await _saveLocalLocations();
+    final newModel = apiResult ??
+        OpportunityModel(
+          id: 'local_${DateTime.now().millisecondsSinceEpoch}',
+          title: title,
+          description: description,
+          subRoleSlug: subRoleSlug,
+          type: type,
+          location: location ?? 'Indonesia',
+          latitude: latitude ?? -6.2088,
+          longitude: longitude ?? 106.8456,
+          locationCategory: locationCategory ?? 'urban',
+          address: address,
+          deadline: deadline,
+          budgetRange: budgetRange,
+          status: 'open',
+          poster: poster,
+        );
+
+    if (apiResult == null) {
+      await _loadLocalLocations();
+      _userCreatedLocations.insert(0, newModel);
+      await _saveLocalLocations();
+    }
 
     return {
-      'status': true,
-      'message': 'Lokasi kolaborasi berhasil ditambahkan!',
+      'status': apiResult != null,
+      'message': apiResult != null
+          ? 'Lokasi kolaborasi berhasil ditambahkan!'
+          : (errorMessage ?? 'Gagal menyimpan ke server. Data tersimpan lokal sementara.'),
       'data': newModel,
+      'is_local': apiResult == null,
     };
   }
 }

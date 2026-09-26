@@ -108,4 +108,16 @@ class AdminService {
       return {'status': false, 'message': e.toString()};
     }
   }
+
+  static Future<Map<String, dynamic>> getDashboardSummary() async {
+    try {
+      final response = await ApiService.get('admin/stats/summary');
+      if (response['status'] == true && response['data'] != null) {
+        return Map<String, dynamic>.from(response['data']);
+      }
+      return {};
+    } catch (e) {
+      return {};
+    }
+  }
 }
