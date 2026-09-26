@@ -19,6 +19,7 @@ class PengumumanPublikScreen extends StatelessWidget {
     final content = Scaffold(
       appBar: AppBar(
         toolbarHeight: 75,
+        automaticallyImplyLeading: MediaQuery.of(context).size.width <= 900,
         title: const Text(
           'Pengumuman Publik',
           style: TextStyle(fontWeight: FontWeight.bold),

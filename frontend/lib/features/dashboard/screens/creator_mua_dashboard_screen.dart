@@ -16,6 +16,7 @@ import '../../../services/portfolio_service.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import '../../../widgets/skeleton/skeleton_grid.dart';
+import '../../../widgets/waving_hand_emoji.dart';
 
 class CreatorMuaDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -400,13 +401,20 @@ class _CreatorMuaDashboardScreenState extends State<CreatorMuaDashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Selamat Datang, Make Up Artist 👋',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF1E1B4B),
-                  ),
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      'Selamat Datang, Make Up Artist',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF1E1B4B),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const WavingHandEmoji(fontSize: 24),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Text(

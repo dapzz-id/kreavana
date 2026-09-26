@@ -18,6 +18,7 @@ import '../../../screens/direct_message_screen.dart';
 import '../../../screens/global_search_screen.dart';
 import '../../../screens/realisasi_anggaran_screen.dart';
 import '../../../screens/pengumuman_publik_screen.dart';
+import '../../../widgets/waving_hand_emoji.dart';
 
 class GovtDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -398,9 +399,16 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Selamat datang, Dinas Komunikasi dan Informatika! 👋',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              const Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    'Selamat datang, Dinas Komunikasi dan Informatika!',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(width: 8),
+                  WavingHandEmoji(fontSize: 24),
+                ],
               ),
               const SizedBox(height: 8),
               Text(
@@ -1520,7 +1528,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
       case 'Buat Kebutuhan':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const BuatKebutuhanScreen()),
+          MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: widget.user)),
         );
         break;
       case 'Cari Vendor':

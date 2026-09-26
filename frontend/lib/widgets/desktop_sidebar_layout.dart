@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'upgrade_plan_modal.dart';
 import '../app/theme.dart';
+import '../app/subrole_theme_engine.dart';
 import '../models/user_model.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/services/auth_service.dart';
@@ -428,7 +429,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     bool isCollapsed = false,
     Color? activeColor,
   }) {
-    final effectiveActiveColor = activeColor ?? AppTheme.primaryPurple;
+    final effectiveActiveColor =
+      activeColor ?? SubRoleThemeEngine.getAccentColorForUser(widget.user);
 
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -537,8 +539,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppTheme.primaryPurple, AppTheme.deepPurple],
+              gradient: SubRoleThemeEngine.getGradient(
+                widget.user.role,
+                widget.user.subRole,
               ),
               borderRadius: BorderRadius.circular(14),
             ),

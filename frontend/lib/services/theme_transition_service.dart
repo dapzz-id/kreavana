@@ -111,8 +111,11 @@ class _ThemeFadeOverlayState extends State<_ThemeFadeOverlay>
       }
     });
 
-    // Start fading out
-    _controller.forward();
+    // Let the new theme complete one frame before revealing it. This keeps
+    // the expensive inherited-theme rebuild behind the opaque overlay.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _controller.forward();
+    });
   }
 
   @override

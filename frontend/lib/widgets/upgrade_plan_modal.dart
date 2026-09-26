@@ -80,13 +80,16 @@ class _ModalBody extends StatefulWidget {
 }
 
 class _ModalBodyState extends State<_ModalBody> {
-  List<SubscriptionPlan> _plans = [];
-  bool _isLoading = true;
+  late List<SubscriptionPlan> _plans;
+  bool _isLoading = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
+    final currentUser = widget.user ?? currentUserNotifier.value;
+    final role = currentUser?.role.toLowerCase();
+    _plans = SubscriptionService.fallbackPlans(role: role);
     _loadPlans();
   }
 
@@ -101,7 +104,7 @@ class _ModalBodyState extends State<_ModalBody> {
       );
       if (mounted) {
         setState(() {
-          _plans = plans.map((plan) {
+          final loadedPlans = plans.map((plan) {
             if (!isCreator) {
               // Boost akun hanya untuk role creator; hilangkan dari user dan client
               return plan.copyWith(
@@ -112,6 +115,9 @@ class _ModalBodyState extends State<_ModalBody> {
             }
             return plan;
           }).toList();
+          if (loadedPlans.isNotEmpty) {
+            _plans = loadedPlans;
+          }
           _isLoading = false;
         });
       }
@@ -173,6 +179,37 @@ class _ModalBodyState extends State<_ModalBody> {
               },
               icon: const Icon(Icons.refresh),
               label: const Text('Coba Lagi'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_plans.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.inventory_2_outlined,
+              size: 48,
+              color: AppTheme.primaryPurple,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Paket upgrade belum tersedia.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () {
+                setState(() => _isLoading = true);
+                _loadPlans();
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Muat Ulang'),
             ),
           ],
         ),

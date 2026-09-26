@@ -217,7 +217,7 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
         ElevatedButton.icon(
           onPressed: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const BuatKebutuhanScreen()),
+            MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: widget.user)),
           ),
           icon: const Icon(Icons.add, size: 18),
           label: const Text('Buat Paket / Event Baru'),

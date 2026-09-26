@@ -218,7 +218,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final content = Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: Navigator.canPop(context),
+        automaticallyImplyLeading: MediaQuery.of(context).size.width <= 900,
         toolbarHeight: 75,
         title: const Text(
           'Profil Pengguna',

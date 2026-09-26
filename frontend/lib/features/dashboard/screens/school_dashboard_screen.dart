@@ -10,6 +10,7 @@ import '../../../screens/explore_screen.dart';
 import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
 import '../../../screens/peluang_proyek_screen.dart';
+import '../../../widgets/waving_hand_emoji.dart';
 
 class SchoolDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -196,12 +197,19 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Selamat datang, ${widget.user.name}! 👋',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    'Selamat datang, ${widget.user.name}!',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const WavingHandEmoji(fontSize: 24),
+                ],
               ),
               const SizedBox(height: 8),
               Text(
@@ -218,7 +226,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
         ElevatedButton.icon(
           onPressed: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const BuatKebutuhanScreen()),
+            MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: widget.user)),
           ),
           icon: const Icon(Icons.add, size: 18),
           label: const Text('Buat Permintaan Baru'),

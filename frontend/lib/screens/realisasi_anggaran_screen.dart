@@ -19,6 +19,7 @@ class RealisasiAnggaranScreen extends StatelessWidget {
     final content = Scaffold(
       appBar: AppBar(
         toolbarHeight: 75,
+        automaticallyImplyLeading: MediaQuery.of(context).size.width <= 900,
         title: const Text(
           'Realisasi Anggaran',
           style: TextStyle(fontWeight: FontWeight.bold),

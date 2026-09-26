@@ -82,9 +82,11 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   late UserModel _currentUser;
   int _currentIndex = 0;
+  int _messageScreenVersion = 0;
   bool _isSidebarCollapsed = false;
   bool _isMobileDrawerOpen = false;
   final Set<int> _loadedScreenIndices = {};
+  final Map<int, Widget> _screenCache = {};
   String? _activeGovRoute;
   final ScrollController _sidebarScrollController = ScrollController();
   static double _savedSidebarScrollOffset = 0;
@@ -124,7 +126,10 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   void _onUserUpdated(UserModel updatedUser) {
-    setState(() => _currentUser = updatedUser);
+    setState(() {
+      _currentUser = updatedUser;
+      _screenCache.clear();
+    });
   }
 
   void _onLogout() async {
@@ -488,6 +493,10 @@ class _MainNavigationState extends State<MainNavigation> {
     }
     setState(() {
       _currentIndex = index;
+      if (index == 11) {
+        _messageScreenVersion++;
+        _screenCache.remove(index);
+      }
       _loadedScreenIndices.add(index);
       _activeGovRoute = null;
     });
@@ -603,6 +612,16 @@ class _MainNavigationState extends State<MainNavigation> {
     bool isMobileDrawer = false,
   }) {
     return [
+      _buildSidebarItem(
+        icon: Icons.handshake_outlined,
+        activeIcon: Icons.handshake,
+        label: 'Kolaborasi',
+        index: 5,
+        theme: theme,
+        isDark: isDark,
+        isCollapsed: isCollapsed,
+        isMobileDrawer: isMobileDrawer,
+      ),
       if (_isCreatorUser)
         _buildSidebarItem(
           icon: Icons.calendar_month_outlined,
@@ -614,16 +633,6 @@ class _MainNavigationState extends State<MainNavigation> {
           isCollapsed: isCollapsed,
           isMobileDrawer: isMobileDrawer,
         ),
-      _buildSidebarItem(
-        icon: Icons.handshake_outlined,
-        activeIcon: Icons.handshake,
-        label: 'Kolaborasi',
-        index: 5,
-        theme: theme,
-        isDark: isDark,
-        isCollapsed: isCollapsed,
-        isMobileDrawer: isMobileDrawer,
-      ),
       if (_isCreatorUser)
         _buildSidebarItem(
           icon: Icons.work_outline,
@@ -655,15 +664,16 @@ class _MainNavigationState extends State<MainNavigation> {
         isCollapsed: isCollapsed,
         isMobileDrawer: isMobileDrawer,
       ),
-      _buildSidebarLink(
-        icon: Icons.workspace_premium_outlined,
-        label: 'Upgrade Plan / Paket',
-        onTap: () => UpgradePlanModal.show(context),
-        isDark: isDark,
-        isCollapsed: isCollapsed,
-        isSelected: false,
-        isMobileDrawer: isMobileDrawer,
-      ),
+      if (!isMobileDrawer)
+        _buildSidebarLink(
+          icon: Icons.workspace_premium_outlined,
+          label: 'Upgrade Plan / Paket',
+          onTap: () => UpgradePlanModal.show(context),
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: false,
+          isMobileDrawer: isMobileDrawer,
+        ),
       _buildSidebarItem(
         icon: Icons.settings_outlined,
         activeIcon: Icons.settings,
@@ -674,7 +684,8 @@ class _MainNavigationState extends State<MainNavigation> {
         isCollapsed: isCollapsed,
         isMobileDrawer: isMobileDrawer,
       ),
-      _buildUpgradePromoCard(isDark, isCollapsed: isCollapsed),
+      if (!isMobileDrawer)
+        _buildUpgradePromoCard(isDark, isCollapsed: isCollapsed),
     ];
   }
 
@@ -767,16 +778,6 @@ class _MainNavigationState extends State<MainNavigation> {
       }),
       const SizedBox(height: 18),
       _buildSidebarSectionHeader('LAINNYA', isDark, isCollapsed: isCollapsed),
-      _buildSidebarItem(
-        icon: Icons.calendar_month_outlined,
-        activeIcon: Icons.calendar_month,
-        label: 'Kapasitas & Jadwal',
-        index: 13,
-        theme: theme,
-        isDark: isDark,
-        isCollapsed: isCollapsed,
-        isMobileDrawer: isMobileDrawer,
-      ),
       if (CreatorSidebarMenus.showKolaborasiInLainnya(_currentUser.subRole))
         _buildSidebarItem(
           icon: Icons.handshake_outlined,
@@ -788,6 +789,16 @@ class _MainNavigationState extends State<MainNavigation> {
           isCollapsed: isCollapsed,
           isMobileDrawer: isMobileDrawer,
         ),
+      _buildSidebarItem(
+        icon: Icons.calendar_month_outlined,
+        activeIcon: Icons.calendar_month,
+        label: 'Kapasitas & Jadwal',
+        index: 13,
+        theme: theme,
+        isDark: isDark,
+        isCollapsed: isCollapsed,
+        isMobileDrawer: isMobileDrawer,
+      ),
       _buildSidebarItem(
         icon: Icons.star_border,
         activeIcon: Icons.star,
@@ -808,15 +819,16 @@ class _MainNavigationState extends State<MainNavigation> {
         isCollapsed: isCollapsed,
         isMobileDrawer: isMobileDrawer,
       ),
-      _buildSidebarLink(
-        icon: Icons.workspace_premium_outlined,
-        label: 'Upgrade Plan / Paket',
-        onTap: () => UpgradePlanModal.show(context),
-        isDark: isDark,
-        isCollapsed: isCollapsed,
-        isSelected: false,
-        isMobileDrawer: isMobileDrawer,
-      ),
+      if (!isMobileDrawer)
+        _buildSidebarLink(
+          icon: Icons.workspace_premium_outlined,
+          label: 'Upgrade Plan / Paket',
+          onTap: () => UpgradePlanModal.show(context),
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: false,
+          isMobileDrawer: isMobileDrawer,
+        ),
       _buildSidebarItem(
         icon: Icons.settings_outlined,
         activeIcon: Icons.settings,
@@ -827,7 +839,8 @@ class _MainNavigationState extends State<MainNavigation> {
         isCollapsed: isCollapsed,
         isMobileDrawer: isMobileDrawer,
       ),
-      _buildUpgradePromoCard(isDark, isCollapsed: isCollapsed),
+      if (!isMobileDrawer)
+        _buildUpgradePromoCard(isDark, isCollapsed: isCollapsed),
     ];
   }
 
@@ -1574,6 +1587,7 @@ class _MainNavigationState extends State<MainNavigation> {
               thickness: 1,
               color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade200,
             ),
+            if (!_currentUser.isAdmin) _buildMobileUpgradeAction(isDark),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.only(top: 8),
@@ -1592,6 +1606,58 @@ class _MainNavigationState extends State<MainNavigation> {
             ),
             _buildUserBottomCard(isDark: isDark, isCollapsed: false),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileUpgradeAction(bool isDark) {
+    final accentColor = SubRoleThemeEngine.getAccentColorForUser(_currentUser);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+      child: Material(
+        color: accentColor.withValues(alpha: isDark ? 0.2 : 0.08),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: () {
+            Navigator.pop(context);
+            UpgradePlanModal.show(context);
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            child: Row(
+              children: [
+                Icon(Icons.workspace_premium_outlined, color: accentColor),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Upgrade Akun',
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black87,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        'Buka fitur dan paket premium',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isDark ? Colors.white60 : Colors.black54,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: accentColor),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -1884,7 +1950,10 @@ class _MainNavigationState extends State<MainNavigation> {
           onLogout: _onLogout,
         ),
       10 => NotificationsScreen(userId: _currentUser.id ?? ''),
-      11 => const DirectMessageScreen(),
+      11 => DirectMessageScreen(
+          key: ValueKey('messages_$_messageScreenVersion'),
+          currentUser: _currentUser,
+        ),
       12 => PeluangProyekScreen(user: _currentUser),
       13 => CreatorCalendarScreen(
           user: _currentUser,
@@ -1893,6 +1962,10 @@ class _MainNavigationState extends State<MainNavigation> {
       14 => KreavanaAiScreen(user: _currentUser),
       _ => const SizedBox.shrink(),
     };
+  }
+
+  Widget _getCachedScreen(int index) {
+    return _screenCache.putIfAbsent(index, () => _buildScreenAt(index));
   }
 
   @override
@@ -1908,7 +1981,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
     final List<Widget> screens = List.generate(
       totalScreenCount,
-      (index) => _buildScreenAt(index),
+      _getCachedScreen,
     );
     final sidebarWidth = _isSidebarCollapsed ? 78.0 : 260.0;
     final bool hasPageFab =
@@ -2130,6 +2203,9 @@ class _MainNavigationState extends State<MainNavigation> {
         bottomNavigationBar: CustomBottomNavBar(
           currentIndex: mobileBottomNavIndex,
           onTap: (navIndex) {
+            if (navIndex == 3 && Navigator.of(context).canPop()) {
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            }
             final targetIndex = switch (navIndex) {
               0 => 0,
               1 => 1,
@@ -2165,9 +2241,9 @@ class _MainNavigationState extends State<MainNavigation> {
                 ]
               : [
                   const BottomNavItem(
-                    icon: Icons.dashboard_outlined,
-                    activeIcon: Icons.dashboard,
-                    label: 'Dashboard',
+                    icon: Icons.home_outlined,
+                    activeIcon: Icons.home,
+                    label: 'Beranda',
                   ),
                   const BottomNavItem(
                     icon: Icons.explore_outlined,

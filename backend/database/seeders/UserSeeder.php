@@ -107,6 +107,37 @@ class UserSeeder extends Seeder
                 'email' => 'videographer@kreavana.id',
                 'username' => 'videographer_demo',
             ],
+            // 4. Kolaborasi Partner Creators (Akun Nyata Kreavana)
+            [
+                'sub_role' => CreatorSubRole::VIDEOGRAPHER,
+                'name' => 'Dimas Arya',
+                'email' => 'dimas.arya@kreavana.id',
+                'username' => 'dimas_arya',
+            ],
+            [
+                'sub_role' => CreatorSubRole::EDITOR,
+                'name' => 'Sarah Putri',
+                'email' => 'sarah.putri@kreavana.id',
+                'username' => 'sarah_putri',
+            ],
+            [
+                'sub_role' => CreatorSubRole::PHOTOGRAPHER,
+                'name' => 'Kevin Jonathan',
+                'email' => 'kevin.jonathan@kreavana.id',
+                'username' => 'kevin_jonathan',
+            ],
+            [
+                'sub_role' => CreatorSubRole::SINGER,
+                'name' => 'Aditya Pratama',
+                'email' => 'aditya.pratama@kreavana.id',
+                'username' => 'aditya_pratama',
+            ],
+            [
+                'sub_role' => CreatorSubRole::COMMUNITY,
+                'name' => 'Nabila Zahra',
+                'email' => 'nabila.zahra@kreavana.id',
+                'username' => 'nabila_zahra',
+            ],
         ];
 
         $capacities = [

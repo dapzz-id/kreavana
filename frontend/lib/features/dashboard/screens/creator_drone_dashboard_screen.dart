@@ -16,6 +16,7 @@ import '../../../services/portfolio_service.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import '../../../widgets/skeleton/skeleton_grid.dart';
+import '../../../widgets/waving_hand_emoji.dart';
 
 class CreatorDroneDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -401,13 +402,20 @@ class _CreatorDroneDashboardScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Selamat Datang, Drone Pilot 👋',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF1E1B4B),
-                  ),
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      'Selamat Datang, Drone Pilot',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF1E1B4B),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const WavingHandEmoji(fontSize: 24),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Text(

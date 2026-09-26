@@ -36,6 +36,7 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
   static const double _buttonHeight = 46.0;
 
   void _toggleWidget() {
+    Navigator.of(context).popUntil((route) => route.isFirst);
     context.go(AppRoutes.aiAssistant);
   }
 
@@ -62,7 +63,7 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
     } else {
       final initialBottomOffset = isDesktop
           ? (widget.hasPageFab ? 96.0 : 32.0)
-          : (widget.hasPageFab ? 150.0 : 88.0);
+          : (widget.hasPageFab ? 84.0 : 56.0);
       _position = Offset(
         (screenSize.width - _buttonWidth - 24.0).clamp(12.0, maxLeft),
         (screenSize.height - _buttonHeight - initialBottomOffset).clamp(
