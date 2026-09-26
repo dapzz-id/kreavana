@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../../models/user_model.dart';
 import '../../../services/admin_service.dart';
 import '../../../widgets/stat_card.dart';
 import '../../../widgets/skeleton_box.dart';
+import '../../../widgets/app_sweet_alert.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -23,36 +25,64 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _activeOpportunities = 0;
   int _openDisputes = 0;
   List<Map<String, dynamic>> _systemLogs = [];
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadAdminStats();
+    // Auto-refresh setiap 15 detik agar dashboard realtime
+    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted) {
+        _loadAdminStats(isSilent: true);
+      }
+    });
   }
 
-  Future<void> _loadAdminStats() async {
-    setState(() => _isLoading = true);
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadAdminStats({bool isSilent = false, bool showToast = false}) async {
+    if (!isSilent) setState(() => _isLoading = true);
     try {
+      final summaryFuture =
+          AdminService.getDashboardSummary().catchError((_) => <String, dynamic>{});
+      final pendingAppsFuture = AdminService.getApplications(status: 'pending')
+          .catchError((_) => <CreatorApplication>[]);
+      final logsFuture =
+          AdminService.getSystemLogs().catchError((_) => <Map<String, dynamic>>[]);
+
       final results = await Future.wait([
-        AdminService.getDashboardSummary(),
-        AdminService.getApplications(status: 'pending'),
-        AdminService.getSystemLogs(),
+        summaryFuture,
+        pendingAppsFuture,
+        logsFuture,
       ]);
       final summary = results[0] as Map<String, dynamic>;
       final pendingApps = results[1] as List;
       final logs = results[2] as List<Map<String, dynamic>>;
       if (mounted) {
         setState(() {
-          _totalUsers = (summary['total_users'] as num?)?.toInt() ?? 0;
-          _activeCreators = (summary['active_creators'] as num?)?.toInt() ?? 0;
-          _completedProjects = (summary['completed_projects'] as num?)?.toInt() ?? 0;
-          _activeOpportunities = (summary['active_opportunities'] as num?)?.toInt() ?? 0;
-          _openDisputes = (summary['open_disputes'] as num?)?.toInt() ?? 0;
+          _totalUsers = (summary['total_users'] as num?)?.toInt() ?? _totalUsers;
+          _activeCreators = (summary['active_creators'] as num?)?.toInt() ?? _activeCreators;
+          _completedProjects = (summary['completed_projects'] as num?)?.toInt() ?? _completedProjects;
+          _activeOpportunities = (summary['active_opportunities'] as num?)?.toInt() ?? _activeOpportunities;
+          _openDisputes = (summary['open_disputes'] as num?)?.toInt() ?? _openDisputes;
           _pendingVerifications =
               (summary['pending_applications'] as num?)?.toInt() ?? pendingApps.length;
           _systemLogs = logs;
           _isLoading = false;
         });
+
+        if (showToast) {
+          AppSweetAlert.success(
+            context,
+            'Data dasbor berhasil diperbarui secara realtime.',
+            title: 'Dasbor Terkini',
+          );
+        }
       }
     } catch (_) {
       if (mounted) {
@@ -128,7 +158,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: _loadAdminStats,
+            tooltip: 'Segarkan Dasbor',
+            onPressed: () => _loadAdminStats(showToast: true),
           ),
         ],
       ),

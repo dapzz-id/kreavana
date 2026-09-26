@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../app/theme.dart';
 import '../services/admin_service.dart';
+import '../widgets/app_sweet_alert.dart';
 
 class AdminSystemSettingsScreen extends StatefulWidget {
   final UserModel user;
@@ -142,23 +143,16 @@ class _AdminSystemSettingsScreenState extends State<AdminSystemSettingsScreen>
       });
 
       if (res['status'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              newVal ? 'Modul diaktifkan.' : 'Modul dinonaktifkan.',
-            ),
-            backgroundColor: newVal ? Colors.green : Colors.grey.shade800,
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
+        AppSweetAlert.success(
+          context,
+          newVal ? 'Modul berhasil diaktifkan.' : 'Modul berhasil dinonaktifkan.',
+          title: newVal ? 'Modul Diaktifkan' : 'Modul Dinonaktifkan',
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(res['message'] ?? 'Gagal mengubah status modul.'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
+        AppSweetAlert.error(
+          context,
+          res['message'] ?? 'Gagal mengubah status modul.',
+          title: 'Gagal',
         );
       }
     }
@@ -184,21 +178,17 @@ class _AdminSystemSettingsScreenState extends State<AdminSystemSettingsScreen>
       setState(() => _isSavingAi = false);
 
       if (res['status'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Konfigurasi AI Engine berhasil disimpan!'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
+        AppSweetAlert.success(
+          context,
+          'Konfigurasi AI Engine berhasil disimpan!',
+          title: 'Tersimpan',
         );
         _loadAllSettings();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(res['message'] ?? 'Gagal menyimpan konfigurasi.'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
+        AppSweetAlert.error(
+          context,
+          res['message'] ?? 'Gagal menyimpan konfigurasi.',
+          title: 'Gagal Simpan',
         );
       }
     }

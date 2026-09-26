@@ -30,9 +30,12 @@ class AdminService {
         'admin/applications/$id/approve',
         {},
       );
+      if (response['status'] == true) {
+        response['success'] = true;
+      }
       return response;
     } catch (e) {
-      return {'success': false, 'message': e.toString()};
+      return {'success': false, 'status': false, 'message': e.toString()};
     }
   }
 
@@ -45,9 +48,12 @@ class AdminService {
       final response = await ApiService.post('admin/applications/$id/reject', {
         'admin_note': note,
       });
+      if (response['status'] == true) {
+        response['success'] = true;
+      }
       return response;
     } catch (e) {
-      return {'success': false, 'message': e.toString()};
+      return {'success': false, 'status': false, 'message': e.toString()};
     }
   }
 

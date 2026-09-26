@@ -31,7 +31,10 @@ class AdminController extends Controller
     {
         try {
             $this->adminService->approveApplication($id);
-            return $this->successResponse('Pengajuan Kreator berhasil disetujui.');
+            return $this->successResponse('Pengajuan berhasil disetujui.', [
+                'id' => $id,
+                'status' => 'approved',
+            ]);
         } catch (Exception $e) {
             return $this->errorResponse($e->getMessage(), $e->getCode() ?: 500);
         }
@@ -41,7 +44,10 @@ class AdminController extends Controller
     {
         try {
             $this->adminService->rejectApplication($id, $request->admin_note);
-            return $this->successResponse('Pengajuan Kreator berhasil ditolak.');
+            return $this->successResponse('Pengajuan berhasil ditolak.', [
+                'id' => $id,
+                'status' => 'rejected',
+            ]);
         } catch (Exception $e) {
             return $this->errorResponse($e->getMessage(), $e->getCode() ?: 500);
         }
@@ -55,33 +61,37 @@ class AdminController extends Controller
 
     public function getDashboardSummary()
     {
-        $totalUsers = \App\Models\User::count();
-        $totalCreators = \App\Models\User::where('role', 'creator')
-            ->where('is_creator_approved', true)
-            ->count();
-        $completedProjects = \App\Models\JobContract::whereIn('status', ['completed', 'paid_out'])
-            ->count();
-        $pendingApplications = \App\Models\CreatorApplication::where('status', 'pending')
-            ->count();
-        $activeOpportunities = \App\Models\Opportunity::where('status', 'open')
-            ->count();
-        $totalDisputes = \App\Models\DisputeCase::whereNull('resolved_at')
-            ->count();
-        $walletVolume = (float) \App\Models\WalletTransaction::whereIn('type', ['topup', 'transfer_in', 'escrow_release'])
-            ->where('status', 'success')
-            ->sum('amount');
-        $newUsersThisWeek = \App\Models\User::where('created_at', '>=', now()->subDays(7))
-            ->count();
+        try {
+            $totalUsers = \App\Models\User::count();
+            $totalCreators = \App\Models\User::where('role', 'creator')
+                ->where('is_creator_approved', true)
+                ->count();
+            $completedProjects = \App\Models\JobContract::whereIn('contract_status', ['completed'])
+                ->count();
+            $pendingApplications = \App\Models\CreatorApplication::where('status', 'pending')
+                ->count();
+            $activeOpportunities = \App\Models\Opportunity::where('status', 'open')
+                ->count();
+            $totalDisputes = \App\Models\DisputeCase::where('status', '!=', 'resolved')
+                ->count();
+            $walletVolume = (float) \App\Models\WalletTransaction::whereIn('type', ['topup', 'transfer', 'payment'])
+                ->whereIn('status', ['completed', 'success'])
+                ->sum('amount');
+            $newUsersThisWeek = \App\Models\User::where('created_at', '>=', now()->subDays(7))
+                ->count();
 
-        return $this->successResponse('Dashboard summary berhasil diambil', [
-            'total_users'              => $totalUsers,
-            'active_creators'          => $totalCreators,
-            'completed_projects'       => $completedProjects,
-            'pending_applications'     => $pendingApplications,
-            'active_opportunities'     => $activeOpportunities,
-            'open_disputes'            => $totalDisputes,
-            'wallet_volume_idr'        => $walletVolume,
-            'new_users_this_week'      => $newUsersThisWeek,
-        ]);
+            return $this->successResponse('Dashboard summary berhasil diambil', [
+                'total_users'              => $totalUsers,
+                'active_creators'          => $totalCreators,
+                'completed_projects'       => $completedProjects,
+                'pending_applications'     => $pendingApplications,
+                'active_opportunities'     => $activeOpportunities,
+                'open_disputes'            => $totalDisputes,
+                'wallet_volume_idr'        => $walletVolume,
+                'new_users_this_week'      => $newUsersThisWeek,
+            ]);
+        } catch (Exception $e) {
+            return $this->errorResponse($e->getMessage(), 500);
+        }
     }
 }

@@ -64,7 +64,7 @@ Route::prefix('payment-providers')->group(function () {
 
 // Auth (Public)
 Route::prefix('auth')->withoutMiddleware(\App\Http\Middleware\ValidateJti::class)->group(function () {
-    Route::post('register', [AuthController::class, 'register'])->middleware('throttle:auth-register');
+    Route::post('register', [AuthController::class, 'register'])->middleware(['throttle:auth-register', 'module:user_registration_enabled']);
     Route::post('login', [AuthController::class, 'login'])->middleware('throttle:auth-login');
     Route::post('refresh', [AuthController::class, 'refresh'])->middleware('throttle:auth-refresh');
     Route::post('user/login', [AuthController::class, 'userLogin'])->middleware('throttle:auth-login');
@@ -121,7 +121,7 @@ Route::middleware('auth:api')->group(function () {
         Route::get('identity', [ProfileController::class, 'identity'])->middleware('permission:view_own_profile');
         Route::get('permissions', [ProfileController::class, 'permissions'])->middleware('permission:view_own_profile');
         Route::get('history', [ProfileController::class, 'history'])->middleware('permission:manage_own_profile');
-        Route::post('apply-creator', [ProfileController::class, 'applyCreator'])->middleware('role:user');
+        Route::post('apply-creator', [ProfileController::class, 'applyCreator'])->middleware(['role:user', 'module:creator_registration_enabled']);
     });
 
     // Verification
@@ -191,7 +191,7 @@ Route::middleware('auth:api')->group(function () {
     });
 
     // Collaborations
-    Route::prefix('collaborations')->group(function () {
+    Route::prefix('collaborations')->middleware('module:collaboration_enabled')->group(function () {
         Route::get('/', [CollaborationController::class, 'index']);
         Route::post('/', [CollaborationController::class, 'store']);
         Route::get('{id}', [CollaborationController::class, 'show']);

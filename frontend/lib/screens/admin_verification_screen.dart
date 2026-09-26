@@ -4,6 +4,7 @@ import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/admin_service.dart';
 import '../services/api_service.dart';
+import '../widgets/app_sweet_alert.dart';
 import '../widgets/skeleton_box.dart';
 
 class AdminVerificationScreen extends StatefulWidget {
@@ -77,20 +78,38 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
     final result = await AdminService.approveApplication(id);
     if (mounted) {
       setState(() => _isLoading = false);
-      if (result['success'] == true) {
+      final isSuccess = result['success'] == true || result['status'] == true;
+      if (isSuccess) {
         final successMsg = app.type == 'client_verification'
             ? 'Verifikasi KTP Klien berhasil disetujui. Akun kini memiliki Centang Biru!'
             : 'Pengajuan kreator berhasil disetujui. Akun telah ditingkatkan ke status Kreator!';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(successMsg),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
+
+        // Realtime removal from pending list immediately so it disappears without manual refresh!
+        setState(() {
+          _pendingApps.removeWhere((a) => a.id == id);
+          _approvedApps.insert(
+            0,
+            app.copyWith(
+              status: 'approved',
+              adminNote: 'Disetujui oleh Admin.',
+            ),
+          );
+        });
+
+        // Tampilkan popup SweetAlert di sebelah kanan atas
+        AppSweetAlert.success(
+          context,
+          successMsg,
+          title: 'Berhasil Disetujui',
         );
+
         _loadApplications();
       } else {
-        _showError(result['message'] ?? 'Gagal menyetujui pengajuan.');
+        AppSweetAlert.error(
+          context,
+          result['message'] ?? 'Gagal menyetujui pengajuan.',
+          title: 'Gagal Menyetujui',
+        );
       }
     }
   }
@@ -159,31 +178,47 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
     final result = await AdminService.rejectApplication(id, note);
     if (mounted) {
       setState(() => _isLoading = false);
-      if (result['success'] == true) {
+      final isSuccess = result['success'] == true || result['status'] == true;
+      if (isSuccess) {
         final rejectMsg = app.type == 'client_verification'
             ? 'Verifikasi KTP Klien berhasil ditolak.'
             : 'Pengajuan kreator berhasil ditolak.';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(rejectMsg),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
+
+        // Realtime removal from pending list immediately so it disappears without manual refresh!
+        setState(() {
+          _pendingApps.removeWhere((a) => a.id == id);
+          _rejectedApps.insert(
+            0,
+            app.copyWith(
+              status: 'rejected',
+              adminNote: note,
+            ),
+          );
+        });
+
+        // Tampilkan popup SweetAlert di sebelah kanan atas
+        AppSweetAlert.warning(
+          context,
+          rejectMsg,
+          title: 'Pengajuan Ditolak',
         );
+
         _loadApplications();
       } else {
-        _showError(result['message'] ?? 'Gagal menolak pengajuan.');
+        AppSweetAlert.error(
+          context,
+          result['message'] ?? 'Gagal menolak pengajuan.',
+          title: 'Gagal Menolak',
+        );
       }
     }
   }
 
   void _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: Colors.red.shade700,
-        behavior: SnackBarBehavior.floating,
-      ),
+    AppSweetAlert.error(
+      context,
+      msg,
+      title: 'Perhatian',
     );
   }
 
