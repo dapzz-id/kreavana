@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/admin_service.dart';
+import '../services/api_service.dart';
 import '../widgets/skeleton_box.dart';
 
 class AdminVerificationScreen extends StatefulWidget {
@@ -426,23 +428,11 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
             ),
             if (app.nibFileUrl != null && app.nibFileUrl!.isNotEmpty) ...[
               const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  app.nibFileUrl!,
-                  height: 120,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 60,
-                    color: Colors.grey.shade200,
-                    child: Center(
-                      child: Text(
-                        'Gagal memuat dokumen NIB',
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                      ),
-                    ),
-                  ),
+              GestureDetector(
+                onTap: () => _showImageDialog(app.nibFileUrl!, 'Dokumen NIB'),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: _buildPhotoPreview(app.nibFileUrl!, height: 120),
                 ),
               ),
             ],
@@ -501,26 +491,7 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
                           onTap: () => _showImageDialog(app.ktpPhotoUrl!, 'Foto KTP'),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              app.ktpPhotoUrl!,
-                              height: 120,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                height: 120,
-                                color: Colors.grey.shade200,
-                                child: Center(
-                                  child: Text(
-                                    'Gagal memuat foto',
-                                    style: TextStyle(
-                                      color: Colors.grey.shade600,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+                            child: _buildPhotoPreview(app.ktpPhotoUrl!, height: 120),
                           ),
                         ),
                       ],
@@ -551,26 +522,7 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              app.selfiePhotoUrl!,
-                              height: 120,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                height: 120,
-                                color: Colors.grey.shade200,
-                                child: Center(
-                                  child: Text(
-                                    'Gagal memuat foto',
-                                    style: TextStyle(
-                                      color: Colors.grey.shade600,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+                            child: _buildPhotoPreview(app.selfiePhotoUrl!, height: 120),
                           ),
                         ),
                       ],
@@ -664,6 +616,63 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
     );
   }
 
+  Widget _buildPhotoPreview(
+    String rawUrl, {
+    double? height,
+    BoxFit fit = BoxFit.cover,
+  }) {
+    if (rawUrl.startsWith('data:image')) {
+      try {
+        final commaIdx = rawUrl.indexOf(',');
+        final b64 = commaIdx != -1 ? rawUrl.substring(commaIdx + 1) : rawUrl;
+        final bytes = base64Decode(b64.trim().replaceAll('\n', '').replaceAll('\r', ''));
+        return Image.memory(
+          bytes,
+          height: height,
+          width: double.infinity,
+          fit: fit,
+          errorBuilder: (_, _, _) => _buildImageErrorBox(height: height),
+        );
+      } catch (e) {
+        debugPrint('Base64 image decode error: $e');
+        return _buildImageErrorBox(height: height);
+      }
+    }
+
+    final resolved = ApiService.resolveAssetUrl(rawUrl);
+    return Image.network(
+      resolved,
+      height: height,
+      width: double.infinity,
+      fit: fit,
+      errorBuilder: (_, _, _) => _buildImageErrorBox(height: height),
+    );
+  }
+
+  Widget _buildImageErrorBox({double? height}) {
+    return Container(
+      height: height ?? 120,
+      width: double.infinity,
+      color: Colors.grey.shade200,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.broken_image_outlined, size: 28, color: Colors.grey.shade500),
+            const SizedBox(height: 4),
+            Text(
+              'Gagal memuat foto',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showImageDialog(String imageUrl, String title) {
     showDialog(
       context: context,
@@ -675,18 +684,7 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
             InteractiveViewer(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    padding: const EdgeInsets.all(24),
-                    color: Colors.black,
-                    child: const Text(
-                      'Gagal memuat gambar',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
+                child: _buildPhotoPreview(imageUrl, fit: BoxFit.contain),
               ),
             ),
             IconButton(

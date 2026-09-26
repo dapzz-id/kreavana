@@ -14,63 +14,84 @@ class DashboardMockSeeder extends Seeder
 {
     public function run(): void
     {
-        $client = User::create([
-            'name' => 'Budi Santoso',
-            'username' => 'budisantoso',
-            'email' => 'budi@test.com',
-            'password' => Hash::make('password'),
-            'role' => \App\Enums\RoleType::User,
-            'sub_role' => null,
-            'is_creator_approved' => false,
-            'balance' => 2500000,
-        ]);
+        $client = User::where('email', 'budi@test.com')
+            ->orWhere('username', 'budisantoso')
+            ->first();
 
-        $creators = [];
-        $creatorData = [
-            ['name' => 'Rina Photography', 'sub_role' => 'photographer'],
-            ['name' => 'Dwiki Videography', 'sub_role' => 'videographer'],
-            ['name' => 'Sari Event Organizer', 'sub_role' => 'event_organizer'],
-            ['name' => 'Andi Editor Pro', 'sub_role' => 'editor'],
-            ['name' => 'Maya Wedding', 'sub_role' => 'wedding_organizer'],
-        ];
-
-        foreach ($creatorData as $data) {
-            $creators[] = User::create([
-                'name' => $data['name'],
-                'username' => fake()->unique()->userName(),
-                'email' => fake()->unique()->safeEmail(),
+        if (!$client) {
+            $client = User::create([
+                'name' => 'Budi Santoso',
+                'username' => 'budisantoso',
+                'email' => 'budi@test.com',
                 'password' => Hash::make('password'),
-                'role' => \App\Enums\RoleType::Creator,
-                'sub_role' => $data['sub_role'],
-                'is_creator_approved' => true,
-                'balance' => fake()->randomFloat(2, 100000, 5000000),
+                'role' => \App\Enums\RoleType::User,
+                'sub_role' => null,
+                'is_creator_approved' => false,
+                'balance' => 2500000,
             ]);
         }
 
-        Opportunity::factory()->count(5)->open()->forUser($client->id)->create();
-        Opportunity::factory()->count(3)->closed()->forUser($client->id)->create();
+        $creators = [];
+        $creatorData = [
+            ['name' => 'Rina Photography', 'username' => 'rinaphoto', 'email' => 'rina@test.com', 'sub_role' => 'photographer'],
+            ['name' => 'Dwiki Videography', 'username' => 'dwikivideo', 'email' => 'dwiki@test.com', 'sub_role' => 'videographer'],
+            ['name' => 'Sari Event Organizer', 'username' => 'sarieo', 'email' => 'sari@test.com', 'sub_role' => 'event_organizer'],
+            ['name' => 'Andi Editor Pro', 'username' => 'andieditor', 'email' => 'andi@test.com', 'sub_role' => 'editor'],
+            ['name' => 'Maya Wedding', 'username' => 'mayawedding', 'email' => 'maya@test.com', 'sub_role' => 'wedding_organizer'],
+        ];
 
-        WalletTransaction::factory()
-            ->count(8)
-            ->completed()
-            ->forUser($client->id)
-            ->create();
+        foreach ($creatorData as $data) {
+            $user = User::where('email', $data['email'])
+                ->orWhere('username', $data['username'])
+                ->first();
 
-        WalletTransaction::factory()
-            ->count(2)
-            ->pending()
-            ->forUser($client->id)
-            ->create();
+            if (!$user) {
+                $user = User::create([
+                    'name' => $data['name'],
+                    'username' => $data['username'],
+                    'email' => $data['email'],
+                    'password' => Hash::make('password'),
+                    'role' => \App\Enums\RoleType::Creator,
+                    'sub_role' => $data['sub_role'],
+                    'is_creator_approved' => true,
+                    'balance' => fake()->randomFloat(2, 100000, 5000000),
+                ]);
+            }
+            $creators[] = $user;
+        }
 
-        Notification::factory()
-            ->count(5)
-            ->forUser($client->id)
-            ->create();
+        // Only create mock opportunities and transactions if client doesn't have any yet
+        if ($client->opportunities()->count() === 0) {
+            Opportunity::factory()->count(5)->open()->forUser($client->id)->create();
+            Opportunity::factory()->count(3)->closed()->forUser($client->id)->create();
+        }
+
+        if (WalletTransaction::where('user_id', $client->id)->count() === 0) {
+            WalletTransaction::factory()
+                ->count(8)
+                ->completed()
+                ->forUser($client->id)
+                ->create();
+
+            WalletTransaction::factory()
+                ->count(2)
+                ->pending()
+                ->forUser($client->id)
+                ->create();
+        }
+
+        if (Notification::where('user_id', $client->id)->count() === 0) {
+            Notification::factory()
+                ->count(5)
+                ->forUser($client->id)
+                ->create();
+        }
 
         foreach (array_slice($creators, 0, 3) as $creator) {
-            UserFollow::create([
+            UserFollow::firstOrCreate([
                 'follower_id' => $client->id,
                 'following_id' => $creator->id,
+            ], [
                 'created_at' => now()->subDays(rand(1, 30)),
             ]);
         }

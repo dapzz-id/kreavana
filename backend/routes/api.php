@@ -27,6 +27,12 @@ Route::get('portfolio-assets/{file}', [PortfolioController::class, 'showAsset'])
     ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class)
     ->withoutMiddleware(\App\Http\Middleware\TouchLastOnline::class);
 
+// Public: serve verification documents (KTP & Selfie) with CORS headers (for Flutter Web)
+Route::get('verification-assets/{type}/{file}', [ProfileController::class, 'showVerificationAsset'])
+    ->where('file', '.*')
+    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class)
+    ->withoutMiddleware(\App\Http\Middleware\TouchLastOnline::class);
+
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');

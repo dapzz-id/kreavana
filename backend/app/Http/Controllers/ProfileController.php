@@ -176,4 +176,50 @@ class ProfileController extends Controller
 
         return $this->successResponse('Public key berhasil diperbarui.', ['public_key' => $user->public_key]);
     }
+
+    /**
+     * Serve verification documents (KTP, Selfie, NIB) with CORS headers for Flutter Web.
+     */
+    public function showVerificationAsset(Request $request, string $type, string $file)
+    {
+        if (!in_array($type, ['ktp', 'selfie', 'nib'])) {
+            abort(404);
+        }
+
+        if (!preg_match('/^[a-zA-Z0-9_\-\.]+\.(jpg|jpeg|png|gif|webp|pdf)$/i', $file)) {
+            abort(404);
+        }
+
+        $possiblePaths = [
+            storage_path("app/public/{$type}/" . $file),
+            public_path("storage/{$type}/" . $file),
+            public_path("{$type}/" . $file),
+        ];
+
+        $path = null;
+        foreach ($possiblePaths as $p) {
+            if (file_exists($p)) {
+                $path = $p;
+                break;
+            }
+        }
+
+        if (!$path) {
+            abort(404);
+        }
+
+        $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+        $mime = match ($ext) {
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'pdf' => 'application/pdf',
+            default => 'image/jpeg',
+        };
+
+        return response()->file($path, [
+            'Content-Type' => $mime,
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
+    }
 }

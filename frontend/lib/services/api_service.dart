@@ -25,13 +25,22 @@ class ApiService {
       if (cleanPath.startsWith('/portfolio/')) {
         return '$base/api/portfolio-assets/${cleanPath.replaceFirst('/portfolio/', '')}';
       }
+      if (cleanPath.startsWith('/storage/ktp/')) {
+        return '$base/api/verification-assets/ktp/${cleanPath.replaceFirst('/storage/ktp/', '')}';
+      }
+      if (cleanPath.startsWith('/storage/selfie/')) {
+        return '$base/api/verification-assets/selfie/${cleanPath.replaceFirst('/storage/selfie/', '')}';
+      }
+      if (cleanPath.startsWith('/storage/nib/')) {
+        return '$base/api/verification-assets/nib/${cleanPath.replaceFirst('/storage/nib/', '')}';
+      }
       return '$base$cleanPath';
     }
 
     // Rewrite localhost/127.0.0.1 to current DioClient.baseUrl when accessing remotely
-    if (url.contains('localhost:8000') || url.contains('127.0.0.1:8000')) {
+    if (url.contains('localhost') || url.contains('127.0.0.1')) {
       final base = DioClient.baseUrl.replaceAll('/api', '');
-      url = url.replaceFirst(RegExp(r'https?://(localhost|127\.0\.0\.1):8000'), base);
+      url = url.replaceFirst(RegExp(r'https?://(localhost|127\.0\.0\.1)(:\d+)?'), base);
     }
 
     // Rewrite /storage/avatar/file.jpg → /api/avatars/file.jpg
@@ -45,6 +54,18 @@ class ApiService {
     // Rewrite /storage/portfolio/file.jpg → /api/portfolio-assets/file.jpg
     if (url.contains('/storage/portfolio/') && !url.contains('/api/portfolio-assets/')) {
       return url.replaceFirst(RegExp(r'/storage/portfolio/'), '/api/portfolio-assets/');
+    }
+    // Rewrite /storage/ktp/file.jpg → /api/verification-assets/ktp/file.jpg
+    if (url.contains('/storage/ktp/') && !url.contains('/api/verification-assets/')) {
+      return url.replaceFirst(RegExp(r'/storage/ktp/'), '/api/verification-assets/ktp/');
+    }
+    // Rewrite /storage/selfie/file.jpg → /api/verification-assets/selfie/file.jpg
+    if (url.contains('/storage/selfie/') && !url.contains('/api/verification-assets/')) {
+      return url.replaceFirst(RegExp(r'/storage/selfie/'), '/api/verification-assets/selfie/');
+    }
+    // Rewrite /storage/nib/file.jpg → /api/verification-assets/nib/file.jpg
+    if (url.contains('/storage/nib/') && !url.contains('/api/verification-assets/')) {
+      return url.replaceFirst(RegExp(r'/storage/nib/'), '/api/verification-assets/nib/');
     }
     return url;
   }
