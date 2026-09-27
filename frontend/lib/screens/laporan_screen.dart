@@ -27,82 +27,120 @@ class LaporanScreen extends StatelessWidget {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
-      body: ListView.builder(
+      body: ListView(
         padding: const EdgeInsets.all(16),
-        itemCount: reports.length + 1,
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return const AiReportSummaryWidget(
-              title: 'Laporan Performa & Keuangan Bulanan',
-              content:
-                  'Laporan evaluasi pengeluaran, proyek aktif, dan performa kreator periode berjalan.',
-              contextType: 'laporan_bulanan',
-            );
-          }
-          final r = reports[index - 1];
-          final color = r['color'] as Color;
-          return Container(
-            margin: const EdgeInsets.only(bottom: 14),
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: isDark ? AppTheme.cardBg : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        children: [
+          const AiReportSummaryWidget(
+            title: 'Laporan Performa & Keuangan Bulanan',
+            content:
+                'Laporan evaluasi pengeluaran, proyek aktif, dan performa kreator periode berjalan.',
+            contextType: 'laporan_bulanan',
+          ),
+          const SizedBox(height: 16),
+          if (reports.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.cardBg : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.analytics_outlined,
+                    size: 48,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
                   ),
-                  child: Icon(
-                    (r['icon'] as IconData?) ?? Icons.image_outlined,
-                    color: color,
-                    size: 22,
+                  const SizedBox(height: 12),
+                  Text(
+                    'Belum Ada Laporan Ekstra',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : AppTheme.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Rincian evaluasi bulanan dan metrik transaksi akan dihasilkan secara otomatis saat aktivitas meningkat.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ...reports.map((r) {
+              final color = r['color'] as Color;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.cardBg : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        r['title'] as String,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        r['subtitle'] as String,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? AppTheme.textMuted
-                              : Colors.grey.shade500,
-                        ),
+                      child: Icon(
+                        (r['icon'] as IconData?) ?? Icons.image_outlined,
+                        color: color,
+                        size: 22,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            r['title'] as String,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            r['subtitle'] as String,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppTheme.textMuted
+                                  : Colors.grey.shade500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      r['value'] as String,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  r['value'] as String,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+              );
+            }),
+        ],
       ),
     );
 

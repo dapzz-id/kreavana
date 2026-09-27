@@ -15,6 +15,9 @@ import '../../../screens/wallet_screen.dart';
 import '../../../services/api_service.dart';
 import '../../../services/badge_service.dart';
 import '../../../services/theme_transition_service.dart';
+import '../../../services/job_contract_service.dart';
+import '../../../models/job_contract.dart';
+import '../services/dashboard_service.dart';
 import '../../../widgets/desktop_sidebar_layout.dart';
 import '../../../widgets/upgrade_plan_modal.dart';
 import '../../../widgets/waving_hand_emoji.dart';
@@ -39,45 +42,6 @@ class EoDashboardEvent {
   });
 }
 
-const _eoEvents = [
-  EoDashboardEvent(
-    title: 'Seminar Digitalisasi UMKM 2026',
-    type: 'Seminar Bisnis',
-    date: '18 Agu 2026 • 09:00 WIB',
-    venue: 'JCC Senayan, Jakarta',
-    progress: 0.75,
-    status: 'Sedang Berjalan',
-    statusColor: Color(0xFF10B981),
-  ),
-  EoDashboardEvent(
-    title: 'Festival Musik Nusantara',
-    type: 'Konser Musik',
-    date: '07 Sep 2026 • 13:00 WIB',
-    venue: 'Stadion GBK, Jakarta',
-    progress: 0.40,
-    status: 'Dalam Persiapan',
-    statusColor: Color(0xFFF59E0B),
-  ),
-  EoDashboardEvent(
-    title: 'Tech Product Launching 2026',
-    type: 'Corporate Launching',
-    date: '21 Sep 2026 • 10:00 WIB',
-    venue: 'Jakarta Creative Hub',
-    progress: 0.25,
-    status: 'Dalam Persiapan',
-    statusColor: Color(0xFFF59E0B),
-  ),
-  EoDashboardEvent(
-    title: 'Company Anniversary PT Maju',
-    type: 'Gala Dinner',
-    date: '05 Okt 2026 • 18:30 WIB',
-    venue: 'Ballroom Hotel Ritz',
-    progress: 0.10,
-    status: 'Menunggu Konfirmasi',
-    statusColor: Color(0xFF6366F1),
-  ),
-];
-
 class EoDashboardVendor {
   final String name;
   final String category;
@@ -93,37 +57,6 @@ class EoDashboardVendor {
     required this.icon,
   });
 }
-
-const _eoVendors = [
-  EoDashboardVendor(
-    name: 'Stage & Lighting Pro',
-    category: 'Panggung & Lighting',
-    rating: '4.9',
-    events: '120+ Event',
-    icon: Icons.light_mode_outlined,
-  ),
-  EoDashboardVendor(
-    name: 'Catering Nusantara',
-    category: 'Katering Acara',
-    rating: '4.8',
-    events: '90+ Event',
-    icon: Icons.restaurant_outlined,
-  ),
-  EoDashboardVendor(
-    name: 'Indo Visual Screen',
-    category: 'LED & Multimedia',
-    rating: '4.9',
-    events: '85+ Event',
-    icon: Icons.tv_outlined,
-  ),
-  EoDashboardVendor(
-    name: 'Garda Security & Medis',
-    category: 'Keamanan & Medis',
-    rating: '4.7',
-    events: '40+ Event',
-    icon: Icons.health_and_safety_outlined,
-  ),
-];
 
 class EoDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -144,6 +77,172 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
 
   static const Color _eoPurple = Color(0xFF6366F1);
 
+  bool _isLoading = true;
+  List<EoDashboardEvent> _events = [];
+  List<EoDashboardVendor> _vendors = [];
+  List<Map<String, dynamic>> _metrics = [];
+  List<Map<String, dynamic>> _activities = [];
+  Map<String, int> _statusCounts = {
+    'Akan Datang': 0,
+    'Sedang Berjalan': 0,
+    'Dalam Persiapan': 0,
+    'Selesai': 0,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEoData();
+  }
+
+  Future<void> _loadEoData() async {
+    try {
+      final results = await Future.wait([
+        JobContractService.getUserContracts().catchError((_) => <JobContract>[]),
+        DashboardService.getStats(subRole: 'event_organizer', roleType: 'creator').catchError((_) => <Map<String, String>>[]),
+        ApiService.get('client-dashboard/overview', queryParams: {'role_type': 'creator'}).catchError((_) => <String, dynamic>{}),
+      ]);
+
+      final contracts = results[0] as List<JobContract>;
+      final stats = results[1] as List<Map<String, String>>;
+      final overviewRes = results[2] as Map<String, dynamic>;
+      final overview = (overviewRes['data'] as Map<String, dynamic>?) ?? {};
+
+      final loadedEvents = <EoDashboardEvent>[];
+      int upcoming = 0;
+      int inProgress = 0;
+      int prep = 0;
+      int completed = 0;
+
+      for (final c in contracts) {
+        Color statusColor;
+        double progress;
+        String statusLabel;
+        switch (c.workStatus.toLowerCase()) {
+          case 'in_progress':
+            statusLabel = 'Sedang Berjalan';
+            statusColor = const Color(0xFF10B981);
+            progress = 0.65;
+            inProgress++;
+            break;
+          case 'review':
+          case 'pending':
+            statusLabel = 'Dalam Persiapan';
+            statusColor = const Color(0xFFF59E0B);
+            progress = 0.35;
+            prep++;
+            break;
+          case 'completed':
+            statusLabel = 'Selesai';
+            statusColor = const Color(0xFF6366F1);
+            progress = 1.0;
+            completed++;
+            break;
+          default:
+            statusLabel = 'Akan Datang';
+            statusColor = const Color(0xFF94A3B8);
+            progress = 0.15;
+            upcoming++;
+        }
+
+        loadedEvents.add(EoDashboardEvent(
+          title: c.title,
+          type: 'Event & Proyek',
+          date: c.scheduledStartDate != null
+              ? '${c.scheduledStartDate!.day}/${c.scheduledStartDate!.month}/${c.scheduledStartDate!.year}'
+              : 'Jadwal Ditentukan',
+          venue: c.clientName.isNotEmpty ? c.clientName : 'Lokasi Ditentukan',
+          progress: progress,
+          status: statusLabel,
+          statusColor: statusColor,
+        ));
+      }
+
+      final loadedVendors = <EoDashboardVendor>[];
+      final vendorList = overview['vendor_recommendations'] as List<dynamic>? ?? [];
+      for (final v in vendorList) {
+        if (v is Map<String, dynamic>) {
+          loadedVendors.add(EoDashboardVendor(
+            name: (v['name'] ?? v['user_name'] ?? 'Vendor Mitra').toString(),
+            category: (v['category'] ?? v['sub_role'] ?? 'Vendor').toString(),
+            rating: (v['rating'] ?? '4.9').toString(),
+            events: '${v['reviews_count'] ?? 10}+ Event',
+            icon: Icons.storefront_outlined,
+          ));
+        }
+      }
+
+      final loadedActivities = <Map<String, dynamic>>[];
+      final actList = overview['activity_feed'] as List<dynamic>? ?? [];
+      for (final a in actList) {
+        if (a is Map<String, dynamic>) {
+          loadedActivities.add({
+            'title': (a['title'] ?? a['message'] ?? 'Aktivitas sistem').toString(),
+            'time': (a['created_at_human'] ?? a['time'] ?? 'Baru saja').toString(),
+            'icon': Icons.notifications_active_outlined,
+            'color': _eoPurple,
+          });
+        }
+      }
+
+      final totalEventVal = stats.isNotEmpty
+          ? (stats.firstWhere(
+                (s) => s['label']?.toLowerCase().contains('event') == true,
+                orElse: () => {'value': contracts.length.toString()},
+              )['value'] ?? contracts.length.toString())
+          : contracts.length.toString();
+
+      final loadedMetrics = [
+        {
+          'label': 'Total Event',
+          'value': totalEventVal,
+          'sub': '${contracts.length} proyek terdaftar',
+          'icon': Icons.festival_outlined,
+          'color': _eoPurple,
+        },
+        {
+          'label': 'Event Berjalan',
+          'value': inProgress.toString(),
+          'sub': 'Persiapan & on-going',
+          'icon': Icons.play_circle_outline_rounded,
+          'color': const Color(0xFF10B981),
+        },
+        {
+          'label': 'Vendor Mitra',
+          'value': loadedVendors.length.toString(),
+          'sub': '${loadedVendors.length} mitra terhubung',
+          'icon': Icons.handshake_outlined,
+          'color': const Color(0xFFF59E0B),
+        },
+        {
+          'label': 'Anggaran Dikelola',
+          'value': overview['summary']?['estimated_expenses']?.toString() ?? 'Rp 0',
+          'sub': 'Realisasi anggaran aktif',
+          'icon': Icons.account_balance_wallet_outlined,
+          'color': const Color(0xFF3B82F6),
+        },
+      ];
+
+      if (mounted) {
+        setState(() {
+          _events = loadedEvents;
+          _vendors = loadedVendors;
+          _activities = loadedActivities;
+          _metrics = loadedMetrics;
+          _statusCounts = {
+            'Akan Datang': upcoming,
+            'Sedang Berjalan': inProgress,
+            'Dalam Persiapan': prep,
+            'Selesai': completed,
+          };
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -156,9 +255,11 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
       backgroundColor: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
       appBar: _buildAppBar(isDark),
       drawer: isCompact ? _buildMobileDrawer(isDark) : null,
-      body: RefreshIndicator(
-        onRefresh: () async {},
-        child: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _loadEoData,
+              child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),
           ),
@@ -724,36 +825,7 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
   }
 
   Widget _buildMetricCards(bool isDark) {
-    final metrics = [
-      {
-        'label': 'Total Event',
-        'value': '24',
-        'sub': '+3 event bulan ini',
-        'icon': Icons.festival_outlined,
-        'color': _eoPurple,
-      },
-      {
-        'label': 'Event Berjalan',
-        'value': '5',
-        'sub': 'Persiapan & on-going',
-        'icon': Icons.play_circle_outline_rounded,
-        'color': const Color(0xFF10B981),
-      },
-      {
-        'label': 'Vendor Mitra',
-        'value': '30',
-        'sub': '10 kategori aktif',
-        'icon': Icons.handshake_outlined,
-        'color': const Color(0xFFF59E0B),
-      },
-      {
-        'label': 'Anggaran Dikelola',
-        'value': 'Rp 222.5M',
-        'sub': 'Realisasi 82%',
-        'icon': Icons.account_balance_wallet_outlined,
-        'color': const Color(0xFF3B82F6),
-      },
-    ];
+    final metrics = _metrics;
 
     final isDesktop = MediaQuery.of(context).size.width > 700;
 
@@ -1100,54 +1172,94 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
             ],
           ),
           const SizedBox(height: 18),
-          SizedBox(
-            height: 140,
-            child: PieChart(
-              PieChartData(
-                sectionsSpace: 3,
-                centerSpaceRadius: 38,
-                sections: [
-                  PieChartSectionData(
-                    value: 50,
-                    color: _eoPurple,
-                    radius: 18,
-                    showTitle: false,
+          Builder(
+            builder: (_) {
+              final total = _statusCounts.values.fold<int>(0, (a, b) => a + b);
+              final upcomingCount = _statusCounts['Akan Datang'] ?? 0;
+              final inProgressCount = _statusCounts['Sedang Berjalan'] ?? 0;
+              final prepCount = _statusCounts['Dalam Persiapan'] ?? 0;
+              final completedCount = _statusCounts['Selesai'] ?? 0;
+
+              final upcomingPct = total > 0 ? (upcomingCount / total) * 100 : 0.0;
+              final inProgressPct = total > 0 ? (inProgressCount / total) * 100 : 0.0;
+              final prepPct = total > 0 ? (prepCount / total) * 100 : 0.0;
+              final completedPct = total > 0 ? (completedCount / total) * 100 : 0.0;
+
+              return Column(
+                children: [
+                  SizedBox(
+                    height: 140,
+                    child: PieChart(
+                      PieChartData(
+                        sectionsSpace: 3,
+                        centerSpaceRadius: 38,
+                        sections: total == 0
+                            ? [
+                                PieChartSectionData(
+                                  value: 100,
+                                  color: isDark ? Colors.white12 : Colors.grey.shade200,
+                                  radius: 18,
+                                  showTitle: false,
+                                ),
+                              ]
+                            : [
+                                if (upcomingCount > 0)
+                                  PieChartSectionData(
+                                    value: upcomingPct,
+                                    color: _eoPurple,
+                                    radius: 18,
+                                    showTitle: false,
+                                  ),
+                                if (inProgressCount > 0)
+                                  PieChartSectionData(
+                                    value: inProgressPct,
+                                    color: const Color(0xFF10B981),
+                                    radius: 18,
+                                    showTitle: false,
+                                  ),
+                                if (prepCount > 0)
+                                  PieChartSectionData(
+                                    value: prepPct,
+                                    color: const Color(0xFFF59E0B),
+                                    radius: 18,
+                                    showTitle: false,
+                                  ),
+                                if (completedCount > 0)
+                                  PieChartSectionData(
+                                    value: completedPct,
+                                    color: Colors.grey.shade400,
+                                    radius: 18,
+                                    showTitle: false,
+                                  ),
+                              ],
+                      ),
+                    ),
                   ),
-                  PieChartSectionData(
-                    value: 21,
-                    color: const Color(0xFF10B981),
-                    radius: 18,
-                    showTitle: false,
+                  const SizedBox(height: 16),
+                  _buildCatRow(
+                    'Akan Datang',
+                    '$upcomingCount Event (${upcomingPct.toStringAsFixed(0)}%)',
+                    _eoPurple,
                   ),
-                  PieChartSectionData(
-                    value: 17,
-                    color: const Color(0xFFF59E0B),
-                    radius: 18,
-                    showTitle: false,
+                  _buildCatRow(
+                    'Sedang Berjalan',
+                    '$inProgressCount Event (${inProgressPct.toStringAsFixed(0)}%)',
+                    const Color(0xFF10B981),
                   ),
-                  PieChartSectionData(
-                    value: 12,
-                    color: Colors.grey.shade400,
-                    radius: 18,
-                    showTitle: false,
+                  _buildCatRow(
+                    'Dalam Persiapan',
+                    '$prepCount Event (${prepPct.toStringAsFixed(0)}%)',
+                    const Color(0xFFF59E0B),
+                  ),
+                  _buildCatRow(
+                    'Selesai',
+                    '$completedCount Event (${completedPct.toStringAsFixed(0)}%)',
+                    Colors.grey.shade400,
                   ),
                 ],
-              ),
-            ),
+              );
+            },
           ),
-          const SizedBox(height: 16),
-          _buildCatRow('Akan Datang', '12 Event (50%)', _eoPurple),
-          _buildCatRow(
-            'Sedang Berjalan',
-            '5 Event (21%)',
-            const Color(0xFF10B981),
-          ),
-          _buildCatRow(
-            'Dalam Persiapan',
-            '4 Event (17%)',
-            const Color(0xFFF59E0B),
-          ),
-          _buildCatRow('Selesai', '3 Event (12%)', Colors.grey.shade400),
         ],
       ),
     );
@@ -1184,7 +1296,7 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
   }
 
   Widget _buildActiveEventsCard(bool isDark) {
-    const events = _eoEvents;
+    final events = _events;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1255,6 +1367,30 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
             ],
           ),
           const SizedBox(height: 16),
+          if (events.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.event_available_outlined,
+                      size: 40,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Belum ada event terdaftar.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
           ...events.map(
             (e) => Container(
               margin: const EdgeInsets.only(bottom: 12),
@@ -1372,7 +1508,7 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
   }
 
   Widget _buildTopVendorsCard(bool isDark) {
-    const vendors = _eoVendors;
+    final vendors = _vendors;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1442,6 +1578,30 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
             ],
           ),
           const SizedBox(height: 14),
+          if (vendors.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.storefront_outlined,
+                      size: 40,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Belum ada mitra vendor terhubung.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
           ...vendors.map(
             (v) => Container(
               margin: const EdgeInsets.only(bottom: 10),
@@ -1744,30 +1904,28 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          _buildActItem(
-            'Pembayaran termin 1 invoice #INV-2026-089 sebesar Rp 25.000.000 telah masuk',
-            '35 menit lalu',
-            Icons.receipt_long_outlined,
-            const Color(0xFF10B981),
-          ),
-          _buildActItem(
-            'Vendor Stage & Lighting Pro mengonfirmasi kesiapan teknis panggung di JCC',
-            '2 jam lalu',
-            Icons.check_circle_outline_rounded,
-            _eoPurple,
-          ),
-          _buildActItem(
-            'Proposal penawaran baru diterima dari Katering Nusantara untuk Festival Musik',
-            '4 jam lalu',
-            Icons.mail_outline_rounded,
-            const Color(0xFFF59E0B),
-          ),
-          _buildActItem(
-            'Milestone "Technical Meeting & Briefing MC" untuk Seminar UMKM telah diselesaikan',
-            'Kemarin • 17:00 WIB',
-            Icons.task_alt_rounded,
-            const Color(0xFF3B82F6),
-          ),
+          if (_activities.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text(
+                  'Belum ada log aktivitas terbaru.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                  ),
+                ),
+              ),
+            )
+          else
+            ..._activities.map(
+              (a) => _buildActItem(
+                a['title'] as String,
+                a['time'] as String,
+                (a['icon'] as IconData?) ?? Icons.notifications_none_rounded,
+                (a['color'] as Color?) ?? _eoPurple,
+              ),
+            ),
         ],
       ),
     );

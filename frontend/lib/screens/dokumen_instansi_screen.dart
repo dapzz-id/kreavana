@@ -31,74 +31,108 @@ class DokumenInstansiScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: dokumen.length,
-        itemBuilder: (context, index) {
-          final d = dokumen[index];
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: isDark ? AppTheme.cardBg : Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: (d['color'] as Color).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    (d['icon'] as IconData?) ?? Icons.image_outlined,
-                    color: d['color'] as Color,
-                    size: 20,
-                  ),
+      body: dokumen.isEmpty
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.folder_open_outlined,
+                      size: 64,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Belum Ada Dokumen Instansi',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : AppTheme.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Berkas, SK, dan dokumen resmi instansi yang diunggah akan tersimpan rapi di sini.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: dokumen.length,
+              itemBuilder: (context, index) {
+                final d = dokumen[index];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.cardBg : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                    ),
+                  ),
+                  child: Row(
                     children: [
-                      Text(
-                        d['name'] as String,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: (d['color'] as Color).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          (d['icon'] as IconData?) ?? Icons.image_outlined,
+                          color: d['color'] as Color,
+                          size: 20,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${d['size']} · ${d['date']}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark
-                              ? AppTheme.textMuted
-                              : Colors.grey.shade500,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              d['name'] as String,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${d['size']} · ${d['date']}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark
+                                    ? AppTheme.textMuted
+                                    : Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {},
+                        icon: Icon(
+                          Icons.download_outlined,
+                          size: 20,
+                          color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
                         ),
                       ),
                     ],
                   ),
-                ),
-                IconButton(
-                  onPressed: () {},
-                  icon: Icon(
-                    Icons.download_outlined,
-                    size: 20,
-                    color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                  ),
-                ),
-              ],
+                );
+              },
             ),
-          );
-        },
-      ),
     );
 
     if (user != null) {

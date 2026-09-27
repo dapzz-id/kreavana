@@ -15,6 +15,9 @@ import '../../../screens/direct_message_screen.dart';
 import '../../../screens/buat_kebutuhan_screen.dart';
 import '../../../screens/peluang_proyek_screen.dart';
 import '../../../widgets/waving_hand_emoji.dart';
+import '../../../services/job_contract_service.dart';
+import '../../../models/job_contract.dart';
+import '../../../services/api_service.dart';
 
 class UmkmDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -34,6 +37,8 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
   final Color _accentColor = SubRoleThemeEngine.getAccentColor('user', 'umkm');
   List<Map<String, String>> _realtimeStats = [];
   Map<String, List<Map<String, String>>> _allSubRoleStats = {};
+  List<Map<String, dynamic>> _packages = [];
+  List<Map<String, dynamic>> _activeProjects = [];
 
   @override
   void initState() {
@@ -43,22 +48,64 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
 
   Future<void> _fetchRealtimeData() async {
     try {
-      final stats = await DashboardService.getStats(
-        subRole: 'umkm',
-        roleType: 'user',
-      );
-      final allStats = await DashboardService.getAllSubRoleStats(
-        subRoleSlugs: ['umkm', 'company', 'government', 'community', 'school'],
-        roleType: 'user',
-      );
+      final results = await Future.wait([
+        DashboardService.getStats(subRole: 'umkm', roleType: 'user').catchError((_) => <Map<String, String>>[]),
+        DashboardService.getAllSubRoleStats(
+          subRoleSlugs: ['umkm', 'company', 'government', 'community', 'school'],
+          roleType: 'user',
+        ).catchError((_) => <String, List<Map<String, String>>>{}),
+        JobContractService.getUserContracts().catchError((_) => <JobContract>[]),
+        ApiService.get('client-dashboard/overview', queryParams: {'role_type': 'user'}).catchError((_) => <String, dynamic>{}),
+      ]);
+
+      final stats = results[0] as List<Map<String, String>>;
+      final allStats = results[1] as Map<String, List<Map<String, String>>>;
+      final contracts = results[2] as List<JobContract>;
+      final overviewRes = results[3] as Map<String, dynamic>;
+      final overview = (overviewRes['data'] as Map<String, dynamic>?) ?? {};
+
+      final loadedProjects = <Map<String, dynamic>>[];
+      for (final c in contracts) {
+        String statusLabel = 'Review Desain';
+        if (c.workStatus == 'in_progress') {
+          statusLabel = 'Proses Produksi';
+        } else if (c.workStatus == 'completed') {
+          statusLabel = 'Selesai';
+        }
+
+        loadedProjects.add({
+          'name': c.title,
+          'vendor': c.creatorName.isNotEmpty ? c.creatorName : 'Vendor Mitra',
+          'deadline': c.deadline != null
+              ? '${c.deadline!.day}/${c.deadline!.month}/${c.deadline!.year}'
+              : 'Segera',
+          'status': statusLabel,
+        });
+      }
+
+      final loadedPackages = <Map<String, dynamic>>[];
+      final rawNeeds = overview['project_needs'] as List<dynamic>? ?? [];
+      for (final item in rawNeeds) {
+        if (item is Map<String, dynamic>) {
+          loadedPackages.add({
+            'tag': (item['category'] ?? 'UMKM Special').toString(),
+            'price': 'Rp ${(item['budget'] ?? 500000).toString()}',
+            'title': (item['title'] ?? 'Paket Branding').toString(),
+            'desc': (item['description'] ?? 'Layanan profesional untuk UMKM').toString(),
+          });
+        }
+      }
+
       if (mounted) {
         setState(() {
           _realtimeStats = stats;
           _allSubRoleStats = allStats;
+          _activeProjects = loadedProjects;
+          _packages = loadedPackages;
         });
       }
     } catch (_) {
-      // Ignore error for now
+      // Ignore error
     }
   }
 
@@ -383,7 +430,7 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
 
-        if (metrics.isEmpty)
+        if (metrics.isEmpty) {
           return Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
@@ -394,6 +441,7 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
             ),
             child: const Center(child: Text('Data belum tersedia.')),
           );
+        }
 
         return GridView.builder(
           shrinkWrap: true,
@@ -499,7 +547,7 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
   }
 
   Widget _buildPackagesSection(bool isDark) {
-    final List<Map<String, dynamic>> packages = [];
+    final packages = _packages;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -529,143 +577,174 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          height: 170,
-          child: ScrollConfiguration(
-            behavior: _DragScrollBehavior(),
-            child: RawScrollbar(
-              thumbVisibility: true,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: packages.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 12),
-                itemBuilder: (context, i) {
-                  final pkg = packages[i];
-                  return Container(
-                    width: 280,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppTheme.cardBg : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: _accentColor.withValues(alpha: 0.3),
-                      ),
+        if (packages.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardBg : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _accentColor.withValues(alpha: 0.2)),
+            ),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.inventory_2_outlined,
+                    size: 36,
+                    color: isDark ? Colors.white38 : Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Belum ada paket kebutuhan terdaftar',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          SizedBox(
+            height: 170,
+            child: ScrollConfiguration(
+              behavior: _DragScrollBehavior(),
+              child: RawScrollbar(
+                thumbVisibility: true,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: packages.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 12),
+                  itemBuilder: (context, i) {
+                    final pkg = packages[i];
+                    return Container(
+                      width: 280,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppTheme.cardBg : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: _accentColor.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _accentColor.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  pkg['tag'] as String,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: _accentColor,
+                                  ),
+                                ),
                               ),
-                              decoration: BoxDecoration(
-                                color: _accentColor.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                pkg['tag'] as String,
+                              Text(
+                                pkg['price'] as String,
                                 style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
                                   color: _accentColor,
                                 ),
                               ),
-                            ),
-                            Text(
-                              pkg['price'] as String,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: _accentColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          pkg['title'] as String,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : AppTheme.textDark,
+                            ],
                           ),
-                        ),
-                        Text(
-                          pkg['desc'] as String,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark
-                                ? AppTheme.textMuted
-                                : AppTheme.textMutedLight,
+                          Text(
+                            pkg['title'] as String,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : AppTheme.textDark,
+                            ),
                           ),
-                        ),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 32,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              final title = (pkg['title'] as String)
-                                  .toLowerCase();
-                              String kategori = 'lainnya';
-                              if (title.contains('foto') ||
-                                  title.contains('katalog')) {
-                                kategori = 'fotografi';
-                              } else if (title.contains('video') ||
-                                  title.contains('reels'))
-                                kategori = 'videografi';
-                              else if (title.contains('desain') ||
-                                  title.contains('redesain') ||
-                                  title.contains('stiker'))
-                                kategori = 'desain-grafis';
+                          Text(
+                            pkg['desc'] as String,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark
+                                  ? AppTheme.textMuted
+                                  : AppTheme.textMutedLight,
+                            ),
+                          ),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 32,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                final title = (pkg['title'] as String)
+                                    .toLowerCase();
+                                String kategori = 'lainnya';
+                                if (title.contains('foto') ||
+                                    title.contains('katalog')) {
+                                  kategori = 'fotografi';
+                                } else if (title.contains('video') ||
+                                    title.contains('reels')) {
+                                  kategori = 'videografi';
+                                } else if (title.contains('desain') ||
+                                    title.contains('redesain') ||
+                                    title.contains('stiker')) {
+                                  kategori = 'desain-grafis';
+                                }
 
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => BuatKebutuhanScreen(
-                                    initialTitle: pkg['title'] as String,
-                                    initialDescription: pkg['desc'] as String,
-                                    initialKategori: kategori,
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => BuatKebutuhanScreen(
+                                      initialTitle: pkg['title'] as String,
+                                      initialDescription: pkg['desc'] as String,
+                                      initialKategori: kategori,
+                                    ),
                                   ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _accentColor,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _accentColor,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                padding: EdgeInsets.zero,
                               ),
-                              padding: EdgeInsets.zero,
-                            ),
-                            child: const Text(
-                              'Pesan Paket Ini',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                              child: const Text(
+                                'Pesan Paket Ini',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
           ),
-        ),
       ],
     );
   }
 
   Widget _buildActiveProjectsSection(bool isDark) {
-    final List<Map<String, dynamic>> active = [];
+    final active = _activeProjects;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -679,73 +758,105 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        Column(
-          children: active.map((proj) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isDark ? AppTheme.cardBg : Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-                ),
+        if (active.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardBg : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
               ),
-              child: Row(
+            ),
+            child: Center(
+              child: Column(
                 children: [
-                  CircleAvatar(
-                    backgroundColor: _accentColor.withValues(alpha: 0.12),
-                    child: Icon(Icons.inventory, color: _accentColor, size: 20),
+                  Icon(
+                    Icons.inventory_outlined,
+                    size: 36,
+                    color: isDark ? Colors.white38 : Colors.grey.shade400,
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          proj['name']!,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : AppTheme.textDark,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Vendor: ${proj['vendor']!} • Deadline: ${proj['deadline']!}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark
-                                ? AppTheme.textMuted
-                                : AppTheme.textMutedLight,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _accentColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      proj['status']!,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: _accentColor,
-                      ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Belum ada project UMKM berjalan',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
                     ),
                   ),
                 ],
               ),
-            );
-          }).toList(),
-        ),
+            ),
+          )
+        else
+          Column(
+            children: active.map((proj) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.cardBg : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: _accentColor.withValues(alpha: 0.12),
+                      child: Icon(Icons.inventory, color: _accentColor, size: 20),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            proj['name']!,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : AppTheme.textDark,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Vendor: ${proj['vendor']!} • Deadline: ${proj['deadline']!}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark
+                                  ? AppTheme.textMuted
+                                  : AppTheme.textMutedLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _accentColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        proj['status']!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: _accentColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
       ],
     );
   }

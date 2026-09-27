@@ -11,6 +11,10 @@ import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
 import '../../../screens/peluang_proyek_screen.dart';
 import '../../../widgets/waving_hand_emoji.dart';
+import '../../../services/job_contract_service.dart';
+import '../../../models/job_contract.dart';
+import '../../../services/api_service.dart';
+import '../services/dashboard_service.dart';
 
 class IndividualDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -32,6 +36,115 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
 
   static const Color _indivPurple = Color(0xFF7C3AED);
 
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _metrics = [];
+  List<Map<String, dynamic>> _requests = [];
+  List<Map<String, dynamic>> _creators = [];
+  List<Map<String, dynamic>> _activities = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchIndividualData();
+  }
+
+  Future<void> _fetchIndividualData() async {
+    try {
+      final results = await Future.wait([
+        JobContractService.getUserContracts().catchError((_) => <JobContract>[]),
+        ApiService.get('client-dashboard/overview', queryParams: {'role_type': 'user'}).catchError((_) => <String, dynamic>{}),
+        DashboardService.getStats(subRole: 'individual', roleType: 'user').catchError((_) => <Map<String, String>>[]),
+      ]);
+
+      final contracts = results[0] as List<JobContract>;
+      final overviewRes = results[1] as Map<String, dynamic>;
+      final overview = (overviewRes['data'] as Map<String, dynamic>?) ?? {};
+      final summary = (overview['summary'] as Map<String, dynamic>?) ?? {};
+
+      final totalRequests = summary['total_projects'] ?? contracts.length;
+      final runningRequests = summary['running_projects'] ?? summary['active_projects'] ?? contracts.where((c) => c.workStatus == 'in_progress').length;
+      final totalSpent = summary['estimated_expenses'] ?? summary['total_payments'] ?? 'Rp 0';
+      final favCount = summary['favorites'] ?? summary['proposals_count'] ?? 12;
+
+      final loadedMetrics = <Map<String, dynamic>>[
+        {
+          'label': 'Total Permintaan',
+          'value': totalRequests.toString(),
+          'sub': '$runningRequests aktif',
+          'color': _indivPurple,
+          'icon': Icons.assignment_outlined,
+        },
+        {
+          'label': 'Proses Pengerjaan',
+          'value': runningRequests.toString(),
+          'sub': 'Sedang dikerjakan',
+          'color': const Color(0xFF10B981),
+          'icon': Icons.hourglass_top_outlined,
+        },
+        {
+          'label': 'Total Pengeluaran',
+          'value': totalSpent.toString(),
+          'sub': 'Pesanan selesai',
+          'color': const Color(0xFFF59E0B),
+          'icon': Icons.account_balance_wallet_outlined,
+        },
+        {
+          'label': 'Kreator Favorit',
+          'value': favCount.toString(),
+          'sub': 'Tersimpan',
+          'color': const Color(0xFFEC4899),
+          'icon': Icons.favorite_outline,
+        },
+      ];
+
+      final loadedRequests = <Map<String, dynamic>>[];
+      for (final c in contracts) {
+        loadedRequests.add({
+          'title': c.title,
+          'date': c.scheduledStartDate != null
+              ? '${c.scheduledStartDate!.day}/${c.scheduledStartDate!.month}/${c.scheduledStartDate!.year}'
+              : 'Baru saja',
+          'price': 'Rp ${c.agreedPrice.toStringAsFixed(0)}',
+        });
+      }
+
+      final loadedCreators = <Map<String, dynamic>>[];
+      final vendorList = overview['vendor_recommendations'] as List<dynamic>? ?? [];
+      for (final v in vendorList) {
+        if (v is Map<String, dynamic>) {
+          loadedCreators.add({
+            'name': (v['name'] ?? v['user_name'] ?? 'Kreator').toString(),
+            'cat': (v['category'] ?? v['sub_role'] ?? 'Kreator').toString(),
+            'rating': (v['rating'] ?? '4.9').toString(),
+          });
+        }
+      }
+
+      final loadedActivities = <Map<String, dynamic>>[];
+      final actList = overview['activity_feed'] as List<dynamic>? ?? [];
+      for (final a in actList) {
+        if (a is Map<String, dynamic>) {
+          loadedActivities.add({
+            'title': (a['title'] ?? a['message'] ?? 'Aktivitas pesanan').toString(),
+            'time': (a['time'] ?? a['created_at'] ?? 'Baru saja').toString(),
+          });
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _metrics = loadedMetrics;
+          _requests = loadedRequests;
+          _creators = loadedCreators;
+          _activities = loadedActivities;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -41,8 +154,10 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
 
     return Scaffold(
       appBar: _buildAppBar(isDark),
-      body: RefreshIndicator(
-        onRefresh: () async {},
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _fetchIndividualData,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
@@ -244,7 +359,38 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
   }
 
   Widget _buildMetricCards(bool isDark) {
-    final metrics = [];
+    final metrics = _metrics.isNotEmpty
+        ? _metrics
+        : [
+            {
+              'label': 'Total Permintaan',
+              'value': '0',
+              'sub': '0 aktif',
+              'color': _indivPurple,
+              'icon': Icons.assignment_outlined,
+            },
+            {
+              'label': 'Proses Pengerjaan',
+              'value': '0',
+              'sub': 'Sedang dikerjakan',
+              'color': const Color(0xFF10B981),
+              'icon': Icons.hourglass_top_outlined,
+            },
+            {
+              'label': 'Total Pengeluaran',
+              'value': 'Rp 0',
+              'sub': 'Pesanan selesai',
+              'color': const Color(0xFFF59E0B),
+              'icon': Icons.account_balance_wallet_outlined,
+            },
+            {
+              'label': 'Kreator Favorit',
+              'value': '0',
+              'sub': 'Tersimpan',
+              'color': const Color(0xFFEC4899),
+              'icon': Icons.favorite_outline,
+            },
+          ];
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -479,7 +625,7 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
   }
 
   Widget _buildRecentRequestsCard(bool isDark) {
-    final List<Map<String, dynamic>> requests = [];
+    final requests = _requests;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -517,52 +663,80 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          ...requests.map(
-            (r) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: _indivPurple.withValues(alpha: 0.1),
-                    child: const Icon(
-                      Icons.camera_alt_outlined,
-                      color: _indivPurple,
-                      size: 18,
+          if (requests.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.assignment_outlined,
+                      size: 36,
+                      color: isDark ? Colors.white38 : Colors.grey.shade400,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          r['title']!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                    const SizedBox(height: 8),
+                    Text(
+                      'Belum ada permintaan dibuat',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ...requests.take(4).map(
+              (r) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: _indivPurple.withValues(alpha: 0.1),
+                      child: const Icon(
+                        Icons.camera_alt_outlined,
+                        color: _indivPurple,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            r['title']!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        Text(
-                          r['date']!,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey,
+                          Text(
+                            r['date']!,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  Text(
-                    r['price']!,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                    Text(
+                      r['price']!,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -611,20 +785,36 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          _buildActItem(
-            'Permintaan "Fotografi Pernikahan" diperbarui',
-            '2 jam lalu',
-          ),
-          _buildActItem('Pembayaran Rp 1.250.000 berhasil', '5 jam lalu'),
-          _buildActItem(
-            'Kreasi Studio menerima permintaan Anda',
-            '1 hari lalu',
-          ),
-          _buildActItem(
-            'Proyek "Desain Konten Instagram" selesai',
-            '2 hari lalu',
-          ),
-          _buildActItem('Dapatkan 50 poin dari ulasan kreator', '3 hari lalu'),
+          if (_activities.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.history_outlined,
+                      size: 36,
+                      color: isDark ? Colors.white38 : Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Belum ada aktivitas terbaru',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ..._activities.take(4).map(
+              (act) => _buildActItem(
+                act['title'] as String,
+                act['time'] as String,
+              ),
+            ),
         ],
       ),
     );
@@ -653,7 +843,7 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
   }
 
   Widget _buildFavoriteCreatorsCard(bool isDark) {
-    final List<Map<String, dynamic>> creators = [];
+    final creators = _creators;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -672,56 +862,80 @@ class _IndividualDashboardScreenState extends State<IndividualDashboardScreen> {
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          ...creators.map(
-            (c) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: _indivPurple.withValues(alpha: 0.1),
-                    child: Text(
-                      c['name']![0],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+          if (creators.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.people_outline,
+                      size: 36,
+                      color: isDark ? Colors.white38 : Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Belum ada kreator favorit',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          c['name']!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ...creators.take(4).map(
+              (c) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: _indivPurple.withValues(alpha: 0.1),
+                      child: Text(
+                        (c['name'] as String).isNotEmpty ? (c['name'] as String)[0] : 'K',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
                         ),
-                        Text(
-                          c['cat']!,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            c['name']!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                      ],
+                          Text(
+                            c['cat']!,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Icon(Icons.star, size: 14, color: Colors.amber.shade600),
-                  Text(
-                    c['rating']!,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                    Icon(Icons.star, size: 14, color: Colors.amber.shade600),
+                    Text(
+                      c['rating']!,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

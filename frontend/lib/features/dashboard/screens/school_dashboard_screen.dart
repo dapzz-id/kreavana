@@ -2,6 +2,8 @@ import '../../../services/badge_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
+import '../../../services/api_service.dart';
+import '../../../services/job_contract_service.dart';
 import '../../../services/theme_transition_service.dart';
 import '../../../screens/global_search_screen.dart';
 import '../../../models/user_model.dart';
@@ -9,7 +11,8 @@ import '../../../screens/buat_kebutuhan_screen.dart';
 import '../../../screens/explore_screen.dart';
 import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
-import '../../../screens/peluang_proyek_screen.dart';
+import '../../../screens/institution_workspace_screen.dart';
+import '../../../screens/tim_hak_akses_screen.dart';
 import '../../../widgets/waving_hand_emoji.dart';
 
 class SchoolDashboardScreen extends StatefulWidget {
@@ -32,6 +35,121 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
   static const Color _schoolBlue = Color(0xFF4F46E5);
   static const Color _schoolGreen = Color(0xFF10B981);
 
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _resources = [];
+  List<Map<String, dynamic>> _recentProjects = [];
+  List<Map<String, dynamic>> _recommendedVendors = [];
+  List<Map<String, dynamic>> _activityFeed = [];
+  List<Map<String, dynamic>> _upcomingAgenda = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final results = await Future.wait([
+        ApiService.get('institution/resources'),
+        ApiService.get('client-dashboard/overview?role_type=creator'),
+        JobContractService.getUserContracts(),
+      ]);
+
+      if (!mounted) return;
+
+      final resResources = results[0] as Map<String, dynamic>;
+      final resOverview = results[1] as Map<String, dynamic>;
+      final contracts = results[2] as List;
+
+      // 1. Process Institution Resources
+      final List<Map<String, dynamic>> loadedResources = [];
+      if (resResources['status'] == true && resResources['data'] is List) {
+        for (final item in resResources['data']) {
+          if (item is Map) {
+            loadedResources.add(Map<String, dynamic>.from(item));
+          }
+        }
+      }
+
+      // 2. Process Recent Projects (Tenders / Contracts)
+      final List<Map<String, dynamic>> loadedProjects = [];
+      final tenders = loadedResources.where((r) => r['resource_type'] == 'tenders').toList();
+      for (final t in tenders.take(4)) {
+        loadedProjects.add({
+          'id': t['id']?.toString() ?? '',
+          'title': t['title']?.toString() ?? 'Program Magang',
+          'type': t['description']?.toString() ?? 'Program Kolaborasi Industri',
+          'status': (t['status'] == 'open' || t['status'] == 'published') ? 'Aktif' : 'Selesai',
+        });
+      }
+      for (final c in contracts.take(4 - loadedProjects.length)) {
+        loadedProjects.add({
+          'id': c.id,
+          'title': c.title,
+          'type': 'Kontrak Kerjasama: ${c.creatorName}',
+          'status': c.status == 'completed' ? 'Selesai' : 'Berjalan',
+        });
+      }
+
+      // 3. Process Overview (Vendors & Activity)
+      final List<Map<String, dynamic>> loadedVendors = [];
+      final List<Map<String, dynamic>> loadedActivities = [];
+      if (resOverview['status'] == true && resOverview['data'] is Map) {
+        final data = resOverview['data'] as Map;
+        final rawVendors = data['vendor_recommendations'];
+        if (rawVendors is List) {
+          for (final v in rawVendors.take(5)) {
+            if (v is Map) {
+              loadedVendors.add(Map<String, dynamic>.from(v));
+            }
+          }
+        }
+
+        final rawActivities = data['activity_feed'];
+        if (rawActivities is List) {
+          for (final a in rawActivities.take(5)) {
+            if (a is Map) {
+              loadedActivities.add(Map<String, dynamic>.from(a));
+            }
+          }
+        }
+      }
+
+      // 4. Process Agenda / Deadlines
+      final List<Map<String, dynamic>> loadedAgenda = [];
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      for (final c in contracts) {
+        if (c.deadline != null) {
+          final dt = c.deadline!;
+          loadedAgenda.add({
+            'date': '${dt.day.toString().padLeft(2, '0')} ${months[dt.month - 1].toUpperCase()}',
+            'title': c.title,
+            'time': 'Tenggat: 23:59 WIB',
+          });
+        }
+      }
+
+      setState(() {
+        _resources = loadedResources;
+        _recentProjects = loadedProjects;
+        _recommendedVendors = loadedVendors;
+        _activityFeed = loadedActivities;
+        _upcomingAgenda = loadedAgenda;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  int get _tendersCount => _resources.where((r) => r['resource_type'] == 'tenders').length;
+  int get _partnersCount => _resources.where((r) => r['resource_type'] == 'partners').length;
+  int get _showcasesCount => _resources.where((r) => r['resource_type'] == 'showcases').length;
+  int get _membersCount => _resources.where((r) => r['resource_type'] == 'members').length + 1; // +1 Owner
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -41,9 +159,13 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
 
     return Scaffold(
       appBar: _buildAppBar(isDark),
-      body: RefreshIndicator(
-        onRefresh: () async {},
-        child: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: _schoolBlue),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadDashboardData,
+              child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
             isDesktop ? 24 : 16,
@@ -103,7 +225,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Cari proyek, kreator, event sekolah...',
+                        'Cari program, mitra industri, atau portofolio siswa...',
                         style: TextStyle(
                           fontSize: 13,
                           color: isDark
@@ -118,6 +240,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
               ),
             ),
           ),
+          const SizedBox(width: 20),
           ListenableBuilder(
             listenable: BadgeService(),
             builder: (_, _) => _buildAppBarBadge(
@@ -135,7 +258,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
               isDark,
             ),
           ),
-          const SizedBox(width: 20),
+          const SizedBox(width: 12),
           IconButton(
             key: _themeBtnKey,
             icon: Icon(
@@ -174,7 +297,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
                     ),
                   ),
                   Text(
-                    'Sekolah / Kampus',
+                    'Sekolah / Lembaga Pendidikan',
                     style: TextStyle(
                       fontSize: 11,
                       color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
@@ -190,46 +313,47 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
   }
 
   Widget _buildHeroBanner(bool isDark) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(
-                    'Selamat datang, ${widget.user.name}!',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 640;
+
+        final textBlock = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  'Selamat datang, ${widget.user.name}!',
+                  style: TextStyle(
+                    fontSize: isMobile ? 20 : 24,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(width: 8),
-                  const WavingHandEmoji(fontSize: 24),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Kelola peluang, kegiatan, dan kolaborasi kreatif bersama Kreavana untuk mendukung pembelajaran dan prestasi siswa.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
                 ),
+                const SizedBox(width: 8),
+                const WavingHandEmoji(fontSize: 24),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Kelola peluang, program magang PKL, kemitraan industri, dan portofolio karya siswa secara langsung di Kreavana.',
+              style: TextStyle(
+                fontSize: isMobile ? 13 : 14,
+                color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
               ),
-            ],
-          ),
-        ), // <-- perbaikan: tutup Expanded dengan )
-        const SizedBox(width: 16),
-        ElevatedButton.icon(
+            ),
+          ],
+        );
+
+        final actionBtn = ElevatedButton.icon(
           onPressed: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: widget.user)),
+            MaterialPageRoute(
+              builder: (_) => BuatKebutuhanScreen(user: widget.user),
+            ),
           ),
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('Buat Permintaan Baru'),
+          icon: const Icon(Icons.add_rounded, size: 18),
+          label: const Text('Buka Program / Magang'),
           style: ElevatedButton.styleFrom(
             backgroundColor: _schoolBlue,
             foregroundColor: Colors.white,
@@ -238,67 +362,204 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
           ),
-        ),
-      ],
+        );
+
+        if (isMobile) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              textBlock,
+              const SizedBox(height: 16),
+              SizedBox(width: double.infinity, child: actionBtn),
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: textBlock),
+            const SizedBox(width: 24),
+            actionBtn,
+          ],
+        );
+      },
     );
   }
 
   Widget _buildMetricCards(bool isDark) {
-    final metrics = [];
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: metrics.map((m) {
-        return Expanded(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isDark ? AppTheme.cardBg : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: (m['color'] as Color).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    (m['icon'] as IconData?) ?? Icons.image_outlined,
-                    color: m['color'] as Color,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  m['label'] as String,
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  m['value'] as String,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  m['sub'] as String,
-                  style: const TextStyle(fontSize: 10, color: Colors.grey),
-                ),
-              ],
+    final metrics = [
+      {
+        'label': 'Program & Magang',
+        'value': '$_tendersCount Program',
+        'sub': _tendersCount > 0 ? 'Tersedia di pengadaan' : 'Belum ada program',
+        'icon': Icons.work_outline_rounded,
+        'color': _schoolBlue,
+        'onTap': () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => InstitutionWorkspaceScreen(
+              user: widget.user,
+              resourceType: 'tenders',
+              onUserUpdated: widget.onUserUpdated,
             ),
           ),
+        ),
+      },
+      {
+        'label': 'Mitra Industri Aktif',
+        'value': '$_partnersCount Mitra',
+        'sub': _partnersCount > 0 ? 'Kerjasama aktif' : 'Belum ada mitra',
+        'icon': Icons.diversity_3_rounded,
+        'color': _schoolGreen,
+        'onTap': () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => InstitutionWorkspaceScreen(
+              user: widget.user,
+              resourceType: 'partners',
+              onUserUpdated: widget.onUserUpdated,
+            ),
+          ),
+        ),
+      },
+      {
+        'label': 'Portofolio Siswa',
+        'value': '$_showcasesCount Karya',
+        'sub': _showcasesCount > 0 ? 'Karya siap industri' : 'Belum diunggah',
+        'icon': Icons.palette_rounded,
+        'color': const Color(0xFF8B5CF6),
+        'onTap': () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => InstitutionWorkspaceScreen(
+              user: widget.user,
+              resourceType: 'showcases',
+              onUserUpdated: widget.onUserUpdated,
+            ),
+          ),
+        ),
+      },
+      {
+        'label': 'Tim & Hak Akses',
+        'value': '$_membersCount Staf',
+        'sub': 'Kelola pengelola sekolah',
+        'icon': Icons.group_rounded,
+        'color': const Color(0xFFF59E0B),
+        'onTap': () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TimHakAksesScreen(
+              user: widget.user,
+              onUserUpdated: widget.onUserUpdated,
+            ),
+          ),
+        ),
+      },
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth > 850;
+        final isMedium = constraints.maxWidth > 520 && !isWide;
+
+        Widget buildCard(Map<String, dynamic> m) {
+          return InkWell(
+            onTap: m['onTap'] as VoidCallback?,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.cardBg : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                ),
+                boxShadow: isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: (m['color'] as Color).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      (m['icon'] as IconData?) ?? Icons.image_outlined,
+                      color: m['color'] as Color,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    m['label'] as String,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    m['value'] as String,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    m['sub'] as String,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        if (isWide) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: metrics.map((m) {
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: buildCard(m),
+                ),
+              );
+            }).toList(),
+          );
+        }
+
+        final cardWidth = isMedium
+            ? (constraints.maxWidth - 12) / 2
+            : constraints.maxWidth;
+
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: metrics.map((m) {
+            return SizedBox(
+              width: cardWidth,
+              child: buildCard(m),
+            );
+          }).toList(),
         );
-      }).toList(),
+      },
     );
   }
 
@@ -328,6 +589,11 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
   }
 
   Widget _buildLineChartCard(bool isDark) {
+    final tenders = _tendersCount.toDouble();
+    final partners = _partnersCount.toDouble();
+    final showcases = _showcasesCount.toDouble();
+    final members = _membersCount.toDouble();
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -340,9 +606,29 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Ringkasan Proyek',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Aktivitas Sumber Daya',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _schoolBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'Data Realtime',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: _schoolBlue,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 20),
           SizedBox(
@@ -351,32 +637,42 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
               LineChartData(
                 gridData: const FlGridData(show: true, drawVerticalLine: false),
                 borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (v, _) {
+                        final labels = ['Magang', 'Mitra', 'Karya', 'Tim'];
+                        final idx = v.toInt();
+                        if (idx >= 0 && idx < labels.length) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(labels[idx], style: const TextStyle(fontSize: 10)),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                ),
                 lineBarsData: [
                   LineChartBarData(
-                    spots: const [
-                      FlSpot(0, 5),
-                      FlSpot(1, 8),
-                      FlSpot(2, 7),
-                      FlSpot(3, 14),
-                      FlSpot(4, 11),
-                      FlSpot(5, 13),
+                    spots: [
+                      FlSpot(0, tenders),
+                      FlSpot(1, partners),
+                      FlSpot(2, showcases),
+                      FlSpot(3, members),
                     ],
                     isCurved: true,
                     color: _schoolBlue,
                     barWidth: 3,
-                  ),
-                  LineChartBarData(
-                    spots: const [
-                      FlSpot(0, 2),
-                      FlSpot(1, 4),
-                      FlSpot(2, 3),
-                      FlSpot(3, 8),
-                      FlSpot(4, 7),
-                      FlSpot(5, 8),
-                    ],
-                    isCurved: true,
-                    color: _schoolGreen,
-                    barWidth: 3,
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: _schoolBlue.withValues(alpha: 0.1),
+                    ),
+                    dotData: const FlDotData(show: true),
                   ),
                 ],
               ),
@@ -388,6 +684,9 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
   }
 
   Widget _buildDonutChartCard(bool isDark) {
+    final total = (_tendersCount + _partnersCount + _showcasesCount + _membersCount);
+    final hasData = total > 0;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -401,54 +700,59 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Proyek Berdasarkan Kategori',
+            'Distribusi Program Sekolah',
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           SizedBox(
             height: 140,
             child: PieChart(
               PieChartData(
                 sectionsSpace: 2,
-                centerSpaceRadius: 35,
-                sections: [
-                  PieChartSectionData(
-                    value: 37.5,
-                    color: _schoolBlue,
-                    radius: 18,
-                    showTitle: false,
-                  ),
-                  PieChartSectionData(
-                    value: 25.0,
-                    color: _schoolGreen,
-                    radius: 18,
-                    showTitle: false,
-                  ),
-                  PieChartSectionData(
-                    value: 18.8,
-                    color: const Color(0xFFF59E0B),
-                    radius: 18,
-                    showTitle: false,
-                  ),
-                  PieChartSectionData(
-                    value: 12.5,
-                    color: const Color(0xFF3B82F6),
-                    radius: 18,
-                    showTitle: false,
-                  ),
-                ],
+                centerSpaceRadius: 40,
+                sections: hasData
+                    ? [
+                        PieChartSectionData(
+                          value: _tendersCount > 0 ? _tendersCount.toDouble() : 1,
+                          color: _schoolBlue,
+                          radius: 18,
+                          showTitle: false,
+                        ),
+                        PieChartSectionData(
+                          value: _partnersCount > 0 ? _partnersCount.toDouble() : 1,
+                          color: _schoolGreen,
+                          radius: 18,
+                          showTitle: false,
+                        ),
+                        PieChartSectionData(
+                          value: _showcasesCount > 0 ? _showcasesCount.toDouble() : 1,
+                          color: const Color(0xFF8B5CF6),
+                          radius: 18,
+                          showTitle: false,
+                        ),
+                        PieChartSectionData(
+                          value: _membersCount.toDouble(),
+                          color: const Color(0xFFF59E0B),
+                          radius: 18,
+                          showTitle: false,
+                        ),
+                      ]
+                    : [
+                        PieChartSectionData(
+                          value: 1,
+                          color: Colors.grey.shade300,
+                          radius: 18,
+                          showTitle: false,
+                        ),
+                      ],
               ),
             ),
           ),
           const SizedBox(height: 12),
-          _buildCatRow('Kegiatan Sekolah', '37.5% (6)', _schoolBlue),
-          _buildCatRow('Kompetisi', '25% (4)', _schoolGreen),
-          _buildCatRow(
-            'Edukasi & Workshop',
-            '18.8% (3)',
-            const Color(0xFFF59E0B),
-          ),
-          _buildCatRow('Produksi Konten', '12.5% (2)', const Color(0xFF3B82F6)),
+          _buildCatRow('Program & Magang', '$_tendersCount data', _schoolBlue),
+          _buildCatRow('Mitra Industri', '$_partnersCount mitra', _schoolGreen),
+          _buildCatRow('Karya Siswa', '$_showcasesCount portofolio', const Color(0xFF8B5CF6)),
+          _buildCatRow('Tim Pengelola', '$_membersCount staf', const Color(0xFFF59E0B)),
         ],
       ),
     );
@@ -476,8 +780,6 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
   }
 
   Widget _buildRecentProjectsCard(bool isDark) {
-    final List<Map<String, dynamic>> projects = [];
-
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -494,7 +796,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Proyek Terbaru',
+                'Program Terbaru',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
               ),
               TextButton(
@@ -502,7 +804,11 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => PeluangProyekScreen(user: widget.user),
+                      builder: (_) => InstitutionWorkspaceScreen(
+                        user: widget.user,
+                        resourceType: 'tenders',
+                        onUserUpdated: widget.onUserUpdated,
+                      ),
                     ),
                   );
                 },
@@ -514,63 +820,92 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          ...projects.map(
-            (p) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: _schoolBlue.withValues(alpha: 0.1),
-                    child: const Icon(
-                      Icons.school_outlined,
-                      color: _schoolBlue,
-                      size: 18,
+          if (_recentProjects.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.work_history_outlined,
+                      size: 32,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          p['title']!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          p['type']!,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _schoolGreen.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      p['status']!,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: _schoolGreen,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(height: 8),
+                    Text(
+                      'Belum ada program magang/proyek',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+            )
+          else
+            ..._recentProjects.map(
+              (p) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: _schoolBlue.withValues(alpha: 0.1),
+                      child: const Icon(
+                        Icons.school_outlined,
+                        color: _schoolBlue,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            p['title']!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            p['type']!,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _schoolGreen.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        p['status']!,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: _schoolGreen,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -619,22 +954,25 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          _buildActItem(
-            'Pembayaran invoice #INV-2025-052 berhasil',
-            '2 jam lalu',
-          ),
-          _buildActItem(
-            'Kreator Kreasi Studio mengirimkan penawaran',
-            '5 jam lalu',
-          ),
-          _buildActItem(
-            'Proyek Lomba Film Pendek Siswa diperbarui',
-            '1 hari lalu',
-          ),
-          _buildActItem(
-            'Siswa kelas 11 Multimedia bergabung di proyek',
-            '2 hari lalu',
-          ),
+          if (_activityFeed.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text(
+                  'Belum ada aktivitas terbaru',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                  ),
+                ),
+              ),
+            )
+          else
+            ..._activityFeed.map((act) {
+              final title = act['title']?.toString() ?? 'Aktivitas sistem';
+              final time = act['time']?.toString() ?? 'Baru saja';
+              return _buildActItem(title, time);
+            }),
         ],
       ),
     );
@@ -651,7 +989,14 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
             child: const Icon(Icons.school, color: _schoolBlue, size: 14),
           ),
           const SizedBox(width: 10),
-          Expanded(child: Text(title, style: const TextStyle(fontSize: 12))),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(fontSize: 12),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
           Text(time, style: const TextStyle(fontSize: 10, color: Colors.grey)),
         ],
       ),
@@ -659,8 +1004,6 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
   }
 
   Widget _buildFavoriteVendorsCard(bool isDark) {
-    final List<Map<String, dynamic>> vendors = [];
-
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -674,60 +1017,83 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Kreator & Vendor Favorit',
+            'Kreator & Vendor Rekomendasi',
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          ...vendors.map(
-            (v) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: _schoolBlue.withValues(alpha: 0.1),
-                    child: Text(
-                      v['name']![0],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
+          if (_recommendedVendors.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text(
+                  'Belum ada rekomendasi vendor',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          v['name']!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          v['cat']!,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.star, size: 14, color: Colors.amber.shade600),
-                  Text(
-                    v['rating']!,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+                ),
               ),
+            )
+          else
+            ..._recommendedVendors.map(
+              (v) {
+                final name = v['name']?.toString() ?? 'Kreator';
+                final cat = v['sub_role_label']?.toString() ?? v['category']?.toString() ?? 'Kreator';
+                final rating = v['rating']?.toString() ?? '5.0';
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: _schoolBlue.withValues(alpha: 0.1),
+                        child: Text(
+                          name.isNotEmpty ? name[0].toUpperCase() : 'K',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: _schoolBlue,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              cat,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.star, size: 14, color: Colors.amber.shade600),
+                      Text(
+                        rating,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-          ),
         ],
       ),
     );
@@ -750,25 +1116,31 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Kalender Mendatang',
+                'Kalender & Tenggat Mendatang',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
               const SizedBox(height: 8),
-              _buildCalItem(
-                '24 MEI',
-                'Lomba Film Pendek Tingkat Kota',
-                '08.00 - 16.00 WIB',
-              ),
-              _buildCalItem(
-                '05 JUN',
-                'Workshop Fotografi Dasar',
-                '09.00 - 13.00 WIB',
-              ),
-              _buildCalItem(
-                '15 JUN',
-                'Pameran Karya Siswa 2025',
-                '10.00 - 17.00 WIB',
-              ),
+              if (_upcomingAgenda.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                    child: Text(
+                      'Tidak ada tenggat mendatang',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                ..._upcomingAgenda.map(
+                  (cal) => _buildCalItem(
+                    cal['date']!,
+                    cal['title']!,
+                    cal['time']!,
+                  ),
+                ),
             ],
           ),
         ),
@@ -784,12 +1156,12 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Tingkatkan Kolaborasi & Prestasi',
+                'Tingkatkan Kolaborasi & Kemitraan',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
               const SizedBox(height: 4),
               const Text(
-                'Temukan lebih banyak peluang proyek, workshop, dan kompetisi.',
+                'Temukan lebih banyak mitra industri dan studio magang terverifikasi di Kreavana.',
                 style: TextStyle(fontSize: 11, color: Colors.grey),
               ),
               const SizedBox(height: 10),
@@ -802,7 +1174,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
                 ),
                 style: ElevatedButton.styleFrom(backgroundColor: _schoolBlue),
                 child: const Text(
-                  'Jelajahi Peluang',
+                  'Jelajahi Mitra Industri',
                   style: TextStyle(color: Colors.white, fontSize: 11),
                 ),
               ),

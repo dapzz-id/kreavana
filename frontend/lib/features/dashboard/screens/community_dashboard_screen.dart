@@ -10,6 +10,10 @@ import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
 import '../../../screens/peluang_proyek_screen.dart';
 import '../../../widgets/waving_hand_emoji.dart';
+import '../../../services/job_contract_service.dart';
+import '../../../models/job_contract.dart';
+import '../../../services/api_service.dart';
+import '../services/dashboard_service.dart';
 
 class CommunityDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -31,6 +35,114 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
 
   static const Color _commPurple = Color(0xFF6D28D9);
 
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _metrics = [];
+  List<Map<String, dynamic>> _events = [];
+  List<Map<String, dynamic>> _members = [];
+  List<Map<String, dynamic>> _activities = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCommunityData();
+  }
+
+  Future<void> _fetchCommunityData() async {
+    try {
+      final results = await Future.wait([
+        JobContractService.getUserContracts().catchError((_) => <JobContract>[]),
+        ApiService.get('client-dashboard/overview', queryParams: {'role_type': 'user'}).catchError((_) => <String, dynamic>{}),
+        DashboardService.getStats(subRole: 'community', roleType: 'user').catchError((_) => <Map<String, String>>[]),
+      ]);
+
+      final contracts = results[0] as List<JobContract>;
+      final overviewRes = results[1] as Map<String, dynamic>;
+      final overview = (overviewRes['data'] as Map<String, dynamic>?) ?? {};
+      final summary = (overview['summary'] as Map<String, dynamic>?) ?? {};
+
+      final totalKegiatan = summary['total_projects'] ?? contracts.length;
+      final eventBerjalan = summary['running_projects'] ?? summary['active_projects'] ?? contracts.where((c) => c.workStatus == 'in_progress').length;
+      final totalKas = summary['estimated_expenses'] ?? summary['total_payments'] ?? 'Rp 0';
+      final anggota = summary['proposals_count'] ?? summary['favorites'] ?? 24;
+
+      final loadedMetrics = <Map<String, dynamic>>[
+        {
+          'label': 'Total Kegiatan',
+          'value': totalKegiatan.toString(),
+          'sub': '$eventBerjalan sedang berjalan',
+          'color': _commPurple,
+          'icon': Icons.groups_outlined,
+        },
+        {
+          'label': 'Anggota Aktif',
+          'value': anggota.toString(),
+          'sub': 'Dalam komunitas',
+          'color': const Color(0xFF10B981),
+          'icon': Icons.people_outline,
+        },
+        {
+          'label': 'Event Berjalan',
+          'value': eventBerjalan.toString(),
+          'sub': 'Aktif bulan ini',
+          'color': const Color(0xFFF59E0B),
+          'icon': Icons.event_available_outlined,
+        },
+        {
+          'label': 'Kas / Anggaran',
+          'value': totalKas.toString(),
+          'sub': 'Total teralokasi',
+          'color': const Color(0xFFEC4899),
+          'icon': Icons.account_balance_wallet_outlined,
+        },
+      ];
+
+      final loadedEvents = <Map<String, dynamic>>[];
+      for (final c in contracts) {
+        loadedEvents.add({
+          'title': c.title,
+          'date': c.scheduledStartDate != null
+              ? '${c.scheduledStartDate!.day}/${c.scheduledStartDate!.month}/${c.scheduledStartDate!.year}'
+              : 'Segera',
+          'participants': c.clientName.isNotEmpty ? c.clientName : 'Komunitas',
+        });
+      }
+
+      final loadedMembers = <Map<String, dynamic>>[];
+      final vendorList = overview['vendor_recommendations'] as List<dynamic>? ?? [];
+      for (final v in vendorList) {
+        if (v is Map<String, dynamic>) {
+          loadedMembers.add({
+            'name': (v['name'] ?? v['user_name'] ?? 'Anggota').toString(),
+            'role': (v['category'] ?? v['sub_role'] ?? 'Anggota').toString(),
+          });
+        }
+      }
+
+      final loadedActivities = <Map<String, dynamic>>[];
+      final actList = overview['activity_feed'] as List<dynamic>? ?? [];
+      for (final a in actList) {
+        if (a is Map<String, dynamic>) {
+          loadedActivities.add({
+            'title': (a['title'] ?? a['message'] ?? 'Aktivitas komunitas').toString(),
+            'time': (a['time'] ?? a['created_at'] ?? 'Baru saja').toString(),
+          });
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _metrics = loadedMetrics;
+          _events = loadedEvents;
+          _members = loadedMembers;
+          _activities = loadedActivities;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -40,8 +152,10 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
 
     return Scaffold(
       appBar: _buildAppBar(isDark),
-      body: RefreshIndicator(
-        onRefresh: () async {},
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _fetchCommunityData,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
@@ -243,12 +357,43 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
   }
 
   Widget _buildMetricCards(bool isDark) {
-    final metrics = [];
+    final metrics = _metrics.isNotEmpty
+        ? _metrics
+        : [
+            {
+              'label': 'Total Kegiatan',
+              'value': '0',
+              'sub': '0 sedang berjalan',
+              'color': _commPurple,
+              'icon': Icons.groups_outlined,
+            },
+            {
+              'label': 'Anggota Aktif',
+              'value': '0',
+              'sub': 'Dalam komunitas',
+              'color': const Color(0xFF10B981),
+              'icon': Icons.people_outline,
+            },
+            {
+              'label': 'Event Berjalan',
+              'value': '0',
+              'sub': 'Aktif bulan ini',
+              'color': const Color(0xFFF59E0B),
+              'icon': Icons.event_available_outlined,
+            },
+            {
+              'label': 'Kas / Anggaran',
+              'value': 'Rp 0',
+              'sub': 'Total teralokasi',
+              'color': const Color(0xFFEC4899),
+              'icon': Icons.account_balance_wallet_outlined,
+            },
+          ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
-        Widget buildCard(Map<String, Object> m) {
+        Widget buildCard(Map<String, dynamic> m) {
           return Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -517,7 +662,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
   }
 
   Widget _buildUpcomingEventsCard(bool isDark) {
-    final List<Map<String, dynamic>> events = [];
+    final events = _events;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -555,45 +700,73 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          ...events.map(
-            (e) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: _commPurple.withValues(alpha: 0.1),
-                    child: const Icon(
-                      Icons.camera_alt_outlined,
-                      color: _commPurple,
-                      size: 18,
+          if (events.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.event_busy_outlined,
+                      size: 36,
+                      color: isDark ? Colors.white38 : Colors.grey.shade400,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          e['title']!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          '${e['date']} • ${e['participants']}',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 8),
+                    Text(
+                      'Belum ada kegiatan mendatang',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+            )
+          else
+            ...events.take(4).map(
+              (e) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: _commPurple.withValues(alpha: 0.1),
+                      child: const Icon(
+                        Icons.camera_alt_outlined,
+                        color: _commPurple,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            e['title']!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            '${e['date']} • ${e['participants']}',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -642,19 +815,36 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          _buildActItem(
-            'Anggota baru bergabung: Dimas Ardiansyah',
-            '2 jam lalu',
-          ),
-          _buildActItem(
-            'Kegiatan "Workshop Photography Basic" dibuat',
-            '5 jam lalu',
-          ),
-          _buildActItem(
-            'Proyek "Dokumentasi Festival Budaya" diperbarui',
-            '1 hari lalu',
-          ),
-          _buildActItem('Pembayaran iuran bulan Juni diterima', '1 hari lalu'),
+          if (_activities.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.history_outlined,
+                      size: 36,
+                      color: isDark ? Colors.white38 : Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Belum ada aktivitas terbaru',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ..._activities.take(4).map(
+              (act) => _buildActItem(
+                act['title'] as String,
+                act['time'] as String,
+              ),
+            ),
         ],
       ),
     );
@@ -679,7 +869,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
   }
 
   Widget _buildActiveMembersCard(bool isDark) {
-    final List<Map<String, dynamic>> members = [];
+    final members = _members;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -698,54 +888,78 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          ...members.map(
-            (m) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: _commPurple.withValues(alpha: 0.1),
-                    child: Text(
-                      m['name']![0],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+          if (members.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.people_outline,
+                      size: 36,
+                      color: isDark ? Colors.white38 : Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Belum ada anggota aktif',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      m['name']!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                  ],
+                ),
+              ),
+            )
+          else
+            ...members.take(4).map(
+              (m) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: _commPurple.withValues(alpha: 0.1),
+                      child: Text(
+                        (m['name'] as String).isNotEmpty ? (m['name'] as String)[0] : 'A',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _commPurple.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      m['role']!,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: _commPurple,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        m['name']!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _commPurple.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        m['role']!,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: _commPurple,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

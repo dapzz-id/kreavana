@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
-import '../utils/app_errors.dart';
 import '../widgets/desktop_sidebar_layout.dart';
+import '../widgets/app_sweet_alert.dart';
 
 enum _FieldKind { text, number, date, url }
 
@@ -58,6 +58,7 @@ class _InstitutionWorkspaceScreenState
     'monitoring': 'Monitoring & Evaluasi',
     'documents': 'Dokumen Instansi',
     'announcements': 'Pengumuman Publik',
+    'showcases': 'Karya & Portofolio Siswa',
   };
 
   static const Map<String, String> _actions = {
@@ -68,6 +69,7 @@ class _InstitutionWorkspaceScreenState
     'monitoring': 'Tambah Program',
     'documents': 'Tambah Dokumen',
     'announcements': 'Buat Pengumuman',
+    'showcases': 'Tambah Karya Siswa',
   };
 
   static const Map<String, IconData> _icons = {
@@ -78,6 +80,7 @@ class _InstitutionWorkspaceScreenState
     'monitoring': Icons.monitor_heart_outlined,
     'documents': Icons.folder_outlined,
     'announcements': Icons.campaign_outlined,
+    'showcases': Icons.palette_outlined,
   };
 
   static const Map<String, List<_WorkspaceField>> _fields = {
@@ -156,6 +159,29 @@ class _InstitutionWorkspaceScreenState
       ),
       _WorkspaceField('valid_until', 'Berlaku Sampai', kind: _FieldKind.date),
     ],
+    'showcases': [
+      _WorkspaceField(
+        'category',
+        'Jurusan / Bidang',
+        hint: 'Contoh: Animasi 3D, DKV, Broadcast, RPL',
+      ),
+      _WorkspaceField(
+        'creator_name',
+        'Nama Siswa / Tim',
+        hint: 'Contoh: Tim Studio Animasi XII-A / Rian Pratama',
+      ),
+      _WorkspaceField(
+        'portfolio_url',
+        'Tautan Karya / Portofolio',
+        kind: _FieldKind.url,
+        hint: 'https://youtube.com/... atau Behance',
+      ),
+      _WorkspaceField(
+        'year',
+        'Tahun Angkatan',
+        hint: 'Contoh: 2026',
+      ),
+    ],
   };
 
   static const Map<String, List<String>> _statuses = {
@@ -166,6 +192,7 @@ class _InstitutionWorkspaceScreenState
     'monitoring': ['in_progress', 'completed', 'closed'],
     'documents': ['published', 'draft'],
     'announcements': ['draft', 'published'],
+    'showcases': ['published', 'draft'],
   };
 
   String get _title => _titles[widget.resourceType] ?? 'Data Instansi';
@@ -248,8 +275,12 @@ class _InstitutionWorkspaceScreenState
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Text(
             existing == null ? _action : 'Edit ${_title.toLowerCase()}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           content: SizedBox(
             width: 480,
@@ -349,10 +380,11 @@ class _InstitutionWorkspaceScreenState
                       if (response['status'] == true) {
                         Navigator.pop(dialogContext, true);
                       } else {
-                        AppSnackbar.error(
+                        AppSweetAlert.error(
                           dialogContext,
                           response['message']?.toString() ??
                               'Data gagal disimpan.',
+                          title: 'Gagal Menyimpan',
                         );
                       }
                     },
@@ -369,6 +401,11 @@ class _InstitutionWorkspaceScreenState
       controller.dispose();
     }
     if (saved == true && mounted) {
+      AppSweetAlert.success(
+        context,
+        'Data $_title berhasil disimpan.',
+        title: 'Berhasil Disimpan',
+      );
       await _loadRecords();
     }
   }
@@ -398,11 +435,17 @@ class _InstitutionWorkspaceScreenState
     );
     if (!mounted) return;
     if (response['status'] == true) {
+      AppSweetAlert.success(
+        context,
+        'Data "${record['title']}" berhasil dihapus.',
+        title: 'Berhasil Dihapus',
+      );
       await _loadRecords();
     } else {
-      AppSnackbar.error(
+      AppSweetAlert.error(
         context,
         response['message']?.toString() ?? 'Data gagal dihapus.',
+        title: 'Gagal Menghapus',
       );
     }
   }
@@ -677,26 +720,99 @@ class _InstitutionWorkspaceScreenState
                 )
               : records.isEmpty
               ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _icons[widget.resourceType],
-                        size: 48,
-                        color: Colors.grey.shade400,
+                  child: Container(
+                    width: double.infinity,
+                    constraints: const BoxConstraints(minHeight: 280),
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.cardBg : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
                       ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Belum ada data ${_title.toLowerCase()}.',
-                        style: TextStyle(color: Colors.grey.shade600),
+                      boxShadow: isDark
+                          ? null
+                          : [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                    ),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 480),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 72,
+                              height: 72,
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryPurple.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppTheme.primaryPurple.withValues(alpha: 0.2),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Icon(
+                                _icons[widget.resourceType] ?? Icons.folder_outlined,
+                                size: 36,
+                                color: AppTheme.primaryPurple,
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            Text(
+                              _search.isNotEmpty || _statusFilter != 'Semua'
+                                  ? 'Tidak Ditemukan Data $_title'
+                                  : 'Belum Ada Data $_title',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _search.isNotEmpty || _statusFilter != 'Semua'
+                                  ? 'Coba sesuaikan kata kunci pencarian atau ubah filter status data Anda.'
+                                  : 'Mulai kelola ${_title.toLowerCase()} instansi Anda dengan menekan tombol di bawah.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.45,
+                                color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(height: 22),
+                            ElevatedButton.icon(
+                              onPressed: _openEditor,
+                              icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                              label: Text(
+                                _action,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryPurple,
+                                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 2,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      FilledButton.icon(
-                        onPressed: _openEditor,
-                        icon: const Icon(Icons.add),
-                        label: Text(_action),
-                      ),
-                    ],
+                    ),
                   ),
                 )
               : RefreshIndicator(
@@ -740,6 +856,29 @@ class _InstitutionWorkspaceScreenState
     ),
   );
 
+  String get _activeRoute {
+    switch (widget.resourceType) {
+      case 'tenders':
+        return 'tender_kolaborasi';
+      case 'partners':
+        return 'mitra_komunitas';
+      case 'showcases':
+        return 'karya_siswa';
+      case 'reports':
+        return 'laporan';
+      case 'monitoring':
+        return 'monitoring_evaluasi';
+      case 'documents':
+        return 'dokumen_instansi';
+      case 'announcements':
+        return 'pengumuman_publik';
+      case 'budgets':
+        return 'realisasi_anggaran';
+      default:
+        return widget.resourceType;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -765,7 +904,8 @@ class _InstitutionWorkspaceScreenState
     if (MediaQuery.of(context).size.width > 900) {
       return DesktopSidebarLayout(
         user: widget.user,
-        activeRoute: widget.resourceType,
+        activeRoute: _activeRoute,
+        onUserUpdated: widget.onUserUpdated,
         child: content,
       );
     }

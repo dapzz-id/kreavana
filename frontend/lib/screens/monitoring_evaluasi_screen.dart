@@ -25,112 +25,146 @@ class MonitoringEvaluasiScreen extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: programs.length,
-        itemBuilder: (context, index) {
-          final p = programs[index];
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isDark ? AppTheme.cardBg : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+      body: programs.isEmpty
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Expanded(
-                      child: Text(
-                        p['title'] as String,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
+                    Icon(
+                      Icons.insights_outlined,
+                      size: 64,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: (p['color'] as Color).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        p['status'] as String,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: p['color'] as Color,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: LinearProgressIndicator(
-                          value: p['progress'] as double,
-                          minHeight: 8,
-                          backgroundColor: isDark
-                              ? Colors.grey.shade800
-                              : Colors.grey.shade200,
-                          valueColor: AlwaysStoppedAnimation(
-                            p['color'] as Color,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
+                    const SizedBox(height: 16),
                     Text(
-                      '${((p['progress'] as double) * 100).round()}%',
-                      style: const TextStyle(
+                      'Belum Ada Program Monitoring',
+                      style: TextStyle(
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : AppTheme.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Monitoring progress proyek, pelaporan tahapan, dan evaluasi hasil kerja akan dimonitor di sini.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
                         fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Dokumentasi: ${((p['progress'] as double) * 100).round()}%',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark
-                            ? AppTheme.textMuted
-                            : Colors.grey.shade500,
-                      ),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: programs.length,
+              itemBuilder: (context, index) {
+                final p = programs[index];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.cardBg : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
                     ),
-                    Text(
-                      'Laporan: ${((p['progress'] as double) * 100).round()}%',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark
-                            ? AppTheme.textMuted
-                            : Colors.grey.shade500,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              p['title'] as String,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: (p['color'] as Color).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              p['status'] as String,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: p['color'] as Color,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: LinearProgressIndicator(
+                                value: p['progress'] as double,
+                                minHeight: 8,
+                                backgroundColor: isDark
+                                    ? Colors.grey.shade800
+                                    : Colors.grey.shade200,
+                                valueColor: AlwaysStoppedAnimation(
+                                  p['color'] as Color,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            '${((p['progress'] as double) * 100).round()}%',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Dokumentasi: ${((p['progress'] as double) * 100).round()}%',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark
+                                  ? AppTheme.textMuted
+                                  : Colors.grey.shade500,
+                            ),
+                          ),
+                          Text(
+                            'Laporan: ${((p['progress'] as double) * 100).round()}%',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark
+                                  ? AppTheme.textMuted
+                                  : Colors.grey.shade500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
     );
 
     if (user != null) {

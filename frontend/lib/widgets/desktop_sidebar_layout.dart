@@ -18,6 +18,7 @@ import '../screens/dokumen_instansi_screen.dart';
 import '../screens/pengumuman_publik_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/tim_hak_akses_screen.dart';
+import '../screens/institution_workspace_screen.dart';
 import 'creator_sidebar_menus.dart';
 import 'kreavana_ai_floating_widget.dart';
 import 'app_sweet_alert.dart';
@@ -79,9 +80,20 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
     return (widget.user.role == 'user' || widget.user.role == 'creator') &&
         (sub == 'government' ||
-            sub == 'institution' ||
             sub == 'pemerintah' ||
             sub == 'instansi');
+  }
+
+  bool get _isSchool {
+    final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
+    return (widget.user.role == 'user' || widget.user.role == 'creator') &&
+        (sub == 'institution' ||
+            sub == 'institusi' ||
+            sub == 'school' ||
+            sub == 'education' ||
+            sub == 'campus' ||
+            sub == 'sekolah' ||
+            sub == 'kampus');
   }
 
   void _pushNoAnimation(Widget destination) {
@@ -123,15 +135,14 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
 
     // Proyek / Kebutuhan (Add, Edit, View Detail, Manage Pelamar)
     if (t == 'proyek_saya' || t == 'proyek') {
+      if (current == 'peluang_proyek' || current == 'peluang') return false;
       return current == 'proyek_saya' ||
           current == 'proyek' ||
           current == 'kebutuhan_proyek' ||
           current == 'buat_kebutuhan' ||
           current == 'detail_kebutuhan' ||
           current == 'edit_kebutuhan' ||
-          current == 'kelola_pelamar' ||
-          current.contains('kebutuhan') ||
-          current.contains('proyek');
+          current == 'kelola_pelamar';
     }
 
     // Home / Beranda
@@ -156,6 +167,12 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
 
     // Portofolio / Marketplace (Add karya, edit karya, detail produk)
     if (t == 'portofolio' || t == 'portfolio' || t == 'marketplace') {
+      if (current == 'karya_siswa' ||
+          current == 'showcases' ||
+          current == 'tambah_karya_siswa' ||
+          current == 'detail_karya_siswa') {
+        return false;
+      }
       return current == 'portofolio' ||
           current == 'portfolio' ||
           current == 'marketplace' ||
@@ -164,9 +181,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
           current == 'tambah_portofolio' ||
           current == 'edit_portofolio' ||
           current == 'detail_portofolio' ||
-          current == 'marketplace_detail' ||
-          current.contains('portofolio') ||
-          current.contains('karya');
+          current == 'marketplace_detail';
     }
 
     // Agenda / Kegiatan & Event / Jadwal
@@ -180,10 +195,17 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
           current == 'creator_calendar';
     }
 
-    // Tender & Kolaborasi
-    if (t == 'tender_kolaborasi' || t == 'tender') {
+    // Tender & Kolaborasi / Pengadaan & Vendor
+    if (t == 'tender_kolaborasi' ||
+        t == 'tender' ||
+        t == 'tenders' ||
+        t == 'pengadaan_vendor' ||
+        t == 'pengadaan & vendor') {
       return current == 'tender_kolaborasi' ||
           current == 'tender' ||
+          current == 'tenders' ||
+          current == 'pengadaan_vendor' ||
+          current == 'pengadaan & vendor' ||
           current == 'buat_tender' ||
           current == 'detail_tender' ||
           current == 'edit_tender';
@@ -198,43 +220,58 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     }
 
     // Laporan
-    if (t == 'laporan') {
+    if (t == 'laporan' || t == 'reports') {
       return current == 'laporan' ||
+          current == 'reports' ||
           current == 'buat_laporan' ||
           current == 'detail_laporan' ||
           current == 'edit_laporan';
     }
 
     // Realisasi Anggaran
-    if (t == 'realisasi_anggaran') {
+    if (t == 'realisasi_anggaran' || t == 'budgets') {
       return current == 'realisasi_anggaran' ||
+          current == 'budgets' ||
           current == 'tambah_anggaran' ||
           current == 'detail_anggaran' ||
           current == 'edit_anggaran';
     }
 
     // Monitoring & Evaluasi
-    if (t == 'monitoring_evaluasi') {
+    if (t == 'monitoring_evaluasi' || t == 'monitoring' || t == 'monev') {
       return current == 'monitoring_evaluasi' ||
+          current == 'monitoring' ||
           current == 'monev' ||
           current == 'tambah_evaluasi' ||
           current == 'detail_evaluasi';
     }
 
     // Dokumen Instansi
-    if (t == 'dokumen_instansi') {
+    if (t == 'dokumen_instansi' || t == 'documents' || t == 'dokumen') {
       return current == 'dokumen_instansi' ||
+          current == 'documents' ||
+          current == 'dokumen' ||
           current == 'tambah_dokumen' ||
           current == 'detail_dokumen' ||
           current == 'edit_dokumen';
     }
 
     // Pengumuman Publik
-    if (t == 'pengumuman_publik') {
+    if (t == 'pengumuman_publik' || t == 'announcements' || t == 'pengumuman') {
       return current == 'pengumuman_publik' ||
+          current == 'announcements' ||
+          current == 'pengumuman' ||
           current == 'buat_pengumuman' ||
           current == 'detail_pengumuman' ||
           current == 'edit_pengumuman';
+    }
+
+    // Karya & Portofolio Siswa
+    if (t == 'karya_siswa' || t == 'showcases') {
+      return current == 'karya_siswa' ||
+          current == 'showcases' ||
+          current == 'tambah_karya_siswa' ||
+          current == 'detail_karya_siswa';
     }
 
     // Profil Instansi / Profil
@@ -262,9 +299,11 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
           current == 'edit_akses';
     }
 
-    // Mitra & Komunitas
-    if (t == 'mitra_komunitas') {
+    // Mitra & Komunitas / Mitra Industri & Sanggar
+    if (t == 'mitra_komunitas' || t == 'partners' || t == 'mitra') {
       return current == 'mitra_komunitas' ||
+          current == 'partners' ||
+          current == 'mitra' ||
           current == 'tambah_mitra' ||
           current == 'detail_mitra';
     }
@@ -357,6 +396,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
       }
     }
 
+    if (_isRouteActive(route)) return;
+
     // Routes that are in MainNavigation's IndexedStack — go to index instead
     switch (route) {
       case 'pesan':
@@ -399,25 +440,75 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     Widget? destination;
     switch (route) {
       case 'tender_kolaborasi':
-        destination = TenderKolaborasiScreen(user: widget.user);
+      case 'tenders':
+      case 'pengadaan_vendor':
+        destination = _isSchool
+            ? InstitutionWorkspaceScreen(
+                user: widget.user,
+                resourceType: 'tenders',
+                onUserUpdated: widget.onUserUpdated,
+              )
+            : TenderKolaborasiScreen(user: widget.user);
         break;
       case 'mitra_komunitas':
-        destination = MitraKomunitasScreen(user: widget.user);
+      case 'partners':
+        destination = _isSchool
+            ? InstitutionWorkspaceScreen(
+                user: widget.user,
+                resourceType: 'partners',
+                onUserUpdated: widget.onUserUpdated,
+              )
+            : MitraKomunitasScreen(user: widget.user);
         break;
       case 'laporan':
-        destination = LaporanScreen(user: widget.user);
+      case 'reports':
+        destination = _isSchool
+            ? InstitutionWorkspaceScreen(
+                user: widget.user,
+                resourceType: 'reports',
+                onUserUpdated: widget.onUserUpdated,
+              )
+            : LaporanScreen(user: widget.user);
         break;
       case 'realisasi_anggaran':
-        destination = RealisasiAnggaranScreen(user: widget.user);
+      case 'budgets':
+        destination = _isSchool
+            ? InstitutionWorkspaceScreen(
+                user: widget.user,
+                resourceType: 'budgets',
+                onUserUpdated: widget.onUserUpdated,
+              )
+            : RealisasiAnggaranScreen(user: widget.user);
         break;
       case 'monitoring_evaluasi':
-        destination = MonitoringEvaluasiScreen(user: widget.user);
+      case 'monitoring':
+        destination = _isSchool
+            ? InstitutionWorkspaceScreen(
+                user: widget.user,
+                resourceType: 'monitoring',
+                onUserUpdated: widget.onUserUpdated,
+              )
+            : MonitoringEvaluasiScreen(user: widget.user);
         break;
       case 'dokumen_instansi':
-        destination = DokumenInstansiScreen(user: widget.user);
+      case 'documents':
+        destination = _isSchool
+            ? InstitutionWorkspaceScreen(
+                user: widget.user,
+                resourceType: 'documents',
+                onUserUpdated: widget.onUserUpdated,
+              )
+            : DokumenInstansiScreen(user: widget.user);
         break;
       case 'pengumuman_publik':
-        destination = PengumumanPublikScreen(user: widget.user);
+      case 'announcements':
+        destination = _isSchool
+            ? InstitutionWorkspaceScreen(
+                user: widget.user,
+                resourceType: 'announcements',
+                onUserUpdated: widget.onUserUpdated,
+              )
+            : PengumumanPublikScreen(user: widget.user);
         break;
       case 'profil_instansi':
         destination = ProfileScreen(
@@ -428,6 +519,14 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'tim_hak_akses':
         destination = TimHakAksesScreen(user: widget.user);
+        break;
+      case 'karya_siswa':
+      case 'showcases':
+        destination = InstitutionWorkspaceScreen(
+          user: widget.user,
+          resourceType: 'showcases',
+          onUserUpdated: widget.onUserUpdated,
+        );
         break;
     }
     if (destination != null) {
@@ -665,8 +764,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     final sidebarWidth = _isSidebarCollapsed ? 78.0 : 260.0;
     final collapsed = _isSidebarCollapsed;
 
-    final showTopPortofolioAgenda =
-      _isCreatorUser && !_isGovernment && !_hasSpecificCreatorSubRole;
     final layananTitle = CreatorSidebarMenus.layananSectionTitle(
       widget.user.subRole,
     );
@@ -835,7 +932,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isCollapsed: collapsed,
                             activeColor: const Color(0xFF8B5CF6),
                           ),
-                        if (_isCreatorUser && !_isGovernment)
+                        if (_isCreatorUser && !_isGovernment && !_isSchool)
                           _buildNavRow(
                             icon: Icons.explore_outlined,
                             label: 'Rekomendasi Peluang',
@@ -844,7 +941,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
-                        if (!_isGovernment)
+                        if (!_isGovernment && !_isSchool)
                           _buildNavRow(
                             icon: Icons.folder_outlined,
                             label: 'Proyek Saya',
@@ -862,25 +959,156 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
-                        if (showTopPortofolioAgenda) ...[
+                        if (!_hasSpecificCreatorSubRole) ...[
+                          if (SystemSettingsService.isMarketplaceEnabled || widget.user.isAdmin)
+                            _buildNavRow(
+                              icon: Icons.storefront_outlined,
+                              label: 'Marketplace',
+                              onTap: () => _goToMain(3),
+                              isSelected: _isRouteActive('marketplace') || _isRouteActive('portofolio'),
+                              isDark: isDark,
+                              isCollapsed: collapsed,
+                            ),
+                          if (_isCreatorUser && !_isGovernment && !_isSchool)
+                            _buildNavRow(
+                              icon: Icons.calendar_today_outlined,
+                              label: 'Agenda',
+                              onTap: () => _goToMain(4),
+                              isSelected: _isRouteActive('agenda'),
+                              isDark: isDark,
+                              isCollapsed: collapsed,
+                            ),
+                        ],
+                        if (_isSchool) ...[
+                          if (!collapsed) ...[
+                            const SizedBox(height: 18),
+                            _buildSectionHeader('PENGELOLAAN SEKOLAH', isDark),
+                          ] else ...[
+                            const SizedBox(height: 8),
+                          ],
                           _buildNavRow(
-                            icon: Icons.photo_library_outlined,
-                            label: 'Portofolio',
-                            onTap: () => _goToMain(3),
-                            isSelected: _isRouteActive('portofolio'),
+                            icon: Icons.work_outline,
+                            label: 'Program & Magang',
+                            onTap: () => _pushLink('proyek_saya'),
+                            isSelected: _isRouteActive('proyek_saya'),
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
                           _buildNavRow(
-                            icon: Icons.calendar_today_outlined,
-                            label: 'Agenda',
-                            onTap: () => _goToMain(4),
+                            icon: Icons.event_outlined,
+                            label: 'Kegiatan & Event',
+                            onTap: () => _pushLink('agenda'),
                             isSelected: _isRouteActive('agenda'),
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
-                        ],
-                        if (_isGovernment) ...[
+                          _buildNavRow(
+                            icon: Icons.handshake_outlined,
+                            label: 'Pengadaan & Vendor',
+                            onTap: () => _pushLink('tender_kolaborasi'),
+                            isSelected: _isRouteActive('tender_kolaborasi'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          _buildNavRow(
+                            icon: Icons.people_outlined,
+                            label: 'Daftar Kreator & Vendor',
+                            onTap: () => _pushLink('explore'),
+                            isSelected: _isRouteActive('explore'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          _buildNavRow(
+                            icon: Icons.diversity_3_outlined,
+                            label: 'Mitra Industri & Sanggar',
+                            onTap: () => _pushLink('mitra_komunitas'),
+                            isSelected: _isRouteActive('mitra_komunitas'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          _buildNavRow(
+                            icon: Icons.palette_outlined,
+                            label: 'Karya & Portofolio Siswa',
+                            onTap: () => _pushLink('karya_siswa'),
+                            isSelected: _isRouteActive('karya_siswa'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          if (!collapsed) ...[
+                            const SizedBox(height: 18),
+                            _buildSectionHeader('PEMANTAUAN AKADEMIK', isDark),
+                          ] else ...[
+                            const SizedBox(height: 8),
+                          ],
+                          _buildNavRow(
+                            icon: Icons.summarize_outlined,
+                            label: 'Laporan Kegiatan',
+                            onTap: () => _pushLink('laporan'),
+                            isSelected: _isRouteActive('laporan'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          _buildNavRow(
+                            icon: Icons.monitor_outlined,
+                            label: 'Monitoring & Evaluasi',
+                            onTap: () => _pushLink('monitoring_evaluasi'),
+                            isSelected: _isRouteActive('monitoring_evaluasi'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          if (!collapsed) ...[
+                            const SizedBox(height: 18),
+                            _buildSectionHeader('DATA & DOKUMEN', isDark),
+                          ] else ...[
+                            const SizedBox(height: 8),
+                          ],
+                          _buildNavRow(
+                            icon: Icons.folder_outlined,
+                            label: 'Dokumen & MoU',
+                            onTap: () => _pushLink('dokumen_instansi'),
+                            isSelected: _isRouteActive('dokumen_instansi'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          _buildNavRow(
+                            icon: Icons.campaign_outlined,
+                            label: 'Pengumuman Sekolah',
+                            onTap: () => _pushLink('pengumuman_publik'),
+                            isSelected: _isRouteActive('pengumuman_publik'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          if (!collapsed) ...[
+                            const SizedBox(height: 18),
+                            _buildSectionHeader('PENGATURAN', isDark),
+                          ] else ...[
+                            const SizedBox(height: 8),
+                          ],
+                          _buildNavRow(
+                            icon: Icons.account_balance_outlined,
+                            label: 'Profil Sekolah',
+                            onTap: () => _pushLink('profil_instansi'),
+                            isSelected: _isRouteActive('profil_instansi'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          _buildNavRow(
+                            icon: Icons.settings_outlined,
+                            label: 'Pengaturan Akun',
+                            onTap: () => _pushLink('pengaturan_akun'),
+                            isSelected: _isRouteActive('pengaturan_akun'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          _buildNavRow(
+                            icon: Icons.admin_panel_settings_outlined,
+                            label: 'Tim & Hak Akses',
+                            onTap: () => _pushLink('tim_hak_akses'),
+                            isSelected: _isRouteActive('tim_hak_akses'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                        ] else if (_isGovernment) ...[
                           if (!collapsed) ...[
                             const SizedBox(height: 18),
                             _buildSectionHeader('PENGELOLAAN', isDark),
