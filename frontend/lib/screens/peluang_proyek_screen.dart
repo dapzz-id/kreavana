@@ -11,11 +11,13 @@ import '../widgets/desktop_sidebar_layout.dart';
 class PeluangProyekScreen extends StatefulWidget {
   final UserModel user;
   final String subRoleSlug;
+  final bool showSidebar;
 
   const PeluangProyekScreen({
     super.key,
     required this.user,
     this.subRoleSlug = 'all',
+    this.showSidebar = false,
   });
 
   @override
@@ -645,7 +647,7 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
       ),
     );
 
-    if (isDesktop) {
+    if (isDesktop && widget.showSidebar) {
       return DesktopSidebarLayout(
         user: widget.user,
         activeRoute: 'explore',

@@ -5,6 +5,7 @@ import '../models/user_model.dart';
 import '../services/admin_service.dart';
 import '../services/api_service.dart';
 import '../widgets/app_sweet_alert.dart';
+import '../widgets/app_breadcrumbs.dart';
 import '../widgets/skeleton_box.dart';
 
 class AdminVerificationScreen extends StatefulWidget {
@@ -858,18 +859,36 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: Navigator.canPop(context),
-        toolbarHeight: 80,
+        toolbarHeight: 96,
         titleSpacing: isDesktop ? 32 : 16,
         elevation: 0,
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Verifikasi Akun & Identitas',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            AppBreadcrumbs(
+              items: [
+                BreadcrumbItem(
+                  label: 'Dasbor Admin',
+                  icon: Icons.admin_panel_settings_rounded,
+                  onTap: () {
+                    if (Navigator.canPop(context)) {
+                      Navigator.pop(context);
+                    }
+                  },
+                ),
+                const BreadcrumbItem(
+                  label: 'Verifikasi Akun',
+                  icon: Icons.verified_user_rounded,
+                ),
+              ],
             ),
-            SizedBox(height: 2),
-            Text(
+            const SizedBox(height: 4),
+            const Text(
+              'Verifikasi Akun & Identitas',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 2),
+            const Text(
               'Kelola verifikasi KTP Klien (Centang Biru) dan Upgrade Kreator (Centang Hijau)',
               style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.normal),
             ),

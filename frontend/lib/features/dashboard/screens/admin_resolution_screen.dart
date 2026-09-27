@@ -3,6 +3,8 @@ import '../../../app/theme.dart';
 import '../../../models/user_model.dart';
 import '../../../services/admin_service.dart';
 import '../../../screens/direct_message_screen.dart';
+import '../../../widgets/app_breadcrumbs.dart';
+import '../../../screens/main_navigation.dart';
 
 class AdminResolutionScreen extends StatefulWidget {
   final UserModel user;
@@ -47,10 +49,38 @@ class _AdminResolutionScreenState extends State<AdminResolutionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 75,
-        title: const Text(
-          'Resolusi & Dispute',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        toolbarHeight: 88,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppBreadcrumbs(
+              items: [
+                BreadcrumbItem(
+                  label: 'Dasbor Admin',
+                  icon: Icons.admin_panel_settings_rounded,
+                  onTap: () => Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MainNavigation(
+                        initialUser: widget.user,
+                        initialIndex: 0,
+                      ),
+                    ),
+                    (r) => false,
+                  ),
+                ),
+                const BreadcrumbItem(
+                  label: 'Resolusi & Dispute',
+                  icon: Icons.warning_amber_rounded,
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Resolusi & Dispute',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            ),
+          ],
         ),
         actions: [
           IconButton(

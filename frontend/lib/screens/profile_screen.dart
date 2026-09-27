@@ -20,12 +20,14 @@ class ProfileScreen extends StatefulWidget {
   final UserModel user;
   final ValueChanged<UserModel> onUserUpdated;
   final VoidCallback onLogout;
+  final bool showSidebar;
 
   const ProfileScreen({
     super.key,
     required this.user,
     required this.onUserUpdated,
     required this.onLogout,
+    this.showSidebar = false,
   });
 
   @override
@@ -303,46 +305,67 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           AppBreadcrumbs(
-                            items: [
-                              BreadcrumbItem(
-                                label: 'Beranda',
-                                icon: Icons.home_rounded,
-                                onTap: () => Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => MainNavigation(
-                                      initialUser: _currentUser,
-                                      initialIndex: 0,
-                                    ),
-                                  ),
-                                  (r) => false,
-                                ),
-                              ),
-                              BreadcrumbItem(
-                                label: 'Pengaturan',
-                                icon: Icons.settings_rounded,
-                                onTap: () {
-                                  if (Navigator.canPop(context)) {
-                                    Navigator.pop(context);
-                                  } else {
-                                    Navigator.pushAndRemoveUntil(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => MainNavigation(
-                                          initialUser: _currentUser,
-                                          initialIndex: 8,
+                            items: _currentUser.isAdmin
+                                ? [
+                                    BreadcrumbItem(
+                                      label: 'Dasbor Admin',
+                                      icon: Icons.admin_panel_settings_rounded,
+                                      onTap: () => Navigator.pushAndRemoveUntil(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => MainNavigation(
+                                            initialUser: _currentUser,
+                                            initialIndex: 0,
+                                          ),
                                         ),
+                                        (r) => false,
                                       ),
-                                      (r) => false,
-                                    );
-                                  }
-                                },
-                              ),
-                              const BreadcrumbItem(
-                                label: 'Profil Saya',
-                                icon: Icons.person_rounded,
-                              ),
-                            ],
+                                    ),
+                                    const BreadcrumbItem(
+                                      label: 'Profil Saya',
+                                      icon: Icons.person_rounded,
+                                    ),
+                                  ]
+                                : [
+                                    BreadcrumbItem(
+                                      label: 'Beranda',
+                                      icon: Icons.home_rounded,
+                                      onTap: () => Navigator.pushAndRemoveUntil(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => MainNavigation(
+                                            initialUser: _currentUser,
+                                            initialIndex: 0,
+                                          ),
+                                        ),
+                                        (r) => false,
+                                      ),
+                                    ),
+                                    BreadcrumbItem(
+                                      label: 'Pengaturan',
+                                      icon: Icons.settings_rounded,
+                                      onTap: () {
+                                        if (Navigator.canPop(context)) {
+                                          Navigator.pop(context);
+                                        } else {
+                                          Navigator.pushAndRemoveUntil(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => MainNavigation(
+                                                initialUser: _currentUser,
+                                                initialIndex: 8,
+                                              ),
+                                            ),
+                                            (r) => false,
+                                          );
+                                        }
+                                      },
+                                    ),
+                                    const BreadcrumbItem(
+                                      label: 'Profil Saya',
+                                      icon: Icons.person_rounded,
+                                    ),
+                                  ],
                           ),
                           const SizedBox(height: 12),
                           isDesktop
@@ -378,7 +401,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
     );
 
-    if (isDesktop) {
+    if (isDesktop && widget.showSidebar) {
       final isGov = (_currentUser.role == 'user' || _currentUser.role == 'creator') &&
           (_currentUser.subRole == 'government' ||
               _currentUser.subRole == 'institution' ||
