@@ -87,6 +87,7 @@ class CreatorServiceSeeder extends Seeder
                     'package_type' => 'premium',
                     'price' => 35000000.00,
                     'duration_info' => '1 bulan',
+                    'thumbnail_url' => 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1200&q=80',
                     'status' => 'pending',
                 ]
             );
@@ -102,6 +103,7 @@ class CreatorServiceSeeder extends Seeder
                     'package_type' => 'standard',
                     'price' => 18000000.00,
                     'duration_info' => '2 minggu',
+                    'thumbnail_url' => 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
                     'status' => 'active',
                 ]
             );
@@ -119,6 +121,7 @@ class CreatorServiceSeeder extends Seeder
                     'package_type' => 'starter',
                     'price' => 5000000.00,
                     'duration_info' => '5 hari',
+                    'thumbnail_url' => 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=80',
                     'status' => 'pending',
                 ]
             );
@@ -134,6 +137,7 @@ class CreatorServiceSeeder extends Seeder
                     'package_type' => 'standard',
                     'price' => 3500000.00,
                     'duration_info' => '3 hari',
+                    'thumbnail_url' => 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=80',
                     'status' => 'rejected',
                     'review_note' => 'Lampiran contoh portofolio resolusi tinggi belum lengkap.',
                 ]

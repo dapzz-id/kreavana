@@ -953,7 +953,8 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
     final creator = package['creator'] is Map
         ? Map<String, dynamic>.from(package['creator'] as Map)
         : <String, dynamic>{};
-    final imageUrl = package['thumbnail_url']?.toString();
+    final rawImageUrl = (package['thumbnail_url']?.toString() ?? '').trim();
+    final hasImage = rawImageUrl.isNotEmpty && rawImageUrl != 'null';
     final status = package['status']?.toString() ?? 'pending';
     final packageType = package['package_type']?.toString() ?? 'Paket Creator';
     final creatorRole = creator['sub_role']?.toString() ?? '';
@@ -972,19 +973,44 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (imageUrl != null && imageUrl.isNotEmpty)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    ApiService.resolveAssetUrl(imageUrl),
-                    width: 88,
-                    height: 72,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => _packageThumbnailPlaceholder(),
-                  ),
-                )
-              else
-                _packageThumbnailPlaceholder(),
+              InkWell(
+                onTap: () => _showPackageDetailDialog(package),
+                borderRadius: BorderRadius.circular(8),
+                child: hasImage
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Stack(
+                          children: [
+                            SizedBox(
+                              width: 96,
+                              height: 76,
+                              child: _buildPhotoPreview(
+                                rawImageUrl,
+                                height: 76,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            Positioned(
+                              right: 4,
+                              bottom: 4,
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.65),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Icon(
+                                  Icons.zoom_in,
+                                  size: 13,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _packageThumbnailPlaceholder(),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -1026,7 +1052,11 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
           ),
           if ((package['description']?.toString() ?? '').isNotEmpty) ...[
             const SizedBox(height: 12),
-            Text(package['description'].toString()),
+            Text(
+              package['description'].toString(),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
           if ((package['review_note']?.toString() ?? '').isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -1035,40 +1065,575 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
               style: TextStyle(color: Colors.red.shade700, fontSize: 12),
             ),
           ],
-          if (showActions) ...[
-            const SizedBox(height: 14),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                OutlinedButton(
-                  onPressed: () =>
-                      _showRejectPackageDialog(package['id'].toString()),
-                  style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
-                  child: const Text('Tolak'),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => _showPackageDetailDialog(package),
+                icon: const Icon(Icons.visibility_outlined, size: 16),
+                label: const Text('Lihat Detail'),
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 ),
-                const SizedBox(width: 8),
-                FilledButton.icon(
-                  onPressed: () => _approvePackage(package['id'].toString()),
-                  icon: const Icon(Icons.check, size: 18),
-                  label: const Text('Setujui & Publikasikan'),
+              ),
+              if (showActions)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () =>
+                          _showRejectPackageDialog(package['id'].toString()),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      ),
+                      child: const Text('Tolak'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      onPressed: () => _approvePackage(package['id'].toString()),
+                      icon: const Icon(Icons.check, size: 16),
+                      label: const Text('Setujui & Publikasikan'),
+                      style: FilledButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ],
+      ),
+    );
+  }
+
+  void _showPackageDetailDialog(Map<String, dynamic> package) {
+    final creator = package['creator'] is Map
+        ? Map<String, dynamic>.from(package['creator'] as Map)
+        : <String, dynamic>{};
+    final rawImageUrl = (package['thumbnail_url']?.toString() ?? '').trim();
+    final hasImage = rawImageUrl.isNotEmpty && rawImageUrl != 'null';
+    final status = package['status']?.toString() ?? 'pending';
+    final packageType = package['package_type']?.toString() ?? 'Paket Creator';
+    final creatorRole = creator['sub_role']?.toString() ?? '';
+    final creatorName = creator['name']?.toString() ?? 'Tidak diketahui';
+    final creatorUsername = creator['username']?.toString() ?? '';
+    final creatorEmail = creator['email']?.toString() ?? '-';
+    final creatorAvatar = creator['avatar_url']?.toString() ?? '';
+    final isPending = status == 'pending';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 680, maxHeight: 780),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.inventory_2_outlined,
+                        color: Theme.of(context).primaryColor,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Detail Paket Kreator',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Informasi lengkap paket layanan kreator',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _packageStatusBadge(status),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      tooltip: 'Tutup',
+                      onPressed: () => Navigator.pop(dialogCtx),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Scrollable Body
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Image Preview
+                      if (hasImage) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Stack(
+                            children: [
+                              Container(
+                                width: double.infinity,
+                                height: 260,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: _buildPhotoPreview(
+                                  rawImageUrl,
+                                  height: 260,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              Positioned(
+                                right: 12,
+                                bottom: 12,
+                                child: FilledButton.tonalIcon(
+                                  onPressed: () => _showImageDialog(
+                                    rawImageUrl,
+                                    package['title']?.toString() ?? 'Thumbnail Paket',
+                                  ),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: Colors.black.withValues(alpha: 0.65),
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  icon: const Icon(Icons.zoom_in, size: 18),
+                                  label: const Text('Perbesar Foto'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                      ] else ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.grey.shade900 : Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.image_not_supported_outlined,
+                                  size: 48, color: Colors.grey.shade400),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Kreator tidak mengunggah gambar thumbnail untuk paket ini.',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                      ],
+
+                      // Title & Badges
+                      Text(
+                        package['title']?.toString() ?? 'Paket Kreator',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              _packageTypeLabel(packageType),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ),
+                          ),
+                          if (creatorRole.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                _creatorRoleLabel(creatorRole),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Kategori: ${package['category'] ?? '-'}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Price & Duration Banner
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).primaryColor.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Harga Layanan',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Rp ${package['price'] ?? '0'}',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    color: Theme.of(context).primaryColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  'Estimasi Pengerjaan',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.schedule, size: 16, color: Colors.grey),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      package['duration_info']?.toString() ?? 'Fleksibel',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Creator Info Section
+                      const Text(
+                        'Informasi Kreator',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 26,
+                              backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+                              backgroundImage: creatorAvatar.isNotEmpty
+                                  ? NetworkImage(ApiService.resolveAssetUrl(creatorAvatar))
+                                  : null,
+                              child: creatorAvatar.isEmpty
+                                  ? Text(
+                                      creatorName.isNotEmpty ? creatorName[0].toUpperCase() : 'C',
+                                      style: TextStyle(
+                                        color: Theme.of(context).primaryColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    creatorName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  if (creatorUsername.isNotEmpty)
+                                    Text(
+                                      '@$creatorUsername',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.email_outlined,
+                                          size: 14,
+                                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          creatorEmail,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Description Section
+                      const Text(
+                        'Deskripsi Layanan & Paket',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.grey.shade900 : Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                          ),
+                        ),
+                        child: Text(
+                          (package['description']?.toString() ?? '').isNotEmpty
+                              ? package['description'].toString()
+                              : 'Tidak ada deskripsi detail untuk paket ini.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.5,
+                            color: isDark ? Colors.grey.shade200 : Colors.grey.shade800,
+                          ),
+                        ),
+                      ),
+
+                      // Rejection Alert Note (if any)
+                      if ((package['review_note']?.toString() ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Catatan Penolakan Admin:',
+                                      style: TextStyle(
+                                        color: Colors.red.shade900,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      package['review_note'].toString(),
+                                      style: TextStyle(
+                                        color: Colors.red.shade800,
+                                        fontSize: 12,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+
+              // Footer Actions
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(
+                      color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogCtx),
+                      child: const Text('Tutup'),
+                    ),
+                    if (isPending) ...[
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(dialogCtx);
+                              _showRejectPackageDialog(package['id'].toString());
+                            },
+                            icon: const Icon(Icons.close, size: 16),
+                            style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                            label: const Text('Tolak'),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton.icon(
+                            onPressed: () {
+                              Navigator.pop(dialogCtx);
+                              _approvePackage(package['id'].toString());
+                            },
+                            icon: const Icon(Icons.check, size: 16),
+                            label: const Text('Setujui & Publikasikan'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   Widget _packageThumbnailPlaceholder() {
     return Container(
-      width: 88,
-      height: 72,
+      width: 96,
+      height: 76,
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
       ),
-      child: Icon(Icons.image_outlined, color: Colors.grey.shade500),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.image_outlined, color: Colors.grey.shade400, size: 26),
+          const SizedBox(height: 2),
+          Text(
+            'Tanpa Foto',
+            style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+          ),
+        ],
+      ),
     );
   }
 

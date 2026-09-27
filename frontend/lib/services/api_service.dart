@@ -34,6 +34,9 @@ class ApiService {
       if (cleanPath.startsWith('/storage/nib/')) {
         return '$base/api/verification-assets/nib/${cleanPath.replaceFirst('/storage/nib/', '')}';
       }
+      if (cleanPath.startsWith('/storage/creator_service_thumbnails/')) {
+        return '$base/api/creator-service-thumbnails/${cleanPath.replaceFirst('/storage/creator_service_thumbnails/', '')}';
+      }
       return '$base$cleanPath';
     }
 
@@ -66,6 +69,10 @@ class ApiService {
     // Rewrite /storage/nib/file.jpg → /api/verification-assets/nib/file.jpg
     if (url.contains('/storage/nib/') && !url.contains('/api/verification-assets/')) {
       return url.replaceFirst(RegExp(r'/storage/nib/'), '/api/verification-assets/nib/');
+    }
+    // Rewrite /storage/creator_service_thumbnails/file.jpg → /api/creator-service-thumbnails/file.jpg
+    if (url.contains('/storage/creator_service_thumbnails/') && !url.contains('/api/creator-service-thumbnails/')) {
+      return url.replaceFirst(RegExp(r'/storage/creator_service_thumbnails/'), '/api/creator-service-thumbnails/');
     }
     return url;
   }

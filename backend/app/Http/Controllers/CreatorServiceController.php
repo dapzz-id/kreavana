@@ -46,18 +46,22 @@ class CreatorServiceController extends Controller
             return $this->errorResponse('Hanya kreator yang dapat membuat layanan.', 403);
         }
 
-        $isCreatorPackage = in_array($request->input('category'), [
-            self::EO_PACKAGE_CATEGORY,
-            self::CREATOR_PACKAGE_CATEGORY,
-        ], true);
-        if ($isCreatorPackage && !$request->filled('package_type')) {
-            return $this->errorResponse('Jenis paket wajib dipilih.', 422);
-        }
         if (
             $request->input('category') === self::EO_PACKAGE_CATEGORY &&
             $user->getRawOriginal('sub_role') !== 'event_organizer'
         ) {
             return $this->errorResponse('Kategori paket EO hanya dapat diajukan oleh Event Organizer.', 403);
+        }
+
+        $isCreatorPackage = in_array($request->input('category'), [
+            self::EO_PACKAGE_CATEGORY,
+            self::CREATOR_PACKAGE_CATEGORY,
+        ], true);
+        if ($request->input('category') === self::EO_PACKAGE_CATEGORY && !$request->filled('package_type')) {
+            $request->merge(['package_type' => 'eo_paket']);
+        }
+        if ($isCreatorPackage && !$request->filled('package_type')) {
+            return $this->errorResponse('Jenis paket wajib dipilih.', 422);
         }
 
         $validated = $request->validate([
