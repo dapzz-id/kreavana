@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../../app/subrole_theme_engine.dart';
 import '../../../models/user_model.dart';
+import '../../../models/job_contract.dart';
+import '../../../services/job_contract_service.dart';
+import '../../../services/api_service.dart';
 import '../../../services/theme_transition_service.dart';
 import '../services/dashboard_service.dart';
 import '../../../widgets/subrole_right_sidebar.dart';
@@ -41,6 +44,11 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
   Color get _govLight => _govBlue.withValues(alpha: 0.7);
   Map<String, List<Map<String, String>>> _allSubRoleStats = {};
   bool _isLoadingStats = true;
+  List<Map<String, dynamic>> _programs = [];
+  List<Map<String, dynamic>> _activities = [];
+  List<Map<String, dynamic>> _vendors = [];
+  List<Map<String, dynamic>> _categories = [];
+
   @override
   void initState() {
     super.initState();
@@ -49,13 +57,108 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
 
   Future<void> _fetchStats() async {
     try {
-      final allStats = await DashboardService.getAllSubRoleStats(
-        subRoleSlugs: ['government', 'institution', 'company', 'community'],
-        roleType: 'user',
-      );
+      final results = await Future.wait([
+        DashboardService.getAllSubRoleStats(
+          subRoleSlugs: ['government', 'institution', 'company', 'community'],
+          roleType: 'user',
+        ),
+        JobContractService.getUserContracts(),
+        ApiService.get('client-dashboard/overview', queryParams: {'role_type': 'user'}),
+      ]);
+
+      final allStats = results[0] as Map<String, List<Map<String, String>>>;
+      final contracts = results[1] as List<JobContract>;
+      final overviewRes = results[2] as Map<String, dynamic>;
+      final overview = (overviewRes['data'] as Map<String, dynamic>?) ?? {};
+
+      final loadedPrograms = <Map<String, dynamic>>[];
+      for (final c in contracts) {
+        String statusLabel = 'Persiapan';
+        Color statusColor = const Color(0xFFF59E0B);
+        IconData icon = Icons.assignment_outlined;
+
+        if (c.workStatus == 'in_progress') {
+          statusLabel = 'Berjalan';
+          statusColor = const Color(0xFF10B981);
+          icon = Icons.pending_actions_outlined;
+        } else if (c.workStatus == 'completed') {
+          statusLabel = 'Selesai';
+          statusColor = const Color(0xFF2563EB);
+          icon = Icons.check_circle_outline;
+        }
+
+        final dateStr = c.scheduledStartDate != null
+            ? '${c.scheduledStartDate!.day}/${c.scheduledStartDate!.month}/${c.scheduledStartDate!.year}'
+            : 'Belum dijadwalkan';
+
+        loadedPrograms.add({
+          'title': c.title,
+          'date': dateStr,
+          'status': statusLabel,
+          'status_color': statusColor,
+          'icon': icon,
+        });
+      }
+
+      final loadedActivities = <Map<String, dynamic>>[];
+      final actList = overview['activity_feed'] as List<dynamic>? ?? [];
+      const defaultColors = [Color(0xFF2563EB), Color(0xFF10B981), Color(0xFFF59E0B)];
+      int actIdx = 0;
+      for (final a in actList) {
+        if (a is Map<String, dynamic>) {
+          loadedActivities.add({
+            'title': (a['title'] ?? a['message'] ?? 'Aktivitas instansi').toString(),
+            'subtitle': (a['description'] ?? a['user_name'] ?? 'Pembaruan sistem').toString(),
+            'time': (a['time'] ?? a['created_at'] ?? 'Baru saja').toString(),
+            'color': defaultColors[actIdx % defaultColors.length],
+            'icon': Icons.notifications_active_outlined,
+          });
+          actIdx++;
+        }
+      }
+
+      final loadedVendors = <Map<String, dynamic>>[];
+      final vendorList = overview['vendor_recommendations'] as List<dynamic>? ?? [];
+      int rank = 1;
+      for (final v in vendorList) {
+        if (v is Map<String, dynamic>) {
+          loadedVendors.add({
+            'rank': rank,
+            'name': (v['name'] ?? v['user_name'] ?? 'Vendor Terverifikasi').toString(),
+            'category': (v['category'] ?? v['sub_role'] ?? 'Layanan Kreatif').toString(),
+            'rating': (v['rating'] ?? '4.9').toString(),
+            'color': rank == 1 ? const Color(0xFFF59E0B) : (rank == 2 ? const Color(0xFF94A3B8) : const Color(0xFFD97706)),
+          });
+          rank++;
+        }
+      }
+
+      final loadedCategories = <Map<String, dynamic>>[];
+      final needsList = overview['project_needs'] as List<dynamic>? ?? [];
+      if (needsList.isNotEmpty) {
+        const catColors = [Color(0xFF2563EB), Color(0xFF10B981), Color(0xFFF59E0B), Color(0xFF8B5CF6)];
+        int cIdx = 0;
+        final totalNeeds = needsList.length;
+        for (final n in needsList) {
+          if (n is Map<String, dynamic>) {
+            loadedCategories.add({
+              'name': (n['title'] ?? n['category'] ?? 'Kategori').toString(),
+              'percent': 100.0 / totalNeeds,
+              'count': 1,
+              'color': catColors[cIdx % catColors.length],
+            });
+            cIdx++;
+          }
+        }
+      }
+
       if (mounted) {
         setState(() {
           _allSubRoleStats = allStats;
+          _programs = loadedPrograms;
+          _activities = loadedActivities;
+          _vendors = loadedVendors;
+          _categories = loadedCategories;
           _isLoadingStats = false;
         });
       }
@@ -722,6 +825,34 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
 
   // ── Line Chart: Ringkasan Program & Kegiatan ──────────────────────────────
   Widget _buildLineChartCard(bool isDark) {
+    if (_programs.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.cardBg : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDashboardPanelHeader(
+              title: 'Ringkasan Program & Kegiatan',
+            ),
+            const SizedBox(height: 8),
+            _buildEmptyDashboardState(
+              icon: Icons.show_chart_rounded,
+              title: 'Belum ada tren kegiatan',
+              description: 'Tren program dan kegiatan akan divisualisasikan setelah program dibuat.',
+              isDark: isDark,
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -940,7 +1071,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
 
   // ── Donut Chart: Program Berdasarkan Kategori ─────────────────────────────
   Widget _buildDonutChartCard(bool isDark) {
-    final List<Map<String, dynamic>> categories = [];
+    final categories = _categories;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1060,7 +1191,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
 
   // ── Recent Programs List ──────────────────────────────────────────────────
   Widget _buildRecentProgramsCard(bool isDark) {
-    final List<Map<String, dynamic>> programs = [];
+    final programs = _programs;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1226,7 +1357,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
 
   // ── Aktivitas Terbaru ─────────────────────────────────────────────────────
   Widget _buildActivityCard(bool isDark) {
-    final List<Map<String, dynamic>> activities = [];
+    final activities = _activities;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1327,7 +1458,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
 
   // ── Kreator & Vendor Terbaik ──────────────────────────────────────────────
   Widget _buildVendorLeaderboardCard(bool isDark) {
-    final List<Map<String, dynamic>> vendors = [];
+    final vendors = _vendors;
 
     return Container(
       padding: const EdgeInsets.all(20),

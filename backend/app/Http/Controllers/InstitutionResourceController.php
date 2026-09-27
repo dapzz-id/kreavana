@@ -17,6 +17,9 @@ class InstitutionResourceController extends Controller
         'monitoring',
         'documents',
         'announcements',
+        'showcases',
+        'members',
+        'team',
     ];
 
     private const STATUSES = [
@@ -127,7 +130,7 @@ class InstitutionResourceController extends Controller
         $user = $request->user();
         $subRole = $user?->getRawOriginal('sub_role');
         abort_unless(
-            $user && in_array($subRole, ['institution', 'government', 'pemerintah', 'instansi'], true),
+            $user && in_array($subRole, ['institution', 'government', 'pemerintah', 'instansi', 'school', 'sekolah'], true),
             403,
             'Fitur ini hanya tersedia untuk akun instansi.',
         );

@@ -12,6 +12,9 @@ import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
 import '../../../screens/profile_screen.dart';
 
+import '../../../models/job_contract.dart';
+import '../../../services/job_contract_service.dart';
+
 class CreatorAnimatorDashboardScreen extends StatefulWidget {
   final UserModel user;
   final ValueChanged<UserModel> onUserUpdated;
@@ -35,6 +38,7 @@ class _CreatorAnimatorDashboardScreenState
   );
   bool _isLoading = true;
   List<Map<String, String>> _realtimeStats = [];
+  List<Map<String, dynamic>> _realtimeJobs = [];
 
   @override
   void initState() {
@@ -44,13 +48,26 @@ class _CreatorAnimatorDashboardScreenState
 
   Future<void> _fetchRealtimeData() async {
     try {
-      final stats = await DashboardService.getStats(
-        subRole: 'animator',
-        roleType: 'creator',
-      );
+      final results = await Future.wait([
+        DashboardService.getStats(
+          subRole: 'animator',
+          roleType: 'creator',
+        ).catchError((_) => <Map<String, String>>[]),
+        JobContractService.getUserContracts().catchError((_) => <JobContract>[]),
+      ]);
+      final stats = results[0] as List<Map<String, String>>;
+      final contracts = results[1] as List<JobContract>;
+      final jobs = contracts.map((c) => {
+        'title': c.title,
+        'client': c.clientName.isNotEmpty ? c.clientName : 'Klien Kreavana',
+        'milestone': c.workStatus.toUpperCase(),
+        'progress': c.workStatus == 'completed' ? 1.0 : (c.workStatus == 'review' ? 0.75 : 0.4),
+      }).toList();
+
       if (mounted) {
         setState(() {
           _realtimeStats = stats;
+          _realtimeJobs = jobs;
           _isLoading = false;
         });
       }
@@ -430,7 +447,7 @@ class _CreatorAnimatorDashboardScreenState
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
 
-        if (metrics.isEmpty)
+        if (metrics.isEmpty) {
           return Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
@@ -441,6 +458,7 @@ class _CreatorAnimatorDashboardScreenState
             ),
             child: const Center(child: Text('Data belum tersedia.')),
           );
+        }
 
         return GridView.builder(
           shrinkWrap: true,
@@ -514,7 +532,7 @@ class _CreatorAnimatorDashboardScreenState
   }
 
   Widget _buildRenderQueueSection(bool isDark) {
-    final List<Map<String, dynamic>> jobs = [];
+    final jobs = _realtimeJobs;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -528,68 +546,90 @@ class _CreatorAnimatorDashboardScreenState
           ),
         ),
         const SizedBox(height: 12),
-        Column(
-          children: jobs.map((j) {
-            final prog = j['progress'] as double;
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isDark ? AppTheme.cardBg : Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        if (jobs.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardBg : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+              ),
+            ),
+            child: Center(
+              child: Text(
+                'Belum ada pipeline atau milestone aktif.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        j['title'] as String,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : AppTheme.textDark,
+            ),
+          )
+        else
+          Column(
+            children: jobs.map((j) {
+              final prog = (j['progress'] as num?)?.toDouble() ?? 0.0;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.cardBg : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          (j['title'] as String?) ?? '',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : AppTheme.textDark,
+                          ),
                         ),
-                      ),
-                      Text(
-                        '${(prog * 100).toInt()}%',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: _accentColor,
+                        Text(
+                          '${(prog * 100).toInt()}%',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: _accentColor,
+                          ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Klien: ${j['client']} • ${j['milestone']}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark
+                            ? AppTheme.textMuted
+                            : AppTheme.textMutedLight,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Klien: ${j['client']} • ${j['milestone']}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark
-                          ? AppTheme.textMuted
-                          : AppTheme.textMutedLight,
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: LinearProgressIndicator(
-                      value: prog,
-                      minHeight: 6,
-                      backgroundColor: _accentColor.withValues(alpha: 0.15),
-                      valueColor: AlwaysStoppedAnimation<Color>(_accentColor),
+                    const SizedBox(height: 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: prog,
+                        minHeight: 6,
+                        backgroundColor: _accentColor.withValues(alpha: 0.15),
+                        valueColor: AlwaysStoppedAnimation<Color>(_accentColor),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-        ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
       ],
     );
   }

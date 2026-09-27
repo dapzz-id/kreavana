@@ -11,6 +11,10 @@ import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
 import '../../../screens/peluang_proyek_screen.dart';
 import '../../../widgets/waving_hand_emoji.dart';
+import '../../../services/job_contract_service.dart';
+import '../../../models/job_contract.dart';
+import '../../../services/api_service.dart';
+import '../services/dashboard_service.dart';
 
 class TourismDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -32,6 +36,119 @@ class _TourismDashboardScreenState extends State<TourismDashboardScreen> {
   static const Color _tourTeal = Color(0xFF0D9488);
   static const Color _tourBlue = Color(0xFF0284C7);
 
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _metrics = [];
+  List<Map<String, dynamic>> _programs = [];
+  List<Map<String, dynamic>> _vendors = [];
+  List<Map<String, dynamic>> _activities = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTourismData();
+  }
+
+  Future<void> _fetchTourismData() async {
+    try {
+      final results = await Future.wait([
+        JobContractService.getUserContracts().catchError((_) => <JobContract>[]),
+        ApiService.get('client-dashboard/overview', queryParams: {'role_type': 'user'}).catchError((_) => <String, dynamic>{}),
+        DashboardService.getStats(subRole: 'tourism', roleType: 'user').catchError((_) => <Map<String, String>>[]),
+      ]);
+
+      final contracts = results[0] as List<JobContract>;
+      final overviewRes = results[1] as Map<String, dynamic>;
+      final overview = (overviewRes['data'] as Map<String, dynamic>?) ?? {};
+      final summary = (overview['summary'] as Map<String, dynamic>?) ?? {};
+
+      final totalProgram = summary['total_projects'] ?? contracts.length;
+      final berjalan = summary['running_projects'] ?? summary['active_projects'] ?? contracts.where((c) => c.workStatus == 'in_progress').length;
+      final totalAnggaran = summary['estimated_expenses'] ?? summary['total_payments'] ?? 'Rp 0';
+      final vendorCount = summary['favorites'] ?? summary['proposals_count'] ?? 18;
+
+      final loadedMetrics = <Map<String, dynamic>>[
+        {
+          'label': 'Total Program Wisata',
+          'value': totalProgram.toString(),
+          'sub': '$berjalan sedang berjalan',
+          'color': _tourTeal,
+          'icon': Icons.landscape_outlined,
+        },
+        {
+          'label': 'Kolaborasi Berjalan',
+          'value': berjalan.toString(),
+          'sub': 'Dalam eksekusi',
+          'color': const Color(0xFF10B981),
+          'icon': Icons.trending_up,
+        },
+        {
+          'label': 'Anggaran Dialokasikan',
+          'value': totalAnggaran.toString(),
+          'sub': 'Total teralokasi',
+          'color': const Color(0xFFF59E0B),
+          'icon': Icons.account_balance_wallet_outlined,
+        },
+        {
+          'label': 'Mitra Kreator & Vendor',
+          'value': vendorCount.toString(),
+          'sub': 'Tersedia di sistem',
+          'color': _tourBlue,
+          'icon': Icons.storefront_outlined,
+        },
+      ];
+
+      final loadedPrograms = <Map<String, dynamic>>[];
+      for (final c in contracts) {
+        String statusLabel = 'Persiapan';
+        if (c.workStatus == 'in_progress') {
+          statusLabel = 'Berjalan';
+        } else if (c.workStatus == 'completed') {
+          statusLabel = 'Selesai';
+        }
+
+        loadedPrograms.add({
+          'title': c.title,
+          'status': statusLabel,
+        });
+      }
+
+      final loadedVendors = <Map<String, dynamic>>[];
+      final vendorList = overview['vendor_recommendations'] as List<dynamic>? ?? [];
+      for (final v in vendorList) {
+        if (v is Map<String, dynamic>) {
+          loadedVendors.add({
+            'name': (v['name'] ?? v['user_name'] ?? 'Vendor Wisata').toString(),
+            'cat': (v['category'] ?? v['sub_role'] ?? 'Spesialis Wisata').toString(),
+            'rating': (v['rating'] ?? '4.9').toString(),
+          });
+        }
+      }
+
+      final loadedActivities = <Map<String, dynamic>>[];
+      final actList = overview['activity_feed'] as List<dynamic>? ?? [];
+      for (final a in actList) {
+        if (a is Map<String, dynamic>) {
+          loadedActivities.add({
+            'title': (a['title'] ?? a['message'] ?? 'Aktivitas pariwisata').toString(),
+            'time': (a['time'] ?? a['created_at'] ?? 'Baru saja').toString(),
+          });
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _metrics = loadedMetrics;
+          _programs = loadedPrograms;
+          _vendors = loadedVendors;
+          _activities = loadedActivities;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -41,8 +158,10 @@ class _TourismDashboardScreenState extends State<TourismDashboardScreen> {
 
     return Scaffold(
       appBar: _buildAppBar(isDark),
-      body: RefreshIndicator(
-        onRefresh: () async {},
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _fetchTourismData,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
@@ -244,7 +363,38 @@ class _TourismDashboardScreenState extends State<TourismDashboardScreen> {
   }
 
   Widget _buildMetricCards(bool isDark) {
-    final metrics = [];
+    final metrics = _metrics.isNotEmpty
+        ? _metrics
+        : [
+            {
+              'label': 'Total Program Wisata',
+              'value': '0',
+              'sub': '0 sedang berjalan',
+              'color': _tourTeal,
+              'icon': Icons.landscape_outlined,
+            },
+            {
+              'label': 'Kolaborasi Berjalan',
+              'value': '0',
+              'sub': 'Dalam eksekusi',
+              'color': const Color(0xFF10B981),
+              'icon': Icons.trending_up,
+            },
+            {
+              'label': 'Anggaran Dialokasikan',
+              'value': 'Rp 0',
+              'sub': 'Total teralokasi',
+              'color': const Color(0xFFF59E0B),
+              'icon': Icons.account_balance_wallet_outlined,
+            },
+            {
+              'label': 'Mitra Kreator & Vendor',
+              'value': '0',
+              'sub': 'Tersedia di sistem',
+              'color': _tourBlue,
+              'icon': Icons.storefront_outlined,
+            },
+          ];
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -472,7 +622,7 @@ class _TourismDashboardScreenState extends State<TourismDashboardScreen> {
   }
 
   Widget _buildRecentProgramsCard(bool isDark) {
-    final List<Map<String, dynamic>> programs = [];
+    final programs = _programs;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -510,51 +660,77 @@ class _TourismDashboardScreenState extends State<TourismDashboardScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          ...programs.map(
-            (p) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: _tourTeal.withValues(alpha: 0.1),
-                    child: const Icon(
-                      Icons.landscape,
-                      color: _tourTeal,
-                      size: 18,
+          if (programs.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.landscape_outlined,
+                      size: 36,
+                      color: isDark ? Colors.white38 : Colors.grey.shade400,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      p['title']!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(height: 8),
+                    Text(
+                      'Belum ada program wisata aktif',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
                       ),
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _tourTeal.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      p['status']!,
-                      style: const TextStyle(
-                        fontSize: 10,
+                  ],
+                ),
+              ),
+            )
+          else
+            ...programs.take(4).map(
+              (p) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: _tourTeal.withValues(alpha: 0.1),
+                      child: const Icon(
+                        Icons.landscape,
                         color: _tourTeal,
-                        fontWeight: FontWeight.bold,
+                        size: 18,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        p['title']!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _tourTeal.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        p['status']!,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: _tourTeal,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -603,19 +779,36 @@ class _TourismDashboardScreenState extends State<TourismDashboardScreen> {
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          _buildActItem('Proposal kolaborasi dari Kreasi Studio', '1 jam lalu'),
-          _buildActItem(
-            'Booking baru untuk Paket Adventure Ciwado',
-            '3 jam lalu',
-          ),
-          _buildActItem(
-            'Konten "Sunrise di Bukit Ciwado" dipublikasikan',
-            '5 jam lalu',
-          ),
-          _buildActItem(
-            'Pembayaran masuk dari Paket Family Trip',
-            '1 hari lalu',
-          ),
+          if (_activities.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.history_outlined,
+                      size: 36,
+                      color: isDark ? Colors.white38 : Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Belum ada aktivitas terbaru',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ..._activities.take(4).map(
+              (act) => _buildActItem(
+                act['title'] as String,
+                act['time'] as String,
+              ),
+            ),
         ],
       ),
     );
@@ -640,7 +833,7 @@ class _TourismDashboardScreenState extends State<TourismDashboardScreen> {
   }
 
   Widget _buildTopVendorsCard(bool isDark) {
-    final List<Map<String, dynamic>> vendors = [];
+    final vendors = _vendors;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -659,56 +852,80 @@ class _TourismDashboardScreenState extends State<TourismDashboardScreen> {
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          ...vendors.map(
-            (v) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: _tourTeal.withValues(alpha: 0.1),
-                    child: Text(
-                      v['name']![0],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+          if (vendors.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.storefront_outlined,
+                      size: 36,
+                      color: isDark ? Colors.white38 : Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Belum ada vendor terdaftar',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          v['name']!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ...vendors.take(4).map(
+              (v) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: _tourTeal.withValues(alpha: 0.1),
+                      child: Text(
+                        (v['name'] as String).isNotEmpty ? (v['name'] as String)[0] : 'V',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
                         ),
-                        Text(
-                          v['cat']!,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            v['name']!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                      ],
+                          Text(
+                            v['cat']!,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Icon(Icons.star, size: 14, color: Colors.amber.shade600),
-                  Text(
-                    v['rating']!,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                    Icon(Icons.star, size: 14, color: Colors.amber.shade600),
+                    Text(
+                      v['rating']!,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

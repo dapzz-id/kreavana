@@ -69,12 +69,46 @@ class _TenderKolaborasiScreenState extends State<TenderKolaborasiScreen> {
           ),
         ),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _tenders.length,
-        itemBuilder: (context, index) =>
-            _buildTenderCard(_tenders[index], isDark),
-      ),
+      body: _tenders.isEmpty
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.handshake_outlined,
+                      size: 64,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Belum Ada Tender & Kolaborasi',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : AppTheme.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Peluang tender terbuka, program kemitraan kreatif, dan penawaran kolaborasi akan tercantum di sini.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _tenders.length,
+              itemBuilder: (context, index) =>
+                  _buildTenderCard(_tenders[index], isDark),
+            ),
     );
 
     if (widget.user != null) {

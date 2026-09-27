@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../../app/subrole_theme_engine.dart';
 import '../../../models/user_model.dart';
+import '../../../models/job_contract.dart';
+import '../../../services/job_contract_service.dart';
 import '../services/dashboard_service.dart';
 import '../../../widgets/dashboard_stats_charts.dart';
 import '../../../widgets/subrole_right_sidebar.dart';
@@ -33,6 +35,7 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
   bool _isLoading = true;
   List<Map<String, String>> _realtimeStats = [];
   Map<String, List<Map<String, String>>> _allSubRoleStats = {};
+  List<Map<String, dynamic>> _campaigns = [];
 
   @override
   void initState() {
@@ -43,7 +46,7 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
   Future<void> _fetchRealtimeData() async {
     try {
       final stats = await DashboardService.getStats(
-        subRole: 'editor',
+        subRole: 'brand_agency',
         roleType: 'user',
       );
       final allStats = await DashboardService.getAllSubRoleStats(
@@ -55,10 +58,21 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
         ],
         roleType: 'user',
       );
+      final List<JobContract> contracts = await JobContractService.getUserContracts();
+      final mappedCampaigns = contracts.map((c) {
+        return {
+          'brand': c.title,
+          'client': c.clientName.isNotEmpty ? c.clientName : (c.creatorName.isNotEmpty ? c.creatorName : 'Klien'),
+          'budget': 'Rp ${c.agreedPrice.toStringAsFixed(0)}',
+          'status': c.workStatus.toUpperCase(),
+        };
+      }).toList();
+
       if (mounted) {
         setState(() {
           _realtimeStats = stats;
           _allSubRoleStats = allStats;
+          _campaigns = mappedCampaigns;
           _isLoading = false;
         });
       }
@@ -344,7 +358,7 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
 
-        if (metrics.isEmpty)
+        if (metrics.isEmpty) {
           return Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
@@ -355,6 +369,7 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
             ),
             child: const Center(child: Text('Data belum tersedia.')),
           );
+        }
 
         return GridView.builder(
           shrinkWrap: true,
@@ -453,7 +468,7 @@ class _AgencyDashboardScreenState extends State<AgencyDashboardScreen> {
   }
 
   Widget _buildActiveCampaigns(bool isDark) {
-    final List<Map<String, dynamic>> campaigns = [];
+    final campaigns = _campaigns;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

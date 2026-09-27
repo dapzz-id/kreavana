@@ -10,6 +10,8 @@ import '../services/api_service.dart';
 import '../utils/app_errors.dart';
 import '../widgets/creator_availability_widget.dart';
 import '../widgets/desktop_sidebar_layout.dart';
+import '../models/job_contract.dart';
+import '../services/job_contract_service.dart';
 
 const _reviewableCreatorPackageKeys = {
   'foto_paket',
@@ -20,6 +22,22 @@ const _reviewableCreatorPackageKeys = {
   'desain_paket',
   'drone_paket',
   'konten_paket',
+};
+
+const _creatorBookingKeys = {
+  'foto_booking',
+  'video_booking',
+  'edit_antrian',
+  'mc_booking',
+  'singer_booking',
+  'mua_booking',
+  'wo_jadwal',
+  'eo_jadwal',
+  'drone_booking',
+  'talent_jadwal',
+  'desain_proyek',
+  'konten_campaign',
+  'animator_antrian',
 };
 
 class CreatorServiceItem {
@@ -234,8 +252,8 @@ class CreatorServiceData {
     required this.subtitle,
     required this.icon,
     required this.gradient,
-    required this.stats,
-    required this.items,
+    this.stats = const [],
+    this.items = const [],
     this.isGrid = false,
     this.actionLabel = 'Ajukan Sekarang',
   });
@@ -248,49 +266,7 @@ class CreatorServiceData {
       subtitle: 'Koleksi karya fotografi terbaik',
       icon: Icons.photo_library_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('48', 'Proyek', Icons.photo_library_outlined),
-        ('4.9', 'Rating', Icons.star_rounded),
-        ('120+', 'Klien', Icons.people_outline),
-      ],
       isGrid: true,
-      items: [
-        CreatorServiceItem(
-          title: 'Wedding & Prewedding',
-          subtitle: 'Dokumentasi pernikahan premium',
-          icon: Icons.favorite_outline,
-          tag: 'Fotografi',
-          value: '24 Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Katalog Produk',
-          subtitle: 'Foto produk untuk e-commerce',
-          icon: Icons.shopping_bag_outlined,
-          tag: 'Produk',
-          value: '15 Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Event & Dokumentasi',
-          subtitle: 'Liputan acara perusahaan & komunitas',
-          icon: Icons.event_outlined,
-          tag: 'Event',
-          value: '12 Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Portrait & Personal Branding',
-          subtitle: 'Foto profil profesional & personal',
-          icon: Icons.face_outlined,
-          tag: 'Portrait',
-          value: '18 Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Arsitektur & Interior',
-          subtitle: 'Foto properti & bangunan',
-          icon: Icons.apartment_outlined,
-          tag: 'Properti',
-          value: '9 Proyek',
-        ),
-      ],
     ),
     'foto_booking': CreatorServiceData(
       key: 'foto_booking',
@@ -298,42 +274,7 @@ class CreatorServiceData {
       subtitle: 'Kelola jadwal pemotretan Anda',
       icon: Icons.calendar_today_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('2', 'Hari Ini', Icons.today_outlined),
-        ('5', 'Minggu Ini', Icons.date_range_outlined),
-        ('3', 'Pending', Icons.pending_actions_outlined),
-      ],
       actionLabel: 'Konfirmasi Booking',
-      items: [
-        CreatorServiceItem(
-          title: 'Katalog Produk - Kopi Nusantara',
-          subtitle: '12 Agu 2026 • 09:00 - 13:00 WIB',
-          icon: Icons.photo_camera_outlined,
-          tag: 'Terkonfirmasi',
-          value: 'Studio Senayan',
-        ),
-        CreatorServiceItem(
-          title: 'Prewedding - Rina & Budi',
-          subtitle: '18 Agu 2026 • 15:00 - 18:00 WIB',
-          icon: Icons.favorite_outline,
-          tag: 'Menunggu',
-          value: 'Ancol',
-        ),
-        CreatorServiceItem(
-          title: 'Launching Toko Sinar Jaya',
-          subtitle: '25 Agu 2026 • 10:00 - 14:00 WIB',
-          icon: Icons.storefront_outlined,
-          tag: 'Terkonfirmasi',
-          value: 'Kelapa Gading',
-        ),
-        CreatorServiceItem(
-          title: 'Portrait - Pak Adi',
-          subtitle: '02 Sep 2026 • 09:00 - 10:30 WIB',
-          icon: Icons.person_outline,
-          tag: 'Terkonfirmasi',
-          value: 'Studio Senayan',
-        ),
-      ],
     ),
     'foto_paket': CreatorServiceData(
       key: 'foto_paket',
@@ -341,122 +282,23 @@ class CreatorServiceData {
       subtitle: 'Layanan fotografi dengan harga transparan',
       icon: Icons.payments_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('3', 'Paket Aktif', Icons.card_membership_outlined),
-        ('Rp 750K', 'Mulai Dari', Icons.price_change_outlined),
-        ('±2 Hari', 'Estimasi Proses', Icons.schedule_outlined),
-      ],
       actionLabel: 'Pilih Paket',
-      items: [
-        CreatorServiceItem(
-          title: 'Paket Basic',
-          subtitle: '1 jam sesi • 30 foto edit • 1 lokasi',
-          icon: Icons.photo_outlined,
-          tag: 'Populer',
-          value: 'Rp 750.000',
-        ),
-        CreatorServiceItem(
-          title: 'Paket Premium',
-          subtitle: '3 jam sesi • 100 foto edit • 2 lokasi',
-          icon: Icons.photo_camera_outlined,
-          tag: 'Best Value',
-          value: 'Rp 1.500.000',
-        ),
-        CreatorServiceItem(
-          title: 'Paket Eksklusif',
-          subtitle: '6 jam sesi • 250 foto edit • unlimited lokasi',
-          icon: Icons.workspace_premium_outlined,
-          tag: 'Premium',
-          value: 'Rp 2.750.000',
-        ),
-      ],
     ),
+    // ─── Videografer ───────────────────────────────────────────────
     'foto_area': CreatorServiceData(
       key: 'foto_area',
       title: 'Cakupan Area',
       subtitle: 'Wilayah layanan & biaya transportasi',
       icon: Icons.location_on_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('12', 'Kota Dilayani', Icons.location_city_outlined),
-        ('0-150 km', 'Jangkauan', Icons.social_distance_outlined),
-        ('Gratis', 'Dari 0 km', Icons.celebration_outlined),
-      ],
-      items: [
-        CreatorServiceItem(
-          title: 'Jakarta & Sekitarnya',
-          subtitle: 'Jangkauan 0 - 30 km',
-          icon: Icons.location_city_outlined,
-          tag: 'Aktif',
-          value: 'Gratis',
-        ),
-        CreatorServiceItem(
-          title: 'Bodetabek',
-          subtitle: 'Jangkauan 30 - 60 km',
-          icon: Icons.directions_car_outlined,
-          tag: 'Aktif',
-          value: 'Rp 150.000',
-        ),
-        CreatorServiceItem(
-          title: 'Bandung & Jawa Barat',
-          subtitle: 'Jangkauan 60 - 150 km',
-          icon: Icons.landscape_outlined,
-          tag: 'Aktif',
-          value: 'Rp 350.000',
-        ),
-        CreatorServiceItem(
-          title: 'Luar Pulau Jawa',
-          subtitle: 'Perlu koordinasi khusus',
-          icon: Icons.flight_takeoff_outlined,
-          tag: 'Custom',
-          value: 'Negosiasi',
-        ),
-      ],
     ),
-
-    // ─── Videografer ───────────────────────────────────────────────
     'video_galeri': CreatorServiceData(
       key: 'video_galeri',
       title: 'Galeri Video',
       subtitle: 'Karya video & film terbaik',
       icon: Icons.videocam_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('36', 'Video', Icons.videocam_outlined),
-        ('4.8', 'Rating', Icons.star_rounded),
-        ('85+', 'Klien', Icons.people_outline),
-      ],
       isGrid: true,
-      items: [
-        CreatorServiceItem(
-          title: 'Video Company Profile',
-          subtitle: 'Profil perusahaan berdurasi 2-3 menit',
-          icon: Icons.business_outlined,
-          tag: 'Korporat',
-          value: '12 Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Iklan & Promosi',
-          subtitle: 'Video iklan untuk sosial media',
-          icon: Icons.campaign_outlined,
-          tag: 'Iklan',
-          value: '18 Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Dokumentasi Event',
-          subtitle: 'Liputan video acara & konser',
-          icon: Icons.mic_external_on_outlined,
-          tag: 'Event',
-          value: '10 Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Video Musik',
-          subtitle: 'MV & konten kreatif',
-          icon: Icons.music_video_outlined,
-          tag: 'Musik',
-          value: '6 Proyek',
-        ),
-      ],
     ),
     'video_booking': CreatorServiceData(
       key: 'video_booking',
@@ -464,35 +306,7 @@ class CreatorServiceData {
       subtitle: 'Kelola jadwal produksi video',
       icon: Icons.calendar_today_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('1', 'Hari Ini', Icons.today_outlined),
-        ('4', 'Minggu Ini', Icons.date_range_outlined),
-        ('2', 'Pending', Icons.pending_actions_outlined),
-      ],
       actionLabel: 'Konfirmasi Booking',
-      items: [
-        CreatorServiceItem(
-          title: 'Company Profile - PT Maju Bersama',
-          subtitle: '13 Agu 2026 • 08:00 - 16:00 WIB',
-          icon: Icons.business_outlined,
-          tag: 'Terkonfirmasi',
-          value: 'Kantor Klien',
-        ),
-        CreatorServiceItem(
-          title: 'Iklan Produk - Kopi Senja',
-          subtitle: '19 Agu 2026 • 09:00 - 15:00 WIB',
-          icon: Icons.campaign_outlined,
-          tag: 'Menunggu',
-          value: 'Studio',
-        ),
-        CreatorServiceItem(
-          title: 'Dokumentasi Festival Budaya',
-          subtitle: '30 Agu 2026 • 07:00 - 22:00 WIB',
-          icon: Icons.festival_outlined,
-          tag: 'Terkonfirmasi',
-          value: 'TMII',
-        ),
-      ],
     ),
     'video_paket': CreatorServiceData(
       key: 'video_paket',
@@ -500,122 +314,23 @@ class CreatorServiceData {
       subtitle: 'Produksi video sesuai kebutuhan',
       icon: Icons.payments_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('3', 'Paket Aktif', Icons.card_membership_outlined),
-        ('Rp 1.5JT', 'Mulai Dari', Icons.price_change_outlined),
-        ('3-7 Hari', 'Estimasi Produksi', Icons.schedule_outlined),
-      ],
       actionLabel: 'Pilih Paket',
-      items: [
-        CreatorServiceItem(
-          title: 'Paket Starter',
-          subtitle: '1 video 60 detik • 1 lokasi • 1x revisi',
-          icon: Icons.videocam_outlined,
-          tag: 'Starter',
-          value: 'Rp 1.500.000',
-        ),
-        CreatorServiceItem(
-          title: 'Paket Profesional',
-          subtitle: '2 video • 2 lokasi • unlimited revisi',
-          icon: Icons.videocam_outlined,
-          tag: 'Best Value',
-          value: 'Rp 3.500.000',
-        ),
-        CreatorServiceItem(
-          title: 'Paket Premium',
-          subtitle: 'Full produksi • 3+ video • drone • tim lengkap',
-          icon: Icons.workspace_premium_outlined,
-          tag: 'Premium',
-          value: 'Rp 7.500.000',
-        ),
-      ],
     ),
+    // ─── Editor ────────────────────────────────────────────────────
     'video_equipment': CreatorServiceData(
       key: 'video_equipment',
       title: 'Equipment',
       subtitle: 'Peralatan produksi yang dimiliki',
       icon: Icons.videocam_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('12', 'Unit Peralatan', Icons.cases_outlined),
-        ('4K', 'Resolusi Maks', Icons.high_quality_outlined),
-        ('2', 'Kamera', Icons.photo_camera_outlined),
-      ],
-      items: [
-        CreatorServiceItem(
-          title: 'Sony FX3 Full Frame',
-          subtitle: 'Kamera sinema 4K 120fps',
-          icon: Icons.camera_outlined,
-          tag: 'Tersedia',
-          value: '2 Unit',
-        ),
-        CreatorServiceItem(
-          title: 'DJI Mavic 3 Pro',
-          subtitle: 'Drone 4K dengan 3 lensa',
-          icon: Icons.flight_outlined,
-          tag: 'Tersedia',
-          value: '1 Unit',
-        ),
-        CreatorServiceItem(
-          title: 'Gimbal DJI RS 3 Pro',
-          subtitle: 'Stabilizer profesional',
-          icon: Icons.settings_remote_outlined,
-          tag: 'Tersedia',
-          value: '1 Unit',
-        ),
-        CreatorServiceItem(
-          title: 'Lighting Set Profesional',
-          subtitle: 'Aputure 600d + softbox',
-          icon: Icons.light_mode_outlined,
-          tag: 'Tersedia',
-          value: '3 Set',
-        ),
-      ],
     ),
-
-    // ─── Editor ────────────────────────────────────────────────────
     'edit_portofolio': CreatorServiceData(
       key: 'edit_portofolio',
       title: 'Portofolio Edit',
       subtitle: 'Hasil edit foto & video terbaik',
       icon: Icons.collections_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('250+', 'Project', Icons.folder_copy_outlined),
-        ('4.9', 'Rating', Icons.star_rounded),
-        ('48 jam', 'Rata-rata Turnaround', Icons.flash_on_rounded),
-      ],
       isGrid: true,
-      items: [
-        CreatorServiceItem(
-          title: 'Color Grading Sinematik',
-          subtitle: 'Video 4K dengan tone sinematik',
-          icon: Icons.movie_outlined,
-          tag: 'Video',
-          value: '80+ Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Retouching Portrait',
-          subtitle: 'Skin retouch natural & beauty',
-          icon: Icons.face_retouching_natural_outlined,
-          tag: 'Foto',
-          value: '120+ Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Motion Graphics',
-          subtitle: 'Animasi logo & teks kreatif',
-          icon: Icons.animation_outlined,
-          tag: 'Video',
-          value: '40+ Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Manipulasi Foto',
-          subtitle: 'Composite & manipulasi kreatif',
-          icon: Icons.layers_outlined,
-          tag: 'Foto',
-          value: '35+ Proyek',
-        ),
-      ],
     ),
     'edit_antrian': CreatorServiceData(
       key: 'edit_antrian',
@@ -623,42 +338,7 @@ class CreatorServiceData {
       subtitle: 'Status pengerjaan proyek Anda',
       icon: Icons.list_alt_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('5', 'Dalam Antrian', Icons.query_builder_outlined),
-        ('2', 'Sedang Dikerjakan', Icons.auto_awesome_motion_outlined),
-        ('3', 'Menunggu Review', Icons.mark_email_unread_outlined),
-      ],
       actionLabel: 'Perbarui Status',
-      items: [
-        CreatorServiceItem(
-          title: 'Color Grading - Iklan Kopi Senja',
-          subtitle: 'Dikirim 05 Agu • Deadlines 10 Agu',
-          icon: Icons.movie_outlined,
-          tag: 'Sedang Dikerjakan',
-          value: '60%',
-        ),
-        CreatorServiceItem(
-          title: 'Retouch - Wedding Rina & Budi',
-          subtitle: 'Dikirim 06 Agu • Deadlines 12 Agu',
-          icon: Icons.face_retouching_natural_outlined,
-          tag: 'Dalam Antrian',
-          value: 'Antrian #2',
-        ),
-        CreatorServiceItem(
-          title: 'Motion - Company Profile PT Maju',
-          subtitle: 'Dikirim 03 Agu • Menunggu review',
-          icon: Icons.animation_outlined,
-          tag: 'Menunggu Review',
-          value: '100%',
-        ),
-        CreatorServiceItem(
-          title: 'Manipulasi - Poster Launching',
-          subtitle: 'Dikirim 04 Agu • Deadlines 09 Agu',
-          icon: Icons.layers_outlined,
-          tag: 'Selesai',
-          value: 'Terunduh',
-        ),
-      ],
     ),
     'edit_harga': CreatorServiceData(
       key: 'edit_harga',
@@ -666,128 +346,22 @@ class CreatorServiceData {
       subtitle: 'Tarif editing transparan',
       icon: Icons.payments_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('6', 'Layanan', Icons.miscellaneous_services_outlined),
-        ('Rp 50K', 'Mulai Dari', Icons.price_change_outlined),
-        ('24 jam', 'Express', Icons.flash_on_rounded),
-      ],
       actionLabel: 'Pilih Layanan',
-      items: [
-        CreatorServiceItem(
-          title: 'Retouching Foto Dasar',
-          subtitle: 'Per foto • koreksi warna & clean up',
-          icon: Icons.photo_outlined,
-          tag: 'Per Foto',
-          value: 'Rp 50.000',
-        ),
-        CreatorServiceItem(
-          title: 'Color Grading Video',
-          subtitle: 'Per menit video • tone & adjustment',
-          icon: Icons.movie_outlined,
-          tag: 'Per Menit',
-          value: 'Rp 100.000',
-        ),
-        CreatorServiceItem(
-          title: 'Editing Video Lengkap',
-          subtitle: 'Per menit • cut, transisi, teks, musik',
-          icon: Icons.videocam_outlined,
-          tag: 'Per Menit',
-          value: 'Rp 250.000',
-        ),
-        CreatorServiceItem(
-          title: 'Motion Graphics',
-          subtitle: 'Per proyek • animasi logo & teks',
-          icon: Icons.animation_outlined,
-          tag: 'Per Proyek',
-          value: 'Rp 500.000',
-        ),
-      ],
     ),
+    // ─── MC ────────────────────────────────────────────────────────
     'edit_spesialisasi': CreatorServiceData(
       key: 'edit_spesialisasi',
       title: 'Spesialisasi',
       subtitle: 'Bidang keahlian editing',
       icon: Icons.tune_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('5', 'Bidang Ahli', Icons.workspace_premium_outlined),
-        ('4.9', 'Rating Keahlian', Icons.star_rounded),
-        ('3', 'Tools Utama', Icons.handyman_outlined),
-      ],
-      items: [
-        CreatorServiceItem(
-          title: 'Color Grading Sinematik',
-          subtitle: 'DaVinci Resolve & Premiere Pro',
-          icon: Icons.palette_outlined,
-          tag: 'Expert',
-          value: '92%',
-        ),
-        CreatorServiceItem(
-          title: 'Retouching & Beauty',
-          subtitle: 'Photoshop & Lightroom',
-          icon: Icons.face_retouching_natural_outlined,
-          tag: 'Advanced',
-          value: '88%',
-        ),
-        CreatorServiceItem(
-          title: 'Motion Graphics & VFX',
-          subtitle: 'After Effects',
-          icon: Icons.animation_outlined,
-          tag: 'Advanced',
-          value: '85%',
-        ),
-        CreatorServiceItem(
-          title: 'Audio Mixing',
-          subtitle: 'Audition & editing suara',
-          icon: Icons.graphic_eq_outlined,
-          tag: 'Intermediate',
-          value: '75%',
-        ),
-      ],
     ),
-
-    // ─── MC ────────────────────────────────────────────────────────
     'mc_profil': CreatorServiceData(
       key: 'mc_profil',
       title: 'Profil MC',
       subtitle: 'Profil profesional Master of Ceremony',
       icon: Icons.mic_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('7+', 'Tahun Pengalaman', Icons.work_history_outlined),
-        ('150+', 'Acara', Icons.event_available_outlined),
-        ('4.9', 'Rating', Icons.star_rounded),
-      ],
-      items: [
-        CreatorServiceItem(
-          title: 'Bahasa Pengantar',
-          subtitle: 'Indonesia & Inggris (bilingual)',
-          icon: Icons.translate_outlined,
-          tag: 'Bilingual',
-          value: 'Fluent',
-        ),
-        CreatorServiceItem(
-          title: 'Gaya Membawakan Acara',
-          subtitle: 'Formal, semi-formal, casual, hingga entertainer',
-          icon: Icons.record_voice_over_outlined,
-          tag: 'Fleksibel',
-          value: '4 Gaya',
-        ),
-        CreatorServiceItem(
-          title: 'Pelatihan & Sertifikasi',
-          subtitle: 'Public speaking & MC profesional',
-          icon: Icons.school_outlined,
-          tag: 'Bersertifikat',
-          value: '3 Sertifikat',
-        ),
-        CreatorServiceItem(
-          title: 'Akomodasi Tambahan',
-          subtitle: 'Sound system, konten, dan skenario acara',
-          icon: Icons.volume_up_outlined,
-          tag: 'Lengkap',
-          value: 'Tersedia',
-        ),
-      ],
     ),
     'mc_booking': CreatorServiceData(
       key: 'mc_booking',
@@ -795,42 +369,7 @@ class CreatorServiceData {
       subtitle: 'Jadwal tampil sebagai MC',
       icon: Icons.calendar_today_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('1', 'Hari Ini', Icons.today_outlined),
-        ('3', 'Bulan Ini', Icons.date_range_outlined),
-        ('2', 'Pending', Icons.pending_actions_outlined),
-      ],
       actionLabel: 'Konfirmasi Booking',
-      items: [
-        CreatorServiceItem(
-          title: 'MC Seminar Nasional Digital 2026',
-          subtitle: '15 Agu 2026 • 08:00 - 16:00 WIB',
-          icon: Icons.school_outlined,
-          tag: 'Terkonfirmasi',
-          value: 'Jakarta Convention Hall',
-        ),
-        CreatorServiceItem(
-          title: 'MC Pernikahan Rina & Budi',
-          subtitle: '22 Agu 2026 • 10:00 - 15:00 WIB',
-          icon: Icons.favorite_outline,
-          tag: 'Menunggu',
-          value: 'Hotel Borobudur',
-        ),
-        CreatorServiceItem(
-          title: 'MC Company Anniversary PT Maju',
-          subtitle: '05 Sep 2026 • 18:00 - 22:00 WIB',
-          icon: Icons.celebration_outlined,
-          tag: 'Terkonfirmasi',
-          value: 'Ballroom Ritz',
-        ),
-        CreatorServiceItem(
-          title: 'MC Konser Amal Komunitas',
-          subtitle: '20 Sep 2026 • 19:00 - 22:00 WIB',
-          icon: Icons.music_note_outlined,
-          tag: 'Menunggu',
-          value: 'Gelora Bung Karno',
-        ),
-      ],
     ),
     'mc_kategori': CreatorServiceData(
       key: 'mc_kategori',
@@ -838,122 +377,23 @@ class CreatorServiceData {
       subtitle: 'Jenis acara yang dilayani',
       icon: Icons.theater_comedy_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('8', 'Kategori', Icons.category_outlined),
-        ('150+', 'Acara Ditangani', Icons.event_available_outlined),
-        ('98%', 'Kepuasan', Icons.verified_outlined),
-      ],
-      items: [
-        CreatorServiceItem(
-          title: 'Seminar & Konferensi',
-          subtitle: 'MC formal untuk acara korporat',
-          icon: Icons.mic_external_on_outlined,
-          tag: 'Sangat Mahir',
-          value: '60+ Acara',
-        ),
-        CreatorServiceItem(
-          title: 'Pernikahan & Resepsi',
-          subtitle: 'MC wedding dengan konsep elegan',
-          icon: Icons.favorite_outline,
-          tag: 'Sangat Mahir',
-          value: '45+ Acara',
-        ),
-        CreatorServiceItem(
-          title: 'Konser & Hiburan',
-          subtitle: 'MC entertainer dengan energi tinggi',
-          icon: Icons.music_note_outlined,
-          tag: 'Mahir',
-          value: '25+ Acara',
-        ),
-        CreatorServiceItem(
-          title: 'Launching Produk',
-          subtitle: 'MC promosi & peluncuran produk',
-          icon: Icons.rocket_launch_outlined,
-          tag: 'Mahir',
-          value: '20+ Acara',
-        ),
-      ],
     ),
+    // ─── Penyanyi ──────────────────────────────────────────────────
     'mc_tarif': CreatorServiceData(
       key: 'mc_tarif',
       title: 'Tarif',
       subtitle: 'Tarif layanan MC profesional',
       icon: Icons.payments_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('3', 'Kategori Tarif', Icons.receipt_long_outlined),
-        ('Rp 2JT', 'Mulai Dari', Icons.price_change_outlined),
-        ('Termasuk', 'Sound System', Icons.volume_up_outlined),
-      ],
       actionLabel: 'Pilih Paket',
-      items: [
-        CreatorServiceItem(
-          title: 'Paket 3 Jam',
-          subtitle: 'Acara lokal • ≤ 200 tamu',
-          icon: Icons.schedule_outlined,
-          tag: 'Populer',
-          value: 'Rp 2.000.000',
-        ),
-        CreatorServiceItem(
-          title: 'Paket 6 Jam',
-          subtitle: 'Acara besar • ≤ 500 tamu',
-          icon: Icons.av_timer_outlined,
-          tag: 'Best Value',
-          value: 'Rp 3.500.000',
-        ),
-        CreatorServiceItem(
-          title: 'Full Day / Event Spesial',
-          subtitle: 'Lebih dari 6 jam • custom kebutuhan',
-          icon: Icons.workspace_premium_outlined,
-          tag: 'Premium',
-          value: 'Rp 5.000.000',
-        ),
-      ],
     ),
-
-    // ─── Penyanyi ──────────────────────────────────────────────────
     'singer_portofolio': CreatorServiceData(
       key: 'singer_portofolio',
       title: 'Portofolio Musik',
       subtitle: 'Penampilan & karya musik',
       icon: Icons.music_note_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('80+', 'Penampilan', Icons.music_note_outlined),
-        ('4.8', 'Rating', Icons.star_rounded),
-        ('5', 'Single Rilis', Icons.album_outlined),
-      ],
       isGrid: true,
-      items: [
-        CreatorServiceItem(
-          title: 'Live Performance Acoustic',
-          subtitle: 'Set akustik untuk cafe & restoran',
-          icon: Icons.music_note_outlined,
-          tag: 'Live',
-          value: '50+ Tampil',
-        ),
-        CreatorServiceItem(
-          title: 'Wedding Performance',
-          subtitle: 'Solo & band untuk pernikahan',
-          icon: Icons.favorite_outline,
-          tag: 'Wedding',
-          value: '20+ Tampil',
-        ),
-        CreatorServiceItem(
-          title: 'Konser & Festival',
-          subtitle: 'Panggung utama festival musik',
-          icon: Icons.festival_outlined,
-          tag: 'Festival',
-          value: '10+ Tampil',
-        ),
-        CreatorServiceItem(
-          title: 'Single Original',
-          subtitle: 'Karya original di platform musik',
-          icon: Icons.album_outlined,
-          tag: 'Original',
-          value: '5 Single',
-        ),
-      ],
     ),
     'singer_booking': CreatorServiceData(
       key: 'singer_booking',
@@ -961,35 +401,7 @@ class CreatorServiceData {
       subtitle: 'Jadwal penampilan Anda',
       icon: Icons.calendar_today_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('1', 'Hari Ini', Icons.today_outlined),
-        ('4', 'Bulan Ini', Icons.date_range_outlined),
-        ('1', 'Pending', Icons.pending_actions_outlined),
-      ],
       actionLabel: 'Konfirmasi Booking',
-      items: [
-        CreatorServiceItem(
-          title: 'Acoustic Night - Kopi Senja',
-          subtitle: '14 Agu 2026 • 19:00 - 21:00 WIB',
-          icon: Icons.coffee_outlined,
-          tag: 'Terkonfirmasi',
-          value: 'Kemang',
-        ),
-        CreatorServiceItem(
-          title: 'Wedding Reception - Maya & Rio',
-          subtitle: '23 Agu 2026 • 18:00 - 21:00 WIB',
-          icon: Icons.favorite_outline,
-          tag: 'Menunggu',
-          value: 'Ritz Ballroom',
-        ),
-        CreatorServiceItem(
-          title: 'Festival Musik Nusantara',
-          subtitle: '07 Sep 2026 • 15:00 - 16:00 WIB',
-          icon: Icons.festival_outlined,
-          tag: 'Terkonfirmasi',
-          value: 'GBK',
-        ),
-      ],
     ),
     'singer_genre': CreatorServiceData(
       key: 'singer_genre',
@@ -997,122 +409,23 @@ class CreatorServiceData {
       subtitle: 'Genre musik & daftar lagu',
       icon: Icons.library_music_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('6', 'Genre', Icons.category_outlined),
-        ('120+', 'Lagu Siap Bawakan', Icons.queue_music_outlined),
-        ('EN/ID', 'Bahasa Lagu', Icons.translate_outlined),
-      ],
-      items: [
-        CreatorServiceItem(
-          title: 'Pop & Ballad',
-          subtitle: 'Lagu pop Indonesia & internasional',
-          icon: Icons.music_note_outlined,
-          tag: 'Andalan',
-          value: '40+ Lagu',
-        ),
-        CreatorServiceItem(
-          title: 'Acoustic & Jazz',
-          subtitle: 'Aransemen akustik & jazz',
-          icon: Icons.piano_outlined,
-          tag: 'Specialty',
-          value: '30+ Lagu',
-        ),
-        CreatorServiceItem(
-          title: 'Dangdut & Koplo',
-          subtitle: 'Untuk acara hiburan & panggung',
-          icon: Icons.music_note_outlined,
-          tag: 'Populer',
-          value: '25+ Lagu',
-        ),
-        CreatorServiceItem(
-          title: 'Religi & Klasik',
-          subtitle: 'Untuk acara formal & rohani',
-          icon: Icons.church_outlined,
-          tag: 'Tersedia',
-          value: '20+ Lagu',
-        ),
-      ],
     ),
+    // ─── MUA ───────────────────────────────────────────────────────
     'singer_tarif': CreatorServiceData(
       key: 'singer_tarif',
       title: 'Tarif',
       subtitle: 'Tarif penampilan profesional',
       icon: Icons.payments_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('3', 'Kategori Tarif', Icons.receipt_long_outlined),
-        ('Rp 1.5JT', 'Mulai Dari', Icons.price_change_outlined),
-        ('Bawaan', 'Backing Track', Icons.music_video_outlined),
-      ],
       actionLabel: 'Pilih Paket',
-      items: [
-        CreatorServiceItem(
-          title: 'Acoustic Set 2 Jam',
-          subtitle: 'Solo performance + instrument',
-          icon: Icons.music_note_outlined,
-          tag: 'Solo',
-          value: 'Rp 1.500.000',
-        ),
-        CreatorServiceItem(
-          title: 'Full Band 3 Jam',
-          subtitle: 'Vocal + band 4 orang',
-          icon: Icons.album_outlined,
-          tag: 'Best Value',
-          value: 'Rp 3.000.000',
-        ),
-        CreatorServiceItem(
-          title: 'Event Spesial & Konser',
-          subtitle: 'Custom kebutuhan & durasi',
-          icon: Icons.festival_outlined,
-          tag: 'Premium',
-          value: 'Rp 5.000.000+',
-        ),
-      ],
     ),
-
-    // ─── MUA ───────────────────────────────────────────────────────
     'mua_portofolio': CreatorServiceData(
       key: 'mua_portofolio',
       title: 'Portofolio MUA',
       subtitle: 'Hasil rias wajah terbaik',
       icon: Icons.face_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('120+', 'Klien', Icons.people_outline),
-        ('4.9', 'Rating', Icons.star_rounded),
-        ('6+', 'Tahun', Icons.work_history_outlined),
-      ],
       isGrid: true,
-      items: [
-        CreatorServiceItem(
-          title: 'Makeup Bridal',
-          subtitle: 'Rias pengantin adat & modern',
-          icon: Icons.favorite_outline,
-          tag: 'Bridal',
-          value: '40+ Klien',
-        ),
-        CreatorServiceItem(
-          title: 'Makeup Pesta',
-          subtitle: 'Rias pesta & wisuda',
-          icon: Icons.celebration_outlined,
-          tag: 'Party',
-          value: '50+ Klien',
-        ),
-        CreatorServiceItem(
-          title: 'Makeup Editorial',
-          subtitle: 'Rias untuk foto & video',
-          icon: Icons.photo_camera_outlined,
-          tag: 'Editorial',
-          value: '20+ Klien',
-        ),
-        CreatorServiceItem(
-          title: 'Soft Glam Daily',
-          subtitle: 'Rias natural sehari-hari',
-          icon: Icons.face_outlined,
-          tag: 'Daily',
-          value: '30+ Klien',
-        ),
-      ],
     ),
     'mua_booking': CreatorServiceData(
       key: 'mua_booking',
@@ -1120,35 +433,7 @@ class CreatorServiceData {
       subtitle: 'Jadwal rias Anda',
       icon: Icons.calendar_today_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('1', 'Hari Ini', Icons.today_outlined),
-        ('3', 'Minggu Ini', Icons.date_range_outlined),
-        ('2', 'Pending', Icons.pending_actions_outlined),
-      ],
       actionLabel: 'Konfirmasi Booking',
-      items: [
-        CreatorServiceItem(
-          title: 'MUA Bridal - Rina & Budi',
-          subtitle: '16 Agu 2026 • 04:00 - 09:00 WIB',
-          icon: Icons.favorite_outline,
-          tag: 'Terkonfirmasi',
-          value: 'Salon Rina',
-        ),
-        CreatorServiceItem(
-          title: 'Makeup Wisuda - Siti A.',
-          subtitle: '21 Agu 2026 • 06:00 - 08:30 WIB',
-          icon: Icons.school_outlined,
-          tag: 'Menunggu',
-          value: 'Rumah Klien',
-        ),
-        CreatorServiceItem(
-          title: 'Editorial Shoot - Majalah Mode',
-          subtitle: '28 Agu 2026 • 09:00 - 15:00 WIB',
-          icon: Icons.photo_camera_outlined,
-          tag: 'Terkonfirmasi',
-          value: 'Studio 21',
-        ),
-      ],
     ),
     'mua_paket': CreatorServiceData(
       key: 'mua_paket',
@@ -1156,115 +441,23 @@ class CreatorServiceData {
       subtitle: 'Paket rias sesuai kebutuhan',
       icon: Icons.payments_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('3', 'Paket Aktif', Icons.card_membership_outlined),
-        ('Rp 350K', 'Mulai Dari', Icons.price_change_outlined),
-        ('Dengan', 'Produk Premium', Icons.health_and_safety_outlined),
-      ],
       actionLabel: 'Pilih Paket',
-      items: [
-        CreatorServiceItem(
-          title: 'Paket Soft Glam',
-          subtitle: 'Rias natural • 60 menit',
-          icon: Icons.face_outlined,
-          tag: 'Populer',
-          value: 'Rp 350.000',
-        ),
-        CreatorServiceItem(
-          title: 'Paket Party Glam',
-          subtitle: 'Rias tahan lama • 90 menit + lashes',
-          icon: Icons.celebration_outlined,
-          tag: 'Best Value',
-          value: 'Rp 550.000',
-        ),
-        CreatorServiceItem(
-          title: 'Paket Bridal Premium',
-          subtitle: 'Rias pengantin + trial + setting',
-          icon: Icons.workspace_premium_outlined,
-          tag: 'Premium',
-          value: 'Rp 1.500.000',
-        ),
-      ],
     ),
+    // ─── Wedding Organizer ─────────────────────────────────────────
     'mua_spesialisasi': CreatorServiceData(
       key: 'mua_spesialisasi',
       title: 'Spesialisasi',
       subtitle: 'Keahlian rias & teknik',
       icon: Icons.palette_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('5', 'Spesialisasi', Icons.category_outlined),
-        ('4.9', 'Rating', Icons.star_rounded),
-        ('12', 'Brand Kosmetik', Icons.shopping_bag_outlined),
-      ],
-      items: [
-        CreatorServiceItem(
-          title: 'Bridal & Engagement',
-          subtitle: 'Rias pengantin adat & modern',
-          icon: Icons.favorite_outline,
-          tag: 'Expert',
-          value: '40+ Klien',
-        ),
-        CreatorServiceItem(
-          title: 'Editorial & Commercial',
-          subtitle: 'Rias untuk shooting profesional',
-          icon: Icons.photo_camera_outlined,
-          tag: 'Advanced',
-          value: '20+ Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Special Effects (SFX)',
-          subtitle: 'Rias efek khusus & karakter',
-          icon: Icons.auto_awesome_outlined,
-          tag: 'Advanced',
-          value: '10+ Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Hijab & Muslimah',
-          subtitle: 'Rias khsus pengantin muslimah',
-          icon: Icons.volunteer_activism_outlined,
-          tag: 'Expert',
-          value: '30+ Klien',
-        ),
-      ],
     ),
-
-    // ─── Wedding Organizer ─────────────────────────────────────────
     'wo_paket': CreatorServiceData(
       key: 'wo_paket',
       title: 'Paket Pernikahan',
       subtitle: 'Paket pernikahan lengkap',
       icon: Icons.favorite_outline,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('3', 'Paket Aktif', Icons.card_membership_outlined),
-        ('250+', 'Pernikahan', Icons.favorite_border_outlined),
-        ('4.9', 'Rating', Icons.star_rounded),
-      ],
       actionLabel: 'Pilih Paket',
-      items: [
-        CreatorServiceItem(
-          title: 'Paket Sakura',
-          subtitle: 'Akad + resepsi • 300 tamu • 5 vendor',
-          icon: Icons.favorite_outline,
-          tag: 'Populer',
-          value: 'Rp 25.000.000',
-        ),
-        CreatorServiceItem(
-          title: 'Paket Premium',
-          subtitle: 'Akad + resepsi + prewedding • 500 tamu',
-          icon: Icons.workspace_premium_outlined,
-          tag: 'Premium',
-          value: 'Rp 50.000.000',
-        ),
-        CreatorServiceItem(
-          title: 'Paket Intimate',
-          subtitle: 'Acara privat • 100 tamu • 3 vendor',
-          icon: Icons.favorite_border_outlined,
-          tag: 'Intimate',
-          value: 'Rp 15.000.000',
-        ),
-      ],
     ),
     'wo_jadwal': CreatorServiceData(
       key: 'wo_jadwal',
@@ -1272,35 +465,7 @@ class CreatorServiceData {
       subtitle: 'Jadwal pernikahan yang ditangani',
       icon: Icons.calendar_today_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('1', 'Bulan Ini', Icons.today_outlined),
-        ('2', 'Bulan Depan', Icons.date_range_outlined),
-        ('1', 'Pending', Icons.pending_actions_outlined),
-      ],
       actionLabel: 'Kelola Jadwal',
-      items: [
-        CreatorServiceItem(
-          title: 'Pernikahan Rina & Budi',
-          subtitle: '22 Agu 2026 • Akad 08:00 • Resepsi 12:00',
-          icon: Icons.favorite_outline,
-          tag: 'Aktif',
-          value: 'Hotel Borobudur',
-        ),
-        CreatorServiceItem(
-          title: 'Pernikahan Maya & Rio',
-          subtitle: '13 Sep 2026 • Akad 09:00 • Resepsi 18:00',
-          icon: Icons.favorite_outline,
-          tag: 'Persiapan',
-          value: 'Ritz Ballroom',
-        ),
-        CreatorServiceItem(
-          title: 'Pernikahan Dewi & Andi',
-          subtitle: '27 Sep 2026 • Akad 07:00 • Resepsi 13:00',
-          icon: Icons.favorite_outline,
-          tag: 'Menunggu',
-          value: 'Balai Kartini',
-        ),
-      ],
     ),
     'wo_vendor': CreatorServiceData(
       key: 'wo_vendor',
@@ -1308,113 +473,22 @@ class CreatorServiceData {
       subtitle: 'Jaringan vendor tepercaya',
       icon: Icons.handshake_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('25', 'Vendor Aktif', Icons.business_outlined),
-        ('8', 'Kategori', Icons.category_outlined),
-        ('98%', 'Ketepatan', Icons.verified_outlined),
-      ],
-      items: [
-        CreatorServiceItem(
-          title: 'Catering Dapur Nusantara',
-          subtitle: 'Catering & wedding cake',
-          icon: Icons.restaurant_outlined,
-          tag: 'Aktif',
-          value: '150+ Event',
-        ),
-        CreatorServiceItem(
-          title: 'Dekorasi Floral Art',
-          subtitle: 'Dekorasi & florist',
-          icon: Icons.local_florist_outlined,
-          tag: 'Aktif',
-          value: '200+ Event',
-        ),
-        CreatorServiceItem(
-          title: 'Venue Collection',
-          subtitle: 'Hotel & gedung pernikahan',
-          icon: Icons.apartment_outlined,
-          tag: 'Aktif',
-          value: '40 Venue',
-        ),
-        CreatorServiceItem(
-          title: 'Entertainment Pro',
-          subtitle: 'MC, band, & hiburan',
-          icon: Icons.mic_external_on_outlined,
-          tag: 'Aktif',
-          value: '30+ Talent',
-        ),
-      ],
     ),
+    // ─── Event Organizer ───────────────────────────────────────────
     'wo_timeline': CreatorServiceData(
       key: 'wo_timeline',
       title: 'Timeline WO',
       subtitle: 'Alur kerja pernikahan',
       icon: Icons.timeline_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('6', 'Tahapan', Icons.view_list_outlined),
-        ('H-90', 'Mulai Persiapan', Icons.query_builder_outlined),
-        ('100%', 'Acara Tepat Waktu', Icons.event_available_outlined),
-      ],
-      items: [
-        CreatorServiceItem(
-          title: 'H-90: Konsultasi & Kontrak',
-          subtitle: 'Diskusi kebutuhan & penandatanganan',
-          icon: Icons.edit_outlined,
-          tag: 'Selesai',
-          value: 'Tahap 1',
-        ),
-        CreatorServiceItem(
-          title: 'H-60: Booking Vendor',
-          subtitle: 'Venue, catering, dekorasi, dokumentasi',
-          icon: Icons.handshake_outlined,
-          tag: 'Selesai',
-          value: 'Tahap 2',
-        ),
-        CreatorServiceItem(
-          title: 'H-30: Fitting & Trial',
-          subtitle: 'Trial makeup & fitting baju',
-          icon: Icons.checkroom_outlined,
-          tag: 'Berjalan',
-          value: 'Tahap 3',
-        ),
-        CreatorServiceItem(
-          title: 'H-7: Gladi Bersih',
-          subtitle: 'Simulasi akad & resepsi',
-          icon: Icons.fact_check_outlined,
-          tag: 'Berjalan',
-          value: 'Tahap 4',
-        ),
-        CreatorServiceItem(
-          title: 'H-Day: Eksekusi',
-          subtitle: 'Koordinasi penuh di hari H',
-          icon: Icons.celebration_outlined,
-          tag: 'Berjalan',
-          value: 'Tahap 5',
-        ),
-        CreatorServiceItem(
-          title: 'H+7: Evaluasi',
-          subtitle: 'Serah terima album & evaluasi',
-          icon: Icons.assignment_turned_in_outlined,
-          tag: 'Selesai',
-          value: 'Tahap 6',
-        ),
-      ],
     ),
-
-    // ─── Event Organizer ───────────────────────────────────────────
     'eo_paket': CreatorServiceData(
       key: 'eo_paket',
       title: 'Paket Event',
       subtitle: 'Paket penyelenggaraan event',
       icon: Icons.festival_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('0', 'Tayang Publik', Icons.public_outlined),
-        ('0', 'Menunggu Review', Icons.pending_actions_outlined),
-        ('0', 'Total Paket', Icons.card_membership_outlined),
-      ],
       actionLabel: 'Ajukan Paket',
-      items: [],
     ),
     'eo_jadwal': CreatorServiceData(
       key: 'eo_jadwal',
@@ -1422,42 +496,7 @@ class CreatorServiceData {
       subtitle: 'Jadwal event yang ditangani',
       icon: Icons.calendar_today_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('2', 'Bulan Ini', Icons.today_outlined),
-        ('3', 'Bulan Depan', Icons.date_range_outlined),
-        ('2', 'Pending', Icons.pending_actions_outlined),
-      ],
       actionLabel: 'Kelola Jadwal',
-      items: [
-        CreatorServiceItem(
-          title: 'Seminar Digitalisasi UMKM',
-          subtitle: '18 Agu 2026 • 09:00 - 17:00 WIB',
-          icon: Icons.school_outlined,
-          tag: 'Aktif',
-          value: 'JCC',
-        ),
-        CreatorServiceItem(
-          title: 'Festival Musik Nusantara',
-          subtitle: '07 Sep 2026 • 12:00 - 22:00 WIB',
-          icon: Icons.festival_outlined,
-          tag: 'Persiapan',
-          value: 'GBK',
-        ),
-        CreatorServiceItem(
-          title: 'Launching Produk Tech',
-          subtitle: '21 Sep 2026 • 10:00 - 16:00 WIB',
-          icon: Icons.rocket_launch_outlined,
-          tag: 'Menunggu',
-          value: 'Jakarta Creative Hub',
-        ),
-        CreatorServiceItem(
-          title: 'Company Anniversary PT Maju',
-          subtitle: '05 Okt 2026 • 18:00 - 22:00 WIB',
-          icon: Icons.celebration_outlined,
-          tag: 'Menunggu',
-          value: 'Ballroom Ritz',
-        ),
-      ],
     ),
     'eo_vendor': CreatorServiceData(
       key: 'eo_vendor',
@@ -1465,141 +504,21 @@ class CreatorServiceData {
       subtitle: 'Jaringan vendor event',
       icon: Icons.handshake_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('30', 'Vendor Aktif', Icons.business_outlined),
-        ('10', 'Kategori', Icons.category_outlined),
-        ('95%', 'Ketepatan', Icons.verified_outlined),
-      ],
-      items: [
-        CreatorServiceItem(
-          title: 'Stage & Lighting Pro',
-          subtitle: 'Sound system, lighting, panggung',
-          icon: Icons.light_mode_outlined,
-          tag: 'Aktif',
-          value: '120+ Event',
-        ),
-        CreatorServiceItem(
-          title: 'Catering Nusantara',
-          subtitle: 'Katering & konsumsi peserta',
-          icon: Icons.restaurant_outlined,
-          tag: 'Aktif',
-          value: '90+ Event',
-        ),
-        CreatorServiceItem(
-          title: 'Ticketing & Registrasi',
-          subtitle: 'Sistem tiket & check-in',
-          icon: Icons.confirmation_number_outlined,
-          tag: 'Aktif',
-          value: '60+ Event',
-        ),
-        CreatorServiceItem(
-          title: 'Keamanan & Medis',
-          subtitle: 'Petugas keamanan & ambulance',
-          icon: Icons.health_and_safety_outlined,
-          tag: 'Aktif',
-          value: '40+ Event',
-        ),
-      ],
     ),
+    // ─── Komunitas ─────────────────────────────────────────────────
     'eo_timeline': CreatorServiceData(
       key: 'eo_timeline',
       title: 'Timeline EO',
       subtitle: 'Alur kerja penyelenggaraan event',
       icon: Icons.timeline_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('6', 'Tahapan', Icons.view_list_outlined),
-        ('H-60', 'Mulai Persiapan', Icons.query_builder_outlined),
-        ('100%', 'Event Tepat Waktu', Icons.event_available_outlined),
-      ],
-      items: [
-        CreatorServiceItem(
-          title: 'H-60: Brief & Konsep',
-          subtitle: 'Diskusi kebutuhan & proposal',
-          icon: Icons.edit_outlined,
-          tag: 'Selesai',
-          value: 'Tahap 1',
-        ),
-        CreatorServiceItem(
-          title: 'H-45: Vendor & Venue',
-          subtitle: 'Booking vendor & perizinan',
-          icon: Icons.handshake_outlined,
-          tag: 'Selesai',
-          value: 'Tahap 2',
-        ),
-        CreatorServiceItem(
-          title: 'H-21: Promosi & Tiket',
-          subtitle: 'Marketing event & penjualan tiket',
-          icon: Icons.campaign_outlined,
-          tag: 'Berjalan',
-          value: 'Tahap 3',
-        ),
-        CreatorServiceItem(
-          title: 'H-7: Finalisasi',
-          subtitle: 'Gladi bersih & teknis',
-          icon: Icons.fact_check_outlined,
-          tag: 'Berjalan',
-          value: 'Tahap 4',
-        ),
-        CreatorServiceItem(
-          title: 'H-Day: Eksekusi',
-          subtitle: 'Operasional event penuh',
-          icon: Icons.celebration_outlined,
-          tag: 'Berjalan',
-          value: 'Tahap 5',
-        ),
-        CreatorServiceItem(
-          title: 'H+7: Laporan',
-          subtitle: 'Laporan & evaluasi klien',
-          icon: Icons.assignment_turned_in_outlined,
-          tag: 'Selesai',
-          value: 'Tahap 6',
-        ),
-      ],
     ),
-
-    // ─── Komunitas ─────────────────────────────────────────────────
     'komunitas_anggota': CreatorServiceData(
       key: 'komunitas_anggota',
       title: 'Anggota',
       subtitle: 'Kelola keanggotaan komunitas',
       icon: Icons.groups_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('1.240', 'Anggota', Icons.people_outline),
-        ('85', 'Aktif Minggu Ini', Icons.how_to_reg_outlined),
-        ('12', 'Pengurus', Icons.admin_panel_settings_outlined),
-      ],
-      items: [
-        CreatorServiceItem(
-          title: 'Pengurus Inti',
-          subtitle: 'Ketua, sekretaris, bendahara',
-          icon: Icons.admin_panel_settings_outlined,
-          tag: '12 Orang',
-          value: 'Aktif',
-        ),
-        CreatorServiceItem(
-          title: 'Anggota Aktif',
-          subtitle: 'Kontributor kegiatan rutin',
-          icon: Icons.people_outline,
-          tag: '240 Orang',
-          value: 'Aktif',
-        ),
-        CreatorServiceItem(
-          title: 'Anggota Baru (Bulan Ini)',
-          subtitle: 'Pendaftar anggota baru',
-          icon: Icons.person_add_alt_outlined,
-          tag: '35 Orang',
-          value: 'Diproses',
-        ),
-        CreatorServiceItem(
-          title: 'Anggota Tidak Aktif',
-          subtitle: 'Tidak aktif 90+ hari',
-          icon: Icons.person_off_outlined,
-          tag: '18 Orang',
-          value: 'Perlu Follow-up',
-        ),
-      ],
     ),
     'komunitas_kegiatan': CreatorServiceData(
       key: 'komunitas_kegiatan',
@@ -1607,42 +526,7 @@ class CreatorServiceData {
       subtitle: 'Agenda kegiatan komunitas',
       icon: Icons.event_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('3', 'Minggu Ini', Icons.today_outlined),
-        ('5', 'Bulan Ini', Icons.date_range_outlined),
-        ('2', 'Rutin', Icons.repeat_outlined),
-      ],
       actionLabel: 'Daftar Kegiatan',
-      items: [
-        CreatorServiceItem(
-          title: 'Kopi Darat Bulanan',
-          subtitle: '16 Agu 2026 • 10:00 - 12:00 WIB',
-          icon: Icons.coffee_outlined,
-          tag: 'Rutin',
-          value: '12 Peserta',
-        ),
-        CreatorServiceItem(
-          title: 'Workshop Fotografi Dasar',
-          subtitle: '23 Agu 2026 • 09:00 - 15:00 WIB',
-          icon: Icons.camera_outlined,
-          tag: 'Workshop',
-          value: '30 Peserta',
-        ),
-        CreatorServiceItem(
-          title: 'Bakti Sosial Komunitas',
-          subtitle: '30 Agu 2026 • 07:00 - 14:00 WIB',
-          icon: Icons.volunteer_activism_outlined,
-          tag: 'Sosial',
-          value: '50 Peserta',
-        ),
-        CreatorServiceItem(
-          title: 'Pameran Karya Anggota',
-          subtitle: '12 Sep 2026 • 10:00 - 20:00 WIB',
-          icon: Icons.palette_outlined,
-          tag: 'Bulanan',
-          value: '100+ Peserta',
-        ),
-      ],
     ),
     'komunitas_pengumuman': CreatorServiceData(
       key: 'komunitas_pengumuman',
@@ -1650,137 +534,24 @@ class CreatorServiceData {
       subtitle: 'Informasi & pengumuman komunitas',
       icon: Icons.campaign_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('2', 'Penting', Icons.priority_high_outlined),
-        ('5', 'Minggu Ini', Icons.mark_email_unread_outlined),
-        ('12', 'Total', Icons.inbox_outlined),
-      ],
       actionLabel: 'Lihat Detail',
-      items: [
-        CreatorServiceItem(
-          title: 'Pendaftaran Pengurus Baru',
-          subtitle: 'Dibuka sampai 20 Agu 2026',
-          icon: Icons.how_to_reg_outlined,
-          tag: 'Penting',
-          value: '2 Hari Lagi',
-        ),
-        CreatorServiceItem(
-          title: 'Perubahan Jadwal Kopdar',
-          subtitle: 'Kopdar pindah ke 23 Agu 2026',
-          icon: Icons.update_outlined,
-          tag: 'Info',
-          value: 'Baca',
-        ),
-        CreatorServiceItem(
-          title: 'Pengumuman Sponsor Baru',
-          subtitle: 'Kerjasama dengan Brand XYZ',
-          icon: Icons.handshake_outlined,
-          tag: 'Info',
-          value: 'Baca',
-        ),
-        CreatorServiceItem(
-          title: 'Rekap Kegiatan Juli 2026',
-          subtitle: 'Laporan kegiatan bulan lalu',
-          icon: Icons.summarize_outlined,
-          tag: 'Rekap',
-          value: 'Baca',
-        ),
-      ],
     ),
+    // ─── Desainer ──────────────────────────────────────────────────
     'komunitas_kolaborasi': CreatorServiceData(
       key: 'komunitas_kolaborasi',
       title: 'Kolaborasi Komunitas',
       subtitle: 'Kerjasama dengan pihak lain',
       icon: Icons.handshake_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('5', 'Kolaborasi', Icons.link_outlined),
-        ('3', 'Aktif', Icons.play_circle_outline),
-        ('2', 'Selesai', Icons.check_circle_outline),
-      ],
       actionLabel: 'Ajukan Kolaborasi',
-      items: [
-        CreatorServiceItem(
-          title: 'Kolaborasi Brand XYZ',
-          subtitle: 'Konten bersama 3 bulan',
-          icon: Icons.branding_watermark_outlined,
-          tag: 'Aktif',
-          value: 'Sampai Okt 2026',
-        ),
-        CreatorServiceItem(
-          title: 'Kolaborasi Komunitas Fotografi',
-          subtitle: 'Pameran karya bersama',
-          icon: Icons.camera_outlined,
-          tag: 'Aktif',
-          value: '12 Sep 2026',
-        ),
-        CreatorServiceItem(
-          title: 'CSR Perusahaan ABC',
-          subtitle: 'Program pelatihan anggota',
-          icon: Icons.volunteer_activism_outlined,
-          tag: 'Menunggu',
-          value: 'Proposal',
-        ),
-        CreatorServiceItem(
-          title: 'Bazaar UMKM Bersama',
-          subtitle: 'Event tahunan komunitas',
-          icon: Icons.storefront_outlined,
-          tag: 'Selesai',
-          value: 'Feb 2026',
-        ),
-      ],
     ),
-
-    // ─── Desainer ──────────────────────────────────────────────────
     'desain_portofolio': CreatorServiceData(
       key: 'desain_portofolio',
       title: 'Portofolio Desain',
       subtitle: 'Karya desain grafis & branding',
       icon: Icons.palette_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('90+', 'Proyek', Icons.folder_copy_outlined),
-        ('4.9', 'Rating', Icons.star_rounded),
-        ('60+', 'Klien', Icons.people_outline),
-      ],
       isGrid: true,
-      items: [
-        CreatorServiceItem(
-          title: 'Desain Logo & Branding',
-          subtitle: 'Identitas visual brand',
-          icon: Icons.branding_watermark_outlined,
-          tag: 'Branding',
-          value: '35+ Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Desain Kemasan',
-          subtitle: 'Kemasan produk yang menarik',
-          icon: Icons.inventory_2_outlined,
-          tag: 'Packaging',
-          value: '25+ Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'UI/UX Design',
-          subtitle: 'Desain aplikasi & website',
-          icon: Icons.design_services_outlined,
-          tag: 'Digital',
-          value: '18+ Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Poster & Konten Visual',
-          subtitle: 'Konten sosial media & promosi',
-          icon: Icons.brush_outlined,
-          tag: 'Konten',
-          value: '40+ Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Ilustrasi Digital',
-          subtitle: 'Ilustrasi custom & karakter',
-          icon: Icons.auto_awesome_outlined,
-          tag: 'Ilustrasi',
-          value: '12+ Proyek',
-        ),
-      ],
     ),
     'desain_proyek': CreatorServiceData(
       key: 'desain_proyek',
@@ -1788,42 +559,7 @@ class CreatorServiceData {
       subtitle: 'Proyek desain yang sedang berjalan',
       icon: Icons.assignment_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('4', 'Aktif', Icons.auto_awesome_motion_outlined),
-        ('2', 'Review', Icons.mark_email_unread_outlined),
-        ('3', 'Selesai', Icons.check_circle_outline),
-      ],
       actionLabel: 'Perbarui Status',
-      items: [
-        CreatorServiceItem(
-          title: 'Rebranding - Kopi Senja',
-          subtitle: 'Brief diterima 05 Agu • 2x revisi',
-          icon: Icons.branding_watermark_outlined,
-          tag: 'Sedang Dikerjakan',
-          value: '70%',
-        ),
-        CreatorServiceItem(
-          title: 'Kemasan Produk - UMKM Madu',
-          subtitle: 'Brief diterima 07 Agu • 1x revisi',
-          icon: Icons.inventory_2_outlined,
-          tag: 'Dalam Antrian',
-          value: 'Antrian #1',
-        ),
-        CreatorServiceItem(
-          title: 'UI/UX - Aplikasi Pesantren',
-          subtitle: 'Brief diterima 02 Agu • menunggu review',
-          icon: Icons.design_services_outlined,
-          tag: 'Menunggu Review',
-          value: '100%',
-        ),
-        CreatorServiceItem(
-          title: 'Poster Launching - Brand ABC',
-          subtitle: 'Brief diterima 28 Jul • terkirim',
-          icon: Icons.brush_outlined,
-          tag: 'Selesai',
-          value: 'Terunduh',
-        ),
-      ],
     ),
     'desain_paket': CreatorServiceData(
       key: 'desain_paket',
@@ -1831,129 +567,23 @@ class CreatorServiceData {
       subtitle: 'Layanan desain dengan harga jelas',
       icon: Icons.payments_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('4', 'Layanan', Icons.miscellaneous_services_outlined),
-        ('Rp 250K', 'Mulai Dari', Icons.price_change_outlined),
-        ('3 Hari', 'Rata-rata', Icons.schedule_outlined),
-      ],
       actionLabel: 'Pilih Paket',
-      items: [
-        CreatorServiceItem(
-          title: 'Paket Logo Dasar',
-          subtitle: '3 konsep • 2x revisi • file siap cetak',
-          icon: Icons.branding_watermark_outlined,
-          tag: 'Populer',
-          value: 'Rp 750.000',
-        ),
-        CreatorServiceItem(
-          title: 'Paket Branding Lengkap',
-          subtitle: 'Logo + 5 media sosial + kartu nama',
-          icon: Icons.palette_outlined,
-          tag: 'Best Value',
-          value: 'Rp 2.500.000',
-        ),
-        CreatorServiceItem(
-          title: 'Paket Desain Kemasan',
-          subtitle: 'Kemasan produk + mockup 3D',
-          icon: Icons.inventory_2_outlined,
-          tag: 'Produk',
-          value: 'Rp 1.800.000',
-        ),
-        CreatorServiceItem(
-          title: 'UI/UX Screen',
-          subtitle: 'Per layar • prototipe interaktif',
-          icon: Icons.design_services_outlined,
-          tag: 'Per Screen',
-          value: 'Rp 350.000',
-        ),
-      ],
     ),
+    // ─── Pilot Drone ───────────────────────────────────────────────
     'desain_spesialisasi': CreatorServiceData(
       key: 'desain_spesialisasi',
       title: 'Spesialisasi',
       subtitle: 'Bidang keahlian desain',
       icon: Icons.tune_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('5', 'Bidang', Icons.category_outlined),
-        ('4.9', 'Rating', Icons.star_rounded),
-        ('7+', 'Tahun', Icons.work_history_outlined),
-      ],
-      items: [
-        CreatorServiceItem(
-          title: 'Brand Identity',
-          subtitle: 'Logo, brand guideline & aplikasi',
-          icon: Icons.branding_watermark_outlined,
-          tag: 'Expert',
-          value: '35+ Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Packaging Design',
-          subtitle: 'Kemasan produk F&B & retail',
-          icon: Icons.inventory_2_outlined,
-          tag: 'Advanced',
-          value: '25+ Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'UI/UX & Web Design',
-          subtitle: 'Figma, prototipe & design system',
-          icon: Icons.design_services_outlined,
-          tag: 'Advanced',
-          value: '18+ Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Ilustrasi & Karakter',
-          subtitle: 'Procreate & vector art',
-          icon: Icons.auto_awesome_outlined,
-          tag: 'Intermediate',
-          value: '12+ Proyek',
-        ),
-      ],
     ),
-
-    // ─── Pilot Drone ───────────────────────────────────────────────
     'drone_galeri': CreatorServiceData(
       key: 'drone_galeri',
       title: 'Galeri Hasil Drone',
       subtitle: 'Foto & video udara terbaik',
       icon: Icons.airplanemode_active_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('60+', 'Proyek', Icons.airplanemode_active_outlined),
-        ('4.8', 'Rating', Icons.star_rounded),
-        ('100%', 'Legal & Berizin', Icons.verified_outlined),
-      ],
       isGrid: true,
-      items: [
-        CreatorServiceItem(
-          title: 'Cinematic Aerial',
-          subtitle: 'Video sinematik dari udara',
-          icon: Icons.movie_outlined,
-          tag: 'Video',
-          value: '25+ Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Foto Udara Real Estate',
-          subtitle: 'Dokumentasi properti dari udara',
-          icon: Icons.apartment_outlined,
-          tag: 'Foto',
-          value: '18+ Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Dokumentasi Event',
-          subtitle: 'Liputan udara konser & festival',
-          icon: Icons.festival_outlined,
-          tag: 'Event',
-          value: '12+ Proyek',
-        ),
-        CreatorServiceItem(
-          title: 'Pemetaan & Survey',
-          subtitle: 'Pemetaan lahan & konstruksi',
-          icon: Icons.map_outlined,
-          tag: 'Survey',
-          value: '8+ Proyek',
-        ),
-      ],
     ),
     'drone_booking': CreatorServiceData(
       key: 'drone_booking',
@@ -1961,35 +591,7 @@ class CreatorServiceData {
       subtitle: 'Jadwal penerbangan drone',
       icon: Icons.calendar_today_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('1', 'Hari Ini', Icons.today_outlined),
-        ('3', 'Minggu Ini', Icons.date_range_outlined),
-        ('1', 'Pending', Icons.pending_actions_outlined),
-      ],
       actionLabel: 'Konfirmasi Booking',
-      items: [
-        CreatorServiceItem(
-          title: 'Aerial - Perumahan Griya Asri',
-          subtitle: '15 Agu 2026 • 07:00 - 10:00 WIB',
-          icon: Icons.apartment_outlined,
-          tag: 'Terkonfirmasi',
-          value: 'Cikarang',
-        ),
-        CreatorServiceItem(
-          title: 'Festival Musik Nusantara',
-          subtitle: '07 Sep 2026 • 14:00 - 18:00 WIB',
-          icon: Icons.festival_outlined,
-          tag: 'Menunggu',
-          value: 'GBK',
-        ),
-        CreatorServiceItem(
-          title: 'Pemetaan Lahan - PT Agro',
-          subtitle: '12 Sep 2026 • 06:00 - 12:00 WIB',
-          icon: Icons.map_outlined,
-          tag: 'Terkonfirmasi',
-          value: 'Subang',
-        ),
-      ],
     ),
     'drone_paket': CreatorServiceData(
       key: 'drone_paket',
@@ -1997,121 +599,22 @@ class CreatorServiceData {
       subtitle: 'Layanan drone dengan harga jelas',
       icon: Icons.payments_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('3', 'Paket', Icons.card_membership_outlined),
-        ('Rp 1JT', 'Mulai Dari', Icons.price_change_outlined),
-        ('Legal', 'Sertifikat & Izin', Icons.verified_outlined),
-      ],
       actionLabel: 'Pilih Paket',
-      items: [
-        CreatorServiceItem(
-          title: 'Paket Foto Udara',
-          subtitle: '1 jam • 50 foto • 1 lokasi',
-          icon: Icons.photo_outlined,
-          tag: 'Populer',
-          value: 'Rp 1.000.000',
-        ),
-        CreatorServiceItem(
-          title: 'Paket Video Sinematik',
-          subtitle: '2 jam • video 4K + edit',
-          icon: Icons.movie_outlined,
-          tag: 'Best Value',
-          value: 'Rp 2.500.000',
-        ),
-        CreatorServiceItem(
-          title: 'Paket Pemetaan & Survey',
-          subtitle: 'Full day • data ortofoto & 3D',
-          icon: Icons.map_outlined,
-          tag: 'Profesional',
-          value: 'Rp 4.500.000',
-        ),
-      ],
     ),
+    // ─── Talent & Model ────────────────────────────────────────────
     'drone_equipment': CreatorServiceData(
       key: 'drone_equipment',
       title: 'Peralatan Drone',
       subtitle: 'Armada drone & perlengkapan',
       icon: Icons.videocam_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('4', 'Unit Drone', Icons.airplanemode_active_outlined),
-        ('4K60', 'Resolusi Maks', Icons.high_quality_outlined),
-        ('A1', 'Kategori Legal', Icons.verified_outlined),
-      ],
-      items: [
-        CreatorServiceItem(
-          title: 'DJI Mavic 3 Pro',
-          subtitle: 'Kamera 4K 60fps • 3 lensa',
-          icon: Icons.airplanemode_active_outlined,
-          tag: 'Tersedia',
-          value: '2 Unit',
-        ),
-        CreatorServiceItem(
-          title: 'DJI Mini 4 Pro',
-          subtitle: 'Drone ringan < 249 gram',
-          icon: Icons.flight_outlined,
-          tag: 'Tersedia',
-          value: '1 Unit',
-        ),
-        CreatorServiceItem(
-          title: 'Baterai & Aksesoris',
-          subtitle: '6 baterai + charger ganda',
-          icon: Icons.battery_charging_full_outlined,
-          tag: 'Tersedia',
-          value: '6 Unit',
-        ),
-        CreatorServiceItem(
-          title: 'Sertifikat & Izin Terbang',
-          subtitle: 'Sertifikasi pilot & izin penerbangan',
-          icon: Icons.verified_outlined,
-          tag: 'Lengkap',
-          value: 'Terdaftar',
-        ),
-      ],
     ),
-
-    // ─── Talent & Model ────────────────────────────────────────────
     'talent_profil': CreatorServiceData(
       key: 'talent_profil',
       title: 'Profil Talent',
       subtitle: 'Profil profesional talent & model',
       icon: Icons.portrait_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('5+', 'Tahun', Icons.work_history_outlined),
-        ('80+', 'Job', Icons.work_outline),
-        ('4.9', 'Rating', Icons.star_rounded),
-      ],
-      items: [
-        CreatorServiceItem(
-          title: 'Data Diri & Portofolio',
-          subtitle: 'Portofolio & comp card terbaru',
-          icon: Icons.badge_outlined,
-          tag: 'Lengkap',
-          value: 'Diperbarui',
-        ),
-        CreatorServiceItem(
-          title: 'Pengukuran & Spesifikasi',
-          subtitle: 'Tinggi, berat, ukuran baju',
-          icon: Icons.straighten_outlined,
-          tag: 'Tersedia',
-          value: 'On Request',
-        ),
-        CreatorServiceItem(
-          title: 'Bahasa & Kemampuan',
-          subtitle: 'Indonesia, Inggris, MC & akting',
-          icon: Icons.translate_outlined,
-          tag: 'Bilingual',
-          value: '3 Skill',
-        ),
-        CreatorServiceItem(
-          title: 'Visa & Dokumen',
-          subtitle: 'Dokumen kerja & identitas',
-          icon: Icons.folder_outlined,
-          tag: 'Lengkap',
-          value: 'Valid',
-        ),
-      ],
     ),
     'talent_jadwal': CreatorServiceData(
       key: 'talent_jadwal',
@@ -2119,42 +622,7 @@ class CreatorServiceData {
       subtitle: 'Jadwal job sebagai talent',
       icon: Icons.calendar_today_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('1', 'Hari Ini', Icons.today_outlined),
-        ('4', 'Bulan Ini', Icons.date_range_outlined),
-        ('2', 'Pending', Icons.pending_actions_outlined),
-      ],
       actionLabel: 'Konfirmasi Booking',
-      items: [
-        CreatorServiceItem(
-          title: 'Model Katalog - Fashion Brand Z',
-          subtitle: '14 Agu 2026 • 08:00 - 16:00 WIB',
-          icon: Icons.checkroom_outlined,
-          tag: 'Terkonfirmasi',
-          value: 'Studio 21',
-        ),
-        CreatorServiceItem(
-          title: 'Talent Iklan TVC - Kopi',
-          subtitle: '20 Agu 2026 • 09:00 - 17:00 WIB',
-          icon: Icons.tv_outlined,
-          tag: 'Menunggu',
-          value: 'Production House',
-        ),
-        CreatorServiceItem(
-          title: 'Runway Fashion Week',
-          subtitle: '05 Sep 2026 • 13:00 - 18:00 WIB',
-          icon: Icons.checkroom_outlined,
-          tag: 'Terkonfirmasi',
-          value: 'Jakarta Fashion Week',
-        ),
-        CreatorServiceItem(
-          title: 'Brand Ambassador - Skincare',
-          subtitle: '12 Sep 2026 • 10:00 - 14:00 WIB',
-          icon: Icons.face_outlined,
-          tag: 'Menunggu',
-          value: 'Kantor Brand',
-        ),
-      ],
     ),
     'talent_kategori': CreatorServiceData(
       key: 'talent_kategori',
@@ -2162,122 +630,23 @@ class CreatorServiceData {
       subtitle: 'Jenis pekerjaan yang dilayani',
       icon: Icons.work_outline,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('6', 'Kategori', Icons.category_outlined),
-        ('80+', 'Job Selesai', Icons.check_circle_outline),
-        ('98%', 'Kepuasan', Icons.verified_outlined),
-      ],
-      items: [
-        CreatorServiceItem(
-          title: 'Model Fashion & Editorial',
-          subtitle: 'Katalog, majalah & editorial',
-          icon: Icons.checkroom_outlined,
-          tag: 'Sangat Mahir',
-          value: '35+ Job',
-        ),
-        CreatorServiceItem(
-          title: 'Iklan TVC & Digital',
-          subtitle: 'Bintang iklan TV & online',
-          icon: Icons.tv_outlined,
-          tag: 'Mahir',
-          value: '20+ Job',
-        ),
-        CreatorServiceItem(
-          title: 'Runway & Catwalk',
-          subtitle: 'Model panggung fashion show',
-          icon: Icons.stairs_outlined,
-          tag: 'Mahir',
-          value: '15+ Job',
-        ),
-        CreatorServiceItem(
-          title: 'Brand Ambassador',
-          subtitle: 'Kerjasama jangka panjang',
-          icon: Icons.thumb_up_outlined,
-          tag: 'Sangat Mahir',
-          value: '10+ Brand',
-        ),
-      ],
     ),
+    // ─── Content Creator ───────────────────────────────────────────
     'talent_tarif': CreatorServiceData(
       key: 'talent_tarif',
       title: 'Tarif',
       subtitle: 'Tarif job talent & model',
       icon: Icons.payments_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('3', 'Kategori Tarif', Icons.receipt_long_outlined),
-        ('Rp 1.5JT', 'Mulai Dari', Icons.price_change_outlined),
-        ('Termasuk', 'Transport & MUA', Icons.local_taxi_outlined),
-      ],
       actionLabel: 'Pilih Paket',
-      items: [
-        CreatorServiceItem(
-          title: 'Katalog / Editorial',
-          subtitle: 'Per sesi 4 jam • 3-5 outfit',
-          icon: Icons.photo_outlined,
-          tag: 'Per Sesi',
-          value: 'Rp 1.500.000',
-        ),
-        CreatorServiceItem(
-          title: 'Iklan TVC / Digital',
-          subtitle: 'Per hari produksi',
-          icon: Icons.tv_outlined,
-          tag: 'Per Hari',
-          value: 'Rp 3.500.000',
-        ),
-        CreatorServiceItem(
-          title: 'Brand Ambassador',
-          subtitle: 'Per bulan • durasi minimal 3 bulan',
-          icon: Icons.thumb_up_outlined,
-          tag: 'Per Bulan',
-          value: 'Rp 8.000.000',
-        ),
-      ],
     ),
-
-    // ─── Content Creator ───────────────────────────────────────────
     'konten_portofolio': CreatorServiceData(
       key: 'konten_portofolio',
       title: 'Portofolio Konten',
       subtitle: 'Konten kreatif untuk brand',
       icon: Icons.photo_library_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('120+', 'Konten', Icons.photo_library_outlined),
-        ('4.8', 'Rating', Icons.star_rounded),
-        ('450K', 'Total Reach', Icons.insights_outlined),
-      ],
       isGrid: true,
-      items: [
-        CreatorServiceItem(
-          title: 'UGC & Review Produk',
-          subtitle: 'Konten testimoni pengguna',
-          icon: Icons.thumb_up_outlined,
-          tag: 'UGC',
-          value: '45+ Konten',
-        ),
-        CreatorServiceItem(
-          title: 'Reels & Short Video',
-          subtitle: 'Video pendek viral',
-          icon: Icons.movie_outlined,
-          tag: 'Reels',
-          value: '60+ Konten',
-        ),
-        CreatorServiceItem(
-          title: 'Konten Foto Produk',
-          subtitle: 'Foto produk lifestyle',
-          icon: Icons.photo_camera_outlined,
-          tag: 'Foto',
-          value: '35+ Konten',
-        ),
-        CreatorServiceItem(
-          title: 'Tutorial & Tips',
-          subtitle: 'Konten edukasi untuk brand',
-          icon: Icons.school_outlined,
-          tag: 'Edukasi',
-          value: '20+ Konten',
-        ),
-      ],
     ),
     'konten_campaign': CreatorServiceData(
       key: 'konten_campaign',
@@ -2285,35 +654,7 @@ class CreatorServiceData {
       subtitle: 'Jadwal konten & campaign berjalan',
       icon: Icons.calendar_today_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('3', 'Campaign', Icons.campaign_outlined),
-        ('5', 'Konten/Minggu', Icons.content_paste_outlined),
-        ('2', 'Pending', Icons.pending_actions_outlined),
-      ],
       actionLabel: 'Kelola Campaign',
-      items: [
-        CreatorServiceItem(
-          title: 'Campaign Ramadhan - Brand X',
-          subtitle: '12 Agu - 05 Sep • 12 konten',
-          icon: Icons.campaign_outlined,
-          tag: 'Berjalan',
-          value: '8/12 Konten',
-        ),
-        CreatorServiceItem(
-          title: 'Launching Produk Baru - Skincare',
-          subtitle: '20 Agu - 10 Sep • 8 konten',
-          icon: Icons.rocket_launch_outlined,
-          tag: 'Menunggu',
-          value: 'Brief',
-        ),
-        CreatorServiceItem(
-          title: 'Konten Bulanan - Kopi Senja',
-          subtitle: 'Sepanjang bulan • 4 konten/minggu',
-          icon: Icons.coffee_outlined,
-          tag: 'Berjalan',
-          value: '16/16 Konten',
-        ),
-      ],
     ),
     'konten_paket': CreatorServiceData(
       key: 'konten_paket',
@@ -2321,35 +662,7 @@ class CreatorServiceData {
       subtitle: 'Paket konten untuk brand',
       icon: Icons.payments_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('3', 'Paket', Icons.card_membership_outlined),
-        ('Rp 2JT', 'Mulai Dari', Icons.price_change_outlined),
-        ('30 Hari', 'Durasi', Icons.date_range_outlined),
-      ],
       actionLabel: 'Pilih Paket',
-      items: [
-        CreatorServiceItem(
-          title: 'Paket Starter',
-          subtitle: '4 konten/bulan • 1 platform',
-          icon: Icons.photo_outlined,
-          tag: 'Populer',
-          value: 'Rp 2.000.000',
-        ),
-        CreatorServiceItem(
-          title: 'Paket Professional',
-          subtitle: '8 konten/bulan • 2 platform + review',
-          icon: Icons.photo_library_outlined,
-          tag: 'Best Value',
-          value: 'Rp 4.000.000',
-        ),
-        CreatorServiceItem(
-          title: 'Paket Campaign',
-          subtitle: 'Full campaign 30 hari • konten + iklan',
-          icon: Icons.campaign_outlined,
-          tag: 'Premium',
-          value: 'Rp 8.000.000',
-        ),
-      ],
     ),
     'konten_platform': CreatorServiceData(
       key: 'konten_platform',
@@ -2357,41 +670,6 @@ class CreatorServiceData {
       subtitle: 'Platform & niche konten',
       icon: Icons.language_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      stats: [
-        ('4', 'Platform', Icons.language_outlined),
-        ('3', 'Niche', Icons.category_outlined),
-        ('450K', 'Total Followers', Icons.people_outline),
-      ],
-      items: [
-        CreatorServiceItem(
-          title: 'Instagram & Reels',
-          subtitle: 'Konten feed, story & reels',
-          icon: Icons.photo_camera_outlined,
-          tag: 'Aktif',
-          value: '250K Followers',
-        ),
-        CreatorServiceItem(
-          title: 'TikTok',
-          subtitle: 'Video pendek viral',
-          icon: Icons.music_note_outlined,
-          tag: 'Aktif',
-          value: '180K Followers',
-        ),
-        CreatorServiceItem(
-          title: 'YouTube',
-          subtitle: 'Konten panjang & tutorial',
-          icon: Icons.play_circle_outline,
-          tag: 'Aktif',
-          value: '45K Subscriber',
-        ),
-        CreatorServiceItem(
-          title: 'Niche: Food & Kuliner',
-          subtitle: 'Review kuliner & resep',
-          icon: Icons.restaurant_outlined,
-          tag: 'Spesialis',
-          value: '40% Konten',
-        ),
-      ],
     ),
   };
 
@@ -2425,6 +703,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
   final Map<String, List<CreatorServiceItem>> _extraItems = {};
   List<CreatorServiceItem> _eoPackages = [];
   bool _isLoadingEoPackages = true;
+  List<CreatorServiceItem> _bookingContracts = [];
 
   bool _isLoadingReviewSummary = false;
   double _avgRating = 0.0;
@@ -2452,15 +731,36 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       );
     }
     final extras = _extraItems[base.key] ?? const [];
-    if (extras.isEmpty) return base;
+    if (_creatorBookingKeys.contains(base.key)) {
+      final allBookings = [..._bookingContracts, ...extras];
+      return CreatorServiceData(
+        key: base.key,
+        title: base.title,
+        subtitle: base.subtitle,
+        icon: base.icon,
+        gradient: base.gradient,
+        stats: [
+          ('${allBookings.length}', 'Total', Icons.event_note_outlined),
+          ('${allBookings.where((i) => i.active).length}', 'Aktif', Icons.pending_actions_outlined),
+          ('${allBookings.where((i) => !i.active).length}', 'Selesai', Icons.task_alt_outlined),
+        ],
+        items: allBookings,
+        isGrid: base.isGrid,
+        actionLabel: base.actionLabel,
+      );
+    }
     return CreatorServiceData(
       key: base.key,
       title: base.title,
       subtitle: base.subtitle,
       icon: base.icon,
       gradient: base.gradient,
-      stats: base.stats,
-      items: [...base.items, ...extras],
+      stats: [
+        ('${extras.length}', 'Total Item', Icons.grid_view_outlined),
+        ('${extras.where((i) => i.active).length}', 'Aktif', Icons.check_circle_outline),
+        ('Live', 'Status', Icons.fiber_manual_record_outlined),
+      ],
+      items: extras,
       isGrid: base.isGrid,
       actionLabel: base.actionLabel,
     );
@@ -2625,6 +925,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       if (_reviewableCreatorPackageKeys.contains(widget.serviceKey)) {
         await _loadCreatorPackages();
       }
+      if (_creatorBookingKeys.contains(widget.serviceKey)) {
+        await _loadBookingContracts();
+      }
       final extras = await CreatorLocalStorage.getExtraItems(widget.serviceKey);
       final saved = await CreatorLocalStorage.getSavedItems();
       final submitted = await CreatorLocalStorage.getSubmittedItems();
@@ -2646,6 +949,29 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
           }
         });
       }
+    } catch (_) {}
+  }
+
+  Future<void> _loadBookingContracts() async {
+    try {
+      final List<JobContract> contracts = await JobContractService.getUserContracts();
+      final items = contracts.map((c) {
+        final dateStr = c.deadline != null
+            ? '${c.deadline!.day}/${c.deadline!.month}/${c.deadline!.year}'
+            : (c.scheduledStartDate != null
+                ? '${c.scheduledStartDate!.day}/${c.scheduledStartDate!.month}/${c.scheduledStartDate!.year}'
+                : 'Jadwal Fleksibel');
+        return CreatorServiceItem(
+          id: c.id,
+          title: c.title,
+          subtitle: '${c.clientName.isNotEmpty ? c.clientName : "Klien"} • $dateStr',
+          icon: Icons.calendar_today_outlined,
+          tag: c.workStatus.toUpperCase(),
+          value: 'Rp ${c.agreedPrice.toStringAsFixed(0)}',
+          active: c.workStatus != 'completed',
+        );
+      }).toList();
+      if (mounted) setState(() => _bookingContracts = items);
     } catch (_) {}
   }
 
@@ -4744,6 +3070,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
 
   Widget _buildEmptyState(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isFiltered = _query.trim().isNotEmpty || _selectedFilter != 'Semua';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 80),
       child: Column(
@@ -4768,14 +3095,14 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
               ],
             ),
             child: Icon(
-              Icons.search_off_rounded,
+              isFiltered ? Icons.search_off_rounded : Icons.inbox_outlined,
               size: 44,
               color: AppTheme.primaryPurple,
             ),
           ),
           const SizedBox(height: 20),
           Text(
-            'Tidak ditemukan',
+            isFiltered ? 'Tidak ditemukan' : 'Belum Ada Data Tersedia',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -4784,28 +3111,32 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
           ),
           const SizedBox(height: 6),
           Text(
-            'Coba ubah kata kunci atau filter',
+            isFiltered
+                ? 'Coba ubah kata kunci atau filter'
+                : 'Data layanan ini masih kosong atau belum ada pemesanan tersimpan.',
             style: TextStyle(
               fontSize: 13,
               color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
             ),
           ),
-          const SizedBox(height: 20),
-          TextButton.icon(
-            onPressed: () {
-              _searchController.clear();
-              setState(() {
-                _query = '';
-                _selectedFilter = 'Semua';
-                _replayAnimations();
-              });
-            },
-            icon: const Icon(Icons.refresh_rounded, size: 16),
-            label: const Text(
-              'Reset Pencarian',
-              style: TextStyle(fontWeight: FontWeight.w700),
+          if (isFiltered) ...[
+            const SizedBox(height: 20),
+            TextButton.icon(
+              onPressed: () {
+                _searchController.clear();
+                setState(() {
+                  _query = '';
+                  _selectedFilter = 'Semua';
+                  _replayAnimations();
+                });
+              },
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text(
+                'Reset Pencarian',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -7549,8 +5880,11 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 180),
                               curve: Curves.easeOutBack,
-                              transform: Matrix4.identity()
-                                ..scale(filled ? 1.08 : 1.0),
+                              transform: Matrix4.diagonal3Values(
+                                filled ? 1.08 : 1.0,
+                                filled ? 1.08 : 1.0,
+                                1.0,
+                              ),
                               child: Icon(
                                 filled
                                     ? Icons.star_rounded

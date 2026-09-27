@@ -114,18 +114,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _pickAndUploadAvatar() async {
     try {
+      // ignore: deprecated_member_use
       final result = await FilePicker.pickFiles(
         type: FileType.image,
+        // ignore: deprecated_member_use
         allowMultiple: false,
       );
 
       if (result != null &&
           (result.files.single.path != null ||
+              // ignore: deprecated_member_use
               (kIsWeb && result.files.single.bytes != null))) {
         setState(() => _isLoading = true);
 
         Uint8List fileBytes;
         if (kIsWeb) {
+          // ignore: deprecated_member_use
           fileBytes = result.files.single.bytes!;
         } else {
           final file = io.File(result.files.single.path!);
@@ -401,22 +405,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
     );
 
-    final isInstitution = const [
-      'institution',
-      'government',
-      'pemerintah',
-      'instansi',
-    ].contains(_currentUser.subRole);
-    if (isDesktop && widget.showSidebar && !_currentUser.isAdmin && !isInstitution) {
-      final isGov =
-          (_currentUser.role == 'user' || _currentUser.role == 'creator') &&
-          (_currentUser.subRole == 'government' ||
-              _currentUser.subRole == 'institution' ||
-              _currentUser.subRole == 'pemerintah' ||
-              _currentUser.subRole == 'instansi');
+    final isGovOrSchool =
+        (_currentUser.role == 'user' || _currentUser.role == 'creator') &&
+        const [
+          'government',
+          'pemerintah',
+          'instansi',
+          'school',
+          'education',
+          'campus',
+          'sekolah',
+          'kampus',
+          'institution',
+          'institusi',
+        ].contains(_currentUser.subRole?.toLowerCase().trim());
+
+    if (isDesktop && widget.showSidebar && !_currentUser.isAdmin) {
       return DesktopSidebarLayout(
         user: _currentUser,
-        activeRoute: isGov ? 'profil_instansi' : 'pengaturan',
+        activeRoute: isGovOrSchool ? 'profil_instansi' : 'pengaturan',
         onUserUpdated: (u) {
           setState(() => _currentUser = u);
           widget.onUserUpdated(u);

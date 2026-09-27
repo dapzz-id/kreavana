@@ -25,79 +25,113 @@ class MitraKomunitasScreen extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: mitra.length,
-        itemBuilder: (context, index) {
-          final m = mitra[index];
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isDark ? AppTheme.cardBg : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: (m['color'] as Color).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.groups_outlined,
-                    color: m['color'] as Color,
-                    size: 24,
-                  ),
+      body: mitra.isEmpty
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.groups_outlined,
+                      size: 64,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Belum Ada Mitra Komunitas',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : AppTheme.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Jaringan komunitas kreatif, mitra asosiasi, dan kelompok kolaborasi akan ditampilkan di sini.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: mitra.length,
+              itemBuilder: (context, index) {
+                final m = mitra[index];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.cardBg : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                    ),
+                  ),
+                  child: Row(
                     children: [
-                      Text(
-                        m['name'] as String,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: (m['color'] as Color).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.groups_outlined,
+                          color: m['color'] as Color,
+                          size: 24,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${m['category']} · ${m['members']} anggota',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? AppTheme.textMuted
-                              : Colors.grey.shade600,
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              m['name'] as String,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${m['category']} · ${m['members']} anggota',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark
+                                    ? AppTheme.textMuted
+                                    : Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
                         ),
+                      ),
+                      OutlinedButton(
+                        onPressed: () {},
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 6,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text('Gabung', style: TextStyle(fontSize: 11)),
                       ),
                     ],
                   ),
-                ),
-                OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 6,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text('Gabung', style: TextStyle(fontSize: 11)),
-                ),
-              ],
+                );
+              },
             ),
-          );
-        },
-      ),
     );
 
     if (user != null) {
