@@ -70,5 +70,74 @@ class CreatorServiceSeeder extends Seeder
                 );
             }
         }
+
+        // Seed creator packages for admin verification workflow
+        $eoCreator = $creators->firstWhere('sub_role', CreatorSubRole::EVENT_ORGANIZER->value) ?? $creators->first();
+        $mediaCreator = $creators->firstWhere('sub_role', CreatorSubRole::VIDEOGRAPHER->value) ?? $creators->last();
+
+        if ($eoCreator) {
+            CreatorService::updateOrCreate(
+                [
+                    'creator_id' => $eoCreator->id,
+                    'title' => 'Paket Bundling EO Konser & Festival 2026',
+                ],
+                [
+                    'description' => 'Paket all-in management panggung, soundsystem, ticketing, dan pengurusan perizinan instansi.',
+                    'category' => 'eo_event_package',
+                    'package_type' => 'premium',
+                    'price' => 35000000.00,
+                    'duration_info' => '1 bulan',
+                    'status' => 'pending',
+                ]
+            );
+
+            CreatorService::updateOrCreate(
+                [
+                    'creator_id' => $eoCreator->id,
+                    'title' => 'Paket EO Seminar Nasional Hybrid',
+                ],
+                [
+                    'description' => 'Penyelenggaraan seminar profesional dengan integrasi zoom broadcast dan dokumentasi live.',
+                    'category' => 'eo_event_package',
+                    'package_type' => 'standard',
+                    'price' => 18000000.00,
+                    'duration_info' => '2 minggu',
+                    'status' => 'active',
+                ]
+            );
+        }
+
+        if ($mediaCreator) {
+            CreatorService::updateOrCreate(
+                [
+                    'creator_id' => $mediaCreator->id,
+                    'title' => 'Paket Produksi Video Sinematik Brand UMKM',
+                ],
+                [
+                    'description' => 'Produksi reels komersial, color grading sinematik, dan lisensi audio komersial.',
+                    'category' => 'creator_package',
+                    'package_type' => 'starter',
+                    'price' => 5000000.00,
+                    'duration_info' => '5 hari',
+                    'status' => 'pending',
+                ]
+            );
+
+            CreatorService::updateOrCreate(
+                [
+                    'creator_id' => $mediaCreator->id,
+                    'title' => 'Paket Foto Katalog Produk Eksklusif',
+                ],
+                [
+                    'description' => 'Sesi foto studio 50 SKU produk, retouching resolusi tinggi, dan revisi 2 kali.',
+                    'category' => 'creator_package',
+                    'package_type' => 'standard',
+                    'price' => 3500000.00,
+                    'duration_info' => '3 hari',
+                    'status' => 'rejected',
+                    'review_note' => 'Lampiran contoh portofolio resolusi tinggi belum lengkap.',
+                ]
+            );
+        }
     }
 }
