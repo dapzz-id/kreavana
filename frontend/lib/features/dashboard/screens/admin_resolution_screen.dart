@@ -49,38 +49,48 @@ class _AdminResolutionScreenState extends State<AdminResolutionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 88,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AppBreadcrumbs(
-              items: [
-                BreadcrumbItem(
-                  label: 'Dasbor Admin',
-                  icon: Icons.admin_panel_settings_rounded,
-                  onTap: () => Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MainNavigation(
-                        initialUser: widget.user,
-                        initialIndex: 0,
+        toolbarHeight: 106,
+        elevation: 0,
+        title: Padding(
+          padding: const EdgeInsets.only(top: 14, bottom: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AppBreadcrumbs(
+                padding: const EdgeInsets.only(bottom: 6),
+                items: [
+                  BreadcrumbItem(
+                    label: 'Dasbor Admin',
+                    icon: Icons.admin_panel_settings_rounded,
+                    onTap: () => Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MainNavigation(
+                          initialUser: widget.user,
+                          initialIndex: 0,
+                        ),
                       ),
+                      (r) => false,
                     ),
-                    (r) => false,
                   ),
+                  const BreadcrumbItem(
+                    label: 'Resolusi & Dispute',
+                    icon: Icons.warning_amber_rounded,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              const Text(
+                'Resolusi & Dispute',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 22,
+                  letterSpacing: -0.4,
                 ),
-                const BreadcrumbItem(
-                  label: 'Resolusi & Dispute',
-                  icon: Icons.warning_amber_rounded,
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Resolusi & Dispute',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
         actions: [
           IconButton(

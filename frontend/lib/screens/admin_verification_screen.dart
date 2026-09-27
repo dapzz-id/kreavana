@@ -1292,40 +1292,55 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: Navigator.canPop(context),
-        toolbarHeight: 96,
+        toolbarHeight: isDesktop ? 122 : 112,
         titleSpacing: isDesktop ? 32 : 16,
         elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AppBreadcrumbs(
-              items: [
-                BreadcrumbItem(
-                  label: 'Dasbor Admin',
-                  icon: Icons.admin_panel_settings_rounded,
-                  onTap: () {
-                    if (Navigator.canPop(context)) {
-                      Navigator.pop(context);
-                    }
-                  },
+        title: Padding(
+          padding: const EdgeInsets.only(top: 14, bottom: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AppBreadcrumbs(
+                padding: const EdgeInsets.only(bottom: 6),
+                items: [
+                  BreadcrumbItem(
+                    label: 'Dasbor Admin',
+                    icon: Icons.admin_panel_settings_rounded,
+                    onTap: () {
+                      if (Navigator.canPop(context)) {
+                        Navigator.pop(context);
+                      }
+                    },
+                  ),
+                  const BreadcrumbItem(
+                    label: 'Verifikasi Akun',
+                    icon: Icons.verified_user_rounded,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              const Text(
+                'Verifikasi Akun & Identitas',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
                 ),
-                const BreadcrumbItem(
-                  label: 'Verifikasi Akun',
-                  icon: Icons.verified_user_rounded,
+              ),
+              const SizedBox(height: 3),
+              Text(
+                'Kelola verifikasi KTP Klien (Centang Biru) dan Upgrade Kreator (Centang Hijau)',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white60
+                      : Colors.grey.shade600,
+                  fontWeight: FontWeight.normal,
                 ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Verifikasi Akun & Identitas',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 2),
-            const Text(
-              'Kelola verifikasi KTP Klien (Centang Biru) dan Upgrade Kreator (Centang Hijau)',
-              style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.normal),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
         bottom: TabBar(
           controller: _tabController,
