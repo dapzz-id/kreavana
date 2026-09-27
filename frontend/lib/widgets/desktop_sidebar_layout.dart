@@ -666,7 +666,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     final collapsed = _isSidebarCollapsed;
 
     final showTopPortofolioAgenda =
-        _isCreatorUser && !_hasSpecificCreatorSubRole;
+      _isCreatorUser && !_isGovernment && !_hasSpecificCreatorSubRole;
     final layananTitle = CreatorSidebarMenus.layananSectionTitle(
       widget.user.subRole,
     );
@@ -835,22 +835,24 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isCollapsed: collapsed,
                             activeColor: const Color(0xFF8B5CF6),
                           ),
-                        if (_isCreatorUser) _buildNavRow(
-                          icon: Icons.explore_outlined,
-                          label: 'Rekomendasi Peluang',
-                          onTap: () => _goToMain(1),
-                          isSelected: _isRouteActive('explore'),
-                          isDark: isDark,
-                          isCollapsed: collapsed,
-                        ),
-                        _buildNavRow(
-                          icon: Icons.folder_outlined,
-                          label: 'Proyek Saya',
-                          onTap: () => _goToMain(2),
-                          isSelected: _isRouteActive('proyek_saya'),
-                          isDark: isDark,
-                          isCollapsed: collapsed,
-                        ),
+                        if (_isCreatorUser && !_isGovernment)
+                          _buildNavRow(
+                            icon: Icons.explore_outlined,
+                            label: 'Rekomendasi Peluang',
+                            onTap: () => _goToMain(1),
+                            isSelected: _isRouteActive('explore'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                        if (!_isGovernment)
+                          _buildNavRow(
+                            icon: Icons.folder_outlined,
+                            label: 'Proyek Saya',
+                            onTap: () => _goToMain(2),
+                            isSelected: _isRouteActive('proyek_saya'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
                         if (SystemSettingsService.isDirectMessageEnabled || widget.user.isAdmin)
                           _buildNavRow(
                             icon: Icons.chat_bubble_outline_rounded,
@@ -932,14 +934,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             const SizedBox(height: 8),
                           ],
                           _buildNavRow(
-                            icon: Icons.work_outline,
-                            label: 'Proyek Aktif',
-                            onTap: () => _pushLink('proyek_saya'),
-                            isSelected: _isRouteActive('proyek_saya'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                          ),
-                          _buildNavRow(
                             icon: Icons.summarize_outlined,
                             label: 'Laporan Kegiatan',
                             onTap: () => _pushLink('laporan'),
@@ -969,14 +963,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                           ] else ...[
                             const SizedBox(height: 8),
                           ],
-                          _buildNavRow(
-                            icon: Icons.badge_outlined,
-                            label: 'Data Kreator',
-                            onTap: () => _pushLink('explore'),
-                            isSelected: _isRouteActive('explore'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                          ),
                           _buildNavRow(
                             icon: Icons.folder_outlined,
                             label: 'Dokumen Instansi',
@@ -1241,7 +1227,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     return Stack(
       children: [
         layoutScaffold,
-        if (SystemSettingsService.isAiEnabled || widget.user.isAdmin)
+        if ((SystemSettingsService.isAiEnabled || widget.user.isAdmin) &&
+            !widget.activeRoute.startsWith('eo_'))
           const KreavanaAiFloatingWidget(hasPageFab: false),
       ],
     );

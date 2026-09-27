@@ -401,8 +401,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
     );
 
-    if (isDesktop && widget.showSidebar) {
-      final isGov = (_currentUser.role == 'user' || _currentUser.role == 'creator') &&
+    final isInstitution = const [
+      'institution',
+      'government',
+      'pemerintah',
+      'instansi',
+    ].contains(_currentUser.subRole);
+    if (isDesktop && widget.showSidebar && !_currentUser.isAdmin && !isInstitution) {
+      final isGov =
+          (_currentUser.role == 'user' || _currentUser.role == 'creator') &&
           (_currentUser.subRole == 'government' ||
               _currentUser.subRole == 'institution' ||
               _currentUser.subRole == 'pemerintah' ||

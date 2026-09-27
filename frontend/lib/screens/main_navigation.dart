@@ -9,12 +9,7 @@ import '../services/profile_service.dart';
 import '../services/api_service.dart';
 import '../features/dashboard/screens/dashboard_screen.dart';
 import '../features/dashboard/screens/govt_dashboard_screen.dart';
-import 'tender_kolaborasi_screen.dart';
-import 'mitra_komunitas_screen.dart';
-import 'realisasi_anggaran_screen.dart';
-import 'monitoring_evaluasi_screen.dart';
-import 'dokumen_instansi_screen.dart';
-import 'pengumuman_publik_screen.dart';
+import 'institution_workspace_screen.dart';
 import 'marketing_dashboard_screen.dart';
 import 'tim_hak_akses_screen.dart';
 import 'notifications_screen.dart';
@@ -33,7 +28,6 @@ import 'kolaborasi_screen.dart';
 import 'marketplace_karya_screen.dart';
 import 'peluang_proyek_screen.dart';
 import 'ulasan_reputasi_screen.dart';
-import 'laporan_screen.dart';
 import 'pengaturan_screen.dart';
 import 'wallet_screen.dart';
 import '../features/dashboard/screens/company_dashboard_screen.dart';
@@ -187,7 +181,9 @@ class _MainNavigationState extends State<MainNavigation> {
     final screensCount = _currentUser.isAdmin ? 6 : 15;
     final activeIndex = _currentIndex >= screensCount ? 0 : _currentIndex;
     final isSelected = activeIndex == index;
-    final defaultAccent = SubRoleThemeEngine.getAccentColorForUser(_currentUser);
+    final defaultAccent = SubRoleThemeEngine.getAccentColorForUser(
+      _currentUser,
+    );
     final activeColor = isAi ? const Color(0xFF8B5CF6) : defaultAccent;
 
     return Padding(
@@ -266,11 +262,7 @@ class _MainNavigationState extends State<MainNavigation> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ).createShader(bounds),
-                    child: Icon(
-                      activeIcon,
-                      color: Colors.white,
-                      size: 20,
-                    ),
+                    child: Icon(activeIcon, color: Colors.white, size: 20),
                   )
                 else if (isAi)
                   Icon(
@@ -283,7 +275,9 @@ class _MainNavigationState extends State<MainNavigation> {
                     isSelected ? activeIcon : icon,
                     color: isSelected
                         ? activeColor
-                        : (isDark ? AppTheme.textMuted : AppTheme.textSecondary),
+                        : (isDark
+                              ? AppTheme.textMuted
+                              : AppTheme.textSecondary),
                     size: 20,
                   ),
                 if (!isCollapsed) ...[
@@ -320,8 +314,12 @@ class _MainNavigationState extends State<MainNavigation> {
                         color: isSelected
                             ? null
                             : (isDark
-                                ? const Color(0xFF8B5CF6).withValues(alpha: 0.2)
-                                : const Color(0xFF8B5CF6).withValues(alpha: 0.12)),
+                                  ? const Color(
+                                      0xFF8B5CF6,
+                                    ).withValues(alpha: 0.2)
+                                  : const Color(
+                                      0xFF8B5CF6,
+                                    ).withValues(alpha: 0.12)),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -997,26 +995,28 @@ class _MainNavigationState extends State<MainNavigation> {
           isMobileDrawer: isMobileDrawer,
           isAi: true,
         ),
-      if (_isCreatorUser) _buildSidebarItem(
-        icon: Icons.explore_outlined,
-        activeIcon: Icons.explore,
-        label: 'Rekomendasi Peluang',
-        index: 1,
-        theme: theme,
-        isDark: isDark,
-        isCollapsed: isCollapsed,
-        isMobileDrawer: isMobileDrawer,
-      ),
-      _buildSidebarItem(
-        icon: Icons.folder_outlined,
-        activeIcon: Icons.folder,
-        label: 'Proyek Saya',
-        index: 2,
-        theme: theme,
-        isDark: isDark,
-        isCollapsed: isCollapsed,
-        isMobileDrawer: isMobileDrawer,
-      ),
+      if (_isCreatorUser && !_isGovernment)
+        _buildSidebarItem(
+          icon: Icons.explore_outlined,
+          activeIcon: Icons.explore,
+          label: 'Rekomendasi Peluang',
+          index: 1,
+          theme: theme,
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isMobileDrawer: isMobileDrawer,
+        ),
+      if (!_isGovernment)
+        _buildSidebarItem(
+          icon: Icons.folder_outlined,
+          activeIcon: Icons.folder,
+          label: 'Proyek Saya',
+          index: 2,
+          theme: theme,
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isMobileDrawer: isMobileDrawer,
+        ),
       if (SystemSettingsService.isDirectMessageEnabled || _currentUser.isAdmin)
         _buildSidebarItem(
           icon: Icons.chat_bubble_outline_rounded,
@@ -1040,7 +1040,7 @@ class _MainNavigationState extends State<MainNavigation> {
             isCollapsed: isCollapsed,
             isMobileDrawer: isMobileDrawer,
           ),
-        if (_isCreatorUser)
+        if (_isCreatorUser && !_isGovernment)
           _buildSidebarItem(
             icon: Icons.calendar_today_outlined,
             activeIcon: Icons.calendar_today,
@@ -1085,7 +1085,13 @@ class _MainNavigationState extends State<MainNavigation> {
           label: 'Tender & Kolaborasi',
           onTap: () {
             setState(() => _activeGovRoute = 'tender_kolaborasi');
-            _pushGovScreen(TenderKolaborasiScreen(user: _currentUser));
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'tenders',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
           },
           isDark: isDark,
           isCollapsed: isCollapsed,
@@ -1106,7 +1112,13 @@ class _MainNavigationState extends State<MainNavigation> {
           label: 'Mitra & Komunitas',
           onTap: () {
             setState(() => _activeGovRoute = 'mitra_komunitas');
-            _pushGovScreen(MitraKomunitasScreen(user: _currentUser));
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'partners',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
           },
           isDark: isDark,
           isCollapsed: isCollapsed,
@@ -1129,20 +1141,17 @@ class _MainNavigationState extends State<MainNavigation> {
           ),
         ],
         _buildSidebarLink(
-          icon: Icons.work_outline,
-          label: 'Proyek Aktif',
-          onTap: () => _navigateToScreenIndex(2),
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _currentIndex == 2 && _activeGovRoute == null,
-          isMobileDrawer: isMobileDrawer,
-        ),
-        _buildSidebarLink(
           icon: Icons.summarize_outlined,
           label: 'Laporan Kegiatan',
           onTap: () {
             setState(() => _activeGovRoute = 'laporan');
-            _pushGovScreen(LaporanScreen(user: _currentUser));
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'reports',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
           },
           isDark: isDark,
           isCollapsed: isCollapsed,
@@ -1154,7 +1163,13 @@ class _MainNavigationState extends State<MainNavigation> {
           label: 'Realisasi Anggaran',
           onTap: () {
             setState(() => _activeGovRoute = 'realisasi_anggaran');
-            _pushGovScreen(RealisasiAnggaranScreen(user: _currentUser));
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'budgets',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
           },
           isDark: isDark,
           isCollapsed: isCollapsed,
@@ -1166,7 +1181,13 @@ class _MainNavigationState extends State<MainNavigation> {
           label: 'Monitoring & Evaluasi',
           onTap: () {
             setState(() => _activeGovRoute = 'monitoring_evaluasi');
-            _pushGovScreen(MonitoringEvaluasiScreen(user: _currentUser));
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'monitoring',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
           },
           isDark: isDark,
           isCollapsed: isCollapsed,
@@ -1189,20 +1210,17 @@ class _MainNavigationState extends State<MainNavigation> {
           ),
         ],
         _buildSidebarLink(
-          icon: Icons.badge_outlined,
-          label: 'Data Kreator',
-          onTap: () => _navigateToScreenIndex(1),
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _currentIndex == 1 && _activeGovRoute == null,
-          isMobileDrawer: isMobileDrawer,
-        ),
-        _buildSidebarLink(
           icon: Icons.folder_outlined,
           label: 'Dokumen Instansi',
           onTap: () {
             setState(() => _activeGovRoute = 'dokumen_instansi');
-            _pushGovScreen(DokumenInstansiScreen(user: _currentUser));
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'documents',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
           },
           isDark: isDark,
           isCollapsed: isCollapsed,
@@ -1214,7 +1232,13 @@ class _MainNavigationState extends State<MainNavigation> {
           label: 'Pengumuman Publik',
           onTap: () {
             setState(() => _activeGovRoute = 'pengumuman_publik');
-            _pushGovScreen(PengumumanPublikScreen(user: _currentUser));
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'announcements',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
           },
           isDark: isDark,
           isCollapsed: isCollapsed,
@@ -1343,9 +1367,7 @@ class _MainNavigationState extends State<MainNavigation> {
         padding: const EdgeInsets.all(12),
         margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: isDark
-              ? const Color(0xFF1E1C2B)
-              : const Color(0xFFF8FAFC),
+          color: isDark ? const Color(0xFF1E1C2B) : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isDark
@@ -1389,14 +1411,18 @@ class _MainNavigationState extends State<MainNavigation> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF0F172A),
                         ),
                       ),
                       Text(
                         'Masuk atau daftar baru',
                         style: TextStyle(
                           fontSize: 10.5,
-                          color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                          color: isDark
+                              ? Colors.white60
+                              : const Color(0xFF64748B),
                         ),
                       ),
                     ],
@@ -1424,7 +1450,9 @@ class _MainNavigationState extends State<MainNavigation> {
                           borderRadius: BorderRadius.circular(10),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+                              color: const Color(
+                                0xFF6366F1,
+                              ).withValues(alpha: 0.3),
                               blurRadius: 6,
                               offset: const Offset(0, 2),
                             ),
@@ -1434,7 +1462,11 @@ class _MainNavigationState extends State<MainNavigation> {
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.login_rounded, size: 14, color: Colors.white),
+                            Icon(
+                              Icons.login_rounded,
+                              size: 14,
+                              color: Colors.white,
+                            ),
                             SizedBox(width: 5),
                             Text(
                               'Masuk',
@@ -1478,7 +1510,9 @@ class _MainNavigationState extends State<MainNavigation> {
                             Icon(
                               Icons.person_add_alt_1_rounded,
                               size: 14,
-                              color: isDark ? Colors.white70 : const Color(0xFF334155),
+                              color: isDark
+                                  ? Colors.white70
+                                  : const Color(0xFF334155),
                             ),
                             const SizedBox(width: 5),
                             Text(
@@ -1486,7 +1520,9 @@ class _MainNavigationState extends State<MainNavigation> {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.white : const Color(0xFF334155),
+                                color: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF334155),
                               ),
                             ),
                           ],
@@ -1985,10 +2021,10 @@ class _MainNavigationState extends State<MainNavigation> {
         3 => AdminSystemSettingsScreen(user: _currentUser),
         4 => NotificationsScreen(userId: _currentUser.id ?? ''),
         5 => ProfileScreen(
-            user: _currentUser,
-            onUserUpdated: _onUserUpdated,
-            onLogout: _onLogout,
-          ),
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+          onLogout: _onLogout,
+        ),
         _ => const SizedBox.shrink(),
       };
     }

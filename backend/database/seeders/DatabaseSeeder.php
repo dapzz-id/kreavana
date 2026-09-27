@@ -29,6 +29,8 @@ class DatabaseSeeder extends Seeder
             OpportunityLocationSeeder::class,
             DashboardMockSeeder::class,
             ReviewSeeder::class,
+            CreatorReviewsSeeder::class,
+            InstitutionResourceSeeder::class,
             CollaborationSeeder::class,
         ]);
     }

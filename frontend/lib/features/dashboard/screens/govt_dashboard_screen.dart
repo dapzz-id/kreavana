@@ -40,6 +40,7 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
   Color get _govBlue => SubRoleThemeEngine.getAccentColor('user', 'government');
   Color get _govLight => _govBlue.withValues(alpha: 0.7);
   Map<String, List<Map<String, String>>> _allSubRoleStats = {};
+  bool _isLoadingStats = true;
   @override
   void initState() {
     super.initState();
@@ -52,8 +53,15 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
         subRoleSlugs: ['government', 'institution', 'company', 'community'],
         roleType: 'user',
       );
-      if (mounted) setState(() => _allSubRoleStats = allStats);
-    } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _allSubRoleStats = allStats;
+          _isLoadingStats = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingStats = false);
+    }
   }
 
   @override
@@ -392,156 +400,323 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
 
   // ── Hero Banner ────────────────────────────────────────────────────────────
   Widget _buildHeroBanner(bool isDark) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(
-                    'Selamat datang, Dinas Komunikasi dan Informatika!',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 620;
+        final introduction = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Selamat datang, ${widget.user.name}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 23,
+                      fontWeight: FontWeight.bold,
+                      height: 1.2,
+                    ),
                   ),
-                  SizedBox(width: 8),
-                  WavingHandEmoji(fontSize: 24),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Kelola program, temukan talenta kreatif, dan wujudkan kolaborasi terbaik untuk masyarakat.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                  height: 1.5,
                 ),
+                const SizedBox(width: 8),
+                const WavingHandEmoji(fontSize: 22),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Kelola program, temukan talenta kreatif, dan wujudkan kolaborasi terbaik untuk masyarakat.',
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                height: 1.5,
               ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 16),
-        ElevatedButton.icon(
+            ),
+          ],
+        );
+        final createButton = ElevatedButton.icon(
           onPressed: () => _navigateTo('Buat Program'),
           icon: const Icon(Icons.add, size: 18),
           label: const Text('Buat Peluang / Program Baru'),
           style: ElevatedButton.styleFrom(
             backgroundColor: _govBlue,
             foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ── 5 Metric Cards ────────────────────────────────────────────────────────
-  Widget _buildMetricCards(bool isDark) {
-    final metrics = [];
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: metrics.map((m) {
-        return Expanded(
-          child: GestureDetector(
-            onTap: () => _navigateTo(m['nav'] as String),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isDark ? AppTheme.cardBg : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-                ),
-                boxShadow: !isDark
-                    ? [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: (m['color'] as Color).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      m['icon'] as IconData,
-                      color: m['color'] as Color,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    m['label'] as String,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    m['value'] as String,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    m['sub'] as String,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
-                    ),
-                  ),
-                ],
-              ),
+              borderRadius: BorderRadius.circular(10),
             ),
           ),
         );
-      }).toList(),
+
+        return Container(
+          padding: EdgeInsets.all(isNarrow ? 16 : 20),
+          decoration: BoxDecoration(
+            color: isDark
+                ? _govBlue.withValues(alpha: 0.12)
+                : _govBlue.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _govBlue.withValues(alpha: 0.18)),
+          ),
+          child: isNarrow
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    introduction,
+                    const SizedBox(height: 16),
+                    SizedBox(width: double.infinity, child: createButton),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(child: introduction),
+                    const SizedBox(width: 20),
+                    createButton,
+                  ],
+                ),
+        );
+      },
+    );
+  }
+
+  // ── Dashboard metrics ─────────────────────────────────────────────────────
+  Widget _buildMetricCards(bool isDark) {
+    final stats = _allSubRoleStats['government'] ?? [];
+    const metricColors = [
+      Color(0xFF0F766E),
+      Color(0xFF2563EB),
+      Color(0xFFD97706),
+      Color(0xFF16A34A),
+    ];
+    const metricIcons = [
+      Icons.campaign_outlined,
+      Icons.event_outlined,
+      Icons.work_outline,
+      Icons.groups_2_outlined,
+    ];
+
+    if (_isLoadingStats || stats.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.cardBg : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              _isLoadingStats ? Icons.hourglass_top_rounded : Icons.insights,
+              color: _govBlue,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _isLoadingStats
+                    ? 'Memuat ringkasan statistik...'
+                    : 'Statistik belum tersedia untuk ditampilkan.',
+                style: TextStyle(
+                  color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = (constraints.maxWidth / 190).floor().clamp(1, 4);
+        final spacing = 12.0;
+        final cardWidth =
+            (constraints.maxWidth - spacing * (columns - 1)) / columns;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: stats.take(4).toList().asMap().entries.map((entry) {
+            final index = entry.key;
+            final stat = entry.value;
+            final color = metricColors[index % metricColors.length];
+            final icon = metricIcons[index % metricIcons.length];
+
+            return SizedBox(
+              width: cardWidth,
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 132),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.cardBg : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.11),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(icon, color: color, size: 18),
+                        ),
+                        const Spacer(),
+                        Icon(
+                          Icons.trending_up_rounded,
+                          color: color.withValues(alpha: 0.65),
+                          size: 18,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      stat['value'] ?? '0',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      stat['label'] ?? 'Statistik',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.25,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyDashboardState({
+    required IconData icon,
+    required String title,
+    required String description,
+    required bool isDark,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: _govBlue.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, color: _govBlue, size: 19),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 11,
+                    height: 1.35,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDashboardPanelHeader({
+    required String title,
+    Widget? trailing,
+    VoidCallback? onAction,
+    String? actionTooltip,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
+        ),
+        if (trailing != null) ...[
+          const SizedBox(width: 8),
+          trailing,
+        ] else if (onAction != null)
+          IconButton(
+            onPressed: onAction,
+            tooltip: actionTooltip,
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            padding: EdgeInsets.zero,
+            icon: Icon(Icons.arrow_forward_rounded, color: _govBlue, size: 20),
+          ),
+      ],
     );
   }
 
   // ── Top 3 Columns: Chart, Donut, Programs ─────────────────────────────────
   Widget _buildTopThreeColumns(bool isDark) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth > 700) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(flex: 3, child: _buildLineChartCard(isDark)),
-          const SizedBox(width: 16),
-          Expanded(flex: 2, child: _buildDonutChartCard(isDark)),
-          const SizedBox(width: 16),
-          Expanded(flex: 3, child: _buildRecentProgramsCard(isDark)),
-        ],
-      );
-    }
-    return Column(
-      children: [
-        _buildLineChartCard(isDark),
-        const SizedBox(height: 16),
-        _buildDonutChartCard(isDark),
-        const SizedBox(height: 16),
-        _buildRecentProgramsCard(isDark),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 900) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 3, child: _buildLineChartCard(isDark)),
+              const SizedBox(width: 16),
+              Expanded(flex: 2, child: _buildDonutChartCard(isDark)),
+              const SizedBox(width: 16),
+              Expanded(flex: 3, child: _buildRecentProgramsCard(isDark)),
+            ],
+          );
+        }
+        return Column(
+          children: [
+            _buildLineChartCard(isDark),
+            const SizedBox(height: 16),
+            _buildDonutChartCard(isDark),
+            const SizedBox(height: 16),
+            _buildRecentProgramsCard(isDark),
+          ],
+        );
+      },
     );
   }
 
@@ -559,14 +734,9 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Ringkasan Program & Kegiatan',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-              Container(
+          _buildDashboardPanelHeader(
+            title: 'Ringkasan Program & Kegiatan',
+            trailing: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 4,
@@ -595,7 +765,6 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
                   ],
                 ),
               ),
-            ],
           ),
           const SizedBox(height: 20),
           SizedBox(
@@ -789,75 +958,91 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
             'Program Berdasarkan Kategori',
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 160,
-            child: PieChart(
-              PieChartData(
-                sectionsSpace: 2,
-                centerSpaceRadius: 40,
-                sections: categories.map((c) {
-                  return PieChartSectionData(
-                    value: c['percent'] as double,
-                    color: c['color'] as Color,
-                    radius: 20,
-                    showTitle: false,
-                  );
-                }).toList(),
+          if (categories.isEmpty)
+            _buildEmptyDashboardState(
+              icon: Icons.donut_small_outlined,
+              title: 'Belum ada data kategori',
+              description: 'Ringkasan kategori akan tampil setelah data tersedia.',
+              isDark: isDark,
+            )
+          else ...[
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 160,
+              child: PieChart(
+                PieChartData(
+                  sectionsSpace: 2,
+                  centerSpaceRadius: 40,
+                  sections: categories.map((c) {
+                    return PieChartSectionData(
+                      value: c['percent'] as double,
+                      color: c['color'] as Color,
+                      radius: 20,
+                      showTitle: false,
+                    );
+                  }).toList(),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Center(
-            child: Column(
-              children: [
-                const Text(
-                  '0',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  'Total Program',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          ...categories.map(
-            (c) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
+            const SizedBox(height: 4),
+            Center(
+              child: Column(
                 children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: c['color'] as Color,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      c['name'] as String,
-                      style: const TextStyle(fontSize: 11),
-                      overflow: TextOverflow.ellipsis,
+                  Text(
+                    categories.length.toString(),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
-                    '${(c['percent'] as double).toStringAsFixed(1)}% (${c['count']})',
+                    'Total Kategori',
                     style: TextStyle(
-                      fontSize: 10,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                      fontSize: 11,
+                      color: isDark
+                          ? AppTheme.textMuted
+                          : Colors.grey.shade500,
                     ),
                   ),
                 ],
               ),
             ),
-          ),
+            const SizedBox(height: 16),
+            ...categories.map(
+              (c) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: c['color'] as Color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        c['name'] as String,
+                        style: const TextStyle(fontSize: 11),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Text(
+                      '${(c['percent'] as double).toStringAsFixed(1)}% (${c['count']})',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: isDark
+                            ? AppTheme.textMuted
+                            : Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           Center(
             child: TextButton.icon(
               onPressed: () => _navigateTo('Lihat Semua Kategori'),
@@ -889,38 +1074,21 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Kegiatan / Program Terbaru',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-              TextButton(
-                onPressed: () => _navigateTo('Lihat Semua Kegiatan'),
-                child: Text(
-                  'Lihat Semua',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _govColor(isDark),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
+          _buildDashboardPanelHeader(
+            title: 'Kegiatan / Program Terbaru',
+            onAction: () => _navigateTo('Lihat Semua Kegiatan'),
+            actionTooltip: 'Lihat semua kegiatan',
           ),
           const SizedBox(height: 8),
-          ...programs.map((p) => _buildProgramListItem(p, isDark)),
-          Center(
-            child: TextButton.icon(
-              onPressed: () => _navigateTo('Lihat Semua Kegiatan'),
-              icon: const Text(
-                'Lihat Semua Kegiatan',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-              ),
-              label: const Icon(Icons.arrow_forward, size: 14),
-            ),
-          ),
+          if (programs.isEmpty)
+            _buildEmptyDashboardState(
+              icon: Icons.event_note_outlined,
+              title: 'Belum ada kegiatan terbaru',
+              description: 'Kegiatan dan program terbaru akan tampil di sini.',
+              isDark: isDark,
+            )
+          else
+            ...programs.map((program) => _buildProgramListItem(program, isDark)),
         ],
       ),
     );
@@ -1016,42 +1184,43 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
     );
   }
 
-  Color _govColor(bool isDark) => _govBlue;
-
   // ── Bottom 3 Columns: Activity, Vendors, Anggaran + Pengumuman ───────────
   Widget _buildBottomThreeColumns(bool isDark) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth > 700) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: _buildActivityCard(isDark)),
-          const SizedBox(width: 16),
-          Expanded(child: _buildVendorLeaderboardCard(isDark)),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildAnggaranCard(isDark),
-                const SizedBox(height: 16),
-                _buildPengumumanCard(isDark),
-              ],
-            ),
-          ),
-        ],
-      );
-    }
-    return Column(
-      children: [
-        _buildActivityCard(isDark),
-        const SizedBox(height: 16),
-        _buildVendorLeaderboardCard(isDark),
-        const SizedBox(height: 16),
-        _buildAnggaranCard(isDark),
-        const SizedBox(height: 16),
-        _buildPengumumanCard(isDark),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 900) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _buildActivityCard(isDark)),
+              const SizedBox(width: 16),
+              Expanded(child: _buildVendorLeaderboardCard(isDark)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildAnggaranCard(isDark),
+                    const SizedBox(height: 16),
+                    _buildPengumumanCard(isDark),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+        return Column(
+          children: [
+            _buildActivityCard(isDark),
+            const SizedBox(height: 16),
+            _buildVendorLeaderboardCard(isDark),
+            const SizedBox(height: 16),
+            _buildAnggaranCard(isDark),
+            const SizedBox(height: 16),
+            _buildPengumumanCard(isDark),
+          ],
+        );
+      },
     );
   }
 
@@ -1071,38 +1240,21 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Aktivitas Terbaru',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-              TextButton(
-                onPressed: () => _navigateTo('Lihat Semua Aktivitas'),
-                child: Text(
-                  'Lihat Semua',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _govColor(isDark),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
+          _buildDashboardPanelHeader(
+            title: 'Aktivitas Terbaru',
+            onAction: () => _navigateTo('Lihat Semua Aktivitas'),
+            actionTooltip: 'Lihat semua aktivitas',
           ),
           const SizedBox(height: 8),
-          ...activities.map((a) => _buildActivityItem(a, isDark)),
-          Center(
-            child: TextButton.icon(
-              onPressed: () => _navigateTo('Lihat Semua Aktivitas'),
-              icon: const Text(
-                'Lihat Semua Aktivitas',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-              ),
-              label: const Icon(Icons.arrow_forward, size: 14),
-            ),
-          ),
+          if (activities.isEmpty)
+            _buildEmptyDashboardState(
+              icon: Icons.history_outlined,
+              title: 'Belum ada aktivitas',
+              description: 'Aktivitas terbaru akan tercatat di bagian ini.',
+              isDark: isDark,
+            )
+          else
+            ...activities.map((activity) => _buildActivityItem(activity, isDark)),
         ],
       ),
     );
@@ -1189,38 +1341,21 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Kreator & Vendor Terbaik',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-              TextButton(
-                onPressed: () => _navigateTo('Cari Vendor'),
-                child: Text(
-                  'Lihat Semua',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _govColor(isDark),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
+          _buildDashboardPanelHeader(
+            title: 'Kreator & Vendor Terbaik',
+            onAction: () => _navigateTo('Cari Vendor'),
+            actionTooltip: 'Cari vendor',
           ),
           const SizedBox(height: 8),
-          ...vendors.map((v) => _buildVendorRankItem(v, isDark)),
-          Center(
-            child: TextButton.icon(
-              onPressed: () => _navigateTo('Cari Vendor'),
-              icon: const Text(
-                'Lihat Semua Vendor',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-              ),
-              label: const Icon(Icons.arrow_forward, size: 14),
-            ),
-          ),
+          if (vendors.isEmpty)
+            _buildEmptyDashboardState(
+              icon: Icons.storefront_outlined,
+              title: 'Belum ada rekomendasi vendor',
+              description: 'Jelajahi daftar kreator dan vendor untuk memulai.',
+              isDark: isDark,
+            )
+          else
+            ...vendors.map((vendor) => _buildVendorRankItem(vendor, isDark)),
         ],
       ),
     );
@@ -1318,8 +1453,6 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
 
   // ── Realisasi Anggaran ────────────────────────────────────────────────────
   Widget _buildAnggaranCard(bool isDark) {
-    final List<Map<String, dynamic>> breakdown = [];
-
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1332,90 +1465,17 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Realisasi Anggaran',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-              TextButton(
-                onPressed: () => _navigateTo('Lihat Detail'),
-                child: Text(
-                  'Lihat Detail',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _govColor(isDark),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
+          _buildDashboardPanelHeader(
+            title: 'Realisasi Anggaran',
+            onAction: () => _navigateTo('Lihat Detail'),
+            actionTooltip: 'Lihat detail anggaran',
           ),
           const SizedBox(height: 8),
-          Text(
-            '0%',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: _govBlue,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Rp 0 / Rp 0',
-            style: TextStyle(
-              fontSize: 11,
-              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 16),
-          ...breakdown.map((b) => _buildAnggaranBreakdownItem(b, isDark)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAnggaranBreakdownItem(Map<String, dynamic> item, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: item['color'] as Color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              item['name'] as String,
-              style: const TextStyle(fontSize: 11),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          Text(
-            item['amount'] as String,
-            style: TextStyle(
-              fontSize: 10,
-              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 36,
-            child: Text(
-              '${item['percent']}%',
-              style: TextStyle(
-                fontSize: 10,
-                color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
-              ),
-              textAlign: TextAlign.right,
-            ),
+          _buildEmptyDashboardState(
+            icon: Icons.account_balance_wallet_outlined,
+            title: 'Data anggaran belum tersedia',
+            description: 'Realisasi akan tampil setelah data anggaran tercatat.',
+            isDark: isDark,
           ),
         ],
       ),
@@ -1436,85 +1496,17 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Pengumuman Terbaru',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-              TextButton(
-                onPressed: () => _navigateTo('Pengumuman Publik'),
-                child: Text(
-                  'Lihat Semua',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _govColor(isDark),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
+          _buildDashboardPanelHeader(
+            title: 'Pengumuman Terbaru',
+            onAction: () => _navigateTo('Pengumuman Publik'),
+            actionTooltip: 'Lihat semua pengumuman',
           ),
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _govBlue.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _govBlue.withValues(alpha: 0.1)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.campaign_outlined, color: _govBlue, size: 20),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'Peluang Kolaborasi Terbuka!',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Instansi membuka peluang kolaborasi untuk program "Inovasi Layanan Publik 2025". Ayo berkolaborasi dan ciptakan dampak positif bersama!',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => _navigateTo('Lihat Pengumuman'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _govBlue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: const Text(
-                      'Lihat Pengumuman',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          _buildEmptyDashboardState(
+            icon: Icons.campaign_outlined,
+            title: 'Belum ada pengumuman terbaru',
+            description: 'Pengumuman yang diterbitkan instansi akan tampil di sini.',
+            isDark: isDark,
           ),
         ],
       ),

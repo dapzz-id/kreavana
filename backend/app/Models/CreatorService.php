@@ -20,15 +20,26 @@ class CreatorService extends Model
         'price',
         'duration_info',
         'status',
+        'reviewed_by',
+        'reviewed_at',
+        'review_note',
+        'thumbnail_url',
+        'package_type',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'reviewed_at' => 'datetime',
     ];
 
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'creator_id');
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
     }
 
     public function jobContracts(): HasMany
