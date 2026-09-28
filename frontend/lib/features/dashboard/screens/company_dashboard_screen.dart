@@ -5,6 +5,9 @@ import '../../../app/theme.dart';
 import '../../../app/subrole_theme_engine.dart';
 import '../../../services/theme_transition_service.dart';
 import '../services/dashboard_service.dart';
+import '../../../services/job_contract_service.dart';
+import '../../../models/job_contract.dart';
+import '../../../services/api_service.dart';
 import '../../../widgets/subrole_right_sidebar.dart';
 import '../../../widgets/dashboard_stats_charts.dart';
 import '../../../screens/global_search_screen.dart';
@@ -35,6 +38,11 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
 
   Color get _brandBlue => SubRoleThemeEngine.getAccentColor('user', 'company');
   Map<String, List<Map<String, String>>> _allSubRoleStats = {};
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _metrics = [];
+  List<Map<String, dynamic>> _projects = [];
+  List<Map<String, dynamic>> _creators = [];
+  List<Map<String, dynamic>> _activities = [];
 
   @override
   void initState() {
@@ -44,12 +52,113 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
 
   Future<void> _fetchStats() async {
     try {
-      final allStats = await DashboardService.getAllSubRoleStats(
-        subRoleSlugs: ['company', 'umkm', 'government', 'community'],
-        roleType: 'user',
-      );
-      if (mounted) setState(() => _allSubRoleStats = allStats);
-    } catch (_) {}
+      final results = await Future.wait([
+        DashboardService.getAllSubRoleStats(
+          subRoleSlugs: ['company', 'umkm', 'government', 'community'],
+          roleType: 'user',
+        ).catchError((_) => <String, List<Map<String, String>>>{}),
+        JobContractService.getUserContracts().catchError((_) => <JobContract>[]),
+        ApiService.get('client-dashboard/overview', queryParams: {'role_type': 'user'}).catchError((_) => <String, dynamic>{}),
+      ]);
+
+      final allStats = results[0] as Map<String, List<Map<String, String>>>;
+      final contracts = results[1] as List<JobContract>;
+      final overviewRes = results[2] as Map<String, dynamic>;
+      final overview = (overviewRes['data'] as Map<String, dynamic>?) ?? {};
+      final summary = (overview['summary'] as Map<String, dynamic>?) ?? {};
+
+      final totalProjects = summary['total_projects'] ?? contracts.length;
+      final activeProjects = summary['active_projects'] ?? summary['running_projects'] ?? contracts.where((c) => c.workStatus == 'in_progress').length;
+      final totalExpenses = summary['total_payments'] ?? summary['estimated_expenses'] ?? 'Rp 0';
+      final pendingExpenses = summary['pending_payments'] ?? 'Rp 0';
+
+      final loadedMetrics = <Map<String, dynamic>>[
+        {
+          'label': 'Total Proyek',
+          'value': totalProjects.toString(),
+          'sub': '$activeProjects sedang berjalan',
+          'color': _brandBlue,
+          'icon': Icons.business_center_outlined,
+        },
+        {
+          'label': 'Proyek Aktif',
+          'value': activeProjects.toString(),
+          'sub': 'Dalam pengerjaan',
+          'color': const Color(0xFF10B981),
+          'icon': Icons.trending_up,
+        },
+        {
+          'label': 'Total Pengeluaran',
+          'value': totalExpenses.toString(),
+          'sub': 'Terkonfirmasi',
+          'color': const Color(0xFFF59E0B),
+          'icon': Icons.account_balance_wallet_outlined,
+        },
+        {
+          'label': 'Menunggu Pembayaran',
+          'value': pendingExpenses.toString(),
+          'sub': 'Menunggu approval',
+          'color': const Color(0xFF8B5CF6),
+          'icon': Icons.hourglass_top_outlined,
+        },
+      ];
+
+      final loadedProjects = <Map<String, dynamic>>[];
+      for (final c in contracts) {
+        double progress = 0.5;
+        if (c.workStatus == 'completed') {
+          progress = 1.0;
+        } else if (c.workStatus == 'in_progress') {
+          progress = 0.65;
+        } else if (c.workStatus == 'review') {
+          progress = 0.85;
+        } else {
+          progress = 0.2;
+        }
+
+        loadedProjects.add({
+          'title': c.title,
+          'creator': c.creatorName.isNotEmpty ? c.creatorName : (c.clientName.isNotEmpty ? c.clientName : 'Kreator Mitra'),
+          'progress': progress,
+        });
+      }
+
+      final loadedCreators = <Map<String, dynamic>>[];
+      final vendorList = overview['vendor_recommendations'] as List<dynamic>? ?? [];
+      for (final v in vendorList) {
+        if (v is Map<String, dynamic>) {
+          loadedCreators.add({
+            'name': (v['name'] ?? v['user_name'] ?? 'Kreator').toString(),
+            'cat': (v['category'] ?? v['sub_role'] ?? 'Spesialis').toString(),
+            'rating': (v['rating'] ?? '4.9').toString(),
+          });
+        }
+      }
+
+      final loadedActivities = <Map<String, dynamic>>[];
+      final actList = overview['activity_feed'] as List<dynamic>? ?? [];
+      for (final a in actList) {
+        if (a is Map<String, dynamic>) {
+          loadedActivities.add({
+            'title': (a['title'] ?? a['message'] ?? 'Aktivitas sistem').toString(),
+            'time': (a['time'] ?? a['created_at'] ?? 'Baru saja').toString(),
+          });
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _allSubRoleStats = allStats;
+          _metrics = loadedMetrics;
+          _projects = loadedProjects;
+          _creators = loadedCreators;
+          _activities = loadedActivities;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -61,8 +170,10 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
 
     return Scaffold(
       appBar: _buildAppBar(isDark),
-      body: RefreshIndicator(
-        onRefresh: _fetchStats,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _fetchStats,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
@@ -424,7 +535,38 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
   }
 
   Widget _buildMetricCards(bool isDark) {
-    final metrics = [];
+    final metrics = _metrics.isNotEmpty
+        ? _metrics
+        : [
+            {
+              'label': 'Total Proyek',
+              'value': '0',
+              'sub': '0 sedang berjalan',
+              'color': _brandBlue,
+              'icon': Icons.business_center_outlined,
+            },
+            {
+              'label': 'Proyek Aktif',
+              'value': '0',
+              'sub': 'Dalam pengerjaan',
+              'color': const Color(0xFF10B981),
+              'icon': Icons.trending_up,
+            },
+            {
+              'label': 'Total Pengeluaran',
+              'value': 'Rp 0',
+              'sub': 'Terkonfirmasi',
+              'color': const Color(0xFFF59E0B),
+              'icon': Icons.account_balance_wallet_outlined,
+            },
+            {
+              'label': 'Menunggu Pembayaran',
+              'value': 'Rp 0',
+              'sub': 'Menunggu approval',
+              'color': const Color(0xFF8B5CF6),
+              'icon': Icons.hourglass_top_outlined,
+            },
+          ];
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -564,8 +706,9 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                           'Mei \'25',
                         ];
                         final i = v.toInt();
-                        if (i < 0 || i >= labels.length)
+                        if (i < 0 || i >= labels.length) {
                           return const SizedBox.shrink();
+                        }
                         return Text(
                           labels[i],
                           style: const TextStyle(fontSize: 10),
@@ -689,7 +832,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
   }
 
   Widget _buildActiveProjectsCard(bool isDark) {
-    final List<Map<String, dynamic>> projects = [];
+    final projects = _projects;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -725,48 +868,76 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          ...projects.map(
-            (p) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: _brandBlue.withValues(alpha: 0.1),
-                    child: Icon(Icons.work, color: _brandBlue, size: 18),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          p['title'] as String,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          p['creator'] as String,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
+          if (projects.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.folder_open_outlined,
+                      size: 36,
+                      color: isDark ? Colors.white38 : Colors.grey.shade400,
                     ),
-                  ),
-                  Text(
-                    '${((p['progress'] as double) * 100).round()}%',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                    const SizedBox(height: 8),
+                    Text(
+                      'Belum ada proyek aktif',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+            )
+          else
+            ...projects.take(4).map(
+              (p) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: _brandBlue.withValues(alpha: 0.1),
+                      child: Icon(Icons.work, color: _brandBlue, size: 18),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            p['title'] as String,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            p['creator'] as String,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '${((p['progress'] as double) * 100).round()}%',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -815,29 +986,38 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          _buildActItem(
-            'Kreasi Studio mengirimkan update pekerjaan',
-            '2 jam lalu',
-            Icons.send,
-          ),
-          _buildActItem(
-            'Pembayaran sebesar Rp 7.500.000 berhasil',
-            '4 jam lalu',
-            Icons.check_circle,
-            Colors.green,
-          ),
-          _buildActItem(
-            'DesignLab mengirimkan penawaran baru',
-            '1 hari lalu',
-            Icons.local_offer,
-            Colors.orange,
-          ),
-          _buildActItem(
-            'EventPro Organizer menyelesaikan pekerjaan',
-            '2 hari lalu',
-            Icons.done_all,
-            Colors.purple,
-          ),
+          if (_activities.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.history_outlined,
+                      size: 36,
+                      color: isDark ? Colors.white38 : Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Belum ada aktivitas terbaru',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ..._activities.take(4).map(
+              (act) => _buildActItem(
+                act['title'] as String,
+                act['time'] as String,
+                Icons.check_circle_outline,
+                _brandBlue,
+              ),
+            ),
         ],
       ),
     );
@@ -868,7 +1048,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
   }
 
   Widget _buildFavoriteCreatorsCard(bool isDark) {
-    final List<Map<String, dynamic>> creators = [];
+    final creators = _creators;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -887,53 +1067,77 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          ...creators.map(
-            (c) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: _brandBlue.withValues(alpha: 0.1),
-                    child: Text(
-                      c['name']![0],
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+          if (creators.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.people_outline,
+                      size: 36,
+                      color: isDark ? Colors.white38 : Colors.grey.shade400,
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          c['name']!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                    const SizedBox(height: 8),
+                    Text(
+                      'Belum ada kreator favorit',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ...creators.take(4).map(
+              (c) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: _brandBlue.withValues(alpha: 0.1),
+                      child: Text(
+                        (c['name'] as String).isNotEmpty ? (c['name'] as String)[0] : 'K',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            c['name'] as String,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          c['cat']!,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey,
+                          Text(
+                            c['cat'] as String,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  Icon(Icons.star, size: 14, color: Colors.amber.shade600),
-                  Text(
-                    c['rating']!,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                    Icon(Icons.star, size: 14, color: Colors.amber.shade600),
+                    Text(
+                      c['rating'] as String,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

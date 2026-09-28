@@ -22,7 +22,7 @@ jobs:
       # 1. CHECKOUT
       # ============================================================
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # ============================================================
       # 2. SETUP FLUTTER
@@ -67,6 +67,7 @@ jobs:
           VPS_HOST: ${{ secrets.KREAVANA_DEV_VPS_HOST }}
           VPS_PORT: ${{ secrets.KREAVANA_DEV_VPS_PORT }}
           VPS_USER: ${{ secrets.KREAVANA_DEV_VPS_USER }}
+          KNOWN_HOSTS_ENTRY: ${{ secrets.KREAVANA_DEV_KNOWN_HOST }}
           DEPLOY_SHA: ${{ github.sha }}
 
         run: |
@@ -106,11 +107,7 @@ jobs:
           echo "PREPARING KNOWN HOSTS"
           echo "============================================================"
 
-          ssh-keyscan \
-            -p "$VPS_PORT" \
-            "$VPS_HOST" \
-            >> ~/.ssh/known_hosts
-
+          printf '%s\n' "$KNOWN_HOSTS_ENTRY" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
           echo "============================================================"
@@ -233,6 +230,14 @@ jobs:
             --optimize-autoloader
 
           echo "Composer install completed."
+
+          echo "============================================================"
+          echo "RUN DATABASE MIGRATIONS & SEEDERS"
+          echo "============================================================"
+
+          php8.4 artisan migrate --seed --force
+
+          echo "Database migrations and seeders completed."
 
           echo "============================================================"
           echo "CLEAR LARAVEL CACHE"

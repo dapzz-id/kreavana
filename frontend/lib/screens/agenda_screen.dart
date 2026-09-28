@@ -6,6 +6,7 @@ import '../services/job_contract_service.dart';
 
 import '../widgets/skeleton/skeleton_list.dart';
 import '../widgets/app_breadcrumbs.dart';
+import '../widgets/app_sweet_alert.dart';
 import 'main_navigation.dart';
 
 class AgendaScreen extends StatefulWidget {
@@ -23,6 +24,19 @@ class _AgendaScreenState extends State<AgendaScreen> {
   final Set<String> _remindedAgendas = {};
   String _selectedFilter = 'Semua';
   String _searchQuery = '';
+
+  bool get _isSchool {
+    final sub = (widget.user?.subRole ?? '').toLowerCase();
+    return sub == 'institution' ||
+        sub == 'institusi' ||
+        sub == 'sekolah' ||
+        sub == 'kampus' ||
+        sub == 'school';
+  }
+
+  List<String> get _filterOptions => _isSchool
+      ? ['Semua', 'Event', 'Workshop', 'Monitoring', 'Deadline']
+      : ['Semua', 'Online', 'Offline', 'Deadline'];
 
   List<Map<String, dynamic>> _agendaList = [];
 
@@ -110,9 +124,9 @@ class _AgendaScreenState extends State<AgendaScreen> {
         toolbarHeight: 80,
         titleSpacing: isDesktop ? 32 : 16,
         elevation: 0,
-        title: const Text(
-          'Agenda Kegiatan',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        title: Text(
+          _isSchool ? 'Kegiatan & Event Sekolah' : 'Agenda Kegiatan',
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
@@ -156,8 +170,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       }
                     },
                   ),
-                  const BreadcrumbItem(
-                    label: 'Agenda',
+                  BreadcrumbItem(
+                    label: _isSchool ? 'Kegiatan & Event' : 'Agenda',
                     icon: Icons.calendar_today_rounded,
                   ),
                 ],
@@ -171,7 +185,9 @@ class _AgendaScreenState extends State<AgendaScreen> {
               TextField(
                 onChanged: (v) => setState(() => _searchQuery = v),
                 decoration: InputDecoration(
-                  hintText: 'Cari agenda, meeting, atau deadline...',
+                  hintText: _isSchool
+                      ? 'Cari event, workshop, ujian magang, atau rapat mitra...'
+                      : 'Cari agenda, meeting, atau deadline...',
                   prefixIcon: const Icon(Icons.search, size: 20),
                   filled: true,
                   fillColor: isDark
@@ -191,7 +207,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: ['Semua', 'Online', 'Offline', 'Deadline'].map((f) {
+                  children: _filterOptions.map((f) {
                     final isSel = _selectedFilter == f;
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
@@ -224,7 +240,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
               if (_isLoading)
                 const SkeletonList()
               else if (filtered.isEmpty)
-                _buildEmptyState(isDark)
+                _buildEmptyState(accentColor, isDark)
               else
                 ...filtered.map(
                   (item) => _buildAgendaCard(item, accentColor, isDark),
@@ -233,29 +249,32 @@ class _AgendaScreenState extends State<AgendaScreen> {
           ),
         ),
       ),
-      floatingActionButton: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).size.width < 900 ? 76 : 0,
-        ),
-        child: FloatingActionButton.extended(
-          heroTag: 'agenda_fab',
-          onPressed: () => _showAddAgendaModal(context, accentColor),
-          backgroundColor: accentColor,
-          icon: const Icon(Icons.event, color: Colors.white),
-          label: const Text(
-            'Tambah Agenda',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ),
+      floatingActionButton: isDesktop
+          ? null
+          : Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).size.width < 900 ? 76 : 0,
+              ),
+              child: FloatingActionButton.extended(
+                heroTag: 'agenda_fab',
+                onPressed: () => _showAddAgendaModal(context, accentColor),
+                backgroundColor: accentColor,
+                icon: const Icon(Icons.event, color: Colors.white),
+                label: Text(
+                  _isSchool ? 'Tambah Kegiatan' : 'Tambah Agenda',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
     );
   }
 
   Widget _buildAgendaHeader(Color accentColor, bool isDark) {
     final upcomingCount = _agendaList.length;
+    final isDesktop = MediaQuery.of(context).size.width > 900;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isDesktop ? 24 : 18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -277,36 +296,58 @@ class _AgendaScreenState extends State<AgendaScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Jadwal & Agenda Terdekat',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _isSchool ? 'Jadwal & Agenda Sekolah' : 'Jadwal & Agenda Terdekat',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isDesktop ? 18 : 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Anda memiliki $upcomingCount agenda terjadwal',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-            ],
-          ),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.calendar_month_rounded,
-              color: Colors.white,
-              size: 28,
+                const SizedBox(height: 4),
+                Text(
+                  _isSchool
+                      ? 'Terdapat $upcomingCount agenda kegiatan atau event terjadwal'
+                      : 'Anda memiliki $upcomingCount agenda terjadwal',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ],
             ),
           ),
+          const SizedBox(width: 12),
+          if (isDesktop)
+            ElevatedButton.icon(
+              onPressed: () => _showAddAgendaModal(context, accentColor),
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: Text(_isSchool ? 'Tambah Kegiatan / Event' : 'Tambah Agenda'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: accentColor,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.calendar_month_rounded,
+                color: Colors.white,
+                size: 26,
+              ),
+            ),
         ],
       ),
     );
@@ -463,16 +504,19 @@ class _AgendaScreenState extends State<AgendaScreen> {
                         _remindedAgendas.add(item['id']);
                       }
                     });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          isReminded
-                              ? 'Pengingat dibatalkan untuk agenda ini.'
-                              : 'Pengingat (Alarm) berhasil disetel!',
-                        ),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
+                    if (isReminded) {
+                      AppSweetAlert.info(
+                        context,
+                        'Pengingat dibatalkan untuk agenda ini.',
+                        title: 'Pengingat Dinonaktifkan',
+                      );
+                    } else {
+                      AppSweetAlert.success(
+                        context,
+                        'Pengingat (Alarm) berhasil diaktifkan!',
+                        title: 'Pengingat Disetel',
+                      );
+                    }
                   },
                   icon: Icon(
                     _remindedAgendas.contains(item['id'])
@@ -511,26 +555,101 @@ class _AgendaScreenState extends State<AgendaScreen> {
     );
   }
 
-  Widget _buildEmptyState(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 40),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.event_busy_outlined,
-            size: 48,
-            color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
+  Widget _buildEmptyState(Color accentColor, bool isDark) {
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 280),
+      margin: const EdgeInsets.symmetric(vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardBg : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: accentColor.withValues(alpha: 0.2),
+                    width: 1.5,
+                  ),
+                ),
+                child: Icon(
+                  Icons.event_available_rounded,
+                  size: 36,
+                  color: accentColor,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                _selectedFilter == 'Semua'
+                    ? (_isSchool
+                        ? 'Belum Ada Kegiatan & Event Terjadwal'
+                        : 'Belum Ada Agenda Terjadwal')
+                    : 'Tidak Ada Agenda pada Kategori "$_selectedFilter"',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _isSchool
+                    ? 'Buat jadwal kegiatan sekolah, rapat kemitraan industri, monitoring magang siswa, atau workshop kreatif di sini.'
+                    : 'Tambahkan agenda meeting online, jadwal shooting, atau batas deadline proyek Anda agar terpantau rapi.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.45,
+                  color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 22),
+              ElevatedButton.icon(
+                onPressed: () => _showAddAgendaModal(context, accentColor),
+                icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                label: Text(
+                  _isSchool ? 'Tambah Kegiatan / Event Baru' : 'Tambah Agenda Baru',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accentColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            'Tidak ada agenda pada kategori ini',
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -538,162 +657,222 @@ class _AgendaScreenState extends State<AgendaScreen> {
   void _showAddAgendaModal(BuildContext context, Color accentColor) {
     final titleCtrl = TextEditingController();
     final timeCtrl = TextEditingController();
-    String typeSel = 'Online';
+    final locCtrl = TextEditingController();
+    String typeSel = _isSchool ? 'Event' : 'Online';
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                20,
-                20,
-                20,
-                MediaQuery.of(ctx).viewInsets.bottom + 20,
+    final schoolTypes = [
+      {'val': 'Event', 'label': 'Event / Pameran Sekolah'},
+      {'val': 'Workshop', 'label': 'Workshop & Pelatihan Siswa'},
+      {'val': 'Monitoring', 'label': 'Monitoring & Evaluasi PKL'},
+      {'val': 'Online', 'label': 'Online Meeting Mitra'},
+      {'val': 'Deadline', 'label': 'Deadline Laporan Siswa'},
+      {'val': 'Lainnya', 'label': 'Lainnya'},
+    ];
+
+    final standardTypes = [
+      {'val': 'Online', 'label': 'Online Meeting'},
+      {'val': 'Offline', 'label': 'Offline / Shooting Day'},
+      {'val': 'Deadline', 'label': 'Deadline Penyerahan'},
+      {'val': 'Review', 'label': 'Review Project'},
+      {'val': 'Client', 'label': 'Client Briefing'},
+      {'val': 'Lainnya', 'label': 'Lainnya'},
+    ];
+
+    final typeOptions = _isSchool ? schoolTypes : standardTypes;
+
+    Widget buildFormContent(StateSetter setModalState, BuildContext ctx) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _isSchool ? 'Tambah Kegiatan / Event' : 'Tambah Agenda Baru',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Tambah Agenda Baru',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: titleCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Judul Agenda / Meeting',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: timeCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Waktu (misal: 10:00 - 11:00 WIB)',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: typeSel,
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'Online',
-                        child: Text('Online Meeting'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Offline',
-                        child: Text('Offline / Shooting Day'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Deadline',
-                        child: Text('Deadline Penyerahan'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Review',
-                        child: Text('Review Project'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Client',
-                        child: Text('Client Briefing'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Lainnya',
-                        child: Text('Lainnya'),
-                      ),
-                    ],
-                    onChanged: (v) => setModalState(() => typeSel = v!),
-                    decoration: const InputDecoration(
-                      labelText: 'Tipe Agenda',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: accentColor,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () {
-                        if (titleCtrl.text.isNotEmpty) {
-                          setState(() {
-                            final now = DateTime.now();
-                            Color getTypeColor(String type) {
-                              if (type == 'Online' || type == 'Client') {
-                                return const Color(0xFF3B82F6);
-                              }
-                              if (type == 'Offline') {
-                                return const Color(0xFFF97316);
-                              }
-                              if (type == 'Deadline' || type == 'Review') {
-                                return const Color(0xFFEF4444);
-                              }
-                              return Colors.grey.shade600; // Lainnya
-                            }
-
-                            IconData getTypeIcon(String type) {
-                              if (type == 'Online' || type == 'Client') {
-                                return Icons.videocam_outlined;
-                              }
-                              if (type == 'Offline') {
-                                return Icons.location_on_outlined;
-                              }
-                              if (type == 'Deadline') {
-                                return Icons.alarm_outlined;
-                              }
-                              if (type == 'Review') {
-                                return Icons.rate_review_outlined;
-                              }
-                              return Icons.event_note_outlined; // Lainnya
-                            }
-
-                            _agendaList.insert(0, {
-                              'id': '${now.millisecondsSinceEpoch}',
-                              'title': titleCtrl.text,
-                              'date': '${now.day}',
-                              'month': 'Agu',
-                              'time': timeCtrl.text.isEmpty
-                                  ? '10:00 WIB'
-                                  : timeCtrl.text,
-                              'type': typeSel,
-                              'typeColor': getTypeColor(typeSel),
-                              'icon': getTypeIcon(typeSel),
-                              'location':
-                                  (typeSel == 'Online' || typeSel == 'Client')
-                                  ? 'Virtual Call Room'
-                                  : (typeSel == 'Offline'
-                                        ? 'Venue / Studio'
-                                        : '-'),
-                              'organizer': widget.user?.name ?? 'Saya',
-                            });
-                          });
-                          Navigator.pop(ctx);
-                        }
-                      },
-                      child: const Text(
-                        'Simpan Agenda',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              IconButton(
+                icon: const Icon(Icons.close_rounded, size: 20),
+                onPressed: () => Navigator.pop(ctx),
               ),
-            );
-          },
-        );
-      },
-    );
+            ],
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: titleCtrl,
+            decoration: InputDecoration(
+              labelText: _isSchool ? 'Nama Kegiatan / Event' : 'Judul Agenda / Meeting',
+              hintText: _isSchool ? 'Misal: Kunjungan Industri Studio Animasi' : 'Misal: Briefing Pra-Produksi',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: timeCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Waktu / Jam',
+                    hintText: '09:00 - 12:00 WIB',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: typeSel,
+                  isExpanded: true,
+                  items: typeOptions.map((opt) {
+                    return DropdownMenuItem(
+                      value: opt['val'],
+                      child: Text(opt['label']!, overflow: TextOverflow.ellipsis),
+                    );
+                  }).toList(),
+                  onChanged: (v) => setModalState(() => typeSel = v!),
+                  decoration: InputDecoration(
+                    labelText: 'Kategori',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: locCtrl,
+            decoration: InputDecoration(
+              labelText: 'Tempat / Lokasi (Opsional)',
+              hintText: _isSchool ? 'Misal: Lab Animasi Lt. 2 / Studio Mitra' : 'Misal: Google Meet / Studio Jakarta',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accentColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                if (titleCtrl.text.trim().isEmpty) {
+                  AppSweetAlert.warning(
+                    ctx,
+                    'Judul kegiatan wajib diisi terlebih dahulu.',
+                    title: 'Form Belum Lengkap',
+                  );
+                  return;
+                }
+                setState(() {
+                  final now = DateTime.now();
+                  Color getTypeColor(String type) {
+                    if (type == 'Online' || type == 'Client') return const Color(0xFF3B82F6);
+                    if (type == 'Offline' || type == 'Event') return const Color(0xFFF97316);
+                    if (type == 'Deadline' || type == 'Review') return const Color(0xFFEF4444);
+                    if (type == 'Workshop' || type == 'Monitoring') return const Color(0xFF10B981);
+                    return Colors.grey.shade600;
+                  }
+
+                  IconData getTypeIcon(String type) {
+                    if (type == 'Online' || type == 'Client') return Icons.videocam_outlined;
+                    if (type == 'Offline' || type == 'Event') return Icons.festival_outlined;
+                    if (type == 'Deadline') return Icons.alarm_outlined;
+                    if (type == 'Review') return Icons.rate_review_outlined;
+                    if (type == 'Workshop') return Icons.school_outlined;
+                    if (type == 'Monitoring') return Icons.monitor_heart_outlined;
+                    return Icons.event_note_outlined;
+                  }
+
+                  final months = [
+                    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+                    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+                  ];
+
+                  _agendaList.insert(0, {
+                    'id': '${now.millisecondsSinceEpoch}',
+                    'title': titleCtrl.text.trim(),
+                    'date': '${now.day}'.padLeft(2, '0'),
+                    'month': months[now.month - 1],
+                    'time': timeCtrl.text.trim().isEmpty ? '09:00 WIB' : timeCtrl.text.trim(),
+                    'type': typeSel,
+                    'typeColor': getTypeColor(typeSel),
+                    'icon': getTypeIcon(typeSel),
+                    'location': locCtrl.text.trim().isNotEmpty
+                        ? locCtrl.text.trim()
+                        : (typeSel == 'Online' ? 'Google Meet / Virtual' : 'Kampus / Sekolah'),
+                    'organizer': widget.user?.name ?? 'Sekolah',
+                  });
+                });
+                Navigator.pop(ctx);
+                AppSweetAlert.success(
+                  context,
+                  _isSchool
+                      ? 'Kegiatan sekolah berhasil ditambahkan ke jadwal!'
+                      : 'Agenda berhasil ditambahkan ke jadwal!',
+                  title: 'Berhasil',
+                );
+              },
+              child: const Text(
+                'Simpan Kegiatan',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final isDesktop = MediaQuery.of(context).size.width > 700;
+
+    if (isDesktop) {
+      showDialog(
+        context: context,
+        builder: (ctx) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: StatefulBuilder(
+              builder: (ctx, setModalState) {
+                return Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: buildFormContent(setModalState, ctx),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (ctx) {
+          return StatefulBuilder(
+            builder: (ctx, setModalState) {
+              return Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  20,
+                  20,
+                  MediaQuery.of(ctx).viewInsets.bottom + 24,
+                ),
+                child: buildFormContent(setModalState, ctx),
+              );
+            },
+          );
+        },
+      );
+    }
   }
 }

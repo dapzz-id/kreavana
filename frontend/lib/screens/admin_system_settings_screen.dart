@@ -3,6 +3,8 @@ import '../models/user_model.dart';
 import '../app/theme.dart';
 import '../services/admin_service.dart';
 import '../widgets/app_sweet_alert.dart';
+import '../widgets/app_breadcrumbs.dart';
+import 'main_navigation.dart';
 
 class AdminSystemSettingsScreen extends StatefulWidget {
   final UserModel user;
@@ -415,6 +417,29 @@ class _AdminSystemSettingsScreenState extends State<AdminSystemSettingsScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              AppBreadcrumbs(
+                items: [
+                  BreadcrumbItem(
+                    label: 'Dasbor Admin',
+                    icon: Icons.admin_panel_settings_rounded,
+                    onTap: () => Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MainNavigation(
+                          initialUser: widget.user,
+                          initialIndex: 0,
+                        ),
+                      ),
+                      (r) => false,
+                    ),
+                  ),
+                  const BreadcrumbItem(
+                    label: 'Pengaturan Sistem & Modul',
+                    icon: Icons.settings_suggest_rounded,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -659,6 +684,34 @@ class _AdminSystemSettingsScreenState extends State<AdminSystemSettingsScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              AppBreadcrumbs(
+                items: [
+                  BreadcrumbItem(
+                    label: 'Dasbor Admin',
+                    icon: Icons.admin_panel_settings_rounded,
+                    onTap: () => Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MainNavigation(
+                          initialUser: widget.user,
+                          initialIndex: 0,
+                        ),
+                      ),
+                      (r) => false,
+                    ),
+                  ),
+                  BreadcrumbItem(
+                    label: 'Pengaturan Sistem & Modul',
+                    icon: Icons.settings_suggest_rounded,
+                    onTap: () => _tabController.animateTo(0),
+                  ),
+                  const BreadcrumbItem(
+                    label: 'Konfigurasi AI Engine',
+                    icon: Icons.auto_awesome_rounded,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
               // ── Header Box ──
               Container(
                 padding: const EdgeInsets.all(16),

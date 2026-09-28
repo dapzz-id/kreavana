@@ -180,7 +180,7 @@ class _MainNavigationState extends State<MainNavigation> {
   }) {
     final screensCount = _currentUser.isAdmin ? 6 : 15;
     final activeIndex = _currentIndex >= screensCount ? 0 : _currentIndex;
-    final isSelected = activeIndex == index;
+    final isSelected = activeIndex == index && _activeGovRoute == null;
     final defaultAccent = SubRoleThemeEngine.getAccentColorForUser(
       _currentUser,
     );
@@ -719,7 +719,11 @@ class _MainNavigationState extends State<MainNavigation> {
         transitionsBuilder: (context, animation, secondaryAnimation, child) =>
             child,
       ),
-    );
+    ).then((_) {
+      if (mounted) {
+        setState(() => _activeGovRoute = null);
+      }
+    });
   }
 
   List<Widget> _buildCreatorSidebarItems({
@@ -764,7 +768,8 @@ class _MainNavigationState extends State<MainNavigation> {
           onTap: () => _handleCreatorMenuEntry(entry),
           isDark: isDark,
           isCollapsed: isCollapsed,
-          isSelected: index != null && _currentIndex == index,
+          isSelected:
+              index != null && _currentIndex == index && _activeGovRoute == null,
           isMobileDrawer: isMobileDrawer,
         );
       }),
@@ -932,7 +937,7 @@ class _MainNavigationState extends State<MainNavigation> {
           isMobileDrawer: isMobileDrawer,
           isAi: true,
         ),
-      if (_isCreatorUser && !_isGovernment)
+      if (_isCreatorUser && !_isGovernment && !_isSchool)
         _buildSidebarItem(
           icon: Icons.explore_outlined,
           activeIcon: Icons.explore,
@@ -943,7 +948,7 @@ class _MainNavigationState extends State<MainNavigation> {
           isCollapsed: isCollapsed,
           isMobileDrawer: isMobileDrawer,
         ),
-      if (!_isGovernment)
+      if (!_isGovernment && !_isSchool)
         _buildSidebarItem(
           icon: Icons.folder_outlined,
           activeIcon: Icons.folder,
@@ -977,7 +982,7 @@ class _MainNavigationState extends State<MainNavigation> {
             isCollapsed: isCollapsed,
             isMobileDrawer: isMobileDrawer,
           ),
-        if (_isCreatorUser && !_isGovernment)
+        if (_isCreatorUser && !_isGovernment && !_isSchool)
           _buildSidebarItem(
             icon: Icons.calendar_today_outlined,
             activeIcon: Icons.calendar_today,
@@ -989,16 +994,258 @@ class _MainNavigationState extends State<MainNavigation> {
             isMobileDrawer: isMobileDrawer,
           ),
       ],
-      if (!isCollapsed && _isGovernment) ...[
+      if (!isCollapsed && _isSchool) ...[
+        const SizedBox(height: 18),
+        _buildSidebarSectionHeader('PENGELOLAAN SEKOLAH', isDark),
+      ] else if (!isCollapsed && _isGovernment) ...[
         const SizedBox(height: 18),
         _buildSidebarSectionHeader('PENGELOLAAN', isDark),
       ] else if (!isCollapsed &&
           !_isGovernment &&
+          !_isSchool &&
           !_hasSpecificCreatorSubRole) ...[
         const SizedBox(height: 18),
         _buildSidebarSectionHeader('LAINNYA', isDark),
       ],
-      if (_isGovernment) ...[
+      if (_isSchool) ...[
+        _buildSidebarLink(
+          icon: Icons.work_outline,
+          label: 'Program & Magang',
+          onTap: () => _navigateToScreenIndex(2),
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _currentIndex == 2 && _activeGovRoute == null,
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarLink(
+          icon: Icons.event_outlined,
+          label: 'Kegiatan & Event',
+          onTap: () => _navigateToScreenIndex(4),
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _currentIndex == 4 && _activeGovRoute == null,
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarLink(
+          icon: Icons.handshake_outlined,
+          label: 'Pengadaan & Vendor',
+          onTap: () {
+            setState(() => _activeGovRoute = 'tender_kolaborasi');
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'tenders',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'tender_kolaborasi',
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarLink(
+          icon: Icons.people_outlined,
+          label: 'Daftar Kreator & Vendor',
+          onTap: () => _navigateToScreenIndex(1),
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _currentIndex == 1 && _activeGovRoute == null,
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarLink(
+          icon: Icons.diversity_3_outlined,
+          label: 'Mitra Industri & Sanggar',
+          onTap: () {
+            setState(() => _activeGovRoute = 'mitra_komunitas');
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'partners',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'mitra_komunitas',
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarLink(
+          icon: Icons.palette_outlined,
+          label: 'Karya & Portofolio Siswa',
+          onTap: () {
+            setState(() => _activeGovRoute = 'karya_siswa');
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'showcases',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'karya_siswa',
+          isMobileDrawer: isMobileDrawer,
+        ),
+        if (!isCollapsed) ...[
+          const SizedBox(height: 18),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'PEMANTAUAN AKADEMIK',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white54 : Colors.grey.shade500,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ],
+        _buildSidebarLink(
+          icon: Icons.summarize_outlined,
+          label: 'Laporan Kegiatan',
+          onTap: () {
+            setState(() => _activeGovRoute = 'laporan');
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'reports',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'laporan',
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarLink(
+          icon: Icons.monitor_outlined,
+          label: 'Monitoring & Evaluasi',
+          onTap: () {
+            setState(() => _activeGovRoute = 'monitoring_evaluasi');
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'monitoring',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'monitoring_evaluasi',
+          isMobileDrawer: isMobileDrawer,
+        ),
+        if (!isCollapsed) ...[
+          const SizedBox(height: 18),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'DATA & DOKUMEN',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white54 : Colors.grey.shade500,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ],
+        _buildSidebarLink(
+          icon: Icons.folder_outlined,
+          label: 'Dokumen & MoU',
+          onTap: () {
+            setState(() => _activeGovRoute = 'dokumen_instansi');
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'documents',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'dokumen_instansi',
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarLink(
+          icon: Icons.campaign_outlined,
+          label: 'Pengumuman Sekolah',
+          onTap: () {
+            setState(() => _activeGovRoute = 'pengumuman_publik');
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'announcements',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'pengumuman_publik',
+          isMobileDrawer: isMobileDrawer,
+        ),
+        if (!isCollapsed) ...[
+          const SizedBox(height: 18),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'PENGATURAN',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white54 : Colors.grey.shade500,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ],
+        _buildSidebarLink(
+          icon: Icons.account_balance_outlined,
+          label: 'Profil Sekolah',
+          onTap: () {
+            setState(() => _activeGovRoute = 'profil_instansi');
+            _pushGovScreen(
+              ProfileScreen(
+                user: _currentUser,
+                onUserUpdated: _onUserUpdated,
+                onLogout: _onLogout,
+              ),
+            );
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'profil_instansi',
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarLink(
+          icon: Icons.settings_outlined,
+          label: 'Pengaturan Akun',
+          onTap: () => _navigateToScreenIndex(8),
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _currentIndex == 8 && _activeGovRoute == null,
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarLink(
+          icon: Icons.admin_panel_settings_outlined,
+          label: 'Tim & Hak Akses',
+          onTap: () {
+            setState(() => _activeGovRoute = 'tim_hak_akses');
+            _pushGovScreen(TimHakAksesScreen(user: _currentUser));
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'tim_hak_akses',
+          isMobileDrawer: isMobileDrawer,
+        ),
+      ] else if (_isGovernment) ...[
         _buildSidebarLink(
           icon: Icons.campaign_outlined,
           label: 'Peluang & Program',
@@ -1733,7 +1980,6 @@ class _MainNavigationState extends State<MainNavigation> {
         );
 
       case 'government':
-      case 'institution':
       case 'pemerintah':
       case 'instansi':
         return GovtDashboardScreen(
@@ -1770,6 +2016,8 @@ class _MainNavigationState extends State<MainNavigation> {
       case 'campus':
       case 'sekolah':
       case 'kampus':
+      case 'institution':
+      case 'institusi':
         return SchoolDashboardScreen(
           user: _currentUser,
           onUserUpdated: _onUserUpdated,
@@ -1822,10 +2070,21 @@ class _MainNavigationState extends State<MainNavigation> {
     final subRole = (_currentUser.subRole ?? '').toLowerCase().trim();
     switch (subRole) {
       case 'government':
-      case 'institution':
       case 'pemerintah':
       case 'instansi':
         return GovtDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
+
+      case 'school':
+      case 'education':
+      case 'campus':
+      case 'sekolah':
+      case 'kampus':
+      case 'institution':
+      case 'institusi':
+        return SchoolDashboardScreen(
           user: _currentUser,
           onUserUpdated: _onUserUpdated,
         );
@@ -1940,9 +2199,20 @@ class _MainNavigationState extends State<MainNavigation> {
     final sub = CreatorSidebarMenus.normalizeSubRole(_currentUser.subRole);
     return (_currentUser.role == 'user' || _currentUser.role == 'creator') &&
         (sub == 'government' ||
-            sub == 'institution' ||
             sub == 'pemerintah' ||
             sub == 'instansi');
+  }
+
+  bool get _isSchool {
+    final sub = CreatorSidebarMenus.normalizeSubRole(_currentUser.subRole);
+    return (_currentUser.role == 'user' || _currentUser.role == 'creator') &&
+        (sub == 'institution' ||
+            sub == 'institusi' ||
+            sub == 'school' ||
+            sub == 'education' ||
+            sub == 'campus' ||
+            sub == 'sekolah' ||
+            sub == 'kampus');
   }
 
   Widget _buildScreenAt(int index) {

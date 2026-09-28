@@ -9,6 +9,7 @@ import 'proyek_saya_screen.dart';
 import '../models/user_model.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import '../widgets/app_breadcrumbs.dart';
+import '../widgets/app_sweet_alert.dart';
 import '../services/verification_service.dart';
 import 'client_verification_page.dart';
 
@@ -67,6 +68,15 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
 
   bool get _isLargeBudget => _selectedBudget.contains('20.000.000');
 
+  bool get _isSchool {
+    final sub = (widget.user?.subRole ?? '').toLowerCase();
+    return sub == 'institution' ||
+        sub == 'institusi' ||
+        sub == 'sekolah' ||
+        sub == 'kampus' ||
+        sub == 'school';
+  }
+
   bool _submitting = false;
   bool _isClientVerified = true;
 
@@ -107,7 +117,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
 
   void _initDefaultRequirement() {
     _requirements = [];
-    final initialRole = widget.initialKategori ?? 'fotografi';
+    final initialRole = widget.initialKategori ?? (_isSchool ? 'animator' : 'fotografi');
     final initialTags = _rolePresetTags[initialRole]?.take(2).toList() ?? ['Portrait'];
     _requirements!.add(
       RoleRequirementFormItem(
@@ -333,9 +343,14 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
       'Charity',
     ],
     'institution': [
-      'CSR Project',
-      'Seminar Akademik',
-      'Pelatihan Keahlian',
+      'Magang PKL Siswa',
+      'Animasi 2D & 3D',
+      'Multimedia & DKV',
+      'Broadcasting & TV',
+      'Desain Grafis UMKM',
+      'Editing & Motion',
+      'Teaching Factory',
+      'Proyek Riset Sekolah',
     ],
     'government': [
       'Publikasi Program',
@@ -375,6 +390,16 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
     '>= Rp 20.000.000 (Skala Besar - MoU Legal Kreavana)',
   ];
 
+  static const _schoolBudgetItems = [
+    'Tanpa Uang Saku / Pengalaman & Sertifikat PKL',
+    '< Rp 500.000 / Bulan (Uang Transport)',
+    'Rp 500.000 - 1.000.000 / Bulan',
+    'Rp 1.000.000 - 2.500.000 / Bulan',
+    '>= Rp 2.500.000 (Kerjasama Industri / Teaching Factory)',
+  ];
+
+  List<String> get _currentBudgetItems => _isSchool ? _schoolBudgetItems : _budgetItems;
+
   static const List<Map<String, dynamic>> _deadlineItems = [
     {'value': '1 Minggu', 'days': 7},
     {'value': '2 Minggu', 'days': 14},
@@ -406,6 +431,8 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
     }
     if (widget.initialBudget != null) {
       _selectedBudget = widget.initialBudget!;
+    } else if (_isSchool) {
+      _selectedBudget = _schoolBudgetItems.first;
     }
     _initDefaultRequirement();
     _checkClientVerification();
@@ -454,7 +481,13 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   void _removeRequirement(int index) {
     final reqs = safeRequirements;
     if (reqs.length <= 1) {
-      AppSnackbar.warning(context, 'Minimal harus ada 1 peran kreator.');
+      AppSweetAlert.warning(
+        context,
+        _isSchool
+            ? 'Minimal harus ada 1 posisi magang siswa.'
+            : 'Minimal harus ada 1 peran kreator.',
+        title: 'Peringatan',
+      );
       return;
     }
     setState(() {
@@ -596,7 +629,13 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
       if (!mounted) return;
 
       if (result['status'] == true) {
-        AppSnackbar.success(context, 'Kebutuhan proyek berhasil dipublikasikan!');
+        AppSweetAlert.success(
+          context,
+          _isSchool
+              ? 'Program magang/PKL berhasil dipublikasikan!'
+              : 'Kebutuhan proyek berhasil dipublikasikan!',
+          title: 'Berhasil Dipublikasikan',
+        );
         if (Navigator.canPop(context)) {
           Navigator.of(context).pop(true);
         } else {
@@ -605,11 +644,19 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
           );
         }
       } else {
-        AppSnackbar.error(context, AppErrors.messageFromResult(result));
+        AppSweetAlert.error(
+          context,
+          AppErrors.messageFromResult(result),
+          title: 'Gagal Mempublikasikan',
+        );
       }
     } catch (e) {
       if (mounted) {
-        AppSnackbar.error(context, AppErrors.friendly(e));
+        AppSweetAlert.error(
+          context,
+          AppErrors.friendly(e),
+          title: 'Terjadi Kesalahan',
+        );
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -659,12 +706,14 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      'Buat Kebutuhan Proyek',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    Text(
+                      _isSchool ? 'Buka Program / Magang Siswa' : 'Buat Kebutuhan Proyek',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     Text(
-                      'Dapatkan tawaran & proposal dari berbagai kreator terbaik',
+                      _isSchool
+                          ? 'Publikasikan lowongan magang, PKL, atau proyek kolaborasi siswa dengan studio mitra'
+                          : 'Dapatkan tawaran & proposal dari berbagai kreator terbaik',
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
@@ -694,8 +743,8 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                 AppBreadcrumbs(
                   items: [
                     BreadcrumbItem(
-                      label: 'Proyek Saya',
-                      icon: Icons.folder_outlined,
+                      label: _isSchool ? 'Program & Magang' : 'Proyek Saya',
+                      icon: _isSchool ? Icons.work_outline_rounded : Icons.folder_outlined,
                       onTap: () {
                         if (Navigator.canPop(context)) {
                           Navigator.pop(context);
@@ -709,9 +758,9 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                         }
                       },
                     ),
-                    const BreadcrumbItem(
-                      label: 'Buat Kebutuhan Proyek',
-                      icon: Icons.add_circle_outline_rounded,
+                    BreadcrumbItem(
+                      label: _isSchool ? 'Buka Program / Magang' : 'Buat Kebutuhan Proyek',
+                      icon: _isSchool ? Icons.add_business_outlined : Icons.add_circle_outline_rounded,
                     ),
                   ],
                 ),
@@ -813,7 +862,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                       stepDelay: const Duration(milliseconds: 50),
                       children: [
                         // ── Info banner ──
-                        _InfoBanner(isDark: isDark),
+                        _InfoBanner(isDark: isDark, isSchool: _isSchool),
                         const SizedBox(height: 24),
 
                         // ── Banner Acara (Opsional) ──
@@ -823,9 +872,11 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                         // ── Judul ──
                         AnimatedInputField(
                           controller: _judulController,
-                          label: 'Judul Kebutuhan Proyek',
-                          hint: 'Contoh: Foto Marathon 10Km & Video Highlight Dokumentasi',
-                          icon: Icons.title_rounded,
+                          label: _isSchool ? 'Nama Program / Magang Siswa' : 'Judul Kebutuhan Proyek',
+                          hint: _isSchool
+                              ? 'Contoh: Magang Siswa SMK Jurusan Animasi 3D & Rigging di Studio Mitra'
+                              : 'Contoh: Foto Marathon 10Km & Video Highlight Dokumentasi',
+                          icon: _isSchool ? Icons.school_outlined : Icons.title_rounded,
                           textInputAction: TextInputAction.next,
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) return 'Wajib diisi';
@@ -850,8 +901,10 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                         // ── Deskripsi ──
                         _AnimatedTextArea(
                           controller: _deskripsiController,
-                          label: 'Deskripsi Kebutuhan & Ruang Lingkup',
-                          hint: 'Jelaskan ekspektasi hasil, konsep visual, rundown acara, atau detail spesifik lainnya...',
+                          label: _isSchool ? 'Deskripsi Program & Kriteria Siswa' : 'Deskripsi Kebutuhan & Ruang Lingkup',
+                          hint: _isSchool
+                              ? 'Jelaskan syarat siswa (kelas, jurusan), fasilitas yang disediakan sekolah/industri, serta target capaian pembelajaran...'
+                              : 'Jelaskan ekspektasi hasil, konsep visual, rundown acara, atau detail spesifik lainnya...',
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) return 'Wajib diisi';
                             return null;
@@ -866,10 +919,12 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                             children: [
                               Expanded(
                                 child: _AnimatedDropdown(
-                                  label: 'Budget Estimasi',
+                                  label: _isSchool ? 'Uang Saku / Tunjangan Magang' : 'Budget Estimasi',
                                   icon: Icons.payments_rounded,
-                                  value: _selectedBudget,
-                                  items: _budgetItems
+                                  value: _currentBudgetItems.contains(_selectedBudget)
+                                      ? _selectedBudget
+                                      : _currentBudgetItems.first,
+                                  items: _currentBudgetItems
                                       .map((e) => <String, dynamic>{'value': e, 'label': e})
                                       .toList(),
                                   onChanged: (v) => setState(() => _selectedBudget = v!),
@@ -878,7 +933,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                               const SizedBox(width: 16),
                               Expanded(
                                 child: _AnimatedDropdown(
-                                  label: 'Target Deadline',
+                                  label: _isSchool ? 'Batas Akhir Pendaftaran' : 'Target Deadline',
                                   icon: Icons.event_rounded,
                                   value: _selectedDeadline,
                                   items: _deadlineItems
@@ -896,17 +951,19 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                           )
                         else ...[
                           _AnimatedDropdown(
-                            label: 'Budget Estimasi',
+                            label: _isSchool ? 'Uang Saku / Tunjangan Magang' : 'Budget Estimasi',
                             icon: Icons.payments_rounded,
-                            value: _selectedBudget,
-                            items: _budgetItems
+                            value: _currentBudgetItems.contains(_selectedBudget)
+                                ? _selectedBudget
+                                : _currentBudgetItems.first,
+                            items: _currentBudgetItems
                                 .map((e) => <String, dynamic>{'value': e, 'label': e})
                                 .toList(),
                             onChanged: (v) => setState(() => _selectedBudget = v!),
                           ),
                           const SizedBox(height: 20),
                           _AnimatedDropdown(
-                            label: 'Target Deadline',
+                            label: _isSchool ? 'Batas Akhir Pendaftaran' : 'Target Deadline',
                             icon: Icons.event_rounded,
                             value: _selectedDeadline,
                             items: _deadlineItems
@@ -960,8 +1017,8 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                             Expanded(
                               flex: 2,
                               child: GradientButton(
-                                text: 'Publikasikan Kebutuhan Proyek',
-                                icon: Icons.rocket_launch_rounded,
+                                text: _isSchool ? 'Publikasikan Lowongan Magang' : 'Publikasikan Kebutuhan Proyek',
+                                icon: _isSchool ? Icons.school_rounded : Icons.rocket_launch_rounded,
                                 isLoading: _submitting,
                                 onPressed: _submit,
                               ),
@@ -1012,7 +1069,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Peran Kreator yang Dibutuhkan',
+                      _isSchool ? 'Posisi / Kebutuhan Bidang Magang' : 'Peran Kreator yang Dibutuhkan',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -1023,7 +1080,9 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Bisa lebih dari satu peran (misal: Fotografer + MC + Event Organizer)',
+                  _isSchool
+                      ? 'Bisa lebih dari satu bidang (misal: Animator 3D + Video Editor + Desain Grafis)'
+                      : 'Bisa lebih dari satu peran (misal: Fotografer + MC + Event Organizer)',
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
@@ -1034,7 +1093,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
             ElevatedButton.icon(
               onPressed: _addRequirement,
               icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Tambah Peran'),
+              label: Text(_isSchool ? 'Tambah Posisi' : 'Tambah Peran'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.12),
                 foregroundColor: AppTheme.primaryPurple,
@@ -1083,8 +1142,8 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
             children: [
               Expanded(
                 child: _AnimatedDropdown(
-                  label: 'Peran Kreator #${index + 1}',
-                  icon: Icons.badge_outlined,
+                  label: _isSchool ? 'Bidang / Jurusan Magang #${index + 1}' : 'Peran Kreator #${index + 1}',
+                  icon: _isSchool ? Icons.school_outlined : Icons.badge_outlined,
                   value: item.slug,
                   items: _kategoriItems,
                   onChanged: (newSlug) {
@@ -1105,7 +1164,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Jumlah Orang',
+                    _isSchool ? 'Kuota Siswa' : 'Jumlah Orang',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -1171,7 +1230,9 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
 
           // Tags section
           Text(
-            'Tag Spesialisasi & Keahlian (Bisa dicari oleh kreator):',
+            _isSchool
+                ? 'Kompetensi & Keahlian Siswa yang Dibutuhkan:'
+                : 'Tag Spesialisasi & Keahlian (Bisa dicari oleh kreator):',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -1212,7 +1273,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
 
           // Recommended preset tags
           Text(
-            'Rekomendasi untuk peran ini:',
+            _isSchool ? 'Rekomendasi kompetensi kejuruan:' : 'Rekomendasi untuk peran ini:',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w500,
@@ -1349,7 +1410,9 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Kreator dapat mencari peluang berdasarkan kota atau jarak terdekat dari lokasi mereka.',
+            _isSchool
+                ? 'Mitra industri dapat melihat lokasi kampus/sekolah atau penempatan magang on-site/remote.'
+                : 'Kreator dapat mencari peluang berdasarkan kota atau jarak terdekat dari lokasi mereka.',
             style: TextStyle(
               fontSize: 12,
               color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
@@ -1499,7 +1562,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
             ),
             const SizedBox(width: 8),
             Text(
-              'Banner Acara / Proyek',
+              _isSchool ? 'Banner Program Magang' : 'Banner Acara / Proyek',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
@@ -1526,7 +1589,9 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Upload foto banner atau pilih gambar tema untuk dipajang di bagian atas detail acara.',
+          _isSchool
+              ? 'Upload poster kegiatan magang atau flyer program sekolah untuk dipajang di bagian atas detail program.'
+              : 'Upload foto banner atau pilih gambar tema untuk dipajang di bagian atas detail acara.',
           style: TextStyle(
             fontSize: 12,
             color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
@@ -1772,7 +1837,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
             ),
             const SizedBox(width: 8),
             Text(
-              'Durasi Acara / Kegiatan Proyek',
+              _isSchool ? 'Periode Magang / PKL Siswa' : 'Durasi Acara / Kegiatan Proyek',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
@@ -1799,7 +1864,9 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Kreator dapat melihat durasi lengkap agar bisa mengajukan bayaran/gaji sesuai beban kerja.',
+          _isSchool
+              ? 'Tentukan rentang tanggal magang siswa untuk sinkronisasi kurikulum sekolah dan mitra industri.'
+              : 'Kreator dapat melihat durasi lengkap agar bisa mengajukan bayaran/gaji sesuai beban kerja.',
           style: TextStyle(
             fontSize: 12,
             color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
@@ -1845,7 +1912,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Tanggal Mulai',
+                              _isSchool ? 'Mulai Magang' : 'Tanggal Mulai',
                               style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey.shade600),
                             ),
                             Text(
@@ -1893,7 +1960,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Tanggal Selesai',
+                              _isSchool ? 'Selesai Magang' : 'Tanggal Selesai',
                               style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey.shade600),
                             ),
                             Text(
@@ -2124,6 +2191,56 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
 
   // ─── Escrow Protection Card (< 20 Jt) ───────────────────────────────────────
   Widget _buildEscrowProtectionCard(bool isDark) {
+    if (_isSchool) {
+      return Container(
+        margin: const EdgeInsets.only(top: 24),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF3B82F6).withValues(alpha: isDark ? 0.12 : 0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3B82F6).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.school_rounded, color: Color(0xFF2563EB), size: 24),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '🎓 Kemitraan Magang Resmi Terproteksi Kreavana',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2563EB),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Program magang/PKL ini tercatat dalam sistem monitoring institusi. Siswa mendapatkan perlindungan MoU kemitraan, lembar evaluasi berkala, dan sertifikat resmi industri.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.4,
+                      color: isDark ? Colors.white70 : Colors.grey.shade800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.only(top: 24),
       padding: const EdgeInsets.all(16),
@@ -2197,7 +2314,9 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
 
 class _InfoBanner extends StatelessWidget {
   final bool isDark;
-  const _InfoBanner({required this.isDark});
+  final bool isSchool;
+
+  const _InfoBanner({required this.isDark, this.isSchool = false});
 
   @override
   Widget build(BuildContext context) {
@@ -2221,8 +2340,8 @@ class _InfoBanner extends StatelessWidget {
               color: AppTheme.primaryPurple.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(
-              Icons.lightbulb_rounded,
+            child: Icon(
+              isSchool ? Icons.school_rounded : Icons.lightbulb_rounded,
               color: AppTheme.primaryPurple,
               size: 18,
             ),
@@ -2230,7 +2349,9 @@ class _InfoBanner extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Tentukan peran, tag spesialisasi, dan wilayah pelaksanaan agar kreator yang sesuai dapat langsung menemukan & melamar proyek Anda.',
+              isSchool
+                  ? 'Tentukan bidang magang, jurusan, kompetensi yang dicari, dan kuota siswa agar mitra industri, studio animasi, & agensi kreatif dapat menemukan program magang sekolah Anda.'
+                  : 'Tentukan peran, tag spesialisasi, dan wilayah pelaksanaan agar kreator yang sesuai dapat langsung menemukan & melamar proyek Anda.',
               style: TextStyle(
                 fontSize: 13,
                 height: 1.5,

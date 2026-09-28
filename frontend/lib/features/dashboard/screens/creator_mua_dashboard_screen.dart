@@ -18,6 +18,11 @@ import 'package:file_picker/file_picker.dart';
 import '../../../widgets/skeleton/skeleton_grid.dart';
 import '../../../widgets/waving_hand_emoji.dart';
 
+import '../../../models/opportunity_model.dart';
+import '../../../models/job_contract.dart';
+import '../../../services/job_contract_service.dart';
+import '../services/dashboard_service.dart';
+
 class CreatorMuaDashboardScreen extends StatefulWidget {
   final UserModel user;
   final ValueChanged<UserModel> onUserUpdated;
@@ -41,19 +46,81 @@ class _CreatorMuaDashboardScreenState extends State<CreatorMuaDashboardScreen> {
   List<PortfolioItemModel> _portfolioItems = [];
   bool _isLoadingPortfolio = true;
 
+  List<Map<String, dynamic>> _realtimeMetrics = [];
+  List<Map<String, dynamic>> _realtimeRecs = [];
+  List<Map<String, dynamic>> _realtimeProjects = [];
+  List<Map<String, dynamic>> _realtimeAgendas = [];
+
   @override
   void initState() {
     super.initState();
-    _loadPortfolio();
+    _loadDashboardData();
   }
 
-  Future<void> _loadPortfolio() async {
-    final items = await PortfolioService.getPortfolio();
-    if (mounted) {
-      setState(() {
-        _portfolioItems = items;
-        _isLoadingPortfolio = false;
-      });
+  Future<void> _loadDashboardData() async {
+    try {
+      final results = await Future.wait([
+        PortfolioService.getPortfolio().catchError((_) => <PortfolioItemModel>[]),
+        DashboardService.getStats(subRole: 'mua', roleType: 'creator').catchError((_) => <Map<String, String>>[]),
+        DashboardService.getOpportunities(subRole: 'mua').catchError((_) => <OpportunityModel>[]),
+        JobContractService.getUserContracts().catchError((_) => <JobContract>[]),
+      ]);
+
+      final portfolio = results[0] as List<PortfolioItemModel>;
+      final stats = results[1] as List<Map<String, String>>;
+      final opps = results[2] as List<OpportunityModel>;
+      final contracts = results[3] as List<JobContract>;
+
+      final metrics = stats.isNotEmpty
+          ? stats.map((s) => {
+                'label': s['label'] ?? '',
+                'value': s['value'] ?? '0',
+                'sub': 'Statistik terkini',
+                'icon': Icons.face_retouching_natural_outlined,
+                'color': _primaryColor,
+              }).toList()
+          : <Map<String, dynamic>>[];
+
+      final recs = opps.take(4).map((o) => {
+            'title': o.title,
+            'type': o.subRoleSlug.toUpperCase(),
+            'price': o.budgetRange ?? 'Fleksibel',
+            'color': _primaryColor,
+          }).toList();
+
+      final projects = contracts.take(5).map((c) => {
+            'title': c.title,
+            'client': c.clientName.isNotEmpty ? c.clientName : 'Klien Kreavana',
+            'status': c.workStatus,
+          }).toList();
+
+      final agendas = contracts
+          .where((c) => c.scheduledStartDate != null)
+          .take(5)
+          .map((c) => {
+                'title': c.title,
+                'date':
+                    '${c.scheduledStartDate!.day}/${c.scheduledStartDate!.month}',
+                'time':
+                    '${c.scheduledStartDate!.day}/${c.scheduledStartDate!.month}/${c.scheduledStartDate!.year}',
+                'tag': c.workStatus,
+              })
+          .toList();
+
+      if (mounted) {
+        setState(() {
+          _portfolioItems = portfolio;
+          _isLoadingPortfolio = false;
+          _realtimeMetrics = metrics;
+          _realtimeRecs = recs;
+          _realtimeProjects = projects;
+          _realtimeAgendas = agendas;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoadingPortfolio = false);
+      }
     }
   }
 
@@ -485,12 +552,35 @@ class _CreatorMuaDashboardScreenState extends State<CreatorMuaDashboardScreen> {
   }
 
   Widget _buildMetricCards(bool isDark) {
-    final metrics = [];
+    final metrics = _realtimeMetrics;
+
+    if (metrics.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.cardBg : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            'Statistik belum tersedia.',
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+            ),
+          ),
+        ),
+      );
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
-        Widget buildCard(Map<String, Object> m) {
+        Widget buildCard(Map<String, dynamic> m) {
           return Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -527,7 +617,7 @@ class _CreatorMuaDashboardScreenState extends State<CreatorMuaDashboardScreen> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
-                        (m['icon'] as IconData?) ?? Icons.image_outlined,
+                        (m['icon'] as IconData?) ?? Icons.face_retouching_natural_outlined,
                         color: m['color'] as Color,
                         size: 18,
                       ),
@@ -548,7 +638,7 @@ class _CreatorMuaDashboardScreenState extends State<CreatorMuaDashboardScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  m['sub'] as String,
+                  (m['sub'] as String?) ?? '',
                   style: const TextStyle(fontSize: 10, color: Colors.grey),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -587,7 +677,7 @@ class _CreatorMuaDashboardScreenState extends State<CreatorMuaDashboardScreen> {
   }
 
   Widget _buildRecommendationsSection(bool isDark) {
-    final List<Map<String, dynamic>> recs = [];
+    final recs = _realtimeRecs;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -597,90 +687,114 @@ class _CreatorMuaDashboardScreenState extends State<CreatorMuaDashboardScreen> {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        Row(
-          children: recs.map((r) {
-            return Expanded(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: isDark ? AppTheme.cardBg : Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: (r['color'] as Color).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        r['type'] as String,
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          color: r['color'] as Color,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      r['title'] as String,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      r['price'] as String,
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 10),
-                    OutlinedButton(
-                      onPressed: () {
-                        if (r['type'] == 'KOMUNITAS') {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  MitraKomunitasScreen(user: widget.user),
-                            ),
-                          );
-                        } else {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  PeluangProyekScreen(user: widget.user),
-                            ),
-                          );
-                        }
-                      },
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 32),
-                      ),
-                      child: const Text(
-                        'Lihat Detail',
-                        style: TextStyle(fontSize: 10),
-                      ),
-                    ),
-                  ],
+        if (recs.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardBg : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+              ),
+            ),
+            child: Center(
+              child: Text(
+                'Belum ada rekomendasi peluang untuk saat ini.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
                 ),
               ),
-            );
-          }).toList(),
-        ),
+            ),
+          )
+        else
+          Row(
+            children: recs.map((r) {
+              return Expanded(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.cardBg : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color:
+                          isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: (r['color'] as Color).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          r['type'] as String,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: r['color'] as Color,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        r['title'] as String,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        r['price'] as String,
+                        style:
+                            const TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton(
+                        onPressed: () {
+                          if (r['type'] == 'KOMUNITAS') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    MitraKomunitasScreen(user: widget.user),
+                              ),
+                            );
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    PeluangProyekScreen(user: widget.user),
+                              ),
+                            );
+                          }
+                        },
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 32),
+                        ),
+                        child: const Text(
+                          'Lihat Detail',
+                          style: TextStyle(fontSize: 10),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
       ],
     );
   }
@@ -711,7 +825,7 @@ class _CreatorMuaDashboardScreenState extends State<CreatorMuaDashboardScreen> {
   }
 
   Widget _buildProjectsAndActivity(bool isDark) {
-    final List<Map<String, dynamic>> items = [];
+    final items = _realtimeProjects;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -730,61 +844,75 @@ class _CreatorMuaDashboardScreenState extends State<CreatorMuaDashboardScreen> {
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          ...items.map(
-            (i) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 14,
-                    backgroundColor: _primaryColor.withValues(alpha: 0.1),
-                    child: const Icon(
-                      Icons.brush,
-                      color: _primaryColor,
-                      size: 14,
-                    ),
+          if (items.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Text(
+                  'Belum ada proyek atau pekerjaan aktif.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          i['title']!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+          else
+            ...items.map(
+              (i) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 14,
+                      backgroundColor: _primaryColor.withValues(alpha: 0.1),
+                      child: const Icon(
+                        Icons.brush,
+                        color: _primaryColor,
+                        size: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            (i['title'] as String?) ?? '',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          i['client']!,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey,
+                          Text(
+                            (i['client'] as String?) ?? '',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  Text(
-                    i['status']!,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: _primaryColor,
+                    Text(
+                      (i['status'] as String?) ?? '',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: _primaryColor,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
   }
 
   Widget _buildAgendaCalendar(bool isDark) {
-    final List<Map<String, dynamic>> agendas = [];
+    final agendas = _realtimeAgendas;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -803,40 +931,54 @@ class _CreatorMuaDashboardScreenState extends State<CreatorMuaDashboardScreen> {
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          ...agendas.map(
-            (a) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _primaryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      a['date']!,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: _primaryColor,
+          if (agendas.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Text(
+                  'Belum ada agenda jadwal pekerjaan.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                  ),
+                ),
+              ),
+            )
+          else
+            ...agendas.map(
+              (a) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        (a['date'] as String?) ?? '',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: _primaryColor,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      a['title']!,
-                      style: const TextStyle(fontSize: 11),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        (a['title'] as String?) ?? '',
+                        style: const TextStyle(fontSize: 11),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

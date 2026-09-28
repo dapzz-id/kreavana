@@ -20,12 +20,14 @@ class ProfileScreen extends StatefulWidget {
   final UserModel user;
   final ValueChanged<UserModel> onUserUpdated;
   final VoidCallback onLogout;
+  final bool showSidebar;
 
   const ProfileScreen({
     super.key,
     required this.user,
     required this.onUserUpdated,
     required this.onLogout,
+    this.showSidebar = false,
   });
 
   @override
@@ -112,18 +114,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _pickAndUploadAvatar() async {
     try {
+      // ignore: deprecated_member_use
       final result = await FilePicker.pickFiles(
         type: FileType.image,
+        // ignore: deprecated_member_use
         allowMultiple: false,
       );
 
       if (result != null &&
           (result.files.single.path != null ||
+              // ignore: deprecated_member_use
               (kIsWeb && result.files.single.bytes != null))) {
         setState(() => _isLoading = true);
 
         Uint8List fileBytes;
         if (kIsWeb) {
+          // ignore: deprecated_member_use
           fileBytes = result.files.single.bytes!;
         } else {
           final file = io.File(result.files.single.path!);
@@ -303,46 +309,67 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           AppBreadcrumbs(
-                            items: [
-                              BreadcrumbItem(
-                                label: 'Beranda',
-                                icon: Icons.home_rounded,
-                                onTap: () => Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => MainNavigation(
-                                      initialUser: _currentUser,
-                                      initialIndex: 0,
-                                    ),
-                                  ),
-                                  (r) => false,
-                                ),
-                              ),
-                              BreadcrumbItem(
-                                label: 'Pengaturan',
-                                icon: Icons.settings_rounded,
-                                onTap: () {
-                                  if (Navigator.canPop(context)) {
-                                    Navigator.pop(context);
-                                  } else {
-                                    Navigator.pushAndRemoveUntil(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => MainNavigation(
-                                          initialUser: _currentUser,
-                                          initialIndex: 8,
+                            items: _currentUser.isAdmin
+                                ? [
+                                    BreadcrumbItem(
+                                      label: 'Dasbor Admin',
+                                      icon: Icons.admin_panel_settings_rounded,
+                                      onTap: () => Navigator.pushAndRemoveUntil(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => MainNavigation(
+                                            initialUser: _currentUser,
+                                            initialIndex: 0,
+                                          ),
                                         ),
+                                        (r) => false,
                                       ),
-                                      (r) => false,
-                                    );
-                                  }
-                                },
-                              ),
-                              const BreadcrumbItem(
-                                label: 'Profil Saya',
-                                icon: Icons.person_rounded,
-                              ),
-                            ],
+                                    ),
+                                    const BreadcrumbItem(
+                                      label: 'Profil Saya',
+                                      icon: Icons.person_rounded,
+                                    ),
+                                  ]
+                                : [
+                                    BreadcrumbItem(
+                                      label: 'Beranda',
+                                      icon: Icons.home_rounded,
+                                      onTap: () => Navigator.pushAndRemoveUntil(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => MainNavigation(
+                                            initialUser: _currentUser,
+                                            initialIndex: 0,
+                                          ),
+                                        ),
+                                        (r) => false,
+                                      ),
+                                    ),
+                                    BreadcrumbItem(
+                                      label: 'Pengaturan',
+                                      icon: Icons.settings_rounded,
+                                      onTap: () {
+                                        if (Navigator.canPop(context)) {
+                                          Navigator.pop(context);
+                                        } else {
+                                          Navigator.pushAndRemoveUntil(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => MainNavigation(
+                                                initialUser: _currentUser,
+                                                initialIndex: 8,
+                                              ),
+                                            ),
+                                            (r) => false,
+                                          );
+                                        }
+                                      },
+                                    ),
+                                    const BreadcrumbItem(
+                                      label: 'Profil Saya',
+                                      icon: Icons.person_rounded,
+                                    ),
+                                  ],
                           ),
                           const SizedBox(height: 12),
                           isDesktop
@@ -378,22 +405,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
     );
 
-    final isInstitution = const [
-      'institution',
-      'government',
-      'pemerintah',
-      'instansi',
-    ].contains(_currentUser.subRole);
-    if (isDesktop && !_currentUser.isAdmin && !isInstitution) {
-      final isGov =
-          (_currentUser.role == 'user' || _currentUser.role == 'creator') &&
-          (_currentUser.subRole == 'government' ||
-              _currentUser.subRole == 'institution' ||
-              _currentUser.subRole == 'pemerintah' ||
-              _currentUser.subRole == 'instansi');
+    final isGovOrSchool =
+        (_currentUser.role == 'user' || _currentUser.role == 'creator') &&
+        const [
+          'government',
+          'pemerintah',
+          'instansi',
+          'school',
+          'education',
+          'campus',
+          'sekolah',
+          'kampus',
+          'institution',
+          'institusi',
+        ].contains(_currentUser.subRole?.toLowerCase().trim());
+
+    if (isDesktop && widget.showSidebar && !_currentUser.isAdmin) {
       return DesktopSidebarLayout(
         user: _currentUser,
-        activeRoute: isGov ? 'profil_instansi' : 'pengaturan',
+        activeRoute: isGovOrSchool ? 'profil_instansi' : 'pengaturan',
         onUserUpdated: (u) {
           setState(() => _currentUser = u);
           widget.onUserUpdated(u);

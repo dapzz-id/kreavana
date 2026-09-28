@@ -20,7 +20,7 @@ class AdminCreatorServiceController extends Controller
         ]);
 
         $services = CreatorService::query()
-            ->with('creator:id,name,username,email')
+            ->with('creator:id,name,username,email,avatar_url,sub_role')
             ->whereIn('category', [self::EO_PACKAGE_CATEGORY, self::CREATOR_PACKAGE_CATEGORY])
             ->when($validated['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($validated['package_type'] ?? null, fn ($query, $packageType) => $query->where('package_type', $packageType))

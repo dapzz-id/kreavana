@@ -10,6 +10,10 @@ import '../../../screens/notifications_screen.dart';
 import '../../../services/badge_service.dart';
 import '../../../screens/proyek_saya_screen.dart';
 import '../../../screens/profile_screen.dart';
+import '../../../services/job_contract_service.dart';
+import '../../../models/job_contract.dart';
+import '../../../services/api_service.dart';
+import '../services/dashboard_service.dart';
 
 class WoDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -30,6 +34,157 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
 
   static const Color _woPink = Color(0xFFA855F7);
 
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _metrics = [];
+  List<Map<String, dynamic>> _projects = [];
+  List<Map<String, dynamic>> _vendors = [];
+  List<Map<String, dynamic>> _activities = [];
+  Map<String, int> _statusCounts = {
+    'Akan Datang': 0,
+    'Sedang Berjalan': 0,
+    'Dalam Persiapan': 0,
+    'Selesai': 0,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWoData();
+  }
+
+  Future<void> _loadWoData() async {
+    try {
+      final results = await Future.wait([
+        JobContractService.getUserContracts().catchError((_) => <JobContract>[]),
+        DashboardService.getStats(subRole: 'wedding_organizer', roleType: 'creator').catchError((_) => <Map<String, String>>[]),
+        ApiService.get('client-dashboard/overview', queryParams: {'role_type': 'creator'}).catchError((_) => <String, dynamic>{}),
+      ]);
+
+      final contracts = results[0] as List<JobContract>;
+      final stats = results[1] as List<Map<String, String>>;
+      final overviewRes = results[2] as Map<String, dynamic>;
+      final overview = (overviewRes['data'] as Map<String, dynamic>?) ?? {};
+
+      int upcoming = 0;
+      int inProgress = 0;
+      int prep = 0;
+      int completed = 0;
+
+      final loadedProjects = <Map<String, dynamic>>[];
+      for (final c in contracts) {
+        double progress;
+        switch (c.workStatus.toLowerCase()) {
+          case 'in_progress':
+            progress = 0.65;
+            inProgress++;
+            break;
+          case 'review':
+          case 'pending':
+            progress = 0.35;
+            prep++;
+            break;
+          case 'completed':
+            progress = 1.0;
+            completed++;
+            break;
+          default:
+            progress = 0.10;
+            upcoming++;
+        }
+        loadedProjects.add({
+          'title': c.title,
+          'date': c.scheduledStartDate != null
+              ? '${c.scheduledStartDate!.day}/${c.scheduledStartDate!.month}/${c.scheduledStartDate!.year}'
+              : 'Jadwal Ditentukan',
+          'progress': progress,
+        });
+      }
+
+      final loadedVendors = <Map<String, dynamic>>[];
+      final vendorList = overview['vendor_recommendations'] as List<dynamic>? ?? [];
+      for (final v in vendorList) {
+        if (v is Map<String, dynamic>) {
+          loadedVendors.add({
+            'name': (v['name'] ?? v['user_name'] ?? 'Vendor').toString(),
+            'cat': (v['category'] ?? v['sub_role'] ?? 'Vendor Layanan').toString(),
+            'rating': (v['rating'] ?? '4.9').toString(),
+          });
+        }
+      }
+
+      final loadedActivities = <Map<String, dynamic>>[];
+      final actList = overview['activity_feed'] as List<dynamic>? ?? [];
+      for (final a in actList) {
+        if (a is Map<String, dynamic>) {
+          loadedActivities.add({
+            'title': (a['title'] ?? a['message'] ?? 'Aktivitas sistem').toString(),
+            'time': (a['created_at_human'] ?? a['time'] ?? 'Baru saja').toString(),
+          });
+        }
+      }
+
+      final totalEventVal = stats.isNotEmpty
+          ? (stats.firstWhere(
+                (s) =>
+                    s['label']?.toLowerCase().contains('event') == true ||
+                    s['label']?.toLowerCase().contains('wedding') == true ||
+                    s['label']?.toLowerCase().contains('proyek') == true,
+                orElse: () => {'value': contracts.length.toString()},
+              )['value'] ??
+              contracts.length.toString())
+          : contracts.length.toString();
+
+      final loadedMetrics = [
+        {
+          'label': 'Total Wedding',
+          'value': totalEventVal,
+          'sub': '${contracts.length} paket/klien terdaftar',
+          'icon': Icons.favorite_rounded,
+          'color': _woPink,
+        },
+        {
+          'label': 'Sedang Berjalan',
+          'value': inProgress.toString(),
+          'sub': 'Persiapan & Hari-H',
+          'icon': Icons.hourglass_top_rounded,
+          'color': const Color(0xFF10B981),
+        },
+        {
+          'label': 'Mitra Vendor',
+          'value': loadedVendors.length.toString(),
+          'sub': '${loadedVendors.length} mitra aktif',
+          'icon': Icons.handshake_outlined,
+          'color': const Color(0xFFF59E0B),
+        },
+        {
+          'label': 'Omset Penjualan',
+          'value': overview['summary']?['estimated_expenses']?.toString() ?? 'Rp 0',
+          'sub': 'Total transaksi aktif',
+          'icon': Icons.account_balance_wallet_outlined,
+          'color': const Color(0xFF3B82F6),
+        },
+      ];
+
+      if (mounted) {
+        setState(() {
+          _projects = loadedProjects;
+          _vendors = loadedVendors;
+          _activities = loadedActivities;
+          _metrics = loadedMetrics;
+          _statusCounts = {
+            'Akan Datang': upcoming,
+            'Sedang Berjalan': inProgress,
+            'Dalam Persiapan': prep,
+            'Selesai': completed,
+          };
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -39,8 +194,10 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
 
     return Scaffold(
       appBar: _buildAppBar(isDark),
-      body: RefreshIndicator(
-        onRefresh: () async {},
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _loadWoData,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
@@ -235,7 +392,30 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
   }
 
   Widget _buildMetricCards(bool isDark) {
-    final metrics = [];
+    final metrics = _metrics;
+
+    if (metrics.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.cardBg : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            'Statistik belum tersedia.',
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+            ),
+          ),
+        ),
+      );
+    }
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,7 +462,7 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  m['sub'] as String,
+                  (m['sub'] as String?) ?? '',
                   style: const TextStyle(fontSize: 10, color: Colors.grey),
                 ),
               ],
@@ -295,7 +475,7 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
 
   Widget _buildTopThreeColumns(bool isDark) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth > 700) {
+    if (screenWidth > 900) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -366,6 +546,17 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
   }
 
   Widget _buildDonutChartCard(bool isDark) {
+    final total = _statusCounts.values.fold<int>(0, (a, b) => a + b);
+    final upcomingCount = _statusCounts['Akan Datang'] ?? 0;
+    final inProgressCount = _statusCounts['Sedang Berjalan'] ?? 0;
+    final prepCount = _statusCounts['Dalam Persiapan'] ?? 0;
+    final completedCount = _statusCounts['Selesai'] ?? 0;
+
+    final upcomingPct = total > 0 ? (upcomingCount / total) * 100 : 0.0;
+    final inProgressPct = total > 0 ? (inProgressCount / total) * 100 : 0.0;
+    final prepPct = total > 0 ? (prepCount / total) * 100 : 0.0;
+    final completedPct = total > 0 ? (completedCount / total) * 100 : 0.0;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -389,40 +580,69 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
               PieChartData(
                 sectionsSpace: 2,
                 centerSpaceRadius: 35,
-                sections: [
-                  PieChartSectionData(
-                    value: 33.3,
-                    color: _woPink,
-                    radius: 18,
-                    showTitle: false,
-                  ),
-                  PieChartSectionData(
-                    value: 33.3,
-                    color: const Color(0xFF10B981),
-                    radius: 18,
-                    showTitle: false,
-                  ),
-                  PieChartSectionData(
-                    value: 22.2,
-                    color: const Color(0xFFF59E0B),
-                    radius: 18,
-                    showTitle: false,
-                  ),
-                  PieChartSectionData(
-                    value: 11.1,
-                    color: Colors.grey,
-                    radius: 18,
-                    showTitle: false,
-                  ),
-                ],
+                sections: total == 0
+                    ? [
+                        PieChartSectionData(
+                          value: 100,
+                          color: isDark ? Colors.white12 : Colors.grey.shade200,
+                          radius: 18,
+                          showTitle: false,
+                        ),
+                      ]
+                    : [
+                        if (upcomingCount > 0)
+                          PieChartSectionData(
+                            value: upcomingPct,
+                            color: _woPink,
+                            radius: 18,
+                            showTitle: false,
+                          ),
+                        if (inProgressCount > 0)
+                          PieChartSectionData(
+                            value: inProgressPct,
+                            color: const Color(0xFF10B981),
+                            radius: 18,
+                            showTitle: false,
+                          ),
+                        if (prepCount > 0)
+                          PieChartSectionData(
+                            value: prepPct,
+                            color: const Color(0xFFF59E0B),
+                            radius: 18,
+                            showTitle: false,
+                          ),
+                        if (completedCount > 0)
+                          PieChartSectionData(
+                            value: completedPct,
+                            color: Colors.grey,
+                            radius: 18,
+                            showTitle: false,
+                          ),
+                      ],
               ),
             ),
           ),
           const SizedBox(height: 12),
-          _buildCatRow('Akan Datang', '6 (33.3%)', _woPink),
-          _buildCatRow('Sedang Berjalan', '6 (33.3%)', const Color(0xFF10B981)),
-          _buildCatRow('Dalam Persiapan', '4 (22.2%)', const Color(0xFFF59E0B)),
-          _buildCatRow('Selesai', '2 (11.1%)', Colors.grey),
+          _buildCatRow(
+            'Akan Datang',
+            '$upcomingCount (${upcomingPct.toStringAsFixed(1)}%)',
+            _woPink,
+          ),
+          _buildCatRow(
+            'Sedang Berjalan',
+            '$inProgressCount (${inProgressPct.toStringAsFixed(1)}%)',
+            const Color(0xFF10B981),
+          ),
+          _buildCatRow(
+            'Dalam Persiapan',
+            '$prepCount (${prepPct.toStringAsFixed(1)}%)',
+            const Color(0xFFF59E0B),
+          ),
+          _buildCatRow(
+            'Selesai',
+            '$completedCount (${completedPct.toStringAsFixed(1)}%)',
+            Colors.grey,
+          ),
         ],
       ),
     );
@@ -450,7 +670,7 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
   }
 
   Widget _buildActiveProjectsCard(bool isDark) {
-    final List<Map<String, dynamic>> projects = [];
+    final projects = _projects;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -491,52 +711,76 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          ...projects.map(
-            (p) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: _woPink.withValues(alpha: 0.1),
-                    child: const Icon(
-                      Icons.favorite_border,
-                      color: _woPink,
-                      size: 18,
+          if (projects.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.assignment_outlined,
+                      size: 36,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          p['title'] as String,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
+                    const SizedBox(height: 8),
+                    Text(
+                      'Belum ada proyek wedding aktif.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ...projects.map(
+              (p) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: _woPink.withValues(alpha: 0.1),
+                      child: const Icon(
+                        Icons.favorite_border,
+                        color: _woPink,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            p['title'] as String,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          p['date'] as String,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey,
+                          Text(
+                            p['date'] as String,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  Text(
-                    '${((p['progress'] as double) * 100).round()}%',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                    Text(
+                      '${((p['progress'] as double) * 100).round()}%',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -585,26 +829,26 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          _buildActItem(
-            'Pembayaran invoice #INV-2025-064 sebesar Rp 18.750.000',
-            '1 jam lalu',
-          ),
-          _buildActItem(
-            'Vendor Decoration House menerima penawaran Anda',
-            '3 jam lalu',
-          ),
-          _buildActItem(
-            'Proyek Wedding Nadia & Faisal diperbarui',
-            '5 jam lalu',
-          ),
-          _buildActItem(
-            'Task "Final Meeting dengan Klien" selesai',
-            '1 hari lalu',
-          ),
-          _buildActItem(
-            'Vendor Lighting Pro ditambahkan ke favorit',
-            '1 hari lalu',
-          ),
+          if (_activities.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Text(
+                  'Belum ada log aktivitas tercatat.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                  ),
+                ),
+              ),
+            )
+          else
+            ..._activities.map(
+              (a) => _buildActItem(
+                a['title'] as String,
+                a['time'] as String,
+              ),
+            ),
         ],
       ),
     );
@@ -629,7 +873,7 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
   }
 
   Widget _buildTopVendorsCard(bool isDark) {
-    final List<Map<String, dynamic>> vendors = [];
+    final vendors = _vendors;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -648,56 +892,70 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          ...vendors.map(
-            (v) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: _woPink.withValues(alpha: 0.1),
-                    child: Text(
-                      v['name']![0],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+          if (vendors.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Text(
+                  'Belum ada mitra vendor terhubung.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                  ),
+                ),
+              ),
+            )
+          else
+            ...vendors.map(
+              (v) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: _woPink.withValues(alpha: 0.1),
+                      child: Text(
+                        (v['name'] as String? ?? 'V')[0],
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          v['name']!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            (v['name'] as String?) ?? 'Vendor',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          v['cat']!,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey,
+                          Text(
+                            (v['cat'] as String?) ?? 'Layanan',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  Icon(Icons.star, size: 14, color: Colors.amber.shade600),
-                  Text(
-                    v['rating']!,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                    Icon(Icons.star, size: 14, color: Colors.amber.shade600),
+                    Text(
+                      (v['rating'] as String?) ?? '4.9',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
