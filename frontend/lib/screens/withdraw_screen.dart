@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../services/wallet_service.dart';
+import '../services/api_service.dart';
 import '../app/theme.dart';
 
 class WithdrawScreen extends StatefulWidget {
@@ -21,17 +22,23 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
   final _amountController = TextEditingController();
   final _accountController = TextEditingController();
   bool _isLoading = false;
+  bool _isLoadingProviders = false;
+  bool _isLoadingFees = false;
 
   String _selectedMethod = 'bank_transfer'; // bank_transfer, e_wallet
-  String _selectedProvider = 'BCA';
+  String _selectedProvider = '';
 
   final List<double> _quickAmounts = [50000, 100000, 200000, 500000, 1000000];
 
-  final List<Map<String, String>> _banks = [];
+  final List<Map<String, dynamic>> _banks = [];
 
-  final List<Map<String, String>> _ewallets = [];
+  final List<Map<String, dynamic>> _ewallets = [];
 
   double _amount = 0.0;
+  double _feePercent = 0.0;
+  double _feeFlat = 0.0;
+  double _minFee = 0.0;
+  double? _maxFee;
   double _tax = 0.0;
   double _netAmount = 0.0;
 
@@ -39,6 +46,8 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
   void initState() {
     super.initState();
     _amountController.addListener(_updateCalculations);
+    _loadPaymentProviders();
+    _loadWalletFees();
   }
 
   @override
@@ -49,12 +58,71 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     super.dispose();
   }
 
+  Future<void> _loadWalletFees() async {
+    setState(() => _isLoadingFees = true);
+    try {
+      final res = await ApiService.get(
+        'wallet/fees',
+        queryParams: {'transaction_type': 'withdraw'},
+      );
+      if (res['status'] == true && res['data'] != null) {
+        final data = Map<String, dynamic>.from(res['data']);
+        final fees = List<dynamic>.from(data['fees'] ?? []);
+        if (fees.isNotEmpty) {
+          final withdrawFee = Map<String, dynamic>.from(fees.first);
+          setState(() {
+            _feePercent = (withdrawFee['fee_percent'] as num?)?.toDouble() ?? 5.0;
+            _feeFlat = (withdrawFee['fee_flat_amount'] as num?)?.toDouble() ?? 0.0;
+            _minFee = (withdrawFee['min_fee'] as num?)?.toDouble() ?? 0.0;
+            _maxFee = (withdrawFee['max_fee'] as num?)?.toDouble();
+          });
+        }
+      }
+    } catch (_) {
+      if (_feePercent == 0.0) {
+        setState(() => _feePercent = 5.0);
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingFees = false);
+    }
+  }
+
+  Future<void> _loadPaymentProviders() async {
+    setState(() => _isLoadingProviders = true);
+    try {
+      final res = await ApiService.get('payment-providers');
+      if (res['status'] == true && res['data'] != null) {
+        final list = List<Map<String, dynamic>>.from(res['data']);
+        final banks = list
+            .where((p) => p['type'] == 'bank' && p['is_active'] == true)
+            .toList();
+        final ewallets = list
+            .where((p) => p['type'] == 'ewallet' && p['is_active'] == true)
+            .toList();
+        setState(() {
+          _banks.clear();
+          _ewallets.clear();
+          _banks.addAll(banks);
+          _ewallets.addAll(ewallets);
+          final defaultList = _selectedMethod == 'bank_transfer' ? _banks : _ewallets;
+          _selectedProvider = defaultList.isNotEmpty ? defaultList.first['code'] as String? ?? '' : '';
+        });
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isLoadingProviders = false);
+    }
+  }
+
   void _updateCalculations() {
     final amountText = _amountController.text.trim();
     final parsedAmount = double.tryParse(amountText) ?? 0.0;
     setState(() {
       _amount = parsedAmount;
-      _tax = _amount * 0.05; // 5% Pajak Platform
+      var tax = (_amount * (_feePercent / 100)) + _feeFlat;
+      if (_minFee > 0 && tax < _minFee) tax = _minFee;
+      if (_maxFee != null && _maxFee! > 0 && tax > _maxFee!) tax = _maxFee!;
+      _tax = tax;
       _netAmount = _amount - _tax;
       if (_netAmount < 0) _netAmount = 0;
     });

@@ -1,4 +1,5 @@
 import 'api_service.dart';
+import 'system_settings_service.dart';
 import '../models/user_model.dart';
 
 class AdminService {
@@ -69,9 +70,12 @@ class AdminService {
         'admin/applications/$id/approve',
         {},
       );
+      if (response['status'] == true) {
+        response['success'] = true;
+      }
       return response;
     } catch (e) {
-      return {'success': false, 'message': e.toString()};
+      return {'success': false, 'status': false, 'message': e.toString()};
     }
   }
 
@@ -84,9 +88,12 @@ class AdminService {
       final response = await ApiService.post('admin/applications/$id/reject', {
         'admin_note': note,
       });
+      if (response['status'] == true) {
+        response['success'] = true;
+      }
       return response;
     } catch (e) {
-      return {'success': false, 'message': e.toString()};
+      return {'success': false, 'status': false, 'message': e.toString()};
     }
   }
 
@@ -146,6 +153,109 @@ class AdminService {
       return response;
     } catch (e) {
       return {'status': false, 'message': e.toString()};
+    }
+  }
+
+  /// Mengambil daftar modul sistem dan status aktif/nonaktifnya
+  static Future<List<Map<String, dynamic>>> getModules() async {
+    try {
+      final response = await ApiService.get('admin/modules');
+      if (response['status'] == true && response['data'] is List) {
+        return List<Map<String, dynamic>>.from(response['data']);
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Mengubah status aktif/nonaktif sebuah modul
+  static Future<Map<String, dynamic>> updateModule(
+    String key,
+    bool enabled,
+  ) async {
+    try {
+      final response = await ApiService.put('admin/modules/$key', {
+        'enabled': enabled,
+      });
+      if (response['status'] == true) {
+        SystemSettingsService.updateLocalModule(key, enabled);
+      }
+      return response;
+    } catch (e) {
+      return {'status': false, 'message': e.toString()};
+    }
+  }
+
+  /// Mengambil konfigurasi AI Engine aktif
+  static Future<Map<String, dynamic>?> getAiConfig() async {
+    try {
+      final response = await ApiService.get('admin/ai-config');
+      if (response['status'] == true && response['data'] != null) {
+        return Map<String, dynamic>.from(response['data']);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Memperbarui konfigurasi AI Engine (Provider, API Key, Model, Suhu, dll)
+  static Future<Map<String, dynamic>> updateAiConfig({
+    required String provider,
+    String? apiKey,
+    required String model,
+    double? temperature,
+    int? maxTokens,
+    String? systemPrompt,
+    String? customEndpoint,
+  }) async {
+    try {
+      final response = await ApiService.post('admin/ai-config', {
+        'provider': provider,
+        if (apiKey != null && apiKey.isNotEmpty) 'api_key': apiKey,
+        'model': model,
+        if (temperature != null) 'temperature': temperature,
+        if (maxTokens != null) 'max_tokens': maxTokens,
+        if (systemPrompt != null) 'system_prompt': systemPrompt,
+        if (customEndpoint != null) 'custom_endpoint': customEndpoint,
+      });
+      return response;
+    } catch (e) {
+      return {'status': false, 'message': e.toString()};
+    }
+  }
+
+  /// Menguji koneksi AI ke provider yang dipilih
+  static Future<Map<String, dynamic>> testAiConnection({
+    required String provider,
+    required String model,
+    String? apiKey,
+    String? customEndpoint,
+  }) async {
+    try {
+      final response = await ApiService.post('admin/ai-config/test', {
+        'provider': provider,
+        'model': model,
+        if (apiKey != null && apiKey.isNotEmpty) 'api_key': apiKey,
+        if (customEndpoint != null && customEndpoint.isNotEmpty)
+          'custom_endpoint': customEndpoint,
+      });
+      return response;
+    } catch (e) {
+      return {'status': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getDashboardSummary() async {
+    try {
+      final response = await ApiService.get('admin/stats/summary');
+      if (response['status'] == true && response['data'] != null) {
+        return Map<String, dynamic>.from(response['data']);
+      }
+      return {};
+    } catch (e) {
+      return {};
     }
   }
 }

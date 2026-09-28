@@ -17,6 +17,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             UserSeeder::class,
+            PaymentProviderSeeder::class,
+            WalletFeeSeeder::class,
             CreatorPortfolioSeeder::class,
             CreatorServiceSeeder::class,
             CreatorScheduleSeeder::class,
@@ -26,6 +28,10 @@ class DatabaseSeeder extends Seeder
             RemainingTablesSeeder::class,
             OpportunityLocationSeeder::class,
             DashboardMockSeeder::class,
+            ReviewSeeder::class,
+            CreatorReviewsSeeder::class,
+            InstitutionResourceSeeder::class,
+            CollaborationSeeder::class,
         ]);
     }
 }

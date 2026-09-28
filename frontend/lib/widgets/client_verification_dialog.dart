@@ -1,9 +1,11 @@
-import 'dart:convert';
+import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../app/theme.dart';
 import '../services/verification_service.dart';
 import '../utils/app_errors.dart';
+import '../utils/image_compressor.dart';
 
 class ClientVerificationDialog extends StatefulWidget {
   final VoidCallback? onSuccess;
@@ -62,12 +64,20 @@ class _ClientVerificationDialogState extends State<ClientVerificationDialog> {
 
     if (result != null && result.files.isNotEmpty) {
       final file = result.files.first;
-      if (file.bytes != null) {
-        final b64 = 'data:image/${file.extension ?? 'jpg'};base64,${base64Encode(file.bytes!)}';
-        setState(() {
-          _ktpFile = file;
-          _ktpBase64 = b64;
-        });
+      Uint8List? bytes = file.bytes;
+      if (bytes == null && file.path != null) {
+        try {
+          bytes = await XFile(file.path!).readAsBytes();
+        } catch (_) {}
+      }
+      if (bytes != null) {
+        final b64 = await ImageCompressor.compressToBase64(bytes);
+        if (mounted) {
+          setState(() {
+            _ktpFile = file;
+            _ktpBase64 = b64;
+          });
+        }
       }
     }
   }
@@ -81,12 +91,20 @@ class _ClientVerificationDialogState extends State<ClientVerificationDialog> {
 
     if (result != null && result.files.isNotEmpty) {
       final file = result.files.first;
-      if (file.bytes != null) {
-        final b64 = 'data:image/${file.extension ?? 'jpg'};base64,${base64Encode(file.bytes!)}';
-        setState(() {
-          _selfieFile = file;
-          _selfieBase64 = b64;
-        });
+      Uint8List? bytes = file.bytes;
+      if (bytes == null && file.path != null) {
+        try {
+          bytes = await XFile(file.path!).readAsBytes();
+        } catch (_) {}
+      }
+      if (bytes != null) {
+        final b64 = await ImageCompressor.compressToBase64(bytes);
+        if (mounted) {
+          setState(() {
+            _selfieFile = file;
+            _selfieBase64 = b64;
+          });
+        }
       }
     }
   }

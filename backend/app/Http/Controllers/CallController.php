@@ -8,6 +8,7 @@ use App\Events\CallSignaling;
 use App\Models\User;
 use App\Traits\ApiResponse;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class CallController extends Controller
 {
@@ -25,11 +26,18 @@ class CallController extends Controller
 
         $data = $request->data ?? [];
         if ($request->type === 'offer') {
+            $isVideo = isset($request->data['video']) && ($request->data['video'] === true || $request->data['video'] === 'true' || $request->data['video'] === 1);
+            if ($isVideo && !\App\Models\SystemSetting::get('video_call_enabled', true)) {
+                return $this->errorResponse('Fitur Panggilan Video (Video Call) sedang dinonaktifkan oleh administrator.', 403);
+            }
+            if (!$isVideo && !\App\Models\SystemSetting::get('voice_call_enabled', true)) {
+                return $this->errorResponse('Fitur Panggilan Suara (Voice Call) sedang dinonaktifkan oleh administrator.', 403);
+            }
+
             $data['callerName'] = $caller->name;
             $data['callerAvatar'] = $caller->avatar_url ?? '';
             
             // Inject authoritative duration from backend
-            $isVideo = isset($request->data['video']) && $request->data['video'] === true;
             $data['max_duration'] = $isVideo 
                 ? $caller->max_video_call_duration_seconds 
                 : $caller->max_voice_call_duration_seconds;
@@ -48,6 +56,58 @@ class CallController extends Controller
         }
 
         return $this->successResponse('Signal berhasil dikirim');
+    }
+
+    /**
+     * Get time-limited TURN credentials using HMAC-based REST API auth.
+     * Uses Coturn `use-auth-secret` mechanism. Expiry 6 hours by default.
+     */
+    public function getTurnCredentials(Request $request)
+    {
+        $user = $request->user();
+        $turnSecret = env('TURN_SECRET', 'kreavana_default_secret_change_in_prod');
+        $turnHost = env('TURN_HOST', $request->getHost());
+        $turnPort = (int) env('TURN_PORT', 3478);
+        $ttlSeconds = (int) env('TURN_TOKEN_TTL', 21600); // 6 hours
+
+        $expiry = time() + $ttlSeconds;
+        $username = "{$expiry}:user_{$user->id}";
+
+        if (!function_exists('hash_hmac')) {
+            return $this->errorResponse('hash_hmac tidak tersedia di server PHP.', 500);
+        }
+
+        $hmac = hash_hmac('sha1', $username, $turnSecret, true);
+        $password = base64_encode($hmac);
+
+        $iceServers = [
+            [
+                'urls' => "stun:{$turnHost}:{$turnPort}",
+            ],
+            [
+                'urls' => [
+                    "turn:{$turnHost}:{$turnPort}",
+                    "turn:{$turnHost}:{$turnPort}?transport=tcp",
+                ],
+                'username' => $username,
+                'credential' => $password,
+            ],
+        ];
+
+        // Cache for a bit less than TTL to avoid repeated generation
+        Cache::put("turn:token:user_{$user->id}", [
+            'username' => $username,
+            'password' => $password,
+        ], (int) ($ttlSeconds * 0.9));
+
+        return $this->successResponse('TURN credentials berhasil diambil', [
+            'ice_servers' => $iceServers,
+            'username'    => $username,
+            'password'    => $password,
+            'ttl_seconds' => $ttlSeconds,
+            'stun_host'   => "stun:{$turnHost}:{$turnPort}",
+            'turn_host'   => "turn:{$turnHost}:{$turnPort}",
+        ]);
     }
 
     /**

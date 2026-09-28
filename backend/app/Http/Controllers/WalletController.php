@@ -137,4 +137,41 @@ class WalletController extends Controller
             return $this->errorResponse($e->getMessage(), $e->getCode() ?: 500);
         }
     }
+
+    public function getFees(Request $request)
+    {
+        $type = $request->query('transaction_type');
+        $providerCode = $request->query('payment_provider_code');
+        $amount = $request->query('amount');
+
+        $query = \App\Models\WalletFee::active();
+
+        if ($type) {
+            $query->where(function ($q) use ($type, $providerCode) {
+                $q->forType($type, $providerCode);
+            });
+        }
+
+        $fees = $query
+            ->orderByRaw('payment_provider_code IS NOT NULL DESC')
+            ->orderBy('transaction_type')
+            ->get();
+
+        $response = [
+            'fees' => $fees->toArray(),
+        ];
+
+        if ($amount !== null && $type !== null) {
+            $calcAmount = (float) $amount;
+            $applicable = $fees->firstWhere('transaction_type', $type);
+            if ($applicable === null) {
+                $applicable = $fees->first();
+            }
+            if ($applicable !== null) {
+                $response['calculation'] = $applicable->calculateFee($calcAmount);
+            }
+        }
+
+        return $this->successResponse('Konfigurasi fee wallet berhasil diambil', $response);
+    }
 }

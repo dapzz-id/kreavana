@@ -8,11 +8,11 @@ use App\Http\Controllers\{
     DashboardController, ProfileController, NotificationController,
     CallController, AdminController, OpportunityController, WalletController,
     RoleController, FollowController, MarketplaceController,
-    PaymentMethodController, UserAddressController, AvatarController,
+    PaymentMethodController, PaymentProviderController, UserAddressController, AvatarController,
     PortfolioController, SubscriptionController,
     StorageController, DisputeController, OpportunityReviewController,
     AiController, JobContractController, JobContractTransitionController,
-    MarketingController, AdminSystemSettingController
+    MarketingController, AdminSystemSettingController, CollaborationController
 };
 
 // Public: serve avatar images with CORS headers (for Flutter Web)
@@ -27,9 +27,21 @@ Route::get('portfolio-assets/{file}', [PortfolioController::class, 'showAsset'])
     ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class)
     ->withoutMiddleware(\App\Http\Middleware\TouchLastOnline::class);
 
+// Public: serve verification documents (KTP & Selfie) with CORS headers (for Flutter Web)
+Route::get('verification-assets/{type}/{file}', [ProfileController::class, 'showVerificationAsset'])
+    ->where('file', '.*')
+    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class)
+    ->withoutMiddleware(\App\Http\Middleware\TouchLastOnline::class);
+
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+
+// Public creator profiles & reputation
+Route::prefix('creators')->group(function () {
+    Route::get('{id}/reviews', [OpportunityReviewController::class, 'listCreatorReviews']);
+    Route::get('{id}/reviews/summary', [OpportunityReviewController::class, 'getCreatorReviewSummary']);
+});
 
 // Roles endpoints
 Route::get('roles/creator/sub-roles', [RoleController::class, 'getCreatorSubRoles']);
@@ -38,9 +50,21 @@ Route::get('roles/creator/sub-roles', [RoleController::class, 'getCreatorSubRole
 Route::get('system/module-statuses', [AdminSystemSettingController::class, 'getPublicModuleStatuses'])
     ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
 
+// Reviews & Reputation (Database driven)
+Route::get('reviews', [OpportunityReviewController::class, 'index'])
+    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
+Route::post('reviews/{id}/helpful', [OpportunityReviewController::class, 'helpful'])
+    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
+
+// Payment Providers — public list of supported banks & e-wallets
+Route::prefix('payment-providers')->group(function () {
+    Route::get('/', [PaymentProviderController::class, 'index']);
+    Route::get('{id}', [PaymentProviderController::class, 'show']);
+});
+
 // Auth (Public)
 Route::prefix('auth')->withoutMiddleware(\App\Http\Middleware\ValidateJti::class)->group(function () {
-    Route::post('register', [AuthController::class, 'register'])->middleware('throttle:auth-register');
+    Route::post('register', [AuthController::class, 'register'])->middleware(['throttle:auth-register', 'module:user_registration_enabled']);
     Route::post('login', [AuthController::class, 'login'])->middleware('throttle:auth-login');
     Route::post('refresh', [AuthController::class, 'refresh'])->middleware('throttle:auth-refresh');
     Route::post('user/login', [AuthController::class, 'userLogin'])->middleware('throttle:auth-login');
@@ -105,13 +129,13 @@ Route::middleware('auth:api')->group(function () {
         Route::get('identity', [ProfileController::class, 'identity'])->middleware('permission:view_own_profile');
         Route::get('permissions', [ProfileController::class, 'permissions'])->middleware('permission:view_own_profile');
         Route::get('history', [ProfileController::class, 'history'])->middleware('permission:manage_own_profile');
-        Route::post('apply-creator', [ProfileController::class, 'applyCreator'])->middleware('role:user');
+        Route::post('apply-creator', [ProfileController::class, 'applyCreator'])->middleware(['role:user', 'module:creator_registration_enabled']);
     });
 
     // Verification
     Route::prefix('verification')->group(function () {
         Route::get('status', [ProfileController::class, 'getVerificationStatus']);
-        Route::post('client', [ProfileController::class, 'applyClientVerification'])->middleware('role:user');
+        Route::post('client', [ProfileController::class, 'applyClientVerification'])->middleware(['role:user', 'module:client_verification_enabled']);
     });
 
     // Public User Profile
@@ -133,13 +157,13 @@ Route::middleware('auth:api')->group(function () {
         Route::get('stats', [DashboardController::class, 'stats'])->middleware('permission:view_dashboard');
         Route::get('opportunities', [DashboardController::class, 'opportunities']);
     });
-    Route::get('collaborations', [DashboardController::class, 'collaborations']);
     // Wallet
-    Route::prefix('wallet')->middleware('permission:manage_own_profile')->group(function () {
+    Route::prefix('wallet')->middleware(['permission:manage_own_profile', 'module:wallet_enabled'])->group(function () {
         Route::get('info', [WalletController::class, 'info']);
         Route::get('has-pin', [WalletController::class, 'hasPin']);
         Route::post('set-pin', [WalletController::class, 'setPin']);
         Route::post('verify-pin', [WalletController::class, 'verifyPin']);
+        Route::get('fees', [WalletController::class, 'getFees']);
         Route::post('topup', [WalletController::class, 'topup']);
         Route::post('topup/simulate', [WalletController::class, 'simulatePay']);
         Route::post('transfer', [WalletController::class, 'transfer']);
@@ -174,6 +198,16 @@ Route::middleware('auth:api')->group(function () {
         Route::post('opportunities/{id}/confirm-payment', [MarketingController::class, 'confirmOpportunityPayment']);
     });
 
+    // Collaborations
+    Route::prefix('collaborations')->middleware('module:collaboration_enabled')->group(function () {
+        Route::get('/', [CollaborationController::class, 'index']);
+        Route::post('/', [CollaborationController::class, 'store']);
+        Route::get('{id}', [CollaborationController::class, 'show']);
+        Route::post('{id}/respond', [CollaborationController::class, 'respond']);
+        Route::put('{id}', [CollaborationController::class, 'update']);
+        Route::delete('{id}', [CollaborationController::class, 'destroy']);
+    });
+
     // Job Contracts
     Route::prefix('contracts')->group(function () {
         Route::get('/', [JobContractController::class, 'index']);
@@ -191,8 +225,11 @@ Route::middleware('auth:api')->group(function () {
         Route::delete('/', [NotificationController::class, 'destroyAll']);
     });
 
-    // Call Signaling
-    Route::post('call/signal', [CallController::class, 'signal']);
+    // Call Signaling & TURN credentials
+    Route::prefix('call')->group(function () {
+        Route::post('signal', [CallController::class, 'signal']);
+        Route::post('turn-credentials', [CallController::class, 'getTurnCredentials']);
+    });
 
     // Unread counts (combined - optimized single query)
     Route::get('unread-count', function (Request $request) {
@@ -229,7 +266,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('user/devices', [UserController::class, 'registerDevice'])->middleware('permission:use_chat');
 
     // Chats
-    Route::prefix('chats')->middleware('permission:use_chat')->group(function () {
+    Route::prefix('chats')->middleware(['permission:use_chat', 'module:direct_message_enabled'])->group(function () {
         Route::get('/', [ChatController::class, 'index']);
         Route::get('unread-count', [ChatController::class, 'unreadCount']);
         Route::post('personal', [ChatController::class, 'startPersonalChat']);
@@ -269,6 +306,7 @@ Route::middleware('auth:api')->group(function () {
 
     // Admin
     Route::prefix('admin')->middleware('role:admin')->group(function () {
+        Route::get('stats/summary', [AdminController::class, 'getDashboardSummary']);
         Route::get('applications', [AdminController::class, 'getApplications']);
         Route::post('applications/{id}/approve', [AdminController::class, 'approveApplication']);
         Route::post('applications/{id}/reject', [AdminController::class, 'rejectApplication']);
@@ -316,7 +354,7 @@ Route::middleware('auth:api')->group(function () {
     });
 
     // Marketplace (write operations)
-    Route::prefix('marketplace')->group(function () {
+    Route::prefix('marketplace')->middleware('module:marketplace_enabled')->group(function () {
         Route::post('/', [MarketplaceController::class, 'store']);
         Route::put('{id}', [MarketplaceController::class, 'update']);
         Route::delete('{id}', [MarketplaceController::class, 'destroy']);
@@ -358,7 +396,7 @@ Route::middleware('auth:api')->group(function () {
     });
 
     // AI Service (Protected)
-    Route::prefix('ai')->group(function () {
+    Route::prefix('ai')->middleware('module:ai_features_enabled')->group(function () {
         Route::post('summarize-report', [AiController::class, 'summarizeReport']);
         Route::post('recommendations', [AiController::class, 'getRecommendations']);
         Route::post('message-assistant', [AiController::class, 'messageAssistant']);
@@ -377,7 +415,7 @@ Route::get('storage/{id}/view', [StorageController::class, 'view']);
 Route::get('storage/{id}/download', [StorageController::class, 'download']);
 
 // Marketplace (public read)
-Route::prefix('marketplace')->group(function () {
+Route::prefix('marketplace')->middleware('module:marketplace_enabled')->group(function () {
     Route::get('/', [MarketplaceController::class, 'index']);
     Route::get('featured', [MarketplaceController::class, 'featured']);
     Route::get('categories', [MarketplaceController::class, 'categories']);
@@ -415,7 +453,7 @@ Route::prefix('opportunities')->group(function () {
 
 // Public Client Dashboard Overview (Guest Browsing)
 Route::get('client-dashboard/overview', [DashboardController::class, 'overview']);
-Route::get('collaborations', [DashboardController::class, 'collaborations']);
+Route::get('collaborations', [CollaborationController::class, 'index']);
 
 
 

@@ -238,6 +238,8 @@ class SubRoleCategory {
 class CreatorApplication {
   final String? id;
   final String? userId;
+  final String? userName;
+  final String? userEmail;
   final String subRoleCategory;
   final String skillDescription;
   final String? portfolioLink;
@@ -260,6 +262,8 @@ class CreatorApplication {
   CreatorApplication({
     this.id,
     this.userId,
+    this.userName,
+    this.userEmail,
     this.type = 'creator_upgrade',
     required this.subRoleCategory,
     required this.skillDescription,
@@ -286,6 +290,8 @@ class CreatorApplication {
     return CreatorApplication(
       id: json['id']?.toString(),
       userId: json['user_id']?.toString(),
+      userName: json['user']?['name'] ?? json['full_name_ktp'],
+      userEmail: json['user']?['email'],
       type: json['type']?.toString() ?? 'creator_upgrade',
       subRoleCategory: json['sub_role_category'] ?? '',
       skillDescription: json['skill_description'] ?? '',
@@ -304,6 +310,56 @@ class CreatorApplication {
       status: json['status'] ?? 'pending',
       adminNote: json['admin_note'],
       appliedAt: json['applied_at'],
+    );
+  }
+
+  CreatorApplication copyWith({
+    String? id,
+    String? userId,
+    String? userName,
+    String? userEmail,
+    String? type,
+    String? subRoleCategory,
+    String? skillDescription,
+    String? portfolioLink,
+    String? experience,
+    String? ktpPhotoUrl,
+    String? selfiePhotoUrl,
+    String? nik,
+    String? fullNameKtp,
+    String? birthPlace,
+    String? birthDate,
+    String? addressKtp,
+    String? nibNumber,
+    String? nibFileUrl,
+    bool? reusedKtp,
+    String? status,
+    String? adminNote,
+    String? appliedAt,
+  }) {
+    return CreatorApplication(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
+      userEmail: userEmail ?? this.userEmail,
+      type: type ?? this.type,
+      subRoleCategory: subRoleCategory ?? this.subRoleCategory,
+      skillDescription: skillDescription ?? this.skillDescription,
+      portfolioLink: portfolioLink ?? this.portfolioLink,
+      experience: experience ?? this.experience,
+      ktpPhotoUrl: ktpPhotoUrl ?? this.ktpPhotoUrl,
+      selfiePhotoUrl: selfiePhotoUrl ?? this.selfiePhotoUrl,
+      nik: nik ?? this.nik,
+      fullNameKtp: fullNameKtp ?? this.fullNameKtp,
+      birthPlace: birthPlace ?? this.birthPlace,
+      birthDate: birthDate ?? this.birthDate,
+      addressKtp: addressKtp ?? this.addressKtp,
+      nibNumber: nibNumber ?? this.nibNumber,
+      nibFileUrl: nibFileUrl ?? this.nibFileUrl,
+      reusedKtp: reusedKtp ?? this.reusedKtp,
+      status: status ?? this.status,
+      adminNote: adminNote ?? this.adminNote,
+      appliedAt: appliedAt ?? this.appliedAt,
     );
   }
 }

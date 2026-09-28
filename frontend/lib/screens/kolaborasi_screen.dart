@@ -25,125 +25,11 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
-  final List<Map<String, dynamic>> _defaultCollabs = [
-    {
-      'id': 'collab-1',
-      'user_id': '01a0d6c1-60a3-727c-b1da-3c7be8aad5bd',
-      'name': 'Dimas Arya',
-      'email': 'dimas.arya@kreavana.id',
-      'username': 'dimas_arya',
-      'role': 'Director & Produser',
-      'avatar': Icons.videocam_rounded,
-      'project': 'Produksi Video Iklan Pariwisata Wonderful Indonesia 2026',
-      'desc':
-          'Membutuhkan drone pilot bersertifikat FPV dan colorist DaVinci untuk shooting di Labuan Bajo & Bali selama 4 hari penuh.',
-      'neededRoles': ['Drone Pilot FPV', 'Colorist DaVinci', 'Audio Recordist'],
-      'budget': 'Rp 18.500.000',
-      'compensationType': 'Bagi Hasil & Fee Tetap',
-      'status': 'Aktif',
-      'statusColor': const Color(0xFF10B981),
-      'membersCount': 4,
-      'maxMembers': 6,
-      'date': '25 Sep - 10 Okt 2026',
-      'location': 'Bali & Labuan Bajo',
-      'tags': ['Cinematic', 'Travel', 'Commercial'],
-    },
-    {
-      'id': 'collab-2',
-      'user_id': '01a0d6c1-620b-70c9-a2c7-ba80501c8f12',
-      'name': 'Sarah Putri',
-      'email': 'sarah.putri@kreavana.id',
-      'username': 'sarah_putri',
-      'role': 'Brand Strategist',
-      'avatar': Icons.palette_rounded,
-      'project': 'Rebranding & Desain Kemasan UMKM Kopi Kintamani',
-      'desc':
-          'Mencari packaging illustrator dan 3D visualizer mockup produk untuk persiapan ekspor pasar Jepang & Australia.',
-      'neededRoles': ['Packaging Designer', '3D Artist', 'Copywriter'],
-      'budget': 'Rp 8.500.000',
-      'compensationType': 'Escrow Kreavana',
-      'status': 'Menunggu',
-      'statusColor': const Color(0xFFF59E0B),
-      'membersCount': 2,
-      'maxMembers': 3,
-      'date': '30 Sep 2026',
-      'location': 'Remote / Bali',
-      'tags': ['Branding', 'Packaging', 'Export'],
-    },
-    {
-      'id': 'collab-3',
-      'user_id': '01a0d6c1-636e-71dd-beb6-a4210fb07ffb',
-      'name': 'Kevin Jonathan',
-      'email': 'kevin.jonathan@kreavana.id',
-      'username': 'kevin_jonathan',
-      'role': 'Fashion Photographer',
-      'avatar': Icons.camera_alt_rounded,
-      'project': 'Photoshoot Editorial Fashion Raya Collection 2026',
-      'desc':
-          'Kolaborasi photoshoot lookbook busana muslim modern bersama brand lokal terkemuka di studio profesional.',
-      'neededRoles': ['MUA Editorial', 'Fashion Stylist', 'Lighting Assistant'],
-      'budget': 'Rp 14.000.000',
-      'compensationType': 'Kontrak Terproteksi',
-      'status': 'Aktif',
-      'statusColor': const Color(0xFF10B981),
-      'membersCount': 5,
-      'maxMembers': 5,
-      'date': '05 Okt 2026',
-      'location': 'Studio Kreavana Jakarta',
-      'tags': ['Fashion', 'Editorial', 'Lookbook'],
-    },
-    {
-      'id': 'collab-4',
-      'user_id': '01a0d6c1-64d5-7196-9c3c-af3580eccef5',
-      'name': 'Aditya Pratama',
-      'email': 'aditya.pratama@kreavana.id',
-      'username': 'aditya_pratama',
-      'role': 'Sound Designer & Composer',
-      'avatar': Icons.music_note_rounded,
-      'project': 'Original Score & Sound Design Film Pendek "Suara Pesisir"',
-      'desc':
-          'Proyek film pendek festival internasional. Membutuhkan pengisi instrumen tradisional dan mixing surround 5.1.',
-      'neededRoles': ['Mixing Engineer', 'Foley Artist'],
-      'budget': 'Rp 7.500.000',
-      'compensationType': 'Royalti & Fee',
-      'status': 'Menunggu',
-      'statusColor': const Color(0xFFF59E0B),
-      'membersCount': 2,
-      'maxMembers': 4,
-      'date': '15 Okt 2026',
-      'location': 'Remote / Yogyakarta',
-      'tags': ['FilmScore', 'Festival', 'Audio'],
-    },
-    {
-      'id': 'collab-5',
-      'user_id': '01a0d6c1-663b-7084-aaa9-b49fa038ad6c',
-      'name': 'Nabila Zahra',
-      'email': 'nabila.zahra@kreavana.id',
-      'username': 'nabila_zahra',
-      'role': 'Social Media Specialist',
-      'avatar': Icons.campaign_rounded,
-      'project': 'Campaign Konten Tiktok & Reels Kuliner Nusantara',
-      'desc':
-          'Produksi 30 video konten pendek review kuliner khas nusantara untuk sponsor e-commerce terkemuka.',
-      'neededRoles': ['Content Creator', 'Video Editor CapCut'],
-      'budget': 'Rp 12.000.000',
-      'compensationType': 'Selesai Dibayarkan',
-      'status': 'Selesai',
-      'statusColor': const Color(0xFF6B7280),
-      'membersCount': 4,
-      'maxMembers': 4,
-      'date': 'Selesai 10 Sep 2026',
-      'location': 'Jakarta & Bandung',
-      'tags': ['TikTok', 'Culinary', 'ViralContent'],
-    },
-  ];
-
   List<Map<String, dynamic>> _collabs = [];
 
   @override
   void initState() {
     super.initState();
-    _collabs = List.from(_defaultCollabs);
     _fetchRealtimeCollabs();
   }
 
@@ -156,28 +42,69 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
   Future<void> _fetchRealtimeCollabs() async {
     setState(() => _isLoading = true);
     try {
-      final res = await ApiService.get('/collaborations');
-      if (res['status'] == true &&
-          res['data'] != null &&
-          (res['data'] as List).isNotEmpty) {
-        final list = List<Map<String, dynamic>>.from(res['data']);
+      final res = await ApiService.get('collaborations');
+      if (res['status'] == true && res['data'] != null) {
+        final raw = res['data'];
+        final List<dynamic> list = raw is List ? raw : (raw['data'] ?? []);
+        final mapped = list.map((item) {
+          final m = Map<String, dynamic>.from(item as Map);
+          final rawAvatar = m['avatar'];
+          IconData avatarIcon = Icons.people_outline_rounded;
+          if (rawAvatar == 'videocam') {
+            avatarIcon = Icons.videocam_rounded;
+          } else if (rawAvatar == 'palette') {
+            avatarIcon = Icons.palette_rounded;
+          } else if (rawAvatar == 'camera') {
+            avatarIcon = Icons.camera_alt_rounded;
+          } else if (rawAvatar == 'music') {
+            avatarIcon = Icons.music_note_rounded;
+          } else if (rawAvatar == 'campaign') {
+            avatarIcon = Icons.campaign_rounded;
+          }
+
+          final status = m['status']?.toString() ?? 'Aktif';
+          Color statusColor = const Color(0xFF10B981);
+          if (status == 'Menunggu') {
+            statusColor = const Color(0xFFF59E0B);
+          } else if (status == 'Selesai') {
+            statusColor = const Color(0xFF6B7280);
+          }
+
+          return {
+            'id': m['id']?.toString() ?? '',
+            'user_id': m['user_id']?.toString() ?? '',
+            'name': m['name']?.toString() ?? 'Kreator Kreavana',
+            'email': m['email']?.toString() ?? '',
+            'username': m['username']?.toString() ?? '',
+            'role': m['role']?.toString() ?? 'Kreator',
+            'avatar': avatarIcon,
+            'avatar_url': (rawAvatar != null && rawAvatar.toString().startsWith('http')) ? rawAvatar.toString() : null,
+            'project': m['project']?.toString() ?? '',
+            'desc': m['desc']?.toString() ?? '',
+            'neededRoles': (m['neededRoles'] as List?)?.map((e) => e.toString()).toList() ?? <String>[],
+            'budget': m['budget']?.toString() ?? 'Sesuai Kesepakatan',
+            'compensationType': m['compensationType']?.toString() ?? 'Escrow Kreavana',
+            'status': status,
+            'statusColor': statusColor,
+            'membersCount': (m['membersCount'] as num?)?.toInt() ?? 1,
+            'maxMembers': (m['maxMembers'] as num?)?.toInt() ?? 4,
+            'date': m['date']?.toString() ?? '',
+            'location': m['location']?.toString() ?? 'Indonesia',
+            'tags': (m['tags'] as List?)?.map((e) => e.toString()).toList() ?? <String>['Kolaborasi'],
+            'members': m['members'] ?? [],
+          };
+        }).toList();
+
         if (mounted) {
           setState(() {
-            _collabs = list;
+            _collabs = mapped;
           });
         }
-        return;
       }
-    } catch (_) {
-      // Fallback to default realistic collaborations
+    } catch (e) {
+      debugPrint('Error fetching collaborations: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
-    }
-
-    if (mounted && _collabs.isEmpty) {
-      setState(() {
-        _collabs = List.from(_defaultCollabs);
-      });
     }
   }
 
@@ -1400,165 +1327,226 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
     final locCtrl = TextEditingController();
     final isDesktop = MediaQuery.of(context).size.width >= 600;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    bool submitting = false;
 
     Widget buildFormContent(BuildContext ctx, {bool inDialog = false}) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!inDialog) ...[
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade400,
-                  borderRadius: BorderRadius.circular(2),
+      return StatefulBuilder(
+        builder: (ctx, setSheetState) => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!inDialog) ...[
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
+              const SizedBox(height: 16),
+            ],
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Ajukan Kolaborasi Baru',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                if (inDialog)
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    onPressed: () => Navigator.pop(ctx),
+                    tooltip: 'Tutup',
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Publikasikan proyek tim Anda agar kreator lain dapat mengajukan diri.',
+              style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
             ),
             const SizedBox(height: 16),
-          ],
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Ajukan Kolaborasi Baru',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            TextField(
+              controller: titleCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nama Proyek / Campaign *',
+                hintText: 'Contoh: Shooting Video Klip Musik Indie',
+                border: OutlineInputBorder(),
               ),
-              if (inDialog)
-                IconButton(
-                  icon: const Icon(Icons.close, size: 20),
-                  onPressed: () => Navigator.pop(ctx),
-                  tooltip: 'Tutup',
-                ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Publikasikan proyek tim Anda agar kreator lain dapat mengajukan diri.',
-            style: TextStyle(
-                fontSize: 12,
-                color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: titleCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Nama Proyek / Campaign *',
-              hintText: 'Contoh: Shooting Video Klip Musik Indie',
-              border: OutlineInputBorder(),
             ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: roleCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Peran yang Dibutuhkan (Pisahkan koma) *',
-              hintText: 'Contoh: Videografer, MUA, Sound Engineer',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: budgetCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Estimasi Budget / Pembagian Fee',
-              hintText: 'Contoh: Rp 10.000.000 (Bagi Hasil)',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: locCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Lokasi Eksekusi',
-              hintText: 'Contoh: Jakarta / Remote',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: descCtrl,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Deskripsi & Tujuan Proyek',
-              hintText: 'Ceritakan detail proyek dan kualifikasi yang dicari...',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: accentColor,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: roleCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Peran yang Dibutuhkan (Pisahkan koma) *',
+                hintText: 'Contoh: Videografer, MUA, Sound Engineer',
+                border: OutlineInputBorder(),
               ),
-              onPressed: () {
-                if (titleCtrl.text.trim().isEmpty) return;
-
-                final roles = roleCtrl.text.isNotEmpty
-                    ? roleCtrl.text
-                        .split(',')
-                        .map((e) => e.trim())
-                        .where((e) => e.isNotEmpty)
-                        .toList()
-                    : ['Partner Kreatif'];
-
-                setState(() {
-                  _collabs.insert(0, {
-                    'id': 'collab-',
-                    'name': widget.user?.name ?? 'Kreator Mandiri',
-                    'role': widget.user?.subRole != null
-                        ? widget.user!.subRole!.toUpperCase()
-                        : 'Kreator',
-                    'project': titleCtrl.text.trim(),
-                    'desc': descCtrl.text.trim().isNotEmpty
-                        ? descCtrl.text.trim()
-                        : 'Proyek kolaborasi baru yang siap dieksekusi bersama tim terpercaya.',
-                    'neededRoles': roles,
-                    'budget': budgetCtrl.text.trim().isNotEmpty
-                        ? budgetCtrl.text.trim()
-                        : 'Sesuai Kesepakatan',
-                    'compensationType': 'Escrow Aman',
-                    'status': 'Menunggu',
-                    'statusColor': const Color(0xFFF59E0B),
-                    'avatar': Icons.person_pin_rounded,
-                    'membersCount': 1,
-                    'maxMembers': roles.length + 1,
-                    'date': 'September 2026',
-                    'location': locCtrl.text.trim().isNotEmpty
-                        ? locCtrl.text.trim()
-                        : 'Indonesia',
-                    'tags': ['New', 'Collaboration'],
-                  });
-                });
-
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Proyek kolaborasi berhasil diajukan dan dipublikasikan!',
-                    ),
-                    backgroundColor: Colors.green,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: budgetCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Estimasi Budget / Pembagian Fee',
+                hintText: 'Contoh: Rp 10.000.000 (Bagi Hasil)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: locCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Lokasi Eksekusi',
+                hintText: 'Contoh: Jakarta / Remote',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: descCtrl,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Deskripsi & Tujuan Proyek',
+                hintText: 'Ceritakan detail proyek dan kualifikasi yang dicari...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accentColor,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                );
-              },
-              child: const Text(
-                'Publikasikan Kolaborasi',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
                 ),
+                onPressed: submitting
+                    ? null
+                    : () async {
+                        if (titleCtrl.text.trim().isEmpty) return;
+                        setSheetState(() => submitting = true);
+                        try {
+                          final now = DateTime.now();
+                          final monthNames = [
+                            'Januari', 'Februari', 'Maret', 'April',
+                            'Mei', 'Juni', 'Juli', 'Agustus',
+                            'September', 'Oktober', 'November', 'Desember'
+                          ];
+                          final dateLabel =
+                              '${monthNames[now.month - 1]} ${now.year}';
+                          final roles = roleCtrl.text.isNotEmpty
+                              ? roleCtrl.text
+                                  .split(',')
+                                  .map((e) => e.trim())
+                                  .where((e) => e.isNotEmpty)
+                                  .toList()
+                              : ['Partner Kreatif'];
+
+                          final res = await ApiService.post(
+                            'collaborations',
+                            {
+                              'project_title': titleCtrl.text.trim(),
+                              'description': descCtrl.text.trim().isNotEmpty
+                                  ? descCtrl.text.trim()
+                                  : 'Peran yang dibutuhkan: ${roles.join(', ')}',
+                              'budget': budgetCtrl.text.trim(),
+                              'location': locCtrl.text.trim(),
+                              'invitees': widget.user != null
+                                  ? [
+                                      {
+                                        'user_id': widget.user!.id,
+                                        'role': roles.first,
+                                      }
+                                    ]
+                                  : [],
+                            },
+                          );
+                          final created = res['data'];
+                          if (mounted) {
+                            setState(() {
+                              _collabs.insert(0, {
+                                'id': created?['id'] ??
+                                    'collab-${now.millisecondsSinceEpoch}',
+                                'name': widget.user?.name ?? 'Kreator Mandiri',
+                                'role': widget.user?.subRole != null
+                                    ? widget.user!.subRole!.toUpperCase()
+                                    : (roles.isNotEmpty ? roles.first : 'Kreator'),
+                                'project': titleCtrl.text.trim(),
+                                'desc': descCtrl.text.trim().isNotEmpty
+                                    ? descCtrl.text.trim()
+                                    : 'Proyek kolaborasi baru yang siap dieksekusi bersama tim terpercaya.',
+                                'neededRoles': roles,
+                                'budget': budgetCtrl.text.trim().isNotEmpty
+                                    ? budgetCtrl.text.trim()
+                                    : 'Sesuai Kesepakatan',
+                                'compensationType': 'Escrow Aman',
+                                'status': 'Menunggu',
+                                'statusColor': const Color(0xFFF59E0B),
+                                'avatar': Icons.person_pin_rounded,
+                                'membersCount':
+                                    (created?['members'] as List?)?.length ?? 1,
+                                'maxMembers': roles.length + 1,
+                                'date': dateLabel,
+                                'location': locCtrl.text.trim().isNotEmpty
+                                    ? locCtrl.text.trim()
+                                    : 'Indonesia',
+                                'tags': ['New', 'Collaboration'],
+                              });
+                            });
+                          }
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Proyek kolaborasi berhasil diajukan dan dipublikasikan!',
+                                ),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(
+                                content: Text('Gagal mengirim pengajuan: $e'),
+                              ),
+                            );
+                          }
+                        } finally {
+                          if (ctx.mounted) {
+                            setSheetState(() => submitting = false);
+                          }
+                        }
+                      },
+                child: submitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Publikasikan Kolaborasi',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
     }
 

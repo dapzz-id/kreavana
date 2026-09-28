@@ -38,6 +38,8 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
   static const _categories = [
     {'slug': 'all', 'name': 'Semua', 'color': Colors.indigo},
     {'slug': 'tukang_kendang', 'name': '🥁 Kendang', 'color': Color(0xFFD97706)},
+    {'slug': 'institution', 'name': 'Institusi', 'color': Color(0xFF3730A3)},
+    {'slug': 'government', 'name': 'Pemerintah', 'color': Color(0xFF475569)},
     {'slug': 'mc', 'name': 'MC', 'color': Color(0xFFF59E0B)},
     {'slug': 'videographer', 'name': 'Videografer', 'color': Color(0xFF0EA5E9)},
     {'slug': 'photographer', 'name': 'Fotografer', 'color': Color(0xFF3B82F6)},
@@ -47,6 +49,12 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
     {'slug': 'event_organizer', 'name': 'EO', 'color': Color(0xFFF97316)},
     {'slug': 'wedding_organizer', 'name': 'WO', 'color': Color(0xFFE11D48)},
     {'slug': 'community', 'name': 'Komunitas', 'color': Color(0xFFEC4899)},
+    {'slug': 'content_creator', 'name': 'Content Creator', 'color': Color(0xFFEF4444)},
+    {'slug': 'animator', 'name': 'Animator', 'color': Color(0xFF22C55E)},
+    {'slug': 'designer', 'name': 'Desainer', 'color': Color(0xFF06B6D4)},
+    {'slug': 'musician', 'name': 'Musisi', 'color': Color(0xFFA855F7)},
+    {'slug': 'talent', 'name': 'Talent', 'color': Color(0xFFFACC15)},
+    {'slug': 'drone_pilot', 'name': 'Drone Pilot', 'color': Color(0xFF64748B)},
   ];
 
   static const _radiusOptions = [

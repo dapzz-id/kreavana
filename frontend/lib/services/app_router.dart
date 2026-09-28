@@ -6,6 +6,7 @@ import '../features/auth/screens/email_verification_screen.dart';
 import '../screens/main_navigation.dart';
 import '../models/user_model.dart';
 import 'user_store.dart';
+import 'system_settings_service.dart';
 import 'auth_session_state.dart';
 // navigatorKey didefinisikan di main.dart dan di-share ke GoRouter
 import 'navigator_key.dart';
@@ -89,12 +90,14 @@ final GoRouter appRouter = GoRouter(
   refreshListenable: Listenable.merge([
     currentUserNotifier,
     authSignedOutNotifier,
+    SystemSettingsService.moduleStatuses,
   ]),
   redirect: (context, state) {
     final user = currentUserNotifier.value;
     final isSignedOut = authSignedOutNotifier.value;
     final currentPath = state.matchedLocation;
     final isPublic = _publicRoutes.contains(currentPath);
+    final isAdmin = user != null && user.isAdmin;
 
     // Belum login & mencoba akses halaman terlindungi via URL bar → redirect ke /login
     if ((user == null || isSignedOut) && !isPublic) {
@@ -106,6 +109,26 @@ final GoRouter appRouter = GoRouter(
         !isSignedOut &&
         (currentPath == AppRoutes.login || currentPath == AppRoutes.register)) {
       return AppRoutes.beranda;
+    }
+
+    // Proteksi module jika dinonaktifkan oleh administrator (non-admin dialihkan ke beranda)
+    if (!isAdmin) {
+      if (currentPath == AppRoutes.marketplaceKarya &&
+          !SystemSettingsService.isMarketplaceEnabled) {
+        return AppRoutes.beranda;
+      }
+      if (currentPath == AppRoutes.aiAssistant &&
+          !SystemSettingsService.isAiEnabled) {
+        return AppRoutes.beranda;
+      }
+      if (currentPath == AppRoutes.kolaborasi &&
+          !SystemSettingsService.isCollaborationEnabled) {
+        return AppRoutes.beranda;
+      }
+      if (currentPath == AppRoutes.wallet &&
+          !SystemSettingsService.isWalletEnabled) {
+        return AppRoutes.beranda;
+      }
     }
 
     return null; // Tidak ada redirect

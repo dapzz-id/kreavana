@@ -15,8 +15,9 @@ class RemainingTablesSeeder extends Seeder
      */
     public function run(): void
     {
-        $admin = \App\Models\User::where('role', 'admin')->first();
-        $adminId = $admin ? $admin->id : null;
+        $admin = \App\Models\User::where('role', 'admin')->first()
+            ?? \App\Models\User::first();
+        $adminId = $admin?->id;
 
         // 1. Sub Role Categories — slugs aligned with App\Enums\CreatorSubRole
         $categories = [
@@ -97,6 +98,48 @@ class RemainingTablesSeeder extends Seeder
                 'icon' => 'videocam',
                 'color' => '#FB7185'
             ],
+            [
+                'slug' => 'content_creator',
+                'name' => 'Content Creator',
+                'description' => 'Pembuat konten kreatif untuk sosial media, short video, dan kampanye digital',
+                'icon' => 'movie',
+                'color' => '#EF4444'
+            ],
+            [
+                'slug' => 'animator',
+                'name' => 'Animator',
+                'description' => 'Jasa animasi 2D/3D, motion graphic, dan ilustrasi bergerak',
+                'icon' => 'animation',
+                'color' => '#22C55E'
+            ],
+            [
+                'slug' => 'designer',
+                'name' => 'Designer',
+                'description' => 'Desain grafis, UI/UX, branding, logo, dan publikasi visual',
+                'icon' => 'brush',
+                'color' => '#F97316'
+            ],
+            [
+                'slug' => 'musician',
+                'name' => 'Musician',
+                'description' => 'Pemusik, komposer, arranger, dan produser audio',
+                'icon' => 'music_note',
+                'color' => '#6366F1'
+            ],
+            [
+                'slug' => 'talent',
+                'name' => 'Talent',
+                'description' => 'Talent, model, aktor, bintang iklan, dan figur publik',
+                'icon' => 'face',
+                'color' => '#A855F7'
+            ],
+            [
+                'slug' => 'drone_pilot',
+                'name' => 'Drone Pilot',
+                'description' => 'Jasa pengambilan gambar udara dan aerial videography dengan drone',
+                'icon' => 'flight',
+                'color' => '#14B8A6'
+            ],
         ];
 
         foreach ($categories as $cat) {
@@ -130,94 +173,95 @@ class RemainingTablesSeeder extends Seeder
             DashboardStat::create($stat);
         }
 
-        // 3. Opportunities
-        $opps = [
-            [
-                'title' => 'Fotografer Event Jakarta',
-                'description' => 'Dibutuhkan fotografer profesional untuk dokumentasi event corporate di Jakarta. Minimal pengalaman 2 tahun.',
-                'sub_role_slug' => 'photographer',
-                'location' => 'Jakarta',
-                'deadline' => '2026-07-15',
-                'budget_range' => 'Rp 3.000.000 - Rp 5.000.000',
-                'status' => 'open',
-                'posted_by' => $adminId
-            ],
-            [
-                'title' => 'MC Pernikahan & Event Korporat',
-                'description' => 'Mencari MC profesional untuk acara pernikahan dan event korporat. Pengalaman minimal 2 tahun.',
-                'sub_role_slug' => 'mc',
-                'location' => 'Bandung',
-                'deadline' => '2026-07-20',
-                'budget_range' => 'Rp 2.000.000 - Rp 5.000.000',
-                'status' => 'open',
-                'posted_by' => $adminId
-            ],
-            [
-                'title' => 'Penyanyi Wedding Organizer',
-                'description' => 'Butuh penyanyi untuk paket pernikahan premium. Genre: pop, jazz, dan akustik.',
-                'sub_role_slug' => 'singer',
-                'location' => 'Surabaya',
-                'deadline' => '2026-08-01',
-                'budget_range' => 'Rp 4.000.000 - Rp 8.000.000',
-                'status' => 'open',
-                'posted_by' => $adminId
-            ],
-            [
-                'title' => 'Konser Musik Akhir Tahun',
-                'description' => 'Event organizer untuk konser musik akhir tahun kapasitas 5000 orang. Termasuk sound, lighting, dan stage.',
-                'sub_role_slug' => 'event_organizer',
-                'location' => 'Jakarta',
-                'deadline' => '2026-12-20',
-                'budget_range' => 'Rp 50.000.000 - Rp 100.000.000',
-                'status' => 'open',
-                'posted_by' => $adminId
-            ],
-            [
-                'title' => 'Peliputan Kegiatan Pemerintah Daerah',
-                'description' => 'Dibutuhkan kreator konten untuk dokumentasi dan publikasi program kegiatan pemerintah daerah.',
-                'sub_role_slug' => 'government',
-                'location' => 'Yogyakarta',
-                'deadline' => '2026-09-10',
-                'budget_range' => 'Rp 10.000.000 - Rp 25.000.000',
-                'status' => 'open',
-                'posted_by' => $adminId
-            ],
-            [
-                'title' => 'Makeup Artist Wedding Premium',
-                'description' => 'Dibutuhkan makeup artist profesional untuk pernikahan premium di Bali. Termasuk trial makeup.',
-                'sub_role_slug' => 'makeup_artist',
-                'location' => 'Bali',
-                'deadline' => '2026-07-25',
-                'budget_range' => 'Rp 2.500.000 - Rp 4.000.000',
-                'status' => 'open',
-                'posted_by' => $adminId
-            ],
-            [
-                'title' => 'Videografer Dokumentasi Event',
-                'description' => 'Mencari videografer untuk dokumentasi event corporate dan wedding. Portfolio wajib.',
-                'sub_role_slug' => 'videographer',
-                'location' => 'Jakarta',
-                'deadline' => '2026-08-10',
-                'budget_range' => 'Rp 5.000.000 - Rp 8.000.000',
-                'status' => 'open',
-                'posted_by' => $adminId
-            ],
-            [
-                'title' => 'Editor Video Konten Sosial',
-                'description' => 'Dibutuhkan editor video untuk konten sosial (Instagram, TikTok, YouTube). Style: modern dan dynamic.',
-                'sub_role_slug' => 'editor',
-                'location' => 'Remote',
-                'deadline' => '2026-07-30',
-                'budget_range' => 'Rp 1.500.000 - Rp 3.000.000',
-                'status' => 'open',
-                'posted_by' => $adminId
-            ],
-        ];
+        // 3. Opportunities (hanya jika ada user yang bisa dijadikan posted_by)
+        if ($adminId !== null) {
+            $opps = [
+                [
+                    'title' => 'Fotografer Event Jakarta',
+                    'description' => 'Dibutuhkan fotografer profesional untuk dokumentasi event corporate di Jakarta. Minimal pengalaman 2 tahun.',
+                    'sub_role_slug' => 'photographer',
+                    'location' => 'Jakarta',
+                    'deadline' => '2026-07-15',
+                    'budget_range' => 'Rp 3.000.000 - Rp 5.000.000',
+                    'status' => 'open',
+                    'posted_by' => $adminId
+                ],
+                [
+                    'title' => 'MC Pernikahan & Event Korporat',
+                    'description' => 'Mencari MC profesional untuk acara pernikahan dan event korporat. Pengalaman minimal 2 tahun.',
+                    'sub_role_slug' => 'mc',
+                    'location' => 'Bandung',
+                    'deadline' => '2026-07-20',
+                    'budget_range' => 'Rp 2.000.000 - Rp 5.000.000',
+                    'status' => 'open',
+                    'posted_by' => $adminId
+                ],
+                [
+                    'title' => 'Penyanyi Wedding Organizer',
+                    'description' => 'Butuh penyanyi untuk paket pernikahan premium. Genre: pop, jazz, dan akustik.',
+                    'sub_role_slug' => 'singer',
+                    'location' => 'Surabaya',
+                    'deadline' => '2026-08-01',
+                    'budget_range' => 'Rp 4.000.000 - Rp 8.000.000',
+                    'status' => 'open',
+                    'posted_by' => $adminId
+                ],
+                [
+                    'title' => 'Konser Musik Akhir Tahun',
+                    'description' => 'Event organizer untuk konser musik akhir tahun kapasitas 5000 orang. Termasuk sound, lighting, dan stage.',
+                    'sub_role_slug' => 'event_organizer',
+                    'location' => 'Jakarta',
+                    'deadline' => '2026-12-20',
+                    'budget_range' => 'Rp 50.000.000 - Rp 100.000.000',
+                    'status' => 'open',
+                    'posted_by' => $adminId
+                ],
+                [
+                    'title' => 'Peliputan Kegiatan Pemerintah Daerah',
+                    'description' => 'Dibutuhkan kreator konten untuk dokumentasi dan publikasi program kegiatan pemerintah daerah.',
+                    'sub_role_slug' => 'government',
+                    'location' => 'Yogyakarta',
+                    'deadline' => '2026-09-10',
+                    'budget_range' => 'Rp 10.000.000 - Rp 25.000.000',
+                    'status' => 'open',
+                    'posted_by' => $adminId
+                ],
+                [
+                    'title' => 'Makeup Artist Wedding Premium',
+                    'description' => 'Dibutuhkan makeup artist profesional untuk pernikahan premium di Bali. Termasuk trial makeup.',
+                    'sub_role_slug' => 'makeup_artist',
+                    'location' => 'Bali',
+                    'deadline' => '2026-07-25',
+                    'budget_range' => 'Rp 2.500.000 - Rp 4.000.000',
+                    'status' => 'open',
+                    'posted_by' => $adminId
+                ],
+                [
+                    'title' => 'Videografer Dokumentasi Event',
+                    'description' => 'Mencari videografer untuk dokumentasi event corporate dan wedding. Portfolio wajib.',
+                    'sub_role_slug' => 'videographer',
+                    'location' => 'Jakarta',
+                    'deadline' => '2026-08-10',
+                    'budget_range' => 'Rp 5.000.000 - Rp 8.000.000',
+                    'status' => 'open',
+                    'posted_by' => $adminId
+                ],
+                [
+                    'title' => 'Editor Video Konten Sosial',
+                    'description' => 'Dibutuhkan editor video untuk konten sosial (Instagram, TikTok, YouTube). Style: modern dan dynamic.',
+                    'sub_role_slug' => 'editor',
+                    'location' => 'Remote',
+                    'deadline' => '2026-07-30',
+                    'budget_range' => 'Rp 1.500.000 - Rp 3.000.000',
+                    'status' => 'open',
+                    'posted_by' => $adminId
+                ],
+            ];
 
-        foreach ($opps as $opp) {
-            // Trim any accidental whitespace from slug
-            $opp['sub_role_slug'] = trim($opp['sub_role_slug']);
-            Opportunity::create($opp);
+            foreach ($opps as $opp) {
+                $opp['sub_role_slug'] = trim($opp['sub_role_slug']);
+                Opportunity::create($opp);
+            }
         }
     }
 }

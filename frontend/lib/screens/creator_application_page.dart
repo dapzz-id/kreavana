@@ -6,6 +6,7 @@ import '../widgets/creator_application_card.dart';
 import '../widgets/app_breadcrumbs.dart';
 import '../utils/app_errors.dart';
 import '../widgets/desktop_sidebar_layout.dart';
+import '../widgets/auth_guard_dialog.dart';
 import '../features/auth/services/auth_service.dart';
 import 'main_navigation.dart';
 
@@ -32,6 +33,27 @@ class _CreatorApplicationPageState extends State<CreatorApplicationPage> {
   void initState() {
     super.initState();
     _currentUser = widget.user;
+    if (_currentUser?.isGuest == true) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        AuthGuardDialog.show(context, actionName: 'mengajukan diri sebagai Kreator');
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        } else {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MainNavigation(
+                initialUser: widget.user ?? UserModel.guest(),
+                initialIndex: 0,
+              ),
+            ),
+            (r) => false,
+          );
+        }
+      });
+      return;
+    }
     if (_currentUser == null) {
       AuthService.getCurrentUser().then((u) {
         if (mounted && u != null) {

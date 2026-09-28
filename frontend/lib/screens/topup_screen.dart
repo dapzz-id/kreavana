@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../services/wallet_service.dart';
+import '../services/api_service.dart';
 import '../app/theme.dart';
 import 'topup_details_screen.dart';
 
@@ -16,20 +17,50 @@ class TopUpScreen extends StatefulWidget {
 class _TopUpScreenState extends State<TopUpScreen> {
   final _amountController = TextEditingController();
   bool _isLoading = false;
+  bool _isLoadingProviders = false;
 
   String _selectedMethod = 'qris'; // bank_transfer, e_wallet, qris
   String _selectedProvider = 'QRIS';
 
   final List<double> _quickAmounts = [20000, 50000, 100000, 200000, 500000];
 
-  final List<Map<String, String>> _banks = [];
+  final List<Map<String, dynamic>> _banks = [];
 
-  final List<Map<String, String>> _ewallets = [];
+  final List<Map<String, dynamic>> _ewallets = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPaymentProviders();
+  }
 
   @override
   void dispose() {
     _amountController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadPaymentProviders() async {
+    setState(() => _isLoadingProviders = true);
+    try {
+      final res = await ApiService.get('payment-providers');
+      if (res['status'] == true && res['data'] != null) {
+        final list = List<Map<String, dynamic>>.from(res['data']);
+        setState(() {
+          _banks
+            ..clear()
+            ..addAll(list
+                .where((p) => p['type'] == 'bank' && p['is_active'] == true));
+          _ewallets
+            ..clear()
+            ..addAll(list
+                .where((p) => p['type'] == 'ewallet' && p['is_active'] == true));
+        });
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isLoadingProviders = false);
+    }
   }
 
   void _onQuickAmountSelected(double val) {

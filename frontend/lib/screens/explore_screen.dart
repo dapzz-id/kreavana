@@ -44,6 +44,12 @@ class _ExploreScreenState extends State<ExploreScreen>
     {'slug': 'photographer', 'name': 'Fotografer'},
     {'slug': 'editor', 'name': 'Editor'},
     {'slug': 'videographer', 'name': 'Videografer'},
+    {'slug': 'content_creator', 'name': 'Content Creator'},
+    {'slug': 'animator', 'name': 'Animator'},
+    {'slug': 'designer', 'name': 'Desainer'},
+    {'slug': 'musician', 'name': 'Musisi'},
+    {'slug': 'talent', 'name': 'Talent'},
+    {'slug': 'drone_pilot', 'name': 'Drone Pilot'},
   ];
 
   bool get _isCreator => CreatorSidebarMenus.isCreatorUser(widget.user);

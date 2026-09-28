@@ -2425,6 +2425,10 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
   final Map<String, List<CreatorServiceItem>> _extraItems = {};
   List<CreatorServiceItem> _eoPackages = [];
   bool _isLoadingEoPackages = true;
+  bool _isLoadingReviewSummary = false;
+  double _avgRating = 0.0;
+  int _totalReviews = 0;
+  final Map<int, int> _reviewDistribution = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
 
   late final AnimationController _fadeController;
   late final AnimationController _staggerController;
@@ -2471,10 +2475,21 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
   bool get _isEoMenu => widget.serviceKey.startsWith('eo_');
   bool get _isCreatorPackage =>
       _reviewableCreatorPackageKeys.contains(widget.serviceKey);
-  double get _personalRating => (_user.followersCount > 500)
-      ? 4.95
-      : ((_user.followersCount * 0.0035) + 4.2).clamp(4.2, 4.95);
-  String get _ratingDisplay => _personalRating.toStringAsFixed(1);
+
+  double get _personalRating {
+    if (_avgRating > 0) return _avgRating;
+    return (_user.followersCount > 500)
+        ? 4.95
+        : ((_user.followersCount * 0.0035) + 4.2).clamp(4.2, 4.95);
+  }
+
+  String get _ratingDisplay {
+    if (_isLoadingReviewSummary && _avgRating == 0.0) return '—';
+    if (_totalReviews == 0 && _avgRating == 0.0) {
+      return _personalRating.toStringAsFixed(1);
+    }
+    return _personalRating.toStringAsFixed(1);
+  }
 
   List<String> get _availableFilters {
     final data = _data;
@@ -2577,10 +2592,39 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       );
     });
     _loadPersistedState();
+    _fetchReviewSummary();
     Future.delayed(Duration.zero, () {
       _fadeController.forward();
       _staggerController.forward();
     });
+  }
+
+  Future<void> _fetchReviewSummary() async {
+    final uid = widget.user.id;
+    if (uid == null || uid.isEmpty) return;
+    setState(() => _isLoadingReviewSummary = true);
+    try {
+      final res = await ApiService.get('creators/$uid/reviews/summary');
+      if (res['status'] == true && res['data'] != null) {
+        final d = Map<String, dynamic>.from(res['data']);
+        final dist = d['distribution'];
+        if (mounted) {
+          setState(() {
+            _avgRating = (d['average_rating'] as num?)?.toDouble() ?? 0.0;
+            _totalReviews = (d['total_reviews'] as num?)?.toInt() ?? 0;
+            if (dist is Map) {
+              for (var i = 5; i >= 1; i--) {
+                final v = dist['$i'] ?? dist[i];
+                _reviewDistribution[i] = (v as num?)?.toInt() ?? 0;
+              }
+            }
+          });
+        }
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isLoadingReviewSummary = false);
+    }
   }
 
   Future<void> _loadPersistedState() async {
@@ -6478,6 +6522,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
         item: item,
         actionLabel: data.actionLabel,
         user: widget.user,
+        totalReviews: _totalReviews,
+        avgRating: _avgRating,
+        reviewDistribution: _reviewDistribution,
         onAddItem: (newItem) => _addItem(data.key, newItem),
         onSubmitCreatorPackage: _reviewableCreatorPackageKeys.contains(data.key)
             ? _submitCreatorPackage
@@ -6552,6 +6599,9 @@ class _ServiceDetailSheet extends StatefulWidget {
   final CreatorServiceItem? item;
   final String actionLabel;
   final UserModel user;
+  final int totalReviews;
+  final double avgRating;
+  final Map<int, int> reviewDistribution;
   final ValueChanged<CreatorServiceItem>? onAddItem;
   final Future<String?> Function(CreatorServiceItem, PlatformFile?, Uint8List?)?
   onSubmitCreatorPackage;
@@ -6561,6 +6611,9 @@ class _ServiceDetailSheet extends StatefulWidget {
     required this.item,
     required this.actionLabel,
     required this.user,
+    this.totalReviews = 0,
+    this.avgRating = 0.0,
+    this.reviewDistribution = const {5: 0, 4: 0, 3: 0, 2: 0, 1: 0},
     this.onAddItem,
     this.onSubmitCreatorPackage,
   });
@@ -6604,6 +6657,46 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
     })
   >
   _customReviews = [];
+
+  List<
+    ({
+      String name,
+      String city,
+      String text,
+      int stars,
+      String date,
+      bool verified,
+      int likes,
+    })
+  >
+  _apiReviews = [];
+
+  Future<void> _fetchApiReviews() async {
+    final uid = widget.user.id;
+    if (uid == null || uid.isEmpty) return;
+    try {
+      final res = await ApiService.get('reviews?creator_id=$uid');
+      if (res['status'] == true && res['data'] is List) {
+        final list = (res['data'] as List).map((r) {
+          final m = Map<String, dynamic>.from(r);
+          return (
+            name: (m['name'] as String?) ?? 'Klien',
+            city: (m['role'] as String?) ?? 'Indonesia',
+            text: (m['comment'] as String?) ?? '',
+            stars: ((m['rating'] as num?)?.round() ?? 5).clamp(1, 5),
+            date: (m['date'] as String?) ?? 'Baru saja',
+            verified: (m['verified'] as bool?) ?? true,
+            likes: (m['helpfulCount'] as num?)?.toInt() ?? 0,
+          );
+        }).toList();
+        if (mounted) {
+          setState(() {
+            _apiReviews = list;
+          });
+        }
+      }
+    } catch (_) {}
+  }
   bool _itemSubmitted = false;
   bool _itemSaved = false;
   bool _isSubmitting = false;
@@ -7691,6 +7784,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
   @override
   void initState() {
     super.initState();
+    _fetchApiReviews();
     _tabCtrl = TabController(length: 2, vsync: this);
     _tabCtrl.addListener(() => setState(() => _tab = _tabCtrl.index));
     _animCtrl = AnimationController(
@@ -9658,91 +9752,39 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
     bool isDark,
   ) {
     final user = widget.user;
-    final List<
-      ({
-        String name,
-        String city,
-        String text,
-        int stars,
-        String date,
-        bool verified,
-        int likes,
-      })
-    >
-    baseReviews = [
-      (
-        name: 'Siti Aisyah Putri',
-        city: 'Jakarta Selatan',
-        text:
-            'Hasil editan video sangat memuaskan! Color grading-nya sinematik banget, sesuai dengan referensi yang saya berikan. Komunikatif dan revisi cepat. Recommended buat yang butuh edit video profesional!',
-        stars: 5,
-        date: '2 hari lalu',
-        verified: true,
-        likes: 24,
-      ),
-      (
-        name: 'Budi Pratama',
-        city: 'Bandung',
-        text:
-            'Retouch foto prewedding hasilnya natural, tidak over-edit. Kulit terlihat nyata tapi tetap bersih. Pengiriman tepat waktu bahkan lebih cepat dari deadline. Harga worth it untuk kualitas begini.',
-        stars: 5,
-        date: '5 hari lalu',
-        verified: true,
-        likes: 18,
-      ),
-      (
-        name: 'Dewi Lestari',
-        city: 'Surabaya',
-        text:
-            'Motion graphics untuk logo perusahaan saya sangat bagus, smooth dan elegan. Cuma satu revisi kecil dan langsung jadi. Komunikasi via WA cepat, nggak bikin nunggu.',
-        stars: 4,
-        date: '1 minggu lalu',
-        verified: true,
-        likes: 12,
-      ),
-      (
-        name: 'Rizky Ramadhani',
-        city: 'Yogyakarta',
-        text:
-            'Pengerjaan foto produk untuk katalog UMKM saya rapi banget. Background bersih, warna produk akurat. Sudah jadi langganan sampai 3 batch. Paket hemat benar-benar hemat.',
-        stars: 5,
-        date: '2 minggu lalu',
-        verified: false,
-        likes: 8,
-      ),
-    ];
-    final reviews = [..._customReviews, ...baseReviews];
-    final totalReviewsBase = user.followersCount > 0
-        ? (user.followersCount ~/ 2).clamp(24, 248)
-        : 124;
-    final totalReviews = totalReviewsBase + _customReviews.length;
-    var fiveStar = (totalReviewsBase * 0.72).round();
-    var fourStar = (totalReviewsBase * 0.18).round();
-    var threeStar = (totalReviewsBase * 0.07).round();
-    var twoStar = (totalReviewsBase * 0.02).round();
-    var oneStar = totalReviewsBase - fiveStar - fourStar - threeStar - twoStar;
-    for (final r in _customReviews) {
-      if (r.stars == 5) {
-        fiveStar++;
-      } else if (r.stars == 4) {
-        fourStar++;
-      } else if (r.stars == 3) {
-        threeStar++;
-      } else if (r.stars == 2) {
-        twoStar++;
-      } else {
-        oneStar++;
-      }
-    }
-    final rating = totalReviews > 0
-        ? ((5 * fiveStar +
-                      4 * fourStar +
-                      3 * threeStar +
-                      2 * twoStar +
-                      1 * oneStar) /
-                  totalReviews)
-              .toStringAsFixed(1)
-        : '4.9';
+    final reviews = [..._customReviews, ..._apiReviews];
+    final totalReviews = widget.totalReviews > 0
+        ? widget.totalReviews
+        : reviews.length;
+    final counts = widget.totalReviews > 0
+        ? [
+            widget.reviewDistribution[5] ?? 0,
+            widget.reviewDistribution[4] ?? 0,
+            widget.reviewDistribution[3] ?? 0,
+            widget.reviewDistribution[2] ?? 0,
+            widget.reviewDistribution[1] ?? 0,
+          ]
+        : reviews.fold<List<int>>([0, 0, 0, 0, 0], (acc, r) {
+            final idx = 5 - (r.stars.clamp(1, 5));
+            if (idx >= 0 && idx < 5) acc[idx]++;
+            return acc;
+          });
+    final fiveStar = counts[0];
+    final fourStar = counts[1];
+    final threeStar = counts[2];
+    final twoStar = counts[3];
+    final oneStar = counts[4];
+    final rating = widget.avgRating > 0
+        ? widget.avgRating.toStringAsFixed(1)
+        : (totalReviews > 0
+            ? ((5 * fiveStar +
+                          4 * fourStar +
+                          3 * threeStar +
+                          2 * twoStar +
+                          1 * oneStar) /
+                      totalReviews)
+                  .toStringAsFixed(1)
+            : '—');
     final filterLabels = const ['Semua', '5 Bintang', 'Dengan Foto', 'Terbaru'];
     return ListView(
       controller: scrollCtrl,
@@ -9975,50 +10017,75 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
           ],
         ),
         const SizedBox(height: 10),
-        ...List.generate(reviews.length, (idx) {
-          final r = reviews[idx];
-          final liked = _likedReviews.contains(idx);
-          final avatarColors = [
-            [const Color(0xFFF59E0B), const Color(0xFFF97316)],
-            [const Color(0xFF10B981), const Color(0xFF059669)],
-            [const Color(0xFF3B82F6), const Color(0xFF6366F1)],
-            [const Color(0xFFEC4899), const Color(0xFFF43F5E)],
-          ];
-          final grad = avatarColors[idx % avatarColors.length];
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: isDark ? AppTheme.cardDark2 : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-              ),
-            ),
+        if (reviews.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
+            alignment: Alignment.center,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(colors: grad),
-                      ),
-                      child: Center(
-                        child: Text(
-                          r.name[0],
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 12,
+                Icon(
+                  Icons.rate_review_outlined,
+                  size: 44,
+                  color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Belum ada ulasan untuk kreator ini',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          ...List.generate(reviews.length, (idx) {
+            final r = reviews[idx];
+            final liked = _likedReviews.contains(idx);
+            final avatarColors = [
+              [const Color(0xFFF59E0B), const Color(0xFFF97316)],
+              [const Color(0xFF10B981), const Color(0xFF059669)],
+              [const Color(0xFF3B82F6), const Color(0xFF6366F1)],
+              [const Color(0xFFEC4899), const Color(0xFFF43F5E)],
+            ];
+            final grad = avatarColors[idx % avatarColors.length];
+            final initialChar = r.name.isNotEmpty ? r.name[0] : 'U';
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.cardDark2 : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(colors: grad),
+                        ),
+                        child: Center(
+                          child: Text(
+                            initialChar,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
+                      const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

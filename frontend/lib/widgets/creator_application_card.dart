@@ -9,6 +9,7 @@ import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/ktp_ocr_service_io.dart' as ktp_ocr;
 import '../utils/form_validators.dart';
+import '../utils/image_compressor.dart';
 
 class CreatorApplicationCard extends StatefulWidget {
   final UserModel user;
@@ -90,17 +91,23 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
   ];
 
   final List<Map<String, String>> _categories = [
-    {'slug': 'institution', 'name': 'Institution'},
-    {'slug': 'government', 'name': 'Government'},
+    {'slug': 'institution', 'name': 'Institusi'},
+    {'slug': 'government', 'name': 'Pemerintah'},
+    {'slug': 'community', 'name': 'Komunitas'},
     {'slug': 'mc', 'name': 'MC'},
-    {'slug': 'singer', 'name': 'Singer'},
+    {'slug': 'singer', 'name': 'Penyanyi'},
     {'slug': 'wedding_organizer', 'name': 'Wedding Organizer'},
     {'slug': 'event_organizer', 'name': 'Event Organizer'},
-    {'slug': 'community', 'name': 'Community'},
     {'slug': 'makeup_artist', 'name': 'Makeup Artist'},
-    {'slug': 'photographer', 'name': 'Photographer'},
+    {'slug': 'photographer', 'name': 'Fotografer'},
     {'slug': 'editor', 'name': 'Editor'},
-    {'slug': 'videographer', 'name': 'Videographer'},
+    {'slug': 'videographer', 'name': 'Videografer'},
+    {'slug': 'content_creator', 'name': 'Content Creator'},
+    {'slug': 'animator', 'name': 'Animator'},
+    {'slug': 'designer', 'name': 'Desainer'},
+    {'slug': 'musician', 'name': 'Musisi'},
+    {'slug': 'talent', 'name': 'Talent'},
+    {'slug': 'drone_pilot', 'name': 'Drone Pilot'},
   ];
 
   @override
@@ -486,10 +493,13 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
         return;
       }
 
-      setState(() {
-        _ktpPreviewBytes = file.bytes;
-        _ktpPhotoBase64 = 'data:image/jpeg;base64,${base64Encode(file.bytes!)}';
-      });
+      final b64 = await ImageCompressor.compressToBase64(file.bytes!);
+      if (mounted) {
+        setState(() {
+          _ktpPreviewBytes = file.bytes;
+          _ktpPhotoBase64 = b64;
+        });
+      }
 
       if (!kIsWeb && file.path != null) {
         await _processKtpImage(file.path!);
@@ -500,14 +510,17 @@ class _CreatorApplicationCardState extends State<CreatorApplicationCard> {
   Future<void> _processKtpImage(String imagePath) async {
     setState(() => _isScanning = true);
 
-    // Read image file and convert to base64
+    // Read image file and convert to compressed base64
     final imageFile = File(imagePath);
     final imageBytes = await imageFile.readAsBytes();
+    final b64 = await ImageCompressor.compressToBase64(imageBytes);
 
-    setState(() {
-      _ktpPreviewBytes = imageBytes;
-      _ktpPhotoBase64 = 'data:image/jpeg;base64,${base64Encode(imageBytes)}';
-    });
+    if (mounted) {
+      setState(() {
+        _ktpPreviewBytes = imageBytes;
+        _ktpPhotoBase64 = b64;
+      });
+    }
 
     final ocr = await ktp_ocr.KtpOcrService.scanFromFile(imagePath);
     if (mounted) {

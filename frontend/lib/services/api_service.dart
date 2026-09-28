@@ -25,13 +25,22 @@ class ApiService {
       if (cleanPath.startsWith('/portfolio/')) {
         return '$base/api/portfolio-assets/${cleanPath.replaceFirst('/portfolio/', '')}';
       }
+      if (cleanPath.startsWith('/storage/ktp/')) {
+        return '$base/api/verification-assets/ktp/${cleanPath.replaceFirst('/storage/ktp/', '')}';
+      }
+      if (cleanPath.startsWith('/storage/selfie/')) {
+        return '$base/api/verification-assets/selfie/${cleanPath.replaceFirst('/storage/selfie/', '')}';
+      }
+      if (cleanPath.startsWith('/storage/nib/')) {
+        return '$base/api/verification-assets/nib/${cleanPath.replaceFirst('/storage/nib/', '')}';
+      }
       return '$base$cleanPath';
     }
 
     // Rewrite localhost/127.0.0.1 to current DioClient.baseUrl when accessing remotely
-    if (url.contains('localhost:8000') || url.contains('127.0.0.1:8000')) {
+    if (url.contains('localhost') || url.contains('127.0.0.1')) {
       final base = DioClient.baseUrl.replaceAll('/api', '');
-      url = url.replaceFirst(RegExp(r'https?://(localhost|127\.0\.0\.1):8000'), base);
+      url = url.replaceFirst(RegExp(r'https?://(localhost|127\.0\.0\.1)(:\d+)?'), base);
     }
 
     // Rewrite /storage/avatar/file.jpg → /api/avatars/file.jpg
@@ -46,7 +55,23 @@ class ApiService {
     if (url.contains('/storage/portfolio/') && !url.contains('/api/portfolio-assets/')) {
       return url.replaceFirst(RegExp(r'/storage/portfolio/'), '/api/portfolio-assets/');
     }
+    // Rewrite /storage/ktp/file.jpg → /api/verification-assets/ktp/file.jpg
+    if (url.contains('/storage/ktp/') && !url.contains('/api/verification-assets/')) {
+      return url.replaceFirst(RegExp(r'/storage/ktp/'), '/api/verification-assets/ktp/');
+    }
+    // Rewrite /storage/selfie/file.jpg → /api/verification-assets/selfie/file.jpg
+    if (url.contains('/storage/selfie/') && !url.contains('/api/verification-assets/')) {
+      return url.replaceFirst(RegExp(r'/storage/selfie/'), '/api/verification-assets/selfie/');
+    }
+    // Rewrite /storage/nib/file.jpg → /api/verification-assets/nib/file.jpg
+    if (url.contains('/storage/nib/') && !url.contains('/api/verification-assets/')) {
+      return url.replaceFirst(RegExp(r'/storage/nib/'), '/api/verification-assets/nib/');
+    }
     return url;
+  }
+
+  static String _normalizePath(String endpoint) {
+    return endpoint.startsWith('/') ? endpoint : '/$endpoint';
   }
 
   static Future<Map<String, dynamic>> get(
@@ -55,7 +80,7 @@ class ApiService {
   }) async {
     try {
       final response = await _dio.get(
-        '/$endpoint',
+        _normalizePath(endpoint),
         queryParameters: queryParams,
       );
       return _formatResponse(response);
@@ -69,7 +94,7 @@ class ApiService {
     Map<String, dynamic> body,
   ) async {
     try {
-      final response = await _dio.post('/$endpoint', data: body);
+      final response = await _dio.post(_normalizePath(endpoint), data: body);
       return _formatResponse(response);
     } on DioException catch (e) {
       return _handleError(e);
@@ -81,7 +106,7 @@ class ApiService {
     FormData data,
   ) async {
     try {
-      final response = await _dio.post('/$endpoint', data: data);
+      final response = await _dio.post(_normalizePath(endpoint), data: data);
       return _formatResponse(response);
     } on DioException catch (e) {
       return _handleError(e);
@@ -93,7 +118,7 @@ class ApiService {
     Map<String, dynamic> body,
   ) async {
     try {
-      final response = await _dio.put('/$endpoint', data: body);
+      final response = await _dio.put(_normalizePath(endpoint), data: body);
       return _formatResponse(response);
     } on DioException catch (e) {
       return _handleError(e);
@@ -105,7 +130,7 @@ class ApiService {
     Map<String, dynamic> body,
   ) async {
     try {
-      final response = await _dio.patch('/$endpoint', data: body);
+      final response = await _dio.patch(_normalizePath(endpoint), data: body);
       return _formatResponse(response);
     } on DioException catch (e) {
       return _handleError(e);
@@ -117,7 +142,7 @@ class ApiService {
     Map<String, dynamic>? data,
   }) async {
     try {
-      final response = await _dio.delete('/$endpoint', data: data);
+      final response = await _dio.delete(_normalizePath(endpoint), data: data);
       return _formatResponse(response);
     } on DioException catch (e) {
       return _handleError(e);

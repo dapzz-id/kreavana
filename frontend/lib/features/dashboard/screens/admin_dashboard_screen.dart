@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../../models/user_model.dart';
 import '../../../services/admin_service.dart';
 import '../../../widgets/stat_card.dart';
 import '../../../widgets/skeleton_box.dart';
+import '../../../widgets/app_sweet_alert.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -16,33 +18,71 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _isLoading = false;
-  final int _totalUsers = 120;
-  int _activeCreators = 45;
+  int _totalUsers = 0;
+  int _activeCreators = 0;
   int _pendingVerifications = 0;
-  final int _completedProjects = 88;
+  int _completedProjects = 0;
+  int _activeOpportunities = 0;
+  int _openDisputes = 0;
   List<Map<String, dynamic>> _systemLogs = [];
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadAdminStats();
+    // Auto-refresh setiap 15 detik agar dashboard realtime
+    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted) {
+        _loadAdminStats(isSilent: true);
+      }
+    });
   }
 
-  Future<void> _loadAdminStats() async {
-    setState(() => _isLoading = true);
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadAdminStats({bool isSilent = false, bool showToast = false}) async {
+    if (!isSilent) setState(() => _isLoading = true);
     try {
-      final pendingApps = await AdminService.getApplications(status: 'pending');
-      final approvedApps = await AdminService.getApplications(
-        status: 'approved',
-      );
-      final logs = await AdminService.getSystemLogs();
+      final summaryFuture =
+          AdminService.getDashboardSummary().catchError((_) => <String, dynamic>{});
+      final pendingAppsFuture = AdminService.getApplications(status: 'pending')
+          .catchError((_) => <CreatorApplication>[]);
+      final logsFuture =
+          AdminService.getSystemLogs().catchError((_) => <Map<String, dynamic>>[]);
+
+      final results = await Future.wait([
+        summaryFuture,
+        pendingAppsFuture,
+        logsFuture,
+      ]);
+      final summary = results[0] as Map<String, dynamic>;
+      final pendingApps = results[1] as List;
+      final logs = results[2] as List<Map<String, dynamic>>;
       if (mounted) {
         setState(() {
-          _pendingVerifications = pendingApps.length;
-          _activeCreators = 35 + approvedApps.length; // baseline + verified
+          _totalUsers = (summary['total_users'] as num?)?.toInt() ?? _totalUsers;
+          _activeCreators = (summary['active_creators'] as num?)?.toInt() ?? _activeCreators;
+          _completedProjects = (summary['completed_projects'] as num?)?.toInt() ?? _completedProjects;
+          _activeOpportunities = (summary['active_opportunities'] as num?)?.toInt() ?? _activeOpportunities;
+          _openDisputes = (summary['open_disputes'] as num?)?.toInt() ?? _openDisputes;
+          _pendingVerifications =
+              (summary['pending_applications'] as num?)?.toInt() ?? pendingApps.length;
           _systemLogs = logs;
           _isLoading = false;
         });
+
+        if (showToast) {
+          AppSweetAlert.success(
+            context,
+            'Data dasbor berhasil diperbarui secara realtime.',
+            title: 'Dasbor Terkini',
+          );
+        }
       }
     } catch (_) {
       if (mounted) {
@@ -118,7 +158,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: _loadAdminStats,
+            tooltip: 'Segarkan Dasbor',
+            onPressed: () => _loadAdminStats(showToast: true),
           ),
         ],
       ),

@@ -57,6 +57,9 @@ import '../widgets/creator_sidebar_menus.dart';
 import '../widgets/kreavana_ai_floating_widget.dart';
 import 'kreavana_ai_screen.dart';
 import 'admin_system_settings_screen.dart';
+import '../services/system_settings_service.dart';
+import '../widgets/feature_disabled_view.dart';
+import '../widgets/app_sweet_alert.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -91,6 +94,7 @@ class _MainNavigationState extends State<MainNavigation> {
     _currentUser = widget.initialUser;
     _currentIndex = widget.initialIndex;
     _loadedScreenIndices.add(widget.initialIndex);
+    SystemSettingsService.moduleStatuses.addListener(_onModuleStatusesChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _refreshProfile();
@@ -103,8 +107,16 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   void dispose() {
+    SystemSettingsService.moduleStatuses.removeListener(_onModuleStatusesChanged);
     _sidebarScrollController.dispose();
     super.dispose();
+  }
+
+  void _onModuleStatusesChanged() {
+    if (mounted) {
+      _screenCache.clear();
+      setState(() {});
+    }
   }
 
   Future<void> _refreshProfile() async {
@@ -183,22 +195,15 @@ class _MainNavigationState extends State<MainNavigation> {
         message: isCollapsed ? label : '',
         child: InkWell(
           onTap: () {
-            if (isMobileDrawer) {
-              Navigator.pop(context);
-            }
+            if (isMobileDrawer) Navigator.pop(context);
             _navigateToScreenIndex(index);
-            if (_currentUser.isAdmin) {
-              if (index == 2 || index == 3) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) _refreshProfile();
-                });
-              }
-            } else {
-              if (index == 9 || index == 10) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) _refreshProfile();
-                });
-              }
+            final shouldRefresh = _currentUser.isAdmin
+                ? index == 2 || index == 3
+                : index == 9 || index == 10;
+            if (shouldRefresh) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _refreshProfile();
+              });
             }
           },
           borderRadius: BorderRadius.circular(12),
@@ -228,46 +233,17 @@ class _MainNavigationState extends State<MainNavigation> {
                   ? MainAxisAlignment.center
                   : MainAxisAlignment.start,
               children: [
-                if (!isCollapsed && isSelected) ...[
-                  Container(
-                    width: 3.5,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      gradient: isAi
-                          ? const LinearGradient(
-                              colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
-                            )
-                          : AppTheme.primaryGradient,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                if (isAi && isSelected)
-                  ShaderMask(
-                    shaderCallback: (bounds) => const LinearGradient(
-                      colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ).createShader(bounds),
-                    child: Icon(activeIcon, color: Colors.white, size: 20),
-                  )
-                else if (isAi)
-                  Icon(
-                    icon,
-                    color: isDark ? Colors.white70 : Colors.grey.shade700,
-                    size: 20,
-                  )
-                else
-                  Icon(
-                    isSelected ? activeIcon : icon,
-                    color: isSelected
-                        ? activeColor
-                        : (isDark
-                              ? AppTheme.textMuted
-                              : AppTheme.textSecondary),
-                    size: 20,
-                  ),
+                Icon(
+                  isSelected ? activeIcon : icon,
+                  color: isAi && isSelected
+                      ? const Color(0xFF8B5CF6)
+                      : (isSelected
+                            ? activeColor
+                            : (isDark
+                                  ? AppTheme.textMuted
+                                  : AppTheme.textSecondary)),
+                  size: 20,
+                ),
                 if (!isCollapsed) ...[
                   const SizedBox(width: 12),
                   Expanded(
@@ -283,43 +259,16 @@ class _MainNavigationState extends State<MainNavigation> {
                         color: isSelected
                             ? (isDark ? Colors.white : activeColor)
                             : (isDark ? Colors.white70 : AppTheme.textPrimary),
-                        letterSpacing: isSelected ? 0.1 : 0,
                       ),
                     ),
                   ),
                   if (isAi)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: isSelected
-                            ? const LinearGradient(
-                                colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
-                              )
-                            : null,
-                        color: isSelected
-                            ? null
-                            : (isDark
-                                  ? const Color(
-                                      0xFF8B5CF6,
-                                    ).withValues(alpha: 0.2)
-                                  : const Color(
-                                      0xFF8B5CF6,
-                                    ).withValues(alpha: 0.12)),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'AI',
-                        style: TextStyle(
-                          color: isSelected
-                              ? Colors.white
-                              : const Color(0xFF8B5CF6),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.5,
-                        ),
+                    const Text(
+                      'AI',
+                      style: TextStyle(
+                        color: Color(0xFF8B5CF6),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                 ],
@@ -483,6 +432,49 @@ class _MainNavigationState extends State<MainNavigation> {
       return;
     }
 
+    if (!_currentUser.isAdmin) {
+      if (index == 3 && !SystemSettingsService.isMarketplaceEnabled) {
+        AppSweetAlert.warning(
+          context,
+          'Fitur Marketplace sedang dinonaktifkan oleh administrator.',
+          title: 'Fitur Dinonaktifkan',
+        );
+        return;
+      }
+      if (index == 14 && !SystemSettingsService.isAiEnabled) {
+        AppSweetAlert.warning(
+          context,
+          'Fitur Kreavana AI sedang dinonaktifkan oleh administrator.',
+          title: 'Fitur Dinonaktifkan',
+        );
+        return;
+      }
+      if (index == 5 && !SystemSettingsService.isCollaborationEnabled) {
+        AppSweetAlert.warning(
+          context,
+          'Fitur Kolaborasi sedang dinonaktifkan oleh administrator.',
+          title: 'Fitur Dinonaktifkan',
+        );
+        return;
+      }
+      if (index == 7 && !SystemSettingsService.isWalletEnabled) {
+        AppSweetAlert.warning(
+          context,
+          'Fitur Pembayaran/Dompet sedang dinonaktifkan oleh administrator.',
+          title: 'Fitur Dinonaktifkan',
+        );
+        return;
+      }
+      if (index == 11 && !SystemSettingsService.isDirectMessageEnabled) {
+        AppSweetAlert.warning(
+          context,
+          'Fitur Pesan Langsung sedang dinonaktifkan oleh administrator.',
+          title: 'Fitur Dinonaktifkan',
+        );
+        return;
+      }
+    }
+
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
@@ -610,16 +602,17 @@ class _MainNavigationState extends State<MainNavigation> {
     bool isMobileDrawer = false,
   }) {
     return [
-      _buildSidebarItem(
-        icon: Icons.handshake_outlined,
-        activeIcon: Icons.handshake,
-        label: 'Kolaborasi',
-        index: 5,
-        theme: theme,
-        isDark: isDark,
-        isCollapsed: isCollapsed,
-        isMobileDrawer: isMobileDrawer,
-      ),
+      if (SystemSettingsService.isCollaborationEnabled || _currentUser.isAdmin)
+        _buildSidebarItem(
+          icon: Icons.handshake_outlined,
+          activeIcon: Icons.handshake,
+          label: 'Kolaborasi',
+          index: 5,
+          theme: theme,
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isMobileDrawer: isMobileDrawer,
+        ),
       if (_isCreatorUser)
         _buildSidebarItem(
           icon: Icons.calendar_month_outlined,
@@ -652,16 +645,17 @@ class _MainNavigationState extends State<MainNavigation> {
         isCollapsed: isCollapsed,
         isMobileDrawer: isMobileDrawer,
       ),
-      _buildSidebarItem(
-        icon: Icons.payment_outlined,
-        activeIcon: Icons.payment,
-        label: 'Pembayaran',
-        index: 7,
-        theme: theme,
-        isDark: isDark,
-        isCollapsed: isCollapsed,
-        isMobileDrawer: isMobileDrawer,
-      ),
+      if (SystemSettingsService.isWalletEnabled || _currentUser.isAdmin)
+        _buildSidebarItem(
+          icon: Icons.payment_outlined,
+          activeIcon: Icons.payment,
+          label: 'Pembayaran',
+          index: 7,
+          theme: theme,
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isMobileDrawer: isMobileDrawer,
+        ),
       if (!isMobileDrawer)
         _buildSidebarLink(
           icon: Icons.workspace_premium_outlined,
@@ -776,7 +770,8 @@ class _MainNavigationState extends State<MainNavigation> {
       }),
       const SizedBox(height: 18),
       _buildSidebarSectionHeader('LAINNYA', isDark, isCollapsed: isCollapsed),
-      if (CreatorSidebarMenus.showKolaborasiInLainnya(_currentUser.subRole))
+      if (CreatorSidebarMenus.showKolaborasiInLainnya(_currentUser.subRole) &&
+          (SystemSettingsService.isCollaborationEnabled || _currentUser.isAdmin))
         _buildSidebarItem(
           icon: Icons.handshake_outlined,
           activeIcon: Icons.handshake,
@@ -807,16 +802,17 @@ class _MainNavigationState extends State<MainNavigation> {
         isCollapsed: isCollapsed,
         isMobileDrawer: isMobileDrawer,
       ),
-      _buildSidebarItem(
-        icon: Icons.payment_outlined,
-        activeIcon: Icons.payment,
-        label: 'Pembayaran',
-        index: 7,
-        theme: theme,
-        isDark: isDark,
-        isCollapsed: isCollapsed,
-        isMobileDrawer: isMobileDrawer,
-      ),
+      if (SystemSettingsService.isWalletEnabled || _currentUser.isAdmin)
+        _buildSidebarItem(
+          icon: Icons.payment_outlined,
+          activeIcon: Icons.payment,
+          label: 'Pembayaran',
+          index: 7,
+          theme: theme,
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isMobileDrawer: isMobileDrawer,
+        ),
       if (!isMobileDrawer)
         _buildSidebarLink(
           icon: Icons.workspace_premium_outlined,
@@ -863,7 +859,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarItem(
           icon: Icons.verified_user_outlined,
           activeIcon: Icons.verified_user,
-          label: 'Verifikasi Kreator',
+          label: 'Verifikasi Akun',
           index: 1,
           theme: theme,
           isDark: isDark,
@@ -924,17 +920,18 @@ class _MainNavigationState extends State<MainNavigation> {
         isCollapsed: isCollapsed,
         isMobileDrawer: isMobileDrawer,
       ),
-      _buildSidebarItem(
-        icon: Icons.auto_awesome_outlined,
-        activeIcon: Icons.auto_awesome_rounded,
-        label: 'Kreavana AI',
-        index: 14,
-        theme: theme,
-        isDark: isDark,
-        isCollapsed: isCollapsed,
-        isMobileDrawer: isMobileDrawer,
-        isAi: true,
-      ),
+      if (SystemSettingsService.isAiEnabled || _currentUser.isAdmin)
+        _buildSidebarItem(
+          icon: Icons.auto_awesome_outlined,
+          activeIcon: Icons.auto_awesome_rounded,
+          label: 'Kreavana AI',
+          index: 14,
+          theme: theme,
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isMobileDrawer: isMobileDrawer,
+          isAi: true,
+        ),
       if (_isCreatorUser && !_isGovernment)
         _buildSidebarItem(
           icon: Icons.explore_outlined,
@@ -957,17 +954,29 @@ class _MainNavigationState extends State<MainNavigation> {
           isCollapsed: isCollapsed,
           isMobileDrawer: isMobileDrawer,
         ),
-      if (!_hasSpecificCreatorSubRole) ...[
+      if (SystemSettingsService.isDirectMessageEnabled || _currentUser.isAdmin)
         _buildSidebarItem(
-          icon: Icons.storefront_outlined,
-          activeIcon: Icons.storefront,
-          label: 'Marketplace',
-          index: 3,
+          icon: Icons.chat_bubble_outline_rounded,
+          activeIcon: Icons.chat_bubble_rounded,
+          label: 'Pesan Langsung',
+          index: 11,
           theme: theme,
           isDark: isDark,
           isCollapsed: isCollapsed,
           isMobileDrawer: isMobileDrawer,
         ),
+      if (!_hasSpecificCreatorSubRole) ...[
+        if (SystemSettingsService.isMarketplaceEnabled || _currentUser.isAdmin)
+          _buildSidebarItem(
+            icon: Icons.storefront_outlined,
+            activeIcon: Icons.storefront,
+            label: 'Marketplace',
+            index: 3,
+            theme: theme,
+            isDark: isDark,
+            isCollapsed: isCollapsed,
+            isMobileDrawer: isMobileDrawer,
+          ),
         if (_isCreatorUser && !_isGovernment)
           _buildSidebarItem(
             icon: Icons.calendar_today_outlined,
@@ -1961,14 +1970,38 @@ class _MainNavigationState extends State<MainNavigation> {
       0 => _buildClientDashboardScreen(),
       1 => ExploreScreen(user: _currentUser),
       2 => ProyekSayaScreen(user: _currentUser),
-      3 => MarketplaceKaryaScreen(user: _currentUser),
+      3 => (!SystemSettingsService.isMarketplaceEnabled && !_currentUser.isAdmin)
+          ? FeatureDisabledView(
+              featureName: 'Marketplace',
+              icon: Icons.storefront_outlined,
+              onBackToHome: () => _navigateToScreenIndex(0),
+            )
+          : MarketplaceKaryaScreen(user: _currentUser),
       4 => const AgendaScreen(),
-      5 => KolaborasiScreen(user: _currentUser, onUserUpdated: _onUserUpdated),
+      5 => (!SystemSettingsService.isCollaborationEnabled && !_currentUser.isAdmin)
+          ? FeatureDisabledView(
+              featureName: 'Kolaborasi',
+              icon: Icons.handshake_outlined,
+              onBackToHome: () => _navigateToScreenIndex(0),
+            )
+          : KolaborasiScreen(
+              user: _currentUser,
+              onUserUpdated: _onUserUpdated,
+            ),
       6 => UlasanReputasiScreen(
-        user: _currentUser,
-        onUserUpdated: _onUserUpdated,
-      ),
-      7 => WalletScreen(user: _currentUser, onUserUpdated: _onUserUpdated),
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        ),
+      7 => (!SystemSettingsService.isWalletEnabled && !_currentUser.isAdmin)
+          ? FeatureDisabledView(
+              featureName: 'Pembayaran & Dompet',
+              icon: Icons.account_balance_wallet_outlined,
+              onBackToHome: () => _navigateToScreenIndex(0),
+            )
+          : WalletScreen(
+              user: _currentUser,
+              onUserUpdated: _onUserUpdated,
+            ),
       8 => PengaturanScreen(
         user: _currentUser,
         onUserUpdated: _onUserUpdated,
@@ -1980,16 +2013,28 @@ class _MainNavigationState extends State<MainNavigation> {
         onLogout: _onLogout,
       ),
       10 => NotificationsScreen(userId: _currentUser.id ?? ''),
-      11 => DirectMessageScreen(
-        key: ValueKey('messages_$_messageScreenVersion'),
-        currentUser: _currentUser,
-      ),
+      11 => (!SystemSettingsService.isDirectMessageEnabled && !_currentUser.isAdmin)
+          ? FeatureDisabledView(
+              featureName: 'Pesan Langsung (Direct Message)',
+              icon: Icons.chat_bubble_outline_rounded,
+              onBackToHome: () => _navigateToScreenIndex(0),
+            )
+          : DirectMessageScreen(
+              key: ValueKey('messages_$_messageScreenVersion'),
+              currentUser: _currentUser,
+            ),
       12 => PeluangProyekScreen(user: _currentUser),
       13 => CreatorCalendarScreen(
-        user: _currentUser,
-        onUserUpdated: _onUserUpdated,
-      ),
-      14 => KreavanaAiScreen(user: _currentUser),
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        ),
+      14 => (!SystemSettingsService.isAiEnabled && !_currentUser.isAdmin)
+          ? FeatureDisabledView(
+              featureName: 'Kreavana AI',
+              icon: Icons.auto_awesome_rounded,
+              onBackToHome: () => _navigateToScreenIndex(0),
+            )
+          : KreavanaAiScreen(user: _currentUser),
       _ => const SizedBox.shrink(),
     };
   }
@@ -2303,7 +2348,9 @@ class _MainNavigationState extends State<MainNavigation> {
     return Stack(
       children: [
         scaffoldWidget,
-        if (!_isMobileDrawerOpen && activeIndex != 14)
+        if (!_isMobileDrawerOpen &&
+            activeIndex != 14 &&
+            (SystemSettingsService.isAiEnabled || _currentUser.isAdmin))
           KreavanaAiFloatingWidget(hasPageFab: hasPageFab),
       ],
     );

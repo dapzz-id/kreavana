@@ -92,6 +92,58 @@ class CallService extends ChangeNotifier {
   RTCVideoRenderer? _remoteRenderer;
   bool _renderersInitialized = false;
 
+  List<dynamic>? _cachedIceServers;
+  DateTime? _iceServersExpireAt;
+
+  Future<List<dynamic>> _getIceServers() async {
+    if (_cachedIceServers != null &&
+        _iceServersExpireAt != null &&
+        DateTime.now().isBefore(_iceServersExpireAt!)) {
+      return _cachedIceServers!;
+    }
+
+    final googleStuns = [
+      {'urls': 'stun:stun.l.google.com:19302'},
+      {'urls': 'stun:stun1.l.google.com:19302'},
+    ];
+
+    try {
+      final res = await ApiService.post('call/turn-credentials', {});
+      if (res['status'] == true && res['data'] != null) {
+        final data = Map<String, dynamic>.from(res['data']);
+        final servers = List<dynamic>.from(data['ice_servers'] ?? []);
+        final ttl = (data['ttl_seconds'] as num?)?.toInt() ?? 21600;
+        _cachedIceServers = [...googleStuns, ...servers];
+        _iceServersExpireAt = DateTime.now().add(
+          Duration(seconds: (ttl * 0.8).toInt()),
+        );
+        return _cachedIceServers!;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Fallback TURN credentials (fetch failed): $e');
+    }
+
+    // ╔══════════════════════════════════════════════════════════════╗
+    // ║  DEV ONLY FALLBACK — HAPUS BLOK INI SEBELUM RILIS PRODUKSI  ║
+    // ║  Credentials ini hanya aktif bila endpoint turn-credentials  ║
+    // ║  tidak merespon. Production wajib pakai HMAC token backend. ║
+    // ╚══════════════════════════════════════════════════════════════╝
+    _cachedIceServers = [
+      ...googleStuns,
+      {'urls': 'stun:${ApiService.hostIp}:3478'},
+      {
+        'urls': [
+          'turn:${ApiService.hostIp}:3478',
+          'turn:${ApiService.hostIp}:3478?transport=tcp',
+        ],
+        'username': 'kreavana',
+        'credential': 'kreavana2025',
+      },
+    ];
+    _iceServersExpireAt = DateTime.now().add(const Duration(minutes: 30));
+    return _cachedIceServers!;
+  }
+
   RTCVideoRenderer get localRenderer => _localRenderer!;
   RTCVideoRenderer get remoteRenderer => _remoteRenderer!;
 
@@ -209,21 +261,9 @@ class CallService extends ChangeNotifier {
 
   /// Create WebRTC Peer Connection
   Future<void> _createPeerConnection() async {
+    final iceServers = await _getIceServers();
     final Map<String, dynamic> configuration = {
-      'iceServers': [
-        {'urls': 'stun:stun.l.google.com:19302'},
-        {'urls': 'stun:stun1.l.google.com:19302'},
-        // Local Coturn TURN server (Docker)
-        {'urls': 'stun:${ApiService.hostIp}:3478'},
-        {
-          'urls': [
-            'turn:${ApiService.hostIp}:3478',
-            'turn:${ApiService.hostIp}:3478?transport=tcp',
-          ],
-          'username': 'kreavana',
-          'credential': 'kreavana2025',
-        },
-      ],
+      'iceServers': iceServers,
       'sdpSemantics': 'unified-plan',
       'iceCandidatePoolSize': 10,
     };

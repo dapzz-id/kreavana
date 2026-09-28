@@ -17,6 +17,7 @@ import '../services/app_router.dart';
 import '../services/theme_transition_service.dart';
 import '../widgets/kreavana_image.dart';
 import '../widgets/app_breadcrumbs.dart';
+import '../widgets/auth_guard_dialog.dart';
 import 'main_navigation.dart';
 
 class PengaturanScreen extends StatefulWidget {
@@ -67,11 +68,18 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
     await prefs.setBool(key, value);
   }
 
-  void _openProfile() {
-    if (widget.user == null) {
-      AppSnackbar.info(context, 'Silakan login terlebih dahulu.');
-      return;
+  bool get _isGuest => widget.user == null || widget.user!.isGuest;
+
+  bool _requireAuth(String actionName) {
+    if (_isGuest) {
+      AuthGuardDialog.show(context, actionName: actionName);
+      return false;
     }
+    return true;
+  }
+
+  void _openProfile() {
+    if (!_requireAuth('mengakses dan mengedit profil')) return;
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -235,7 +243,10 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                 title: 'Keamanan',
                 subtitle: 'Ubah kata sandi & verifikasi 2FA',
                 isDark: isDark,
-                onTap: () => _showChangePasswordDialog(),
+                onTap: () {
+                  if (!_requireAuth('mengubah kata sandi dan keamanan akun')) return;
+                  _showChangePasswordDialog();
+                },
               ),
               _buildNavTile(
                 icon: Icons.payment_outlined,
@@ -243,12 +254,15 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                 title: 'Metode Pembayaran',
                 subtitle: 'Kelola kartu & rekening bank',
                 isDark: isDark,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const PaymentMethodsScreen(),
-                  ),
-                ),
+                onTap: () {
+                  if (!_requireAuth('mengelola metode pembayaran')) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PaymentMethodsScreen(),
+                    ),
+                  );
+                },
               ),
               _buildNavTile(
                 icon: Icons.location_on_outlined,
@@ -256,10 +270,13 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                 title: 'Alamat',
                 subtitle: 'Kelola alamat pengiriman',
                 isDark: isDark,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AddressesScreen()),
-                ),
+                onTap: () {
+                  if (!_requireAuth('mengelola alamat pengiriman')) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AddressesScreen()),
+                  );
+                },
               ),
               _buildNavTile(
                 icon: Icons.storage_outlined,
@@ -270,12 +287,15 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                 isLast:
                     widget.user?.role != 'creator' &&
                     widget.user?.isCreator != true,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => StorageManagementScreen(user: widget.user),
-                  ),
-                ),
+                onTap: () {
+                  if (!_requireAuth('mengakses manajemen storage')) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => StorageManagementScreen(user: widget.user),
+                    ),
+                  );
+                },
               ),
               if (widget.user?.role == 'creator' ||
                   widget.user?.isCreator == true)
@@ -286,7 +306,10 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                   subtitle: 'Atur kapasitas harian & ketersediaan',
                   isDark: isDark,
                   isLast: true,
-                  onTap: () => context.go(AppRoutes.kapasitasJadwal),
+                  onTap: () {
+                    if (!_requireAuth('mengakses kapasitas dan jadwal kerja')) return;
+                    context.go(AppRoutes.kapasitasJadwal);
+                  },
                 ),
             ],
           ),
@@ -373,26 +396,29 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                               ),
                             )
                           : null),
-                  onTap: widget.user!.isCreator
-                      ? () {
-                          AppSnackbar.info(
-                            context,
-                            'Akun Anda sudah terverifikasi sebagai Kreator resmi (Centang Hijau). Verifikasi Identitas Klien dinonaktifkan.',
-                          );
-                        }
-                      : () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ClientVerificationPage(
-                              user: widget.user!,
-                              onSuccess: () {
-                                if (widget.onUserUpdated != null) {
-                                  // trigger refresh
-                                }
-                              },
-                            ),
-                          ),
+                  onTap: () {
+                    if (!_requireAuth('melakukan verifikasi identitas (KTP)')) return;
+                    if (widget.user!.isCreator) {
+                      AppSnackbar.info(
+                        context,
+                        'Akun Anda sudah terverifikasi sebagai Kreator resmi (Centang Hijau). Verifikasi Identitas Klien dinonaktifkan.',
+                      );
+                      return;
+                    }
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ClientVerificationPage(
+                          user: widget.user!,
+                          onSuccess: () {
+                            if (widget.onUserUpdated != null) {
+                              // trigger refresh
+                            }
+                          },
                         ),
+                      ),
+                    );
+                  },
                 ),
                 // Creator Application tile — only for non-creator users
                 if (widget.user!.role != 'admin')
@@ -436,15 +462,18 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                             ),
                           )
                         : null,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => CreatorApplicationPage(
-                          user: widget.user!,
-                          onUserUpdated: widget.onUserUpdated,
+                    onTap: () {
+                      if (!_requireAuth('mengajukan verifikasi menjadi Kreator')) return;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CreatorApplicationPage(
+                            user: widget.user!,
+                            onUserUpdated: widget.onUserUpdated,
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
               ],
             ),
@@ -602,16 +631,25 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
           ),
           const SizedBox(height: 28),
 
-          // ── Logout ───────────────────────────────────────────────────────
+          // ── Logout / Login ───────────────────────────────────────────────
           Container(
             decoration: BoxDecoration(
               color: isDark ? AppTheme.cardDark : Colors.white,
               borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-              border: Border.all(color: AppTheme.error.withValues(alpha: 0.25)),
+              border: Border.all(
+                color: _isGuest
+                    ? AppTheme.primaryPurple.withValues(alpha: 0.3)
+                    : AppTheme.error.withValues(alpha: 0.25),
+              ),
               boxShadow: isDark ? null : AppTheme.cardShadowLight,
             ),
             child: InkWell(
-              onTap: _confirmLogout,
+              onTap: _isGuest
+                  ? () => AuthGuardDialog.show(
+                        context,
+                        actionName: 'masuk atau mendaftar ke akun Kreavana',
+                      )
+                  : _confirmLogout,
               borderRadius: BorderRadius.circular(AppTheme.radiusMD),
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -620,12 +658,17 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppTheme.error.withValues(alpha: 0.1),
+                        color: (_isGuest
+                                ? AppTheme.primaryPurple
+                                : AppTheme.error)
+                            .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
-                        Icons.logout_rounded,
-                        color: AppTheme.error,
+                        _isGuest ? Icons.login_rounded : Icons.logout_rounded,
+                        color: _isGuest
+                            ? AppTheme.primaryPurple
+                            : AppTheme.error,
                         size: 20,
                       ),
                     ),
@@ -635,15 +678,21 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Keluar dari Akun',
+                            _isGuest
+                                ? 'Masuk / Daftar Akun'
+                                : 'Keluar dari Akun',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
-                              color: AppTheme.error,
+                              color: _isGuest
+                                  ? AppTheme.primaryPurple
+                                  : AppTheme.error,
                             ),
                           ),
                           Text(
-                            'Anda akan keluar dari sesi ini',
+                            _isGuest
+                                ? 'Masuk untuk membuka profil, verifikasi & proyek'
+                                : 'Anda akan keluar dari sesi ini',
                             style: TextStyle(
                               fontSize: 11,
                               color: isDark
@@ -656,7 +705,10 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                     ),
                     Icon(
                       Icons.chevron_right,
-                      color: AppTheme.error.withValues(alpha: 0.5),
+                      color: (_isGuest
+                              ? AppTheme.primaryPurple
+                              : AppTheme.error)
+                          .withValues(alpha: 0.5),
                       size: 18,
                     ),
                   ],

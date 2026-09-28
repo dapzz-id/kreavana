@@ -13,6 +13,7 @@ import '../widgets/skeleton_box.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import 'client_verification_page.dart';
 import '../widgets/app_breadcrumbs.dart';
+import '../widgets/auth_guard_dialog.dart';
 import 'main_navigation.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -44,6 +45,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _currentUser = widget.user;
+    if (_currentUser.isGuest) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        AuthGuardDialog.show(context, actionName: 'mengakses profil akun');
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        } else {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MainNavigation(
+                initialUser: widget.user,
+                initialIndex: 0,
+              ),
+            ),
+            (r) => false,
+          );
+        }
+      });
+      return;
+    }
     _nameController.text = _currentUser.name;
     _phoneController.text = _currentUser.phone ?? '';
     _loadProfileDetails();

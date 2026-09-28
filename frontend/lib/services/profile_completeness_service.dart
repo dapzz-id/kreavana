@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../app/theme.dart';
 import '../widgets/upgrade_plan_modal.dart';
+import '../widgets/auth_guard_dialog.dart';
 import '../screens/profile_screen.dart';
 
 class ProfileCheckItem {
@@ -29,6 +30,10 @@ class ProfileCompleteness {
   ProfileCompleteness({required this.percentage, required this.items});
 
   static ProfileCompleteness calculate(UserModel user) {
+    if (user.isGuest) {
+      return ProfileCompleteness(percentage: 0, items: []);
+    }
+
     final items = <ProfileCheckItem>[];
     int score = 0;
 
@@ -115,6 +120,11 @@ class ProfileCompleteness {
     UserModel user, {
     VoidCallback? onRefresh,
   }) {
+    if (user.isGuest) {
+      AuthGuardDialog.show(context, actionName: 'melihat kelengkapan profil akun');
+      return;
+    }
+
     final completeness = calculate(user);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
