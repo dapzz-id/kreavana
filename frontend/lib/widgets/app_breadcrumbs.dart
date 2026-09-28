@@ -21,8 +21,8 @@ class AppBreadcrumbs extends StatelessWidget {
   const AppBreadcrumbs({
     super.key,
     required this.items,
-    this.padding = const EdgeInsets.only(top: 4, bottom: 12),
-    this.showCapsule = true,
+    this.padding = const EdgeInsets.only(bottom: 12),
+    this.showCapsule = false,
   });
 
   @override
@@ -42,8 +42,8 @@ class AppBreadcrumbs extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 5),
               child: Icon(
                 Icons.chevron_right_rounded,
-                size: 15,
-                color: isDark ? Colors.white30 : const Color(0xFF94A3B8),
+                size: 16,
+                color: isDark ? Colors.white38 : Colors.grey.shade400,
               ),
             ),
         ],
@@ -53,27 +53,18 @@ class AppBreadcrumbs extends StatelessWidget {
     Widget breadcrumbWidget;
     if (showCapsule) {
       breadcrumbWidget = Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: isDark
               ? const Color(0xFF1E293B).withValues(alpha: 0.65)
               : const Color(0xFFF1F5F9).withValues(alpha: 0.85),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isDark
                 ? const Color(0xFF334155).withValues(alpha: 0.5)
                 : const Color(0xFFE2E8F0),
             width: 0.8,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: isDark
-                  ? Colors.black.withValues(alpha: 0.2)
-                  : const Color(0xFF64748B).withValues(alpha: 0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
-            ),
-          ],
         ),
         child: rowContent,
       );
@@ -93,65 +84,30 @@ class AppBreadcrumbs extends StatelessWidget {
   Widget _buildItem(BreadcrumbItem item, bool isLast, bool isDark) {
     final hasAction = item.onTap != null && !isLast;
 
-    if (isLast) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
-        decoration: BoxDecoration(
-          color: AppTheme.primaryPurple.withValues(alpha: isDark ? 0.22 : 0.1),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: AppTheme.primaryPurple.withValues(alpha: isDark ? 0.45 : 0.2),
-            width: 0.8,
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (item.icon != null) ...[
+          Icon(
+            item.icon,
+            size: 15,
+            color: isLast
+                ? AppTheme.primaryPurple
+                : (isDark ? AppTheme.textMuted : const Color(0xFF64748B)),
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (item.icon != null) ...[
-              Icon(
-                item.icon,
-                size: 13.5,
-                color: isDark ? const Color(0xFFC084FC) : AppTheme.primaryPurple,
-              ),
-              const SizedBox(width: 4.5),
-            ],
-            Text(
-              item.label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: isDark ? const Color(0xFFE9D5FF) : AppTheme.primaryPurple,
-                letterSpacing: 0.1,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final normalContent = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (item.icon != null) ...[
-            Icon(
-              item.icon,
-              size: 13.5,
-              color: isDark ? Colors.white70 : const Color(0xFF64748B),
-            ),
-            const SizedBox(width: 4.5),
-          ],
-          Text(
-            item.label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: isDark ? Colors.white70 : const Color(0xFF475569),
-            ),
-          ),
+          const SizedBox(width: 5),
         ],
-      ),
+        Text(
+          item.label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: isLast ? FontWeight.w700 : FontWeight.w500,
+            color: isLast
+                ? (isDark ? Colors.white : const Color(0xFF1E293B))
+                : (isDark ? AppTheme.textMuted : const Color(0xFF64748B)),
+          ),
+        ),
+      ],
     );
 
     if (hasAction) {
@@ -159,13 +115,19 @@ class AppBreadcrumbs extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: item.onTap,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(6),
           hoverColor: AppTheme.primaryPurple.withValues(alpha: 0.08),
-          child: normalContent,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+            child: content,
+          ),
         ),
       );
     }
 
-    return normalContent;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+      child: content,
+    );
   }
 }

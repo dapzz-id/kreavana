@@ -1852,122 +1852,138 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 900;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: Navigator.canPop(context),
-        toolbarHeight: isDesktop ? 122 : 112,
-        titleSpacing: isDesktop ? 32 : 16,
-        elevation: 0,
-        title: Padding(
-          padding: const EdgeInsets.only(top: 14, bottom: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AppBreadcrumbs(
-                padding: const EdgeInsets.only(bottom: 6),
-                items: [
-                  BreadcrumbItem(
-                    label: 'Dasbor Admin',
-                    icon: Icons.admin_panel_settings_rounded,
-                    onTap: () {
-                      if (Navigator.canPop(context)) {
-                        Navigator.pop(context);
-                      }
-                    },
-                  ),
-                  const BreadcrumbItem(
-                    label: 'Verifikasi Akun',
-                    icon: Icons.verified_user_rounded,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 2),
-              const Text(
-                'Verifikasi Akun & Identitas',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.4,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                'Kelola verifikasi KTP Klien (Centang Biru) dan Upgrade Kreator (Centang Hijau)',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white60
-                      : Colors.grey.shade600,
-                  fontWeight: FontWeight.normal,
-                ),
-              ),
-            ],
-          ),
-        ),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          labelStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-          ),
-          tabs: [
-            Tab(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Pending'),
-                  if (_pendingApps.isNotEmpty) ...[
-                    const SizedBox(width: 6),
-                    Badge.count(count: _pendingApps.length),
-                  ],
-                ],
-              ),
+      appBar: Navigator.canPop(context)
+          ? AppBar(
+              automaticallyImplyLeading: true,
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+            )
+          : null,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            color: Theme.of(context).cardColor,
+            padding: EdgeInsets.fromLTRB(
+              isDesktop ? 32 : 16,
+              isDesktop ? 24 : 16,
+              isDesktop ? 32 : 16,
+              0,
             ),
-            const Tab(text: 'Disetujui'),
-            const Tab(text: 'Ditolak'),
-            Tab(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Paket Creator'),
-                  if (_creatorPackages
-                      .where((package) => package['status'] == 'pending')
-                      .isNotEmpty) ...[
-                    const SizedBox(width: 6),
-                    Badge.count(
-                      count: _creatorPackages
-                          .where((package) => package['status'] == 'pending')
-                          .length,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppBreadcrumbs(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  items: [
+                    BreadcrumbItem(
+                      label: 'Dasbor Admin',
+                      icon: Icons.admin_panel_settings_rounded,
+                      onTap: () {
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        }
+                      },
+                    ),
+                    const BreadcrumbItem(
+                      label: 'Verifikasi Akun',
+                      icon: Icons.verified_user_rounded,
                     ),
                   ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      body:
-          _isLoading &&
-              _pendingApps.isEmpty &&
-              _approvedApps.isEmpty &&
-              _creatorPackages.isEmpty
-          ? ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: 4,
-              itemBuilder: (context, index) => const AdminAppSkeleton(),
-            )
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildAppList(_pendingApps, showActions: true),
-                _buildAppList(_approvedApps),
-                _buildAppList(_rejectedApps),
-                _buildPackageReviewList(),
+                ),
+                const Text(
+                  'Verifikasi Akun & Identitas',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.4,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Kelola verifikasi KTP Klien (Centang Biru) dan Upgrade Kreator (Centang Hijau)',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.white60 : Colors.grey.shade600,
+                    fontWeight: FontWeight.normal,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TabBar(
+                  controller: _tabController,
+                  isScrollable: true,
+                  labelStyle: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                  tabs: [
+                    Tab(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('Pending'),
+                          if (_pendingApps.isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            Badge.count(count: _pendingApps.length),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const Tab(text: 'Disetujui'),
+                    const Tab(text: 'Ditolak'),
+                    Tab(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('Paket Creator'),
+                          if (_creatorPackages
+                              .where((package) => package['status'] == 'pending')
+                              .isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            Badge.count(
+                              count: _creatorPackages
+                                  .where((package) => package['status'] == 'pending')
+                                  .length,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
+          ),
+          Divider(
+            height: 1,
+            thickness: 1,
+            color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+          ),
+          Expanded(
+            child: _isLoading &&
+                    _pendingApps.isEmpty &&
+                    _approvedApps.isEmpty &&
+                    _creatorPackages.isEmpty
+                ? ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: 4,
+                    itemBuilder: (context, index) => const AdminAppSkeleton(),
+                  )
+                : TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildAppList(_pendingApps, showActions: true),
+                      _buildAppList(_approvedApps),
+                      _buildAppList(_rejectedApps),
+                      _buildPackageReviewList(),
+                    ],
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }
