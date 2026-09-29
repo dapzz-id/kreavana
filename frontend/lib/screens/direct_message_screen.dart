@@ -1531,11 +1531,15 @@ class ChatDetailSection extends StatefulWidget {
 
 class _ChatDetailSectionState extends State<ChatDetailSection> {
   final TextEditingController _messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   record.AudioRecorder? _record;
   late final BaseAudioPlayer _appAudioPlayer = getAudioPlayer();
 
   List<Map<String, dynamic>> _messages = [];
   List<String> _pinnedMessageIds = [];
+  int _activePinnedIndex = 0;
+  String? _highlightedMessageId;
+  Timer? _highlightTimer;
   bool isLoading = true;
   bool _isRecording = false;
   bool _isAudioLoading = false;
@@ -1654,9 +1658,11 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     _pingTimer?.cancel();
     _presenceTimer?.cancel();
     _recordTimer?.cancel();
+    _highlightTimer?.cancel();
     _messageSubscription?.cancel();
     _deletedMessageSubscription?.cancel();
     _messageController.dispose();
+    _scrollController.dispose();
     _appAudioPlayer.dispose();
     _record?.dispose();
     super.dispose();
@@ -2328,6 +2334,9 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     if (_pinnedMessageIds.contains(messageId)) {
       setState(() {
         _pinnedMessageIds.remove(messageId);
+        if (_activePinnedIndex >= _pinnedMessageIds.length) {
+          _activePinnedIndex = (_pinnedMessageIds.length - 1).clamp(0, 2);
+        }
       });
       _savePinnedMessages();
       AppSnackbar.info(context, 'Pesan dilepas dari sematan.');
@@ -2342,103 +2351,11 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
       }
       setState(() {
         _pinnedMessageIds.insert(0, messageId);
+        _activePinnedIndex = 0;
       });
       _savePinnedMessages();
       AppSnackbar.success(context, 'Pesan berhasil disematkan ke atas.');
     }
-  }
-
-  void _showAllPinnedMessagesSheet(List<Map<String, dynamic>> pinnedList) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return Dialog(
-          backgroundColor: isDark ? AppTheme.cardDark : Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.push_pin_rounded,
-                          color: AppTheme.primaryPurple,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          'Pesan Tersemat (${pinnedList.length}/3)',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          icon: const Icon(Icons.close_rounded, size: 20),
-                          onPressed: () => Navigator.pop(ctx),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 16),
-                  ...pinnedList.map((msg) {
-                    final isMe = msg['isMe'] == true;
-                    final sender = isMe ? 'Anda' : (msg['sender_name'] ?? msg['name'] ?? 'Pesan');
-                    final text = msg['text']?.toString() ?? '';
-                    final preview = text.isNotEmpty
-                        ? text
-                        : (msg['type'] == 'audio' ? '🎵 Pesan suara' : 'Lampiran media');
-                    return ListTile(
-                      leading: CircleAvatar(
-                        radius: 18,
-                        backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.12),
-                        child: const Icon(
-                          Icons.push_pin_rounded,
-                          color: AppTheme.primaryPurple,
-                          size: 16,
-                        ),
-                      ),
-                      title: Text(
-                        sender,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                      subtitle: Text(
-                        preview,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.close_rounded, size: 18),
-                        tooltip: 'Lepas Sematan',
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          _togglePinMessage(msg);
-                        },
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
   }
 
   Widget _buildPinnedMessagesBanner(ThemeData theme, bool isDark) {
@@ -2451,15 +2368,21 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
 
     if (pinnedList.isEmpty) return const SizedBox.shrink();
 
-    final latestPinned = pinnedList.first;
-    final isMe = latestPinned['isMe'] == true;
-    final senderName = isMe ? 'Anda' : (latestPinned['sender_name'] ?? latestPinned['name'] ?? 'Pesan');
-    final rawText = latestPinned['text']?.toString() ?? '';
+    if (_activePinnedIndex >= pinnedList.length) {
+      _activePinnedIndex = 0;
+    }
+
+    final currentPinned = pinnedList[_activePinnedIndex];
+    final isMe = currentPinned['isMe'] == true;
+    final senderName = isMe
+        ? 'Anda'
+        : (currentPinned['sender_name'] ?? currentPinned['name'] ?? 'Pesan Tersemat');
+    final rawText = currentPinned['text']?.toString() ?? '';
     final previewText = rawText.isNotEmpty
         ? rawText
-        : (latestPinned['type'] == 'audio'
+        : (currentPinned['type'] == 'audio'
             ? '🎵 Pesan suara'
-            : (latestPinned['type'] == 'image' ? '📷 Gambar' : 'Pesan tersemat'));
+            : (currentPinned['type'] == 'image' ? '📷 Gambar' : 'Pesan tersemat'));
 
     return Container(
       decoration: BoxDecoration(
@@ -2477,74 +2400,139 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryPurple.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.push_pin_rounded,
-              size: 16,
-              color: AppTheme.primaryPurple,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: InkWell(
-              onTap: () => _showAllPinnedMessagesSheet(pinnedList),
-              borderRadius: BorderRadius.circular(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            // 1. Lompat ke pesan di dalam chat list
+            final targetId = currentPinned['id']?.toString();
+            if (targetId != null) {
+              final targetIndex = _messages.indexWhere(
+                (m) => m['id']?.toString() == targetId,
+              );
+              if (targetIndex != -1 && _scrollController.hasClients) {
+                final estimatedOffset = (targetIndex * 72.0)
+                    .clamp(0.0, _scrollController.position.maxScrollExtent);
+                _scrollController.animateTo(
+                  estimatedOffset,
+                  duration: const Duration(milliseconds: 350),
+                  curve: Curves.easeOutCubic,
+                );
+              }
+              _highlightTimer?.cancel();
+              setState(() {
+                _highlightedMessageId = targetId;
+              });
+              _highlightTimer = Timer(const Duration(milliseconds: 1800), () {
+                if (mounted) {
+                  setState(() {
+                    _highlightedMessageId = null;
+                  });
+                }
+              });
+            }
+
+            // 2. Berpindah ke pesan tersemat berikutnya jika ada lebih dari 1
+            if (pinnedList.length > 1) {
+              setState(() {
+                _activePinnedIndex =
+                    (_activePinnedIndex + 1) % pinnedList.length;
+              });
+            }
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                // ── Indikator Bar seperti WhatsApp di sebelah kiri ──
+                SizedBox(
+                  height: 32,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: List.generate(pinnedList.length, (idx) {
+                      final isActive = idx == _activePinnedIndex;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 3.5,
+                        height: isActive ? 28 : 14,
+                        margin: const EdgeInsets.only(right: 3.5),
+                        decoration: BoxDecoration(
+                          color: isActive
+                              ? AppTheme.primaryPurple
+                              : (isDark
+                                  ? Colors.white24
+                                  : Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+                const SizedBox(width: 10),
+
+                // ── Teks Info & Pratinjau Pesan ──
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'Pesan Tersemat (${pinnedList.length}/3)',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryPurple,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          '• $senderName',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark ? Colors.white60 : Colors.grey.shade600,
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              senderName,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryPurple,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          if (pinnedList.length > 1) ...[
+                            const SizedBox(width: 6),
+                            Text(
+                              '(${_activePinnedIndex + 1}/${pinnedList.length})',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark
+                                    ? Colors.white38
+                                    : Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        previewText,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark ? Colors.white70 : Colors.black87,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    previewText,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDark ? Colors.white70 : Colors.black87,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                ),
+
+                // ── Ikon Pin di kanan (tanpa tombol X) ──
+                const SizedBox(width: 8),
+                Transform.rotate(
+                  angle: 0.4,
+                  child: Icon(
+                    Icons.push_pin_rounded,
+                    size: 18,
+                    color: isDark ? Colors.white60 : Colors.grey.shade500,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.close_rounded, size: 18),
-            tooltip: 'Lepas Sematan',
-            onPressed: () => _togglePinMessage(latestPinned),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -3343,6 +3331,7 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                       ),
                     )
                   : ListView.builder(
+                      controller: _scrollController,
                       reverse: true,
                       padding: const EdgeInsets.all(16.0),
                       itemCount: _messages.length,
@@ -3356,6 +3345,8 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
 
                         final isMe = message['isMe'] == true;
                         final isAudio = message['type'] == 'audio';
+                        final isHighlighted =
+                            _highlightedMessageId == message['id']?.toString();
 
                         return AnimatedEntrance(
                           duration: AppMotion.fast,
@@ -3389,54 +3380,86 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                                 children: [
                                   if (isMe)
                                     IconButton(
-                                      icon: const Icon(Icons.more_vert_rounded, size: 18),
-                                      color: isDark ? Colors.white38 : Colors.grey.shade400,
-                                      tooltip: 'Opsi pesan',
-                                      padding: const EdgeInsets.all(4),
-                                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                                      onPressed: () => _showMessageActions(message),
-                                    ),
-                                  GestureDetector(
-                                    onLongPress: () => _showMessageActions(message),
-                                    onSecondaryTap: () => _showMessageActions(message),
-                                    child: Container(
-                                  margin: const EdgeInsets.only(bottom: 12.0),
-                                  constraints: BoxConstraints(
-                                    maxWidth:
-                                        MediaQuery.of(context).size.width *
-                                        0.75,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16.0,
-                                    vertical: 12.0,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    gradient: isMe
-                                        ? AppTheme.primaryGradient
-                                        : null,
-                                    color: isMe
-                                        ? null
-                                        : theme.colorScheme.surface,
-                                    borderRadius: BorderRadius.circular(20)
-                                        .copyWith(
-                                          bottomRight: isMe
-                                              ? const Radius.circular(4)
-                                              : const Radius.circular(20),
-                                          bottomLeft: !isMe
-                                              ? const Radius.circular(4)
-                                              : const Radius.circular(20),
-                                        ),
-                                    boxShadow: [
-                                      if (!isMe)
-                                        BoxShadow(
-                                          color: Colors.black.withValues(
-                                            alpha: 0.05,
+                                      icon: const Icon(
+                                        Icons.more_vert_rounded,
+                                        size: 18,
+                                      ),
+                                          color: isDark
+                                              ? Colors.white38
+                                              : Colors.grey.shade400,
+                                          tooltip: 'Opsi pesan',
+                                          padding: const EdgeInsets.all(4),
+                                          constraints: const BoxConstraints(
+                                            minWidth: 28,
+                                            minHeight: 28,
                                           ),
-                                          blurRadius: 5,
-                                          offset: const Offset(0, 2),
+                                          onPressed: () =>
+                                              _showMessageActions(message),
                                         ),
-                                    ],
-                                  ),
+                                      GestureDetector(
+                                        onLongPress: () =>
+                                            _showMessageActions(message),
+                                        onSecondaryTap: () =>
+                                            _showMessageActions(message),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(
+                                            milliseconds: 300,
+                                          ),
+                                          margin: const EdgeInsets.only(
+                                            bottom: 12.0,
+                                          ),
+                                          constraints: BoxConstraints(
+                                            maxWidth:
+                                                MediaQuery.of(context)
+                                                    .size
+                                                    .width *
+                                                0.75,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16.0,
+                                            vertical: 12.0,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            gradient: isMe
+                                                ? AppTheme.primaryGradient
+                                                : null,
+                                            color: isMe
+                                                ? null
+                                                : theme.colorScheme.surface,
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ).copyWith(
+                                              bottomRight: isMe
+                                                  ? const Radius.circular(4)
+                                                  : const Radius.circular(20),
+                                              bottomLeft: !isMe
+                                                  ? const Radius.circular(4)
+                                                  : const Radius.circular(20),
+                                            ),
+                                            border: isHighlighted
+                                                ? Border.all(
+                                                    color:
+                                                        AppTheme.primaryPurple,
+                                                    width: 2.5,
+                                                  )
+                                                : null,
+                                            boxShadow: [
+                                              if (isHighlighted)
+                                                BoxShadow(
+                                                  color: AppTheme.primaryPurple
+                                                      .withValues(alpha: 0.35),
+                                                  blurRadius: 12,
+                                                  spreadRadius: 2,
+                                                )
+                                              else if (!isMe)
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withValues(alpha: 0.05),
+                                                  blurRadius: 5,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                            ],
+                                          ),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
