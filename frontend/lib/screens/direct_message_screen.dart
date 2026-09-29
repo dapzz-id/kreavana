@@ -1222,22 +1222,25 @@ class ChatListSectionState extends State<ChatListSection> {
                             ),
                           ),
                         ],
-                        const SizedBox(width: 6),
-                        InkWell(
-                          onTap: () => _togglePinChat(chat),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.all(3),
-                            child: Icon(
-                              isPinned
-                                  ? Icons.push_pin_rounded
-                                  : Icons.push_pin_outlined,
-                              size: 16,
-                              color: isPinned
-                                  ? AppTheme.primaryPurple
-                                  : (isDark ? Colors.white24 : Colors.grey.shade400),
+                        if (isPinned) ...[
+                          const SizedBox(width: 4),
+                          Transform.rotate(
+                            angle: 0.4,
+                            child: const Icon(
+                              Icons.push_pin_rounded,
+                              size: 14,
+                              color: AppTheme.primaryPurple,
                             ),
                           ),
+                        ],
+                        const SizedBox(width: 4),
+                        IconButton(
+                          icon: const Icon(Icons.more_vert_rounded, size: 18),
+                          color: isDark ? Colors.white38 : Colors.grey.shade400,
+                          tooltip: 'Opsi obrolan',
+                          padding: const EdgeInsets.all(4),
+                          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                          onPressed: () => _showChatOptionsMenu(chat),
                         ),
                       ],
                     ),
