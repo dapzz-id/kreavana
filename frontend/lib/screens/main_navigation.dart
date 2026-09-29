@@ -974,7 +974,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarItem(
           icon: Icons.chat_bubble_outline_rounded,
           activeIcon: Icons.chat_bubble_rounded,
-          label: 'Pesan Langsung',
+          label: 'Direct Message',
           index: 11,
           theme: theme,
           isDark: isDark,

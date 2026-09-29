@@ -965,7 +965,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                         if (SystemSettingsService.isDirectMessageEnabled || widget.user.isAdmin)
                           _buildNavRow(
                             icon: Icons.chat_bubble_outline_rounded,
-                            label: 'Pesan Langsung',
+                            label: 'Direct Message',
                             onTap: () => _goToMain(11),
                             isSelected: _isRouteActive('pesan') || _isRouteActive('chat') || _isRouteActive('direct_message'),
                             isDark: isDark,

@@ -25,6 +25,7 @@ import '../../../widgets/app_empty_state.dart';
 import '../../../widgets/opportunity_detail_sheet.dart';
 import '../../../models/opportunity_model.dart';
 import '../../../services/profile_completeness_service.dart';
+import '../../../widgets/upgrade_plan_modal.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -2142,6 +2143,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildSavedCreatorsCard(bool isDark) {
+    final isUpgraded = widget.user.subscriptionTier.toLowerCase() != 'free';
+    if (!isUpgraded) {
+      return _buildUpgradeForRecommendationsCard(isDark);
+    }
+
     final topCreators = [
       {
         'name': 'Dimas Arya',
@@ -2301,6 +2307,110 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             );
           }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpgradeForRecommendationsCard(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF261845), const Color(0xFF19122B)]
+              : [const Color(0xFFF3E8FF), const Color(0xFFFAF5FF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+        border: Border.all(
+          color: AppTheme.primaryPurple.withValues(alpha: 0.35),
+        ),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: AppTheme.primaryPurple.withValues(alpha: 0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.primaryGradient,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Rekomendasi Kreator AI',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
+                  ),
+                ),
+                child: const Text(
+                  'UPGRADE PLAN',
+                  style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFD97706),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Dapatkan akses rekomendasi kreator terkurasi berbasis AI, kuota proyek lebih tinggi, dan prioritas penawaran dengan meng-upgrade paket Anda.',
+            style: TextStyle(
+              fontSize: 11,
+              height: 1.4,
+              color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => UpgradePlanModal.show(context, user: widget.user),
+              icon: const Icon(Icons.workspace_premium_outlined, size: 15),
+              label: const Text(
+                'Upgrade Plan Sekarang',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryPurple,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+            ),
+          ),
         ],
       ),
     );
