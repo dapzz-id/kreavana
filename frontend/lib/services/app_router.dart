@@ -121,8 +121,10 @@ final GoRouter appRouter = GoRouter(
           !SystemSettingsService.isAiEnabled) {
         return AppRoutes.beranda;
       }
+      final isCreator =
+          user != null && (user.role == 'creator' || user.isCreator);
       if (currentPath == AppRoutes.kolaborasi &&
-          !SystemSettingsService.isCollaborationEnabled) {
+          (!SystemSettingsService.isCollaborationEnabled || !isCreator)) {
         return AppRoutes.beranda;
       }
       if (currentPath == AppRoutes.wallet &&

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Collaboration;
 use App\Models\CollaborationMember;
 use App\Models\User;
+use App\Enums\RoleType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -114,6 +115,14 @@ class CollaborationController extends Controller
 
     public function store(Request $request)
     {
+        $user = Auth::user();
+        if ($user && $user->role !== RoleType::Creator && $user->role !== RoleType::Admin) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Hanya akun kreator yang dapat mengajukan proyek kolaborasi.',
+            ], 403);
+        }
+
         $request->validate([
             'project_title'    => 'required|string|max:200',
             'description'      => 'sometimes|string|max:2000',

@@ -25,6 +25,12 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
+  bool get _isCreator =>
+      widget.user != null &&
+      (widget.user!.role == 'creator' ||
+          widget.user!.isCreator ||
+          widget.user!.isAdmin);
+
   List<Map<String, dynamic>> _collabs = [];
 
   @override
@@ -309,26 +315,28 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
     ),
   ),
 ),
-      floatingActionButton: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).size.width < 900 ? 76 : 0,
-        ),
-        child: FloatingActionButton.extended(
-          heroTag: 'kolaborasi_fab',
-          onPressed: () => _showNewCollabDialog(context, accentColor),
-          backgroundColor: accentColor,
-          elevation: 5,
-          icon: const Icon(Icons.group_add_rounded, color: Colors.white),
-          label: const Text(
-            'Ajukan Kolaborasi',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.2,
-            ),
-          ),
-        ),
-      ),
+      floatingActionButton: _isCreator
+          ? Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).size.width < 900 ? 76 : 0,
+              ),
+              child: FloatingActionButton.extended(
+                heroTag: 'kolaborasi_fab',
+                onPressed: () => _showNewCollabDialog(context, accentColor),
+                backgroundColor: accentColor,
+                elevation: 5,
+                icon: const Icon(Icons.group_add_rounded, color: Colors.white),
+                label: const Text(
+                  'Ajukan Kolaborasi',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+            )
+          : null,
     );
   }
 
@@ -416,27 +424,28 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
                         ),
                       ),
                     ),
-                  ElevatedButton.icon(
-                    onPressed: () => _showNewCollabDialog(context, accentColor),
-                    icon: const Icon(Icons.group_add_rounded,
-                        size: 16, color: Colors.white),
-                    label: const Text(
-                      'Ajukan Kolaborasi Sekarang',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                  if (_isCreator)
+                    ElevatedButton.icon(
+                      onPressed: () => _showNewCollabDialog(context, accentColor),
+                      icon: const Icon(Icons.group_add_rounded,
+                          size: 16, color: Colors.white),
+                      label: const Text(
+                        'Ajukan Kolaborasi Sekarang',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentColor,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: accentColor,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ],
@@ -1236,37 +1245,39 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Pengajuan bergabung ke "${c['project']}" berhasil dikirim ke ${c['name']}!',
+                if (_isCreator) ...[
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Pengajuan bergabung ke "${c['project']}" berhasil dikirim ke ${c['name']}!',
+                            ),
+                            backgroundColor: Colors.green.shade700,
                           ),
-                          backgroundColor: Colors.green.shade700,
+                        );
+                      },
+                      icon: const Icon(Icons.check_circle_outline_rounded,
+                          color: Colors.white),
+                      label: const Text(
+                        'Ajukan Diri untuk Bergabung',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentColor,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                      );
-                    },
-                    icon: const Icon(Icons.check_circle_outline_rounded,
-                        color: Colors.white),
-                    label: const Text(
-                      'Ajukan Diri untuk Bergabung',
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: accentColor,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                   ),
-                ),
+                ],
               ],
             ],
           );

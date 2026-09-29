@@ -457,6 +457,14 @@ class _MainNavigationState extends State<MainNavigation> {
         );
         return;
       }
+      if (index == 5 && !_isCreatorUser) {
+        AppSweetAlert.info(
+          context,
+          'Ruang Kolaborasi dirancang khusus untuk akun kreator berkarya bersama. Silakan gunakan menu Proyek Saya untuk mengelola proyek Anda.',
+          title: 'Khusus Akun Kreator',
+        );
+        return;
+      }
       if (index == 7 && !SystemSettingsService.isWalletEnabled) {
         AppSweetAlert.warning(
           context,
@@ -602,7 +610,7 @@ class _MainNavigationState extends State<MainNavigation> {
     bool isMobileDrawer = false,
   }) {
     return [
-      if (SystemSettingsService.isCollaborationEnabled || _currentUser.isAdmin)
+      if ((_isCreatorUser && SystemSettingsService.isCollaborationEnabled) || _currentUser.isAdmin)
         _buildSidebarItem(
           icon: Icons.handshake_outlined,
           activeIcon: Icons.handshake,
@@ -2254,10 +2262,16 @@ class _MainNavigationState extends State<MainNavigation> {
               icon: Icons.handshake_outlined,
               onBackToHome: () => _navigateToScreenIndex(0),
             )
-          : KolaborasiScreen(
-              user: _currentUser,
-              onUserUpdated: _onUserUpdated,
-            ),
+          : (!_isCreatorUser && !_currentUser.isAdmin)
+              ? FeatureDisabledView(
+                  featureName: 'Kolaborasi (Khusus Kreator)',
+                  icon: Icons.handshake_outlined,
+                  onBackToHome: () => _navigateToScreenIndex(0),
+                )
+              : KolaborasiScreen(
+                  user: _currentUser,
+                  onUserUpdated: _onUserUpdated,
+                ),
       6 => UlasanReputasiScreen(
           user: _currentUser,
           onUserUpdated: _onUserUpdated,
@@ -2335,7 +2349,7 @@ class _MainNavigationState extends State<MainNavigation> {
           2 => true, // ProyekSayaScreen ('Buat Proyek Baru')
           3 => _currentUser.isCreator, // MarketplaceKaryaScreen ('Jual Karya')
           4 => true, // AgendaScreen ('Tambah Agenda')
-          5 => true, // KolaborasiScreen ('Ajukan Kolaborasi')
+          5 => _isCreatorUser, // KolaborasiScreen ('Ajukan Kolaborasi')
           11 => true, // DirectMessageScreen
           _ => false,
         };
