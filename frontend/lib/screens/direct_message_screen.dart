@@ -22,6 +22,7 @@ import '../services/ai_service.dart';
 import '../app/theme.dart';
 import '../app/app_animations.dart';
 import '../utils/app_errors.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'call_screen.dart';
 import 'transfer_screen.dart';
 import 'contacts_screen.dart';
@@ -161,6 +162,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                   width: 380,
                   child: ChatListSection(
                     key: chatListKey,
+                    currentUser: widget.currentUser,
                     onChatSelected: (chat) {
                       setState(() {
                         selectedChat = chat;
@@ -202,6 +204,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
             // Jika lebar layar kecil (Mobile), hanya tampilkan daftar chat
             return ChatListSection(
               key: chatListKey,
+              currentUser: widget.currentUser,
               onChatSelected: (chat) {
                 Navigator.push(
                   context,
@@ -287,12 +290,14 @@ class ChatListSection extends StatefulWidget {
   final Function(Map<String, dynamic>) onChatSelected;
   final Map<String, dynamic>? selectedChat;
   final void Function(Map<String, dynamic>)? onPresenceUpdated;
+  final UserModel? currentUser;
 
   const ChatListSection({
     super.key,
     required this.onChatSelected,
     this.selectedChat,
     this.onPresenceUpdated,
+    this.currentUser,
   });
 
   @override
@@ -311,15 +316,21 @@ class ChatListSectionState extends State<ChatListSection> {
   List<Map<String, dynamic>> _searchResults = [];
   List<Map<String, dynamic>> _invitations = [];
 
+  List<String> _pinnedPersonalChatIds = [];
+  List<String> _pinnedGroupChatIds = [];
+
   StreamSubscription? _messageSubscription;
   final Set<String> _subscribedChats = {};
   Timer? _presenceTimer;
   Timer? _pingTimer;
   bool _isRefreshingPresence = false;
 
+  String get _currentUserId => widget.currentUser?.id?.toString() ?? 'default';
+
   @override
   void initState() {
     super.initState();
+    _loadPinnedChats();
     loadChats();
     _messageSubscription = ChatService.messageStream.listen((msg) {
       if (mounted) loadChats();
@@ -341,6 +352,206 @@ class ChatListSectionState extends State<ChatListSection> {
     _messageSubscription?.cancel();
     _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadPinnedChats() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final personalKey = 'dm_pinned_personal_chats_$_currentUserId';
+      final groupKey = 'dm_pinned_group_chats_$_currentUserId';
+      if (mounted) {
+        setState(() {
+          _pinnedPersonalChatIds = prefs.getStringList(personalKey) ?? [];
+          _pinnedGroupChatIds = prefs.getStringList(groupKey) ?? [];
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading pinned chats: $e');
+    }
+  }
+
+  Future<void> _savePinnedChats() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final personalKey = 'dm_pinned_personal_chats_$_currentUserId';
+      final groupKey = 'dm_pinned_group_chats_$_currentUserId';
+      await prefs.setStringList(personalKey, _pinnedPersonalChatIds);
+      await prefs.setStringList(groupKey, _pinnedGroupChatIds);
+    } catch (e) {
+      debugPrint('Error saving pinned chats: $e');
+    }
+  }
+
+  bool _isChatPinned(String chatId, bool isGroup) {
+    return isGroup
+        ? _pinnedGroupChatIds.contains(chatId)
+        : _pinnedPersonalChatIds.contains(chatId);
+  }
+
+  void _togglePinChat(Map<String, dynamic> chat) {
+    final chatId = chat['id']?.toString() ?? '';
+    if (chatId.isEmpty) return;
+    final isGroup = chat['isGroup'] == true;
+    final rawName = chat['name']?.toString() ?? '';
+    final chatName = (rawName.isEmpty || rawName == 'null' || rawName.toLowerCase() == 'unknown')
+        ? (chat['username']?.toString() ?? (isGroup ? 'Grup' : 'Kontak'))
+        : rawName;
+
+    if (isGroup) {
+      if (_pinnedGroupChatIds.contains(chatId)) {
+        setState(() {
+          _pinnedGroupChatIds.remove(chatId);
+        });
+        _savePinnedChats();
+        AppSnackbar.info(context, 'Pin dilepas dari grup "$chatName"');
+      } else {
+        if (_pinnedGroupChatIds.length >= 3) {
+          AppSweetAlert.warning(
+            context,
+            'Maksimal 3 obrolan grup yang dapat disematkan ke atas.',
+            title: 'Batas Sematan Tercapai',
+          );
+          return;
+        }
+        setState(() {
+          _pinnedGroupChatIds.insert(0, chatId);
+        });
+        _savePinnedChats();
+        AppSnackbar.success(context, 'Grup "$chatName" berhasil disematkan ke atas');
+      }
+    } else {
+      if (_pinnedPersonalChatIds.contains(chatId)) {
+        setState(() {
+          _pinnedPersonalChatIds.remove(chatId);
+        });
+        _savePinnedChats();
+        AppSnackbar.info(context, 'Pin dilepas dari obrolan "$chatName"');
+      } else {
+        if (_pinnedPersonalChatIds.length >= 3) {
+          AppSweetAlert.warning(
+            context,
+            'Maksimal 3 orang/kontak yang dapat disematkan ke atas.',
+            title: 'Batas Sematan Tercapai',
+          );
+          return;
+        }
+        setState(() {
+          _pinnedPersonalChatIds.insert(0, chatId);
+        });
+        _savePinnedChats();
+        AppSnackbar.success(context, 'Obrolan "$chatName" berhasil disematkan ke atas');
+      }
+    }
+  }
+
+  void _showChatOptionsMenu(Map<String, dynamic> chat) {
+    final isGroup = chat['isGroup'] == true;
+    final chatId = chat['id']?.toString() ?? '';
+    final isPinned = _isChatPinned(chatId, isGroup);
+    final rawName = chat['name']?.toString() ?? '';
+    final name = (rawName.isEmpty || rawName == 'null' || rawName.toLowerCase() == 'unknown')
+        ? (chat['username']?.toString() ?? (isGroup ? 'Grup' : 'Kontak'))
+        : rawName;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isPinned)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryPurple.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.push_pin_rounded, size: 12, color: AppTheme.primaryPurple),
+                              SizedBox(width: 4),
+                              Text(
+                                'Tersemat',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primaryPurple,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const Divider(),
+                ListTile(
+                  leading: Icon(
+                    isPinned ? Icons.push_pin_outlined : Icons.push_pin_rounded,
+                    color: AppTheme.primaryPurple,
+                  ),
+                  title: Text(
+                    isPinned
+                        ? (isGroup ? 'Lepas Sematan Grup' : 'Lepas Sematan Obrolan')
+                        : (isGroup ? 'Sematkan Grup (Maks. 3)' : 'Sematkan Obrolan (Maks. 3)'),
+                  ),
+                  subtitle: Text(
+                    isPinned
+                        ? 'Kembalikan posisi grup/obrolan ke urutan normal'
+                        : (isGroup
+                            ? 'Sematkan grup ini di urutan paling atas'
+                            : 'Sematkan orang ini di urutan paling atas'),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _togglePinChat(chat);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.chat_bubble_outline_rounded),
+                  title: const Text('Buka Obrolan'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    widget.onChatSelected(chat);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> refreshChats() async {
@@ -761,6 +972,9 @@ class ChatListSectionState extends State<ChatListSection> {
                 '',
           );
 
+    final chatId = chat['id']?.toString() ?? '';
+    final isPinned = _isChatPinned(chatId, isGroup);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       decoration: BoxDecoration(
@@ -769,24 +983,33 @@ class ChatListSectionState extends State<ChatListSection> {
             ? (isDark
                   ? AppTheme.primaryPurple.withValues(alpha: 0.12)
                   : AppTheme.primaryPurple.withValues(alpha: 0.07))
-            : Colors.transparent,
+            : (isPinned
+                  ? (isDark
+                        ? AppTheme.primaryPurple.withValues(alpha: 0.08)
+                        : AppTheme.primaryPurple.withValues(alpha: 0.04))
+                  : Colors.transparent),
         border: Border.all(
           color: isSelected
               ? AppTheme.primaryPurple.withValues(alpha: 0.4)
-              : Colors.transparent,
+              : (isPinned
+                    ? AppTheme.primaryPurple.withValues(alpha: 0.25)
+                    : Colors.transparent),
         ),
       ),
-      child: Pressable(
-        onTap: () => widget.onChatSelected(chat),
-        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            children: [
-              // ── Avatar ──
-              Stack(
-                children: [
-                  CircleAvatar(
+      child: GestureDetector(
+        onLongPress: () => _showChatOptionsMenu(chat),
+        onSecondaryTap: () => _showChatOptionsMenu(chat),
+        child: Pressable(
+          onTap: () => widget.onChatSelected(chat),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                // ── Avatar ──
+                Stack(
+                  children: [
+                    CircleAvatar(
                     radius: 25,
                     backgroundColor: isGroup
                         ? theme.colorScheme.tertiaryContainer
@@ -858,17 +1081,44 @@ class ChatListSectionState extends State<ChatListSection> {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            name,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: unread
-                                  ? FontWeight.w700
-                                  : FontWeight.w600,
-                              color: theme.colorScheme.onSurface,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  name,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: unread || isPinned
+                                        ? FontWeight.w700
+                                        : FontWeight.w600,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (isPinned) ...[
+                                const SizedBox(width: 4),
+                                Tooltip(
+                                  message: isGroup ? 'Grup Tersemat' : 'Obrolan Tersemat',
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryPurple.withValues(alpha: 0.12),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Transform.rotate(
+                                      angle: 0.4,
+                                      child: const Icon(
+                                        Icons.push_pin_rounded,
+                                        size: 13,
+                                        color: AppTheme.primaryPurple,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -946,6 +1196,23 @@ class ChatListSectionState extends State<ChatListSection> {
                             ),
                           ),
                         ],
+                        const SizedBox(width: 6),
+                        InkWell(
+                          onTap: () => _togglePinChat(chat),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(3),
+                            child: Icon(
+                              isPinned
+                                  ? Icons.push_pin_rounded
+                                  : Icons.push_pin_outlined,
+                              size: 16,
+                              color: isPinned
+                                  ? AppTheme.primaryPurple
+                                  : (isDark ? Colors.white24 : Colors.grey.shade400),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -955,7 +1222,8 @@ class ChatListSectionState extends State<ChatListSection> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   String _formatChatLastOnline(String value) {
@@ -980,6 +1248,29 @@ class ChatListSectionState extends State<ChatListSection> {
   Widget build(BuildContext context) {
     var baseChats = viewType == 'personal' ? _personalChats : _groupChats;
     var chats = List<Map<String, dynamic>>.from(baseChats);
+    final currentPinnedList = viewType == 'personal'
+        ? _pinnedPersonalChatIds
+        : _pinnedGroupChatIds;
+
+    // Urutkan chat: yang disematkan (max 3) selalu di bagian paling atas
+    chats.sort((a, b) {
+      final aId = a['id']?.toString() ?? '';
+      final bId = b['id']?.toString() ?? '';
+      final aIndex = currentPinnedList.indexOf(aId);
+      final bIndex = currentPinnedList.indexOf(bId);
+      final aIsPinned = aIndex != -1;
+      final bIsPinned = bIndex != -1;
+
+      if (aIsPinned && bIsPinned) {
+        return aIndex.compareTo(bIndex);
+      } else if (aIsPinned) {
+        return -1;
+      } else if (bIsPinned) {
+        return 1;
+      }
+      return 0;
+    });
+
     List<Map<String, dynamic>> additionalResults = [];
 
     if (searchQuery.isNotEmpty) {
@@ -1215,6 +1506,7 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
   late final BaseAudioPlayer _appAudioPlayer = getAudioPlayer();
 
   List<Map<String, dynamic>> _messages = [];
+  List<String> _pinnedMessageIds = [];
   bool isLoading = true;
   bool _isRecording = false;
   bool _isAudioLoading = false;
@@ -1280,6 +1572,7 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     super.initState();
     _record = record.AudioRecorder();
     ChatService.markAsRead(widget.chat['id'].toString());
+    _loadPinnedMessages();
     _loadMessages();
     _messageSubscription = ChatService.messageStream.listen((msg) {
       if (msg['chat_id'] == widget.chat['id'].toString()) {
@@ -1975,8 +2268,260 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     );
   }
 
+  Future<void> _loadPinnedMessages() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = 'dm_pinned_msgs_${widget.chat['id']}';
+      if (mounted) {
+        setState(() {
+          _pinnedMessageIds = prefs.getStringList(key) ?? [];
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading pinned messages: $e');
+    }
+  }
+
+  Future<void> _savePinnedMessages() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = 'dm_pinned_msgs_${widget.chat['id']}';
+      await prefs.setStringList(key, _pinnedMessageIds);
+    } catch (e) {
+      debugPrint('Error saving pinned messages: $e');
+    }
+  }
+
+  void _togglePinMessage(Map<String, dynamic> message) {
+    final messageId = message['id']?.toString() ?? '';
+    if (messageId.isEmpty) return;
+
+    if (_pinnedMessageIds.contains(messageId)) {
+      setState(() {
+        _pinnedMessageIds.remove(messageId);
+      });
+      _savePinnedMessages();
+      AppSnackbar.info(context, 'Pesan dilepas dari sematan.');
+    } else {
+      if (_pinnedMessageIds.length >= 3) {
+        AppSweetAlert.warning(
+          context,
+          'Maksimal 3 pesan yang dapat disematkan dalam obrolan ini.',
+          title: 'Batas Sematan Pesan',
+        );
+        return;
+      }
+      setState(() {
+        _pinnedMessageIds.insert(0, messageId);
+      });
+      _savePinnedMessages();
+      AppSnackbar.success(context, 'Pesan berhasil disematkan ke atas.');
+    }
+  }
+
+  void _showAllPinnedMessagesSheet(List<Map<String, dynamic>> pinnedList) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.push_pin_rounded,
+                        color: AppTheme.primaryPurple,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Pesan Tersemat (${pinnedList.length}/3)',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(),
+                ...pinnedList.map((msg) {
+                  final isMe = msg['isMe'] == true;
+                  final sender = isMe ? 'Anda' : (msg['sender_name'] ?? msg['name'] ?? 'Pesan');
+                  final text = msg['text']?.toString() ?? '';
+                  final preview = text.isNotEmpty
+                      ? text
+                      : (msg['type'] == 'audio' ? '🎵 Pesan suara' : 'Lampiran media');
+                  return ListTile(
+                    leading: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.12),
+                      child: const Icon(
+                        Icons.push_pin_rounded,
+                        color: AppTheme.primaryPurple,
+                        size: 16,
+                      ),
+                    ),
+                    title: Text(
+                      sender,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    subtitle: Text(
+                      preview,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 18),
+                      tooltip: 'Lepas Sematan',
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _togglePinMessage(msg);
+                      },
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPinnedMessagesBanner(ThemeData theme, bool isDark) {
+    final pinnedList = _pinnedMessageIds.map((id) {
+      return _messages.firstWhere(
+        (m) => m['id']?.toString() == id,
+        orElse: () => {'id': id, 'text': 'Pesan tersemat'},
+      );
+    }).toList();
+
+    if (pinnedList.isEmpty) return const SizedBox.shrink();
+
+    final latestPinned = pinnedList.first;
+    final isMe = latestPinned['isMe'] == true;
+    final senderName = isMe ? 'Anda' : (latestPinned['sender_name'] ?? latestPinned['name'] ?? 'Pesan');
+    final rawText = latestPinned['text']?.toString() ?? '';
+    final previewText = rawText.isNotEmpty
+        ? rawText
+        : (latestPinned['type'] == 'audio'
+            ? '🎵 Pesan suara'
+            : (latestPinned['type'] == 'image' ? '📷 Gambar' : 'Pesan tersemat'));
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardDark : Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? Colors.white10 : Colors.grey.shade200,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryPurple.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.push_pin_rounded,
+              size: 16,
+              color: AppTheme.primaryPurple,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: InkWell(
+              onTap: () => _showAllPinnedMessagesSheet(pinnedList),
+              borderRadius: BorderRadius.circular(8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Pesan Tersemat (${pinnedList.length}/3)',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryPurple,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          '• $senderName',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? Colors.white60 : Colors.grey.shade600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    previewText,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close_rounded, size: 18),
+            tooltip: 'Lepas Sematan',
+            onPressed: () => _togglePinMessage(latestPinned),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showMessageActions(Map<String, dynamic> message) {
     final isMe = message['isMe'] == true;
+    final messageId = message['id']?.toString() ?? '';
+    final isPinned = _pinnedMessageIds.contains(messageId);
+
     showModalBottomSheet(
       context: context,
       builder: (context) {
@@ -1996,6 +2541,22 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                   setState(() {
                     _replyingTo = message;
                   });
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  isPinned ? Icons.push_pin_outlined : Icons.push_pin_rounded,
+                  color: AppTheme.primaryPurple,
+                ),
+                title: Text(isPinned ? 'Lepas Sematan Pesan' : 'Sematkan Pesan'),
+                subtitle: Text(
+                  isPinned
+                      ? 'Hapus pesan ini dari sematan atas'
+                      : 'Sematkan pesan ini di bagian atas obrolan (maks. 3 pesan)',
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _togglePinMessage(message);
                 },
               ),
               ListTile(
@@ -2482,6 +3043,7 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
@@ -2581,6 +3143,8 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
       ),
       body: Column(
         children: [
+          if (_pinnedMessageIds.isNotEmpty)
+            _buildPinnedMessagesBanner(theme, isDark),
           Expanded(
             child: Container(
               color: theme.colorScheme.surfaceContainerHighest.withValues(
@@ -2752,6 +3316,16 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
+                                          if (_pinnedMessageIds.contains(message['id']?.toString())) ...[
+                                            Icon(
+                                              Icons.push_pin_rounded,
+                                              size: 11,
+                                              color: isMe
+                                                  ? theme.colorScheme.onPrimary.withValues(alpha: 0.8)
+                                                  : AppTheme.primaryPurple,
+                                            ),
+                                            const SizedBox(width: 4),
+                                          ],
                                           Text(
                                             message['time'],
                                             style: TextStyle(
