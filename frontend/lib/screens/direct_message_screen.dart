@@ -398,10 +398,6 @@ class ChatListSectionState extends State<ChatListSection> {
           isLoading = false;
         });
 
-        // Auto-select first chat if none selected (outside setState)
-        if (widget.selectedChat == null && _personalChats.isNotEmpty) {
-          widget.onChatSelected(_personalChats.first);
-        }
 
         for (var chat in chats) {
           final chatId = chat['id'].toString();

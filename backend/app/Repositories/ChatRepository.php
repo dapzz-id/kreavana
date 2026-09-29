@@ -22,7 +22,7 @@ class ChatRepository extends BaseRepository
         }])
         ->withCount(['messages as unread_count' => function ($query) use ($userId) {
             $query->where('user_id', '!=', $userId)
-                  ->whereRaw('messages.created_at > COALESCE((SELECT last_read_at FROM chat_participants WHERE chat_participants.chat_id = messages.chat_id AND chat_participants.user_id = ? LIMIT 1), "2000-01-01 00:00:00")', [$userId]);
+                  ->whereRaw('messages.created_at > COALESCE((SELECT last_read_at FROM chat_participants WHERE chat_participants.chat_id = messages.chat_id AND chat_participants.user_id = ? LIMIT 1), ?)', [$userId, '2000-01-01 00:00:00']);
         }])
         ->orderBy('updated_at', 'desc')
         ->get();

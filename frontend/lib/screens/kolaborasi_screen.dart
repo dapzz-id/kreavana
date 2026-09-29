@@ -7,6 +7,7 @@ import '../services/chat_service.dart';
 import 'direct_message_screen.dart';
 import '../widgets/skeleton/skeleton_list.dart';
 import '../widgets/app_breadcrumbs.dart';
+import '../widgets/feature_disabled_view.dart';
 import 'main_navigation.dart';
 
 class KolaborasiScreen extends StatefulWidget {
@@ -143,6 +144,40 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
     }).toList();
 
     final isDesktop = MediaQuery.of(context).size.width > 900;
+
+    if (widget.user != null && !_isCreator) {
+      return Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: Navigator.canPop(context),
+          toolbarHeight: 80,
+          titleSpacing: isDesktop ? 32 : 18,
+          title: const Text(
+            'Kolaborasi',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+        ),
+        body: FeatureDisabledView(
+          featureName: 'Kolaborasi (Khusus Kreator)',
+          icon: Icons.handshake_outlined,
+          onBackToHome: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MainNavigation(
+                    initialUser: widget.user!,
+                    initialIndex: 0,
+                  ),
+                ),
+                (r) => false,
+              );
+            }
+          },
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(

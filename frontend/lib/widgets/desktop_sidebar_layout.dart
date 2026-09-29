@@ -370,13 +370,23 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         );
         return;
       }
-      if (route == 'kolaborasi' && !SystemSettingsService.isCollaborationEnabled) {
-        AppSweetAlert.warning(
-          context,
-          'Fitur Kolaborasi sedang dinonaktifkan oleh administrator.',
-          title: 'Fitur Dinonaktifkan',
-        );
-        return;
+      if (route == 'kolaborasi') {
+        if (!SystemSettingsService.isCollaborationEnabled && !widget.user.isAdmin) {
+          AppSweetAlert.warning(
+            context,
+            'Fitur Kolaborasi sedang dinonaktifkan oleh administrator.',
+            title: 'Fitur Dinonaktifkan',
+          );
+          return;
+        }
+        if (!_isCreatorUser && !widget.user.isAdmin) {
+          AppSweetAlert.info(
+            context,
+            'Ruang Kolaborasi dirancang khusus untuk akun kreator berkarya bersama. Silakan gunakan menu Proyek Saya untuk mengelola proyek Anda.',
+            title: 'Khusus Akun Kreator',
+          );
+          return;
+        }
       }
       if (route == 'pembayaran' && !SystemSettingsService.isWalletEnabled) {
         AppSweetAlert.warning(
@@ -769,9 +779,10 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     );
     final layananItems = CreatorSidebarMenus.layananItems(widget.user.subRole);
     final hasLayanan = layananTitle != null && layananItems.isNotEmpty;
-    final showKolaborasi = CreatorSidebarMenus.showKolaborasiInLainnya(
-      widget.user.subRole,
-    );
+    final showKolaborasi = _isCreatorUser &&
+        CreatorSidebarMenus.showKolaborasiInLainnya(
+          widget.user.subRole,
+        );
 
     final layoutScaffold = Scaffold(
       body: Row(
