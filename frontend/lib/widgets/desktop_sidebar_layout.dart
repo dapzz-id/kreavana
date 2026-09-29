@@ -379,7 +379,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
           );
           return;
         }
-        if (!_isCreatorUser && !widget.user.isAdmin) {
+        if (widget.user.isClient || (!_isCreatorUser && !widget.user.isAdmin)) {
           AppSweetAlert.info(
             context,
             'Ruang Kolaborasi dirancang khusus untuk akun kreator berkarya bersama. Silakan gunakan menu Proyek Saya untuk mengelola proyek Anda.',
@@ -779,7 +779,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     );
     final layananItems = CreatorSidebarMenus.layananItems(widget.user.subRole);
     final hasLayanan = layananTitle != null && layananItems.isNotEmpty;
-    final showKolaborasi = _isCreatorUser &&
+    final showKolaborasi = !widget.user.isClient &&
+        _isCreatorUser &&
         CreatorSidebarMenus.showKolaborasiInLainnya(
           widget.user.subRole,
         );

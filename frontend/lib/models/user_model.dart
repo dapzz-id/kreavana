@@ -63,7 +63,7 @@ class UserModel {
     this.performanceBoost = 1.0,
   });
 
-  bool get isClient => role == 'user';
+  bool get isClient => role == 'user' || role == 'client';
   bool get isClientVerified => isClient && isVerified;
   bool get isCreatorVerified => isCreator && (isVerified || isCreatorApproved);
 
@@ -193,7 +193,7 @@ class UserModel {
     );
   }
 
-  bool get isCreator => role == 'creator' && isCreatorApproved;
+  bool get isCreator => !isClient && (role == 'creator' && isCreatorApproved);
   bool get isAdmin => role == 'admin';
   bool get isMarketing => role == 'marketing';
   bool get isGuest => id == null || role == 'guest';

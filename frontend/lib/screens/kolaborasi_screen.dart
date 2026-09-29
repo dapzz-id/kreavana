@@ -28,6 +28,7 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
 
   bool get _isCreator =>
       widget.user != null &&
+      !widget.user!.isClient &&
       (widget.user!.role == 'creator' ||
           widget.user!.isCreator ||
           widget.user!.isAdmin);
@@ -145,7 +146,7 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
 
     final isDesktop = MediaQuery.of(context).size.width > 900;
 
-    if (widget.user != null && !_isCreator) {
+    if (widget.user == null || widget.user!.isClient || !_isCreator) {
       return Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: Navigator.canPop(context),
@@ -167,7 +168,7 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (_) => MainNavigation(
-                    initialUser: widget.user!,
+                    initialUser: widget.user ?? UserModel.guest(),
                     initialIndex: 0,
                   ),
                 ),

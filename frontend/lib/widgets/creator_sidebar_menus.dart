@@ -22,7 +22,7 @@ class CreatorSidebarMenus {
       (subRole ?? '').toLowerCase().trim();
 
   static bool isCreatorUser(UserModel user) =>
-      user.role == 'creator' || user.isCreator;
+      !user.isClient && !user.isAdmin && (user.role == 'creator' || user.isCreator);
 
   static bool hasSpecificSubRole(String? subRole) {
     const known = {

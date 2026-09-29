@@ -457,7 +457,7 @@ class _MainNavigationState extends State<MainNavigation> {
         );
         return;
       }
-      if (index == 5 && !_isCreatorUser) {
+      if (index == 5 && (_currentUser.isClient || !_isCreatorUser)) {
         AppSweetAlert.info(
           context,
           'Ruang Kolaborasi dirancang khusus untuk akun kreator berkarya bersama. Silakan gunakan menu Proyek Saya untuk mengelola proyek Anda.',
@@ -610,7 +610,9 @@ class _MainNavigationState extends State<MainNavigation> {
     bool isMobileDrawer = false,
   }) {
     return [
-      if ((_isCreatorUser && SystemSettingsService.isCollaborationEnabled) || _currentUser.isAdmin)
+      if (!_currentUser.isClient &&
+          ((_isCreatorUser && SystemSettingsService.isCollaborationEnabled) ||
+              _currentUser.isAdmin))
         _buildSidebarItem(
           icon: Icons.handshake_outlined,
           activeIcon: Icons.handshake,
@@ -783,7 +785,8 @@ class _MainNavigationState extends State<MainNavigation> {
       }),
       const SizedBox(height: 18),
       _buildSidebarSectionHeader('LAINNYA', isDark, isCollapsed: isCollapsed),
-      if (CreatorSidebarMenus.showKolaborasiInLainnya(_currentUser.subRole) &&
+      if (!_currentUser.isClient &&
+          CreatorSidebarMenus.showKolaborasiInLainnya(_currentUser.subRole) &&
           (SystemSettingsService.isCollaborationEnabled || _currentUser.isAdmin))
         _buildSidebarItem(
           icon: Icons.handshake_outlined,
@@ -2262,7 +2265,7 @@ class _MainNavigationState extends State<MainNavigation> {
               icon: Icons.handshake_outlined,
               onBackToHome: () => _navigateToScreenIndex(0),
             )
-          : (!_isCreatorUser && !_currentUser.isAdmin)
+          : (_currentUser.isClient || (!_isCreatorUser && !_currentUser.isAdmin))
               ? FeatureDisabledView(
                   featureName: 'Kolaborasi (Khusus Kreator)',
                   icon: Icons.handshake_outlined,
