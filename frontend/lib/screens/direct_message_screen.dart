@@ -453,100 +453,126 @@ class ChatListSectionState extends State<ChatListSection> {
         ? (chat['username']?.toString() ?? (isGroup ? 'Grup' : 'Kontak'))
         : rawName;
 
-    showModalBottomSheet(
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+        return Dialog(
+          backgroundColor: isDark ? AppTheme.cardDark : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 380),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      if (isPinned)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryPurple.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.push_pin_rounded, size: 12, color: AppTheme.primaryPurple),
-                              SizedBox(width: 4),
-                              Text(
-                                'Tersemat',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.primaryPurple,
+                        if (isPinned)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryPurple.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.push_pin_rounded, size: 12, color: AppTheme.primaryPurple),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Tersemat',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.primaryPurple,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 20),
+                          onPressed: () => Navigator.pop(ctx),
                         ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const Divider(),
-                ListTile(
-                  leading: Icon(
-                    isPinned ? Icons.push_pin_outlined : Icons.push_pin_rounded,
-                    color: AppTheme.primaryPurple,
+                  const Divider(height: 16),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryPurple.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        isPinned ? Icons.push_pin_outlined : Icons.push_pin_rounded,
+                        color: AppTheme.primaryPurple,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      isPinned
+                          ? (isGroup ? 'Lepas Sematan Grup' : 'Lepas Sematan Obrolan')
+                          : (isGroup ? 'Sematkan Grup (Maks. 3)' : 'Sematkan Obrolan (Maks. 3)'),
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      isPinned
+                          ? 'Kembalikan posisi grup/obrolan ke urutan normal'
+                          : (isGroup
+                              ? 'Sematkan grup ini di urutan paling atas'
+                              : 'Sematkan orang ini di urutan paling atas'),
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _togglePinChat(chat);
+                    },
                   ),
-                  title: Text(
-                    isPinned
-                        ? (isGroup ? 'Lepas Sematan Grup' : 'Lepas Sematan Obrolan')
-                        : (isGroup ? 'Sematkan Grup (Maks. 3)' : 'Sematkan Obrolan (Maks. 3)'),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryPurple.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        color: AppTheme.primaryPurple,
+                        size: 20,
+                      ),
+                    ),
+                    title: const Text(
+                      'Buka Obrolan',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      widget.onChatSelected(chat);
+                    },
                   ),
-                  subtitle: Text(
-                    isPinned
-                        ? 'Kembalikan posisi grup/obrolan ke urutan normal'
-                        : (isGroup
-                            ? 'Sematkan grup ini di urutan paling atas'
-                            : 'Sematkan orang ini di urutan paling atas'),
-                  ),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _togglePinChat(chat);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.chat_bubble_outline_rounded),
-                  title: const Text('Buka Obrolan'),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    widget.onChatSelected(chat);
-                  },
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -2320,88 +2346,91 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
   }
 
   void _showAllPinnedMessagesSheet(List<Map<String, dynamic>> pinnedList) {
-    showModalBottomSheet(
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
+        return Dialog(
+          backgroundColor: isDark ? AppTheme.cardDark : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.push_pin_rounded,
+                          color: AppTheme.primaryPurple,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Pesan Tersemat (${pinnedList.length}/3)',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 20),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.push_pin_rounded,
-                        color: AppTheme.primaryPurple,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Pesan Tersemat (${pinnedList.length}/3)',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                  const Divider(height: 16),
+                  ...pinnedList.map((msg) {
+                    final isMe = msg['isMe'] == true;
+                    final sender = isMe ? 'Anda' : (msg['sender_name'] ?? msg['name'] ?? 'Pesan');
+                    final text = msg['text']?.toString() ?? '';
+                    final preview = text.isNotEmpty
+                        ? text
+                        : (msg['type'] == 'audio' ? '🎵 Pesan suara' : 'Lampiran media');
+                    return ListTile(
+                      leading: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.12),
+                        child: const Icon(
+                          Icons.push_pin_rounded,
+                          color: AppTheme.primaryPurple,
+                          size: 16,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const Divider(),
-                ...pinnedList.map((msg) {
-                  final isMe = msg['isMe'] == true;
-                  final sender = isMe ? 'Anda' : (msg['sender_name'] ?? msg['name'] ?? 'Pesan');
-                  final text = msg['text']?.toString() ?? '';
-                  final preview = text.isNotEmpty
-                      ? text
-                      : (msg['type'] == 'audio' ? '🎵 Pesan suara' : 'Lampiran media');
-                  return ListTile(
-                    leading: CircleAvatar(
-                      radius: 18,
-                      backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.12),
-                      child: const Icon(
-                        Icons.push_pin_rounded,
-                        color: AppTheme.primaryPurple,
-                        size: 16,
+                      title: Text(
+                        sender,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
-                    ),
-                    title: Text(
-                      sender,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                      subtitle: Text(
+                        preview,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    subtitle: Text(
-                      preview,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 18),
-                      tooltip: 'Lepas Sematan',
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        _togglePinMessage(msg);
-                      },
-                    ),
-                  );
-                }),
-              ],
+                      trailing: IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 18),
+                        tooltip: 'Lepas Sematan',
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _togglePinMessage(msg);
+                        },
+                      ),
+                    );
+                  }),
+                ],
+              ),
             ),
           ),
         );
@@ -2521,74 +2550,174 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     final isMe = message['isMe'] == true;
     final messageId = message['id']?.toString() ?? '';
     final isPinned = _pinnedMessageIds.contains(messageId);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(
-                  Icons.reply_rounded,
-                  color: AppTheme.primaryPurple,
-                ),
-                title: const Text('Balas Pesan'),
-                subtitle: const Text('Kutip pesan ini untuk membalas'),
-                onTap: () {
-                  Navigator.pop(context);
-                  setState(() {
-                    _replyingTo = message;
-                  });
-                },
-              ),
-              ListTile(
-                leading: Icon(
-                  isPinned ? Icons.push_pin_outlined : Icons.push_pin_rounded,
-                  color: AppTheme.primaryPurple,
-                ),
-                title: Text(isPinned ? 'Lepas Sematan Pesan' : 'Sematkan Pesan'),
-                subtitle: Text(
-                  isPinned
-                      ? 'Hapus pesan ini dari sematan atas'
-                      : 'Sematkan pesan ini di bagian atas obrolan (maks. 3 pesan)',
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _togglePinMessage(message);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete_outline, color: Colors.orange),
-                title: const Text('Hapus untuk saya'),
-                subtitle: const Text('Hapus hanya dari tampilan Anda'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _deleteMessage(message, 'me');
-                },
-              ),
-              if (isMe)
-                ListTile(
-                  leading: const Icon(
-                    Icons.delete_forever_rounded,
-                    color: Colors.red,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: isDark ? AppTheme.cardDark : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryPurple.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            color: AppTheme.primaryPurple,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Opsi Pesan',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 20),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
                   ),
-                  title: const Text('Hapus untuk semua orang'),
-                  subtitle: const Text(
-                    'Hapus pesan untuk semua orang dalam obrolan',
+                  const Divider(height: 16),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryPurple.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.reply_rounded,
+                        color: AppTheme.primaryPurple,
+                        size: 20,
+                      ),
+                    ),
+                    title: const Text(
+                      'Balas Pesan',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    ),
+                    subtitle: const Text(
+                      'Kutip pesan ini untuk membalas',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      setState(() {
+                        _replyingTo = message;
+                      });
+                    },
                   ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _confirmDeleteForEveryone(message);
-                  },
-                ),
-              ListTile(
-                leading: const Icon(Icons.close),
-                title: const Text('Batal'),
-                onTap: () => Navigator.pop(context),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryPurple.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        isPinned ? Icons.push_pin_outlined : Icons.push_pin_rounded,
+                        color: AppTheme.primaryPurple,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      isPinned ? 'Lepas Sematan Pesan' : 'Sematkan Pesan',
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      isPinned
+                          ? 'Hapus pesan ini dari sematan atas'
+                          : 'Sematkan pesan ini di bagian atas obrolan (maks. 3 pesan)',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _togglePinMessage(message);
+                    },
+                  ),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline,
+                        color: Colors.orange,
+                        size: 20,
+                      ),
+                    ),
+                    title: const Text(
+                      'Hapus untuk saya',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    ),
+                    subtitle: const Text(
+                      'Hapus hanya dari tampilan Anda',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _deleteMessage(message, 'me');
+                    },
+                  ),
+                  if (isMe)
+                    ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.delete_forever_rounded,
+                          color: Colors.red,
+                          size: 20,
+                        ),
+                      ),
+                      title: const Text(
+                        'Hapus untuk semua orang',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: Colors.red,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Hapus pesan untuk semua orang dalam obrolan',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _confirmDeleteForEveryone(message);
+                      },
+                    ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },
@@ -3251,9 +3380,23 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                               alignment: isMe
                                   ? Alignment.centerRight
                                   : Alignment.centerLeft,
-                              child: GestureDetector(
-                                onLongPress: () => _showMessageActions(message),
-                                child: Container(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  if (isMe)
+                                    IconButton(
+                                      icon: const Icon(Icons.more_vert_rounded, size: 18),
+                                      color: isDark ? Colors.white38 : Colors.grey.shade400,
+                                      tooltip: 'Opsi pesan',
+                                      padding: const EdgeInsets.all(4),
+                                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                      onPressed: () => _showMessageActions(message),
+                                    ),
+                                  GestureDetector(
+                                    onLongPress: () => _showMessageActions(message),
+                                    onSecondaryTap: () => _showMessageActions(message),
+                                    child: Container(
                                   margin: const EdgeInsets.only(bottom: 12.0),
                                   constraints: BoxConstraints(
                                     maxWidth:
@@ -3357,14 +3500,25 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                                   ),
                                 ),
                               ),
-                            ),
+                              if (!isMe)
+                                IconButton(
+                                  icon: const Icon(Icons.more_vert_rounded, size: 18),
+                                  color: isDark ? Colors.white38 : Colors.grey.shade400,
+                                  tooltip: 'Opsi pesan',
+                                  padding: const EdgeInsets.all(4),
+                                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                  onPressed: () => _showMessageActions(message),
+                                ),
+                            ],
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      ),
+                    );
+                  },
             ),
           ),
-          Column(
+        ),
+        Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (_replyingTo != null) _buildReplyBanner(),
