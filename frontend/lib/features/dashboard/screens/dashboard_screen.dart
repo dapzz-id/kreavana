@@ -1561,12 +1561,21 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ── Right sidebar ────────────────────────────────────────────────────────────
   Widget _buildRightSidebar(bool isDark) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildProfileCard(isDark),
         const SizedBox(height: 14),
         _buildQuickActionsCard(isDark),
         const SizedBox(height: 14),
         _buildAiTipsCard(isDark),
+        const SizedBox(height: 14),
+        _buildEscrowTrustCard(isDark),
+        const SizedBox(height: 14),
+        _buildSavedCreatorsCard(isDark),
+        const SizedBox(height: 14),
+        _buildRecentProjectActivityCard(isDark),
+        const SizedBox(height: 14),
+        _buildClientHelpHubCard(isDark),
       ],
     );
   }
@@ -2017,6 +2026,476 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  Widget _buildEscrowTrustCard(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardDark : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
+        ),
+        boxShadow: isDark ? null : AppTheme.cardShadowLight,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.verified_user_outlined,
+                  color: Color(0xFF10B981),
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Proteksi Transaksi & Escrow',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF132B22) : const Color(0xFFECFDF5),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFF10B981).withValues(alpha: 0.3),
+              ),
+            ),
+            child: const Row(
+              children: [
+                Icon(
+                  Icons.shield_rounded,
+                  color: Color(0xFF10B981),
+                  size: 16,
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Dana Anda 100% aman dalam escrow bersama Kreavana.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF059669),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildTrustPoint(
+            icon: Icons.check_circle_outline,
+            text: 'Pembayaran hanya dicairkan setelah Anda menyetujui hasil karya',
+            isDark: isDark,
+          ),
+          const SizedBox(height: 8),
+          _buildTrustPoint(
+            icon: Icons.refresh_rounded,
+            text: 'Garansi revisi terjamin sesuai kesepakatan brief',
+            isDark: isDark,
+          ),
+          const SizedBox(height: 8),
+          _buildTrustPoint(
+            icon: Icons.copyright_outlined,
+            text: 'Hak cipta karya 100% menjadi milik klien setelah lunas',
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrustPoint({
+    required IconData icon,
+    required String text,
+    required bool isDark,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 14, color: const Color(0xFF10B981)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 11,
+              height: 1.35,
+              color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSavedCreatorsCard(bool isDark) {
+    final topCreators = [
+      {
+        'name': 'Dimas Arya',
+        'role': 'Videographer & FPV',
+        'rating': '5.0 (24)',
+        'avatar': 'videocam',
+      },
+      {
+        'name': 'Kevin Jonathan',
+        'role': 'Photographer & Editor',
+        'rating': '5.0 (18)',
+        'avatar': 'camera',
+      },
+      {
+        'name': 'Andi Editor Pro',
+        'role': 'Motion & 3D Editor',
+        'rating': '4.9 (31)',
+        'avatar': 'palette',
+      },
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardDark : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
+        ),
+        boxShadow: isDark ? null : AppTheme.cardShadowLight,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryPurple.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.star_rounded,
+                      color: AppTheme.primaryPurple,
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Kreator Rekomendasi',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              InkWell(
+                onTap: () => _navigateTo('Cari Kreator'),
+                borderRadius: BorderRadius.circular(6),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Text(
+                    'Lihat Semua',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primaryPurple,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ...topCreators.map((c) {
+            IconData icon = Icons.person;
+            if (c['avatar'] == 'videocam') icon = Icons.videocam_rounded;
+            if (c['avatar'] == 'camera') icon = Icons.camera_alt_rounded;
+            if (c['avatar'] == 'palette') icon = Icons.palette_rounded;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.inputDark : AppTheme.inputLight,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDark ? AppTheme.inputBorder : AppTheme.dividerLight,
+                ),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 17,
+                    backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.15),
+                    child: Icon(icon, color: AppTheme.primaryPurple, size: 16),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          c['name']!,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          c['role']!,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 12),
+                            const SizedBox(width: 3),
+                            Text(
+                              c['rating']!,
+                              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => _navigateTo('Pesan'),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryPurple.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Chat',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryPurple,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentProjectActivityCard(bool isDark) {
+    final activities = [
+      {
+        'title': 'Proposal Baru Diterima',
+        'desc': 'Videografer mengajukan proposal untuk Proyek TVC.',
+        'time': '2 jam lalu',
+        'icon': Icons.mail_outline_rounded,
+        'color': const Color(0xFF3B82F6),
+      },
+      {
+        'title': 'Milestone 1 Siap Di-review',
+        'desc': 'Fotografi Produk Komersial siap untuk disetujui.',
+        'time': '1 hari lalu',
+        'icon': Icons.assignment_turned_in_outlined,
+        'color': const Color(0xFF10B981),
+      },
+      {
+        'title': 'Pembayaran Escrow Diamankan',
+        'desc': 'Dana DP proyek terlindungi di rekening bersama.',
+        'time': '2 hari lalu',
+        'icon': Icons.account_balance_wallet_outlined,
+        'color': const Color(0xFF8B5CF6),
+      },
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardDark : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
+        ),
+        boxShadow: isDark ? null : AppTheme.cardShadowLight,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.history_rounded,
+                  color: Color(0xFF3B82F6),
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Aktivitas Proyek Terbaru',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ...activities.map((a) {
+            final color = a['color'] as Color;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(a['icon'] as IconData, size: 12, color: color),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          a['title'] as String,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          a['desc'] as String,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                            height: 1.3,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          a['time'] as String,
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: isDark ? AppTheme.textMuted.withValues(alpha: 0.7) : AppTheme.textMutedLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClientHelpHubCard(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF1E1C2B), const Color(0xFF171523)]
+              : [const Color(0xFFF8FAFC), Colors.white],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
+        ),
+        boxShadow: isDark ? null : AppTheme.cardShadowLight,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.primaryGradient,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.support_agent_rounded,
+                  color: Colors.white,
+                  size: 15,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Pusat Bantuan & Panduan',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Butuh bantuan menentukan kreator atau membuat brief proyek yang detail?',
+            style: TextStyle(
+              fontSize: 11,
+              height: 1.4,
+              color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => context.go(AppRoutes.aiAssistant),
+              icon: const Icon(Icons.auto_awesome, size: 14),
+              label: const Text('Konsultasi AI Kreavana', style: TextStyle(fontSize: 11)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryPurple,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── AppBar ───────────────────────────────────────────────────────────────────
   PreferredSizeWidget _buildAppBar(bool isDark) {
     return AppBar(
@@ -2274,7 +2753,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget build(BuildContext context) {
     super.build(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isWide = MediaQuery.of(context).size.width > 1100;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWide = screenWidth > 1100;
+    final sidebarWidth = screenWidth > 1400 ? 330.0 : (screenWidth > 1200 ? 310.0 : 290.0);
 
     return Scaffold(
       appBar: _buildAppBar(isDark),
@@ -2304,7 +2785,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ),
                     ),
                     const SizedBox(width: 20),
-                    SizedBox(width: 290, child: RepaintBoundary(child: _buildRightSidebar(isDark))),
+                    SizedBox(width: sidebarWidth, child: RepaintBoundary(child: _buildRightSidebar(isDark))),
                   ],
                 )
               : Column(

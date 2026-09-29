@@ -36,12 +36,17 @@ class SubRoleRightSidebar extends StatelessWidget {
     );
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildProfileCard(context, accentColor),
         const SizedBox(height: 16),
         _buildQuickActionsCard(context, accentColor),
         const SizedBox(height: 16),
         _buildAiTipsCard(context, accentColor),
+        const SizedBox(height: 16),
+        _buildEscrowTrustCard(context, accentColor),
+        const SizedBox(height: 16),
+        _buildClientHelpCard(context, accentColor),
       ],
     );
   }
@@ -592,6 +597,175 @@ class SubRoleRightSidebar extends StatelessWidget {
                 ),
               );
             }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEscrowTrustCard(BuildContext context, Color accentColor) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardDark : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
+        ),
+        boxShadow: isDark ? null : AppTheme.cardShadowLight,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.verified_user_outlined,
+                  color: Color(0xFF10B981),
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Proteksi Transaksi & Escrow',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF132B22) : const Color(0xFFECFDF5),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFF10B981).withValues(alpha: 0.3),
+              ),
+            ),
+            child: const Row(
+              children: [
+                Icon(
+                  Icons.shield_rounded,
+                  color: Color(0xFF10B981),
+                  size: 16,
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Dana Anda 100% aman dalam escrow bersama Kreavana.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF059669),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildTrustItem(
+            'Pembayaran hanya cair setelah hasil karya disetujui',
+          ),
+          const SizedBox(height: 8),
+          _buildTrustItem(
+            'Garansi revisi terjamin sesuai brief proyek',
+          ),
+          const SizedBox(height: 8),
+          _buildTrustItem(
+            'Hak cipta karya 100% milik klien setelah lunas',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrustItem(String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.check_circle_outline, size: 14, color: Color(0xFF10B981)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 11,
+              height: 1.35,
+              color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildClientHelpCard(BuildContext context, Color accentColor) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: isDark ? 0.08 : 0.04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accentColor.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.support_agent_rounded,
+                  color: Colors.white,
+                  size: 15,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Pusat Bantuan & Panduan',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Butuh panduan membuat brief atau mencari talent yang pas untuk proyek Anda?',
+            style: TextStyle(
+              fontSize: 11,
+              height: 1.4,
+              color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => context.go(AppRoutes.aiAssistant),
+              icon: const Icon(Icons.auto_awesome, size: 14),
+              label: const Text('Konsultasi AI Kreavana', style: TextStyle(fontSize: 11)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accentColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+            ),
           ),
         ],
       ),
