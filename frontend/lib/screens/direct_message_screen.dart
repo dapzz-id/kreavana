@@ -1734,15 +1734,31 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
           text,
           replyToId: replyId,
         );
+
+        if (result['status'] == false) {
+          final errorMsg =
+              result['message']?.toString() ?? 'Gagal mengirim pesan';
+          if (mounted) AppSnackbar.error(context, errorMsg);
+          _messageController.text = text;
+          return;
+        }
+
         final msgData = result['data'];
         if (msgData != null) {
+          final mapData = Map<String, dynamic>.from(msgData);
+          mapData['isMe'] = true;
+          mapData['text'] = text;
+          mapData['_decrypt_failed'] = false;
+
           setState(() {
             if (!_messages.any(
-              (m) => m['id'].toString() == msgData['id'].toString(),
+              (m) => m['id'].toString() == mapData['id'].toString(),
             )) {
-              final processed = _processMessage(
-                Map<String, dynamic>.from(msgData),
-              );
+              final processed = _processMessage(mapData);
+              if ((processed['text']?.toString().isEmpty ?? true)) {
+                processed['text'] = text;
+                processed['_decrypt_failed'] = false;
+              }
               _messages.insert(0, processed);
             }
           });
@@ -1750,6 +1766,8 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         widget.onMessageSent?.call();
       } catch (e) {
         debugPrint('Error sending message: $e');
+        if (mounted) AppSnackbar.error(context, 'Gagal mengirim pesan: $e');
+        _messageController.text = text;
       }
     }
   }
@@ -1984,13 +2002,24 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
           );
         }
 
+        if (result['status'] == false) {
+          final errorMsg =
+              result['message']?.toString() ?? 'Gagal mengirim pesan suara';
+          if (mounted) AppSnackbar.error(context, errorMsg);
+          return;
+        }
+
         final msgData = result['data'];
         if (msgData != null) {
+          final mapData = Map<String, dynamic>.from(msgData);
+          mapData['isMe'] = true;
+          mapData['_decrypt_failed'] = false;
           setState(() {
             if (!_messages.any(
-              (m) => m['id'].toString() == msgData['id'].toString(),
+              (m) => m['id'].toString() == mapData['id'].toString(),
             )) {
-              _messages.insert(0, Map<String, dynamic>.from(msgData));
+              final processed = _processMessage(mapData);
+              _messages.insert(0, processed);
             }
           });
         }
@@ -2022,10 +2051,18 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
   }
 
   Future<void> _toggleAudioPlayback(Map<String, dynamic> message) async {
-    if (message['media_url'] == null ||
-        message['media_url'].toString().isEmpty) {
+    final rawUrl = message['media_url']?.toString();
+    if (rawUrl == null || rawUrl.isEmpty) {
       return;
     }
+
+    String audioUrl = rawUrl;
+    if (!audioUrl.startsWith('http://') && !audioUrl.startsWith('https://')) {
+      if (!audioUrl.startsWith('/')) {
+        audioUrl = '/api/storage/file/$audioUrl/view';
+      }
+    }
+    audioUrl = ApiService.resolveAssetUrl(audioUrl);
 
     final messageId = message['id']?.toString() ?? '';
     if (_playingMessageId == messageId && _appAudioPlayer.isPlaying) {
@@ -2043,7 +2080,7 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
       });
 
       await _appAudioPlayer.playUrl(
-        message['media_url'].toString(),
+        audioUrl,
         onDuration: (duration) {
           if (mounted && _playingMessageId == messageId) {
             setState(() => _audioDuration = duration);

@@ -59,11 +59,16 @@ class MessageService extends BaseService
 
             $textPayload = $msg->message ?? $msg->ciphertext ?? '';
 
+            $mediaUrl = $msg->media_url;
+            if ($mediaUrl && !str_starts_with($mediaUrl, 'http') && !str_starts_with($mediaUrl, '/')) {
+                $mediaUrl = url('/api/storage/file/' . $mediaUrl . '/view');
+            }
+
             return [
                 'id' => $msg->id,
                 'text' => $textPayload,
                 'type' => $msg->type,
-                'media_url' => $msg->media_url,
+                'media_url' => $mediaUrl,
                 'isMe' => $isMe,
                 'time' => $this->formatMessageTime($msg->created_at),
                 'raw_time' => $msg->created_at->format('H:i'),
@@ -208,12 +213,18 @@ class MessageService extends BaseService
             unset($broadcastData['message_keys']);
         }
 
-        Log::info('Broadcasting MessageSent on chat.' . $chat->id . ' by User ' . $userId);
-        broadcast(new MessageSent($broadcastData, $chat->id));
+        try {
+            Log::info('Broadcasting MessageSent on chat.' . $chat->id . ' by User ' . $userId);
+            broadcast(new MessageSent($broadcastData, $chat->id));
+        } catch (\Throwable $e) {
+            Log::warning('Broadcast MessageSent failed: ' . $e->getMessage());
+        }
 
-        $this->createMessageNotification($chat, $userId, $messageText, $type, $encryptionVersion, $message->id);
-
-
+        try {
+            $this->createMessageNotification($chat, $userId, $messageText, $type, $encryptionVersion, $message->id);
+        } catch (\Throwable $e) {
+            Log::warning('Create notification failed: ' . $e->getMessage());
+        }
 
         $messageData['isMe'] = true;
         return $messageData;
@@ -237,7 +248,11 @@ class MessageService extends BaseService
 
         if ($scope === 'everyone') {
             $deletedFor = array_values(array_unique($participantIds));
-            broadcast(new MessageDeleted(['id' => $message->id, 'scope' => 'everyone'], $chat->id));
+            try {
+                broadcast(new MessageDeleted(['id' => $message->id, 'scope' => 'everyone'], $chat->id));
+            } catch (\Throwable $e) {
+                Log::warning('Broadcast MessageDeleted failed: ' . $e->getMessage());
+            }
         } else {
             $deletedFor[] = $userId;
             $deletedFor = array_values(array_unique($deletedFor));
@@ -291,7 +306,7 @@ class MessageService extends BaseService
         
         @unlink($tempPath);
 
-        return $storageFile->id; // Using ID as the reference for secure fetching
+        return url('/api/storage/file/' . $storageFile->id . '/view');
     }
 
     protected function createMessageNotification(Chat $chat, string $senderId, ?string $messageText, string $type, int $encryptionVersion = 0, ?string $messageId = null): void

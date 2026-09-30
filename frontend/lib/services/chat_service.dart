@@ -202,17 +202,28 @@ class ChatService {
     if (replyToId != null) body['reply_to_id'] = replyToId;
 
     if (encrypt && EncryptionService().isInitialized) {
-      // 1. Fetch active devices for all participants in this chat
-      final devices = await fetchDevices(chatId);
+      try {
+        final devices = await fetchDevices(chatId);
+        final List<Map<String, dynamic>> deviceList =
+            List<Map<String, dynamic>>.from(devices);
 
-      // 2. Encrypt the message for all those devices
-      final List<Map<String, dynamic>> deviceList =
-          List<Map<String, dynamic>>.from(devices);
-      final encryptedPayload = EncryptionService()
-          .encryptMessageForMultipleDevices(text, deviceList);
+        if (deviceList.isNotEmpty) {
+          final encryptedPayload = EncryptionService()
+              .encryptMessageForMultipleDevices(text, deviceList);
 
-      body.addAll(encryptedPayload);
-      body.remove('message'); // Do not send plaintext
+          final keys = encryptedPayload['message_keys'] as List?;
+          if (keys != null && keys.isNotEmpty) {
+            body.addAll(encryptedPayload);
+            body.remove('message'); // Do not send plaintext
+          } else {
+            body['encryption_version'] = 0;
+          }
+        } else {
+          body['encryption_version'] = 0;
+        }
+      } catch (_) {
+        body['encryption_version'] = 0;
+      }
     } else {
       body['encryption_version'] = 0;
     }
@@ -243,6 +254,7 @@ class ChatService {
       'type': 'audio',
       'message': 'Voice note',
       'media': 'data:$mimeType;base64,$base64Data',
+      'encryption_version': 0,
     };
     if (replyToId != null) body['reply_to_id'] = replyToId;
 

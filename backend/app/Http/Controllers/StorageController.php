@@ -174,7 +174,17 @@ class StorageController extends Controller
         }
 
         if ($storageFile->visibility === 'private') {
-            if (!$user || $storageFile->user_id !== $user->id) {
+            if ($storageFile->category === 'chat_attachment') {
+                $hasAccess = false;
+                if ($user) {
+                    $hasAccess = $storageFile->user_id === $user->id || \App\Models\Message::where('media_url', 'like', '%' . $storageFile->id . '%')
+                        ->whereHas('chat.participants', fn($q) => $q->where('user_id', $user->id))
+                        ->exists();
+                }
+                if (!$hasAccess) {
+                    return response()->json(['message' => 'Anda tidak memiliki izin untuk melihat file ini.'], 403);
+                }
+            } elseif (!$user || $storageFile->user_id !== $user->id) {
                 return response()->json(['message' => 'Anda tidak memiliki izin untuk melihat file ini.'], 403);
             }
         }
