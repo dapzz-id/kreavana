@@ -56,6 +56,22 @@ class MobileAudioPlayer implements BaseAudioPlayer {
   }
 
   @override
+  Future<void> seek(Duration position) async {
+    await _player.seek(position);
+  }
+
+  @override
+  Future<Duration?> getDuration(String url) async {
+    try {
+      final tempPlayer = AudioPlayer();
+      final d = await tempPlayer.setUrl(url);
+      await tempPlayer.dispose();
+      return d;
+    } catch (_) {}
+    return null;
+  }
+
+  @override
   void dispose() {
     _posSub?.cancel();
     _stateSub?.cancel();

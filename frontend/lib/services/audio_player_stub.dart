@@ -8,6 +8,8 @@ abstract class BaseAudioPlayer {
   });
   Future<void> pause();
   Future<void> stop();
+  Future<void> seek(Duration position);
+  Future<Duration?> getDuration(String url);
   bool get isPlaying;
   void dispose();
 }

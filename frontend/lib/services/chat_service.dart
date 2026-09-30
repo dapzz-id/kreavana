@@ -236,11 +236,18 @@ class ChatService {
     String chatId,
     String filePath, {
     String? replyToId,
+    String? durationText,
   }) async {
     final bytes = await File(filePath).readAsBytes();
     final ext = filePath.split('.').last.toLowerCase();
     final mime = _getAudioMime(ext);
-    return sendAudioBytes(chatId, bytes, mime, replyToId: replyToId);
+    return sendAudioBytes(
+      chatId,
+      bytes,
+      mime,
+      replyToId: replyToId,
+      durationText: durationText,
+    );
   }
 
   static Future<Map<String, dynamic>> sendAudioBytes(
@@ -248,11 +255,14 @@ class ChatService {
     Uint8List bytes,
     String mimeType, {
     String? replyToId,
+    String? durationText,
   }) async {
     final base64Data = base64Encode(bytes);
     final body = <String, dynamic>{
       'type': 'audio',
-      'message': 'Voice note',
+      'message': (durationText != null && durationText.isNotEmpty)
+          ? durationText
+          : 'Voice note',
       'media': 'data:$mimeType;base64,$base64Data',
       'encryption_version': 0,
     };

@@ -1549,6 +1549,8 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
   String? _playingMessageId;
   Duration _audioPosition = Duration.zero;
   Duration _audioDuration = Duration.zero;
+  bool _isSeeking = false;
+  final Map<String, Duration> _cachedDurations = {};
 
   Map<String, dynamic>? _replyingTo;
   bool _showEmojiPicker = false;
@@ -1985,6 +1987,8 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
 
   Future<void> _stopAndSendRecording() async {
     _recordTimer?.cancel();
+    final recordedSeconds = _recordingSeconds;
+    final durationText = _formatDuration(recordedSeconds);
     try {
       HapticFeedback.mediumImpact();
     } catch (_) {}
@@ -2010,12 +2014,14 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
             bytes,
             'audio/webm',
             replyToId: replyId,
+            durationText: durationText,
           );
         } else {
           result = await ChatService.sendAudioMessage(
             widget.chat['id'].toString(),
             recordPath,
             replyToId: replyId,
+            durationText: durationText,
           );
         }
 
@@ -2030,13 +2036,18 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         if (msgData != null) {
           final mapData = Map<String, dynamic>.from(msgData);
           mapData['isMe'] = true;
+          mapData['text'] = durationText;
+          mapData['message'] = durationText;
           mapData['_decrypt_failed'] = false;
+          _cachedDurations[mapData['id'].toString()] =
+              Duration(seconds: recordedSeconds);
           setState(() {
             final existingIndex = _messages.indexWhere(
               (m) => m['id'].toString() == mapData['id'].toString(),
             );
             final processed = _processMessage(mapData);
             processed['isMe'] = true;
+            processed['text'] = durationText;
             if (existingIndex >= 0) {
               _messages[existingIndex] = processed;
             } else {
@@ -2077,6 +2088,59 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     return '$mins:$secs';
   }
 
+  Duration _getMessageDuration(Map<String, dynamic> message) {
+    final messageId = message['id']?.toString() ?? '';
+    if (_playingMessageId == messageId && _audioDuration > Duration.zero) {
+      return _audioDuration;
+    }
+    if (_cachedDurations.containsKey(messageId)) {
+      return _cachedDurations[messageId]!;
+    }
+    final text = (message['text'] ?? message['message'])?.toString().trim() ?? '';
+    final parts = text.split(':');
+    if (parts.length == 2) {
+      final m = int.tryParse(parts[0]);
+      final s = int.tryParse(parts[1]);
+      if (m != null && s != null) {
+        final d = Duration(minutes: m, seconds: s);
+        _cachedDurations[messageId] = d;
+        return d;
+      }
+    }
+    _preloadAudioDuration(message);
+    return Duration.zero;
+  }
+
+  void _preloadAudioDuration(Map<String, dynamic> message) async {
+    final messageId = message['id']?.toString() ?? '';
+    if (messageId.isEmpty || _cachedDurations.containsKey(messageId)) return;
+
+    final rawUrl = message['media_url']?.toString();
+    if (rawUrl == null || rawUrl.isEmpty) return;
+
+    String audioUrl = rawUrl;
+    if (!audioUrl.startsWith('http://') && !audioUrl.startsWith('https://')) {
+      if (!audioUrl.startsWith('/')) {
+        audioUrl = '/api/storage/file/$audioUrl/view';
+      }
+    }
+    audioUrl = ApiService.resolveAssetUrl(audioUrl);
+
+    try {
+      final token = await SecureStorageService().getToken();
+      if (token != null && token.isNotEmpty && !audioUrl.contains('token=')) {
+        final sep = audioUrl.contains('?') ? '&' : '?';
+        audioUrl = '$audioUrl${sep}token=$token';
+      }
+      final dur = await _appAudioPlayer.getDuration(audioUrl);
+      if (dur != null && dur > Duration.zero && mounted) {
+        setState(() {
+          _cachedDurations[messageId] = dur;
+        });
+      }
+    } catch (_) {}
+  }
+
   Future<void> _toggleAudioPlayback(Map<String, dynamic> message) async {
     final rawUrl = message['media_url']?.toString();
     if (rawUrl == null || rawUrl.isEmpty) {
@@ -2107,22 +2171,26 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     }
 
     try {
+      final initialDuration = _getMessageDuration(message);
       setState(() {
         _isAudioLoading = true;
         _playingMessageId = messageId;
         _audioPosition = Duration.zero;
-        _audioDuration = Duration.zero;
+        _audioDuration = initialDuration;
       });
 
       await _appAudioPlayer.playUrl(
         audioUrl,
         onDuration: (duration) {
           if (mounted && _playingMessageId == messageId) {
-            setState(() => _audioDuration = duration);
+            setState(() {
+              _audioDuration = duration;
+              _cachedDurations[messageId] = duration;
+            });
           }
         },
         onPosition: (position) {
-          if (mounted && _playingMessageId == messageId) {
+          if (mounted && _playingMessageId == messageId && !_isSeeking) {
             setState(() => _audioPosition = position);
           }
         },
@@ -2131,12 +2199,16 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
             setState(() {
               _playingMessageId = null;
               _audioPosition = Duration.zero;
+              _isSeeking = false;
             });
           }
         },
         onError: (err) {
           if (mounted) {
-            setState(() => _playingMessageId = null);
+            setState(() {
+              _playingMessageId = null;
+              _isSeeking = false;
+            });
             final errorStr = err.toString();
             if (errorStr.contains('410') ||
                 errorStr.contains('Media telah dihapus') ||
@@ -2202,10 +2274,16 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     final isPlaying =
         _playingMessageId == messageId && _appAudioPlayer.isPlaying;
     final isLoading = _isAudioLoading && _playingMessageId == messageId;
-    final progress = _audioDuration.inMilliseconds > 0
-        ? (_audioPosition.inMilliseconds / _audioDuration.inMilliseconds)
-            .clamp(0.0, 1.0)
+    final totalDuration = _getMessageDuration(message);
+
+    final currentPosMs = (_playingMessageId == messageId)
+        ? _audioPosition.inMilliseconds
+        : 0;
+    final totalMs = totalDuration.inMilliseconds;
+    final progress = (totalMs > 0)
+        ? (currentPosMs / totalMs).clamp(0.0, 1.0)
         : 0.0;
+
     final theme = Theme.of(context);
     final isDeleted = message['is_media_deleted'] == true;
 
@@ -2281,51 +2359,96 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 6),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: isPlaying ? progress : 0.0,
-                    minHeight: 4,
-                    backgroundColor: isMe
-                        ? Colors.white.withValues(alpha: 0.28)
-                        : theme.colorScheme.primary.withValues(alpha: 0.18),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      isMe ? Colors.white : theme.colorScheme.primary,
+                // Seekbar (Slider)
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 3.5,
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 6.0,
+                      elevation: 1.0,
                     ),
+                    overlayShape: const RoundSliderOverlayShape(
+                      overlayRadius: 13.0,
+                    ),
+                    activeTrackColor: isMe
+                        ? Colors.white
+                        : theme.colorScheme.primary,
+                    inactiveTrackColor: isMe
+                        ? Colors.white.withValues(alpha: 0.3)
+                        : theme.colorScheme.primary.withValues(alpha: 0.2),
+                    thumbColor: isMe ? Colors.white : theme.colorScheme.primary,
+                    overlayColor: (isMe
+                            ? Colors.white
+                            : theme.colorScheme.primary)
+                        .withValues(alpha: 0.15),
+                  ),
+                  child: Slider(
+                    value: isPlaying ? progress : 0.0,
+                    onChanged: (val) {
+                      if (totalMs > 0) {
+                        setState(() {
+                          _isSeeking = true;
+                          _playingMessageId = messageId;
+                          _audioPosition =
+                              Duration(milliseconds: (val * totalMs).round());
+                        });
+                      }
+                    },
+                    onChangeEnd: (val) async {
+                      if (totalMs > 0) {
+                        final targetPos =
+                            Duration(milliseconds: (val * totalMs).round());
+                        if (_playingMessageId != messageId ||
+                            !_appAudioPlayer.isPlaying) {
+                          await _toggleAudioPlayback(message);
+                        }
+                        await _appAudioPlayer.seek(targetPos);
+                        if (mounted) {
+                          setState(() {
+                            _isSeeking = false;
+                            _audioPosition = targetPos;
+                          });
+                        }
+                      } else {
+                        if (mounted) setState(() => _isSeeking = false);
+                      }
+                    },
                   ),
                 ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      isPlaying && _audioDuration > Duration.zero
-                          ? '${_formatDuration(_audioPosition)} / ${_formatDuration(_audioDuration)}'
-                          : (_audioDuration > Duration.zero && _playingMessageId == messageId
-                              ? _formatDuration(_audioDuration)
-                              : 'Voice note'),
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: isMe
-                            ? Colors.white.withValues(alpha: 0.85)
-                            : theme.colorScheme.onSurfaceVariant,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        isPlaying && totalDuration > Duration.zero
+                            ? '${_formatDuration(_audioPosition)} / ${_formatDuration(totalDuration)}'
+                            : (totalDuration > Duration.zero
+                                ? _formatDuration(totalDuration)
+                                : '00:00'),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: isMe
+                              ? Colors.white.withValues(alpha: 0.85)
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                    Icon(
-                      Icons.mic_rounded,
-                      size: 15,
-                      color: isMe
-                          ? Colors.white.withValues(alpha: 0.7)
-                          : theme.colorScheme.primary.withValues(alpha: 0.7),
-                    ),
-                  ],
+                      Icon(
+                        Icons.mic_rounded,
+                        size: 15,
+                        color: isMe
+                            ? Colors.white.withValues(alpha: 0.7)
+                            : theme.colorScheme.primary.withValues(alpha: 0.7),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

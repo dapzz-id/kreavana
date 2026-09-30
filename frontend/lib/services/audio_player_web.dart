@@ -71,6 +71,28 @@ class WebAudioPlayer implements BaseAudioPlayer {
     _cleanup();
   }
 
+  @override
+  Future<void> seek(Duration position) async {
+    if (_element != null) {
+      final sec = position.inMilliseconds / 1000.0;
+      _element!.currentTime = sec;
+    }
+  }
+
+  @override
+  Future<Duration?> getDuration(String url) async {
+    try {
+      final el = html.AudioElement(url);
+      el.preload = 'metadata';
+      await el.onLoadedMetadata.first.timeout(const Duration(seconds: 4));
+      final sec = el.duration;
+      if (sec != null && !sec.isNaN && sec > 0) {
+        return Duration(milliseconds: (sec * 1000).round());
+      }
+    } catch (_) {}
+    return null;
+  }
+
   void _cleanup() {
     _endedSub?.cancel();
     _timeSub?.cancel();
