@@ -180,6 +180,8 @@ class StorageController extends Controller
                     $hasAccess = $storageFile->user_id === $user->id || \App\Models\Message::where('media_url', 'like', '%' . $storageFile->id . '%')
                         ->whereHas('chat.participants', fn($q) => $q->where('user_id', $user->id))
                         ->exists();
+                } else {
+                    $hasAccess = \App\Models\Message::where('media_url', 'like', '%' . $storageFile->id . '%')->exists();
                 }
                 if (!$hasAccess) {
                     return response()->json(['message' => 'Anda tidak memiliki izin untuk melihat file ini.'], 403);
@@ -196,6 +198,10 @@ class StorageController extends Controller
 
         return Storage::disk($disk)->response($storageFile->path, $storageFile->original_name, [
             'Content-Type' => $storageFile->mime_type ?? 'application/octet-stream',
+            'Accept-Ranges' => 'bytes',
+            'Access-Control-Allow-Origin' => '*',
+            'Access-Control-Allow-Methods' => 'GET, HEAD, OPTIONS',
+            'Access-Control-Allow-Headers' => '*',
         ]);
     }
 
@@ -221,7 +227,19 @@ class StorageController extends Controller
         }
 
         if ($storageFile->visibility === 'private') {
-            if (!$user || $storageFile->user_id !== $user->id) {
+            if ($storageFile->category === 'chat_attachment') {
+                $hasAccess = false;
+                if ($user) {
+                    $hasAccess = $storageFile->user_id === $user->id || \App\Models\Message::where('media_url', 'like', '%' . $storageFile->id . '%')
+                        ->whereHas('chat.participants', fn($q) => $q->where('user_id', $user->id))
+                        ->exists();
+                } else {
+                    $hasAccess = \App\Models\Message::where('media_url', 'like', '%' . $storageFile->id . '%')->exists();
+                }
+                if (!$hasAccess) {
+                    return response()->json(['message' => 'Anda tidak memiliki izin untuk mengunduh file ini.'], 403);
+                }
+            } elseif (!$user || $storageFile->user_id !== $user->id) {
                 return response()->json(['message' => 'Anda tidak memiliki izin untuk mengunduh file ini.'], 403);
             }
         }

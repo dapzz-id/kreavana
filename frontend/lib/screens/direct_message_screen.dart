@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart' as record;
 
+import '../services/secure_storage_service.dart';
 import '../services/badge_service.dart';
 import '../services/encryption_service.dart';
 import '../services/chat_service.dart';
@@ -1566,6 +1567,12 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     final rawText = msg['text'] ?? msg['message'] ?? msg['body'] ?? '';
     msg['text'] = rawText;
 
+    final myId = widget.currentUser?.id?.toString();
+    final senderId = msg['user_id']?.toString();
+    if (myId != null && senderId != null && senderId.isNotEmpty) {
+      msg['isMe'] = (senderId == myId);
+    }
+
     if (msg['encryption_version'] == 1 &&
         (msg['ciphertext'] as String?)?.isNotEmpty == true) {
       if (EncryptionService().isInitialized) {
@@ -1612,10 +1619,16 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
         if (mounted) {
           ChatService.markAsRead(widget.chat['id'].toString());
           setState(() {
-            if (!_messages.any(
+            final existingIndex = _messages.indexWhere(
               (m) => m['id'].toString() == msg['id'].toString(),
-            )) {
-              final processed = _processMessage(Map<String, dynamic>.from(msg));
+            );
+            final processed = _processMessage(Map<String, dynamic>.from(msg));
+            if (existingIndex >= 0) {
+              if (_messages[existingIndex]['isMe'] == true) {
+                processed['isMe'] = true;
+              }
+              _messages[existingIndex] = processed;
+            } else {
               _messages.insert(0, processed);
             }
           });
@@ -1751,14 +1764,18 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
           mapData['_decrypt_failed'] = false;
 
           setState(() {
-            if (!_messages.any(
+            final existingIndex = _messages.indexWhere(
               (m) => m['id'].toString() == mapData['id'].toString(),
-            )) {
-              final processed = _processMessage(mapData);
-              if ((processed['text']?.toString().isEmpty ?? true)) {
-                processed['text'] = text;
-                processed['_decrypt_failed'] = false;
-              }
+            );
+            final processed = _processMessage(mapData);
+            processed['isMe'] = true;
+            if ((processed['text']?.toString().isEmpty ?? true)) {
+              processed['text'] = text;
+              processed['_decrypt_failed'] = false;
+            }
+            if (existingIndex >= 0) {
+              _messages[existingIndex] = processed;
+            } else {
               _messages.insert(0, processed);
             }
           });
@@ -2015,10 +2032,14 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
           mapData['isMe'] = true;
           mapData['_decrypt_failed'] = false;
           setState(() {
-            if (!_messages.any(
+            final existingIndex = _messages.indexWhere(
               (m) => m['id'].toString() == mapData['id'].toString(),
-            )) {
-              final processed = _processMessage(mapData);
+            );
+            final processed = _processMessage(mapData);
+            processed['isMe'] = true;
+            if (existingIndex >= 0) {
+              _messages[existingIndex] = processed;
+            } else {
               _messages.insert(0, processed);
             }
           });
@@ -2044,9 +2065,15 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     });
   }
 
-  String _formatDuration(int seconds) {
-    final mins = (seconds ~/ 60).toString().padLeft(2, '0');
-    final secs = (seconds % 60).toString().padLeft(2, '0');
+  String _formatDuration(dynamic duration) {
+    int totalSec = 0;
+    if (duration is Duration) {
+      totalSec = duration.inSeconds;
+    } else if (duration is num) {
+      totalSec = duration.toInt();
+    }
+    final mins = (totalSec ~/ 60).toString().padLeft(2, '0');
+    final secs = (totalSec % 60).toString().padLeft(2, '0');
     return '$mins:$secs';
   }
 
@@ -2063,6 +2090,14 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
       }
     }
     audioUrl = ApiService.resolveAssetUrl(audioUrl);
+
+    try {
+      final token = await SecureStorageService().getToken();
+      if (token != null && token.isNotEmpty && !audioUrl.contains('token=')) {
+        final sep = audioUrl.contains('?') ? '&' : '?';
+        audioUrl = '$audioUrl${sep}token=$token';
+      }
+    } catch (_) {}
 
     final messageId = message['id']?.toString() ?? '';
     if (_playingMessageId == messageId && _appAudioPlayer.isPlaying) {
@@ -2166,127 +2201,137 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
     final messageId = message['id']?.toString() ?? '';
     final isPlaying =
         _playingMessageId == messageId && _appAudioPlayer.isPlaying;
+    final isLoading = _isAudioLoading && _playingMessageId == messageId;
     final progress = _audioDuration.inMilliseconds > 0
-        ? _audioPosition.inMilliseconds / _audioDuration.inMilliseconds
+        ? (_audioPosition.inMilliseconds / _audioDuration.inMilliseconds)
+            .clamp(0.0, 1.0)
         : 0.0;
     final theme = Theme.of(context);
-
     final isDeleted = message['is_media_deleted'] == true;
 
-    return Column(
-      crossAxisAlignment: isMe
-          ? CrossAxisAlignment.end
-          : CrossAxisAlignment.start,
-      children: [
-        if (isDeleted)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4.0),
-            child: Row(
+    if (isDeleted) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4.0),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.broken_image_rounded,
+              size: 20,
+              color: isMe
+                  ? theme.colorScheme.onPrimary
+                  : theme.colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Voice note telah dihapus',
+              style: TextStyle(
+                fontSize: 13,
+                color: isMe
+                    ? theme.colorScheme.onPrimary
+                    : theme.colorScheme.onSurface,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final playBtnBg = isMe
+        ? Colors.white.withValues(alpha: 0.22)
+        : theme.colorScheme.primary.withValues(alpha: 0.12);
+    final playBtnColor = isMe
+        ? Colors.white
+        : theme.colorScheme.primary;
+
+    return Container(
+      width: 250,
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Material(
+            color: playBtnBg,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () => _toggleAudioPlayback(message),
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: Center(
+                  child: isLoading
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: playBtnColor,
+                          ),
+                        )
+                      : Icon(
+                          isPlaying
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                          size: 26,
+                          color: playBtnColor,
+                        ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.broken_image,
-                  size: 24,
-                  color: isMe
-                      ? theme.colorScheme.onPrimary
-                      : theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Media telah dihapus',
-                  style: TextStyle(
-                    color: isMe
-                        ? theme.colorScheme.onPrimary
-                        : theme.colorScheme.onSurface,
-                    fontStyle: FontStyle.italic,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: isPlaying ? progress : 0.0,
+                    minHeight: 4,
+                    backgroundColor: isMe
+                        ? Colors.white.withValues(alpha: 0.28)
+                        : theme.colorScheme.primary.withValues(alpha: 0.18),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      isMe ? Colors.white : theme.colorScheme.primary,
+                    ),
                   ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      isPlaying && _audioDuration > Duration.zero
+                          ? '${_formatDuration(_audioPosition)} / ${_formatDuration(_audioDuration)}'
+                          : (_audioDuration > Duration.zero && _playingMessageId == messageId
+                              ? _formatDuration(_audioDuration)
+                              : 'Voice note'),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: isMe
+                            ? Colors.white.withValues(alpha: 0.85)
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    Icon(
+                      Icons.mic_rounded,
+                      size: 15,
+                      color: isMe
+                          ? Colors.white.withValues(alpha: 0.7)
+                          : theme.colorScheme.primary.withValues(alpha: 0.7),
+                    ),
+                  ],
                 ),
               ],
             ),
-          )
-        else
-          InkWell(
-            onTap: () => _toggleAudioPlayback(message),
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4.0),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isPlaying
-                        ? Icons.pause_circle_filled
-                        : Icons.play_circle_fill,
-                    size: 28,
-                    color: isMe
-                        ? theme.colorScheme.onPrimary
-                        : theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Voice note',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: isMe
-                                ? theme.colorScheme.onPrimary
-                                : theme.colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _audioDuration > Duration.zero
-                              ? '${_audioDuration.inSeconds}s'
-                              : 'Sentuh untuk memutar',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isMe
-                                ? theme.colorScheme.onPrimary.withValues(
-                                    alpha: 0.75,
-                                  )
-                                : theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (_isAudioLoading && _playingMessageId == messageId)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8.0),
-                      child: SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: isMe
-                              ? theme.colorScheme.onPrimary
-                              : theme.colorScheme.primary,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
           ),
-        if (_audioDuration > Duration.zero)
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: LinearProgressIndicator(
-              value: progress.clamp(0.0, 1.0),
-              backgroundColor:
-                  (isMe
-                          ? theme.colorScheme.onPrimary
-                          : theme.colorScheme.surfaceContainerHighest)
-                      .withValues(alpha: 0.2),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                isMe ? theme.colorScheme.onPrimary : theme.colorScheme.primary,
-              ),
-            ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -3446,11 +3491,13 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                                             bottom: 12.0,
                                           ),
                                           constraints: BoxConstraints(
-                                            maxWidth:
-                                                MediaQuery.of(context)
-                                                    .size
-                                                    .width *
-                                                0.75,
+                                            maxWidth: isAudio
+                                                ? 290.0
+                                                : MediaQuery.of(context)
+                                                        .size
+                                                        .width *
+                                                    0.75,
+                                            minWidth: isAudio ? 230.0 : 0.0,
                                           ),
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 16.0,
@@ -3498,8 +3545,23 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
                                             ],
                                           ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    crossAxisAlignment: isMe
+                                        ? CrossAxisAlignment.end
+                                        : CrossAxisAlignment.start,
                                     children: [
+                                      if (!isMe && widget.chat['isGroup'] == true) ...[
+                                        Padding(
+                                          padding: const EdgeInsets.only(bottom: 6.0),
+                                          child: Text(
+                                            message['sender']?.toString() ?? 'Pengguna',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                              color: isDark ? Colors.purple.shade200 : AppTheme.primaryPurple,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                       if (message['reply_to'] != null)
                                         _buildReplyQuote(
                                           Map<String, dynamic>.from(
