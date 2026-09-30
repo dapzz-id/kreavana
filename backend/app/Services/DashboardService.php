@@ -74,6 +74,8 @@ class DashboardService extends BaseService implements DashboardServiceInterface
                 'poster_url' => $opp->poster_url,
             ])->toArray(),
             'project_needs' => $isGuest ? [] : $this->getProjectNeeds($userId),
+            'incoming_proposals' => $isGuest ? [] : $this->getIncomingProposals($userId),
+            'running_contracts' => $isGuest ? [] : $this->getRunningContracts($userId),
             'agenda' => $isGuest ? [] : $this->getAgenda($userId),
             'project_assets' => $isGuest ? [] : $this->getProjectAssets($userId),
         ];
@@ -140,6 +142,61 @@ class DashboardService extends BaseService implements DashboardServiceInterface
                 'budget' => $opp->budget_range,
                 'deadline' => $opp->deadline?->format('d M Y'),
                 'created_at' => $opp->created_at?->toIso8601String(),
+            ];
+        })->toArray();
+    }
+
+    protected function getIncomingProposals(string $userId): array
+    {
+        $proposals = \App\Models\OpportunityApplication::query()
+            ->whereHas('opportunity', function ($q) use ($userId) {
+                $q->where('posted_by', $userId);
+            })
+            ->with(['creator', 'opportunity'])
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get();
+
+        return $proposals->map(function ($prop) {
+            $creatorName = $prop->creator?->name ?? 'Kreator';
+            return [
+                'id' => $prop->id,
+                'opportunity_id' => $prop->opportunity_id,
+                'opportunity_title' => $prop->opportunity?->title ?? 'Kebutuhan Proyek',
+                'creator_id' => $prop->creator_id,
+                'creator_name' => $creatorName,
+                'creator_avatar' => $prop->creator?->avatar_url,
+                'bid_price' => $prop->bid_price ? 'Rp ' . number_format($prop->bid_price, 0, ',', '.') : 'Sesuai Budget',
+                'pitch_message' => $prop->pitch_message ?? '',
+                'status' => $prop->status ?? 'submitted',
+                'created_at' => $prop->created_at?->diffForHumans() ?? 'Baru saja',
+            ];
+        })->toArray();
+    }
+
+    protected function getRunningContracts(string $userId): array
+    {
+        $contracts = \App\Models\JobContract::query()
+            ->where('client_id', $userId)
+            ->whereNotIn('contract_status', [\App\Enums\ContractStatus::Completed, \App\Enums\ContractStatus::Cancelled])
+            ->with('creator')
+            ->orderByDesc('updated_at')
+            ->limit(5)
+            ->get();
+
+        return $contracts->map(function ($c) {
+            $workStatusStr = is_object($c->work_status) ? $c->work_status->value : (string)$c->work_status;
+            $contractStatusStr = is_object($c->contract_status) ? $c->contract_status->value : (string)$c->contract_status;
+            return [
+                'id' => $c->id,
+                'title' => $c->title,
+                'creator_name' => $c->creator?->name ?? 'Kreator',
+                'creator_avatar' => $c->creator?->avatar_url,
+                'agreed_price' => 'Rp ' . number_format($c->agreed_price ?? 0, 0, ',', '.'),
+                'escrow_amount' => 'Rp ' . number_format($c->escrow_amount ?? 0, 0, ',', '.'),
+                'work_status' => $workStatusStr,
+                'contract_status' => $contractStatusStr,
+                'deadline' => $c->deadline?->format('d M Y') ?? '-',
             ];
         })->toArray();
     }

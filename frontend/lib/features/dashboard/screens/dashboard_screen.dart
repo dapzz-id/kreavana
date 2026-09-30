@@ -48,6 +48,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   Map<String, dynamic> _overviewSummary = {};
   List<Map<String, dynamic>> _vendorRecommendations = [];
   List<Map<String, dynamic>> _projectNeeds = [];
+  List<Map<String, dynamic>> _incomingProposals = [];
+  List<Map<String, dynamic>> _runningContracts = [];
   List<Map<String, dynamic>> _agenda = [];
   List<Map<String, dynamic>> _projectAssets = [];
 
@@ -139,6 +141,12 @@ class _DashboardScreenState extends State<DashboardScreen>
           _projectNeeds = List<Map<String, dynamic>>.from(
             data['project_needs'] ?? [],
           );
+          _incomingProposals = List<Map<String, dynamic>>.from(
+            data['incoming_proposals'] ?? [],
+          );
+          _runningContracts = List<Map<String, dynamic>>.from(
+            data['running_contracts'] ?? [],
+          );
           _agenda = List<Map<String, dynamic>>.from(data['agenda'] ?? []);
           _projectAssets = List<Map<String, dynamic>>.from(
             data['project_assets'] ?? [],
@@ -158,6 +166,8 @@ class _DashboardScreenState extends State<DashboardScreen>
           };
           _vendorRecommendations = [];
           _projectNeeds = [];
+          _incomingProposals = [];
+          _runningContracts = [];
           _agenda = [];
           _projectAssets = [];
         });
@@ -321,7 +331,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => ProyekSayaScreen(user: widget.user),
+            builder: (_) => ProyekSayaScreen(
+              user: widget.user,
+              onUserUpdated: widget.onUserUpdated,
+            ),
           ),
         );
         break;
@@ -1060,26 +1073,44 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ── Three-column section ─────────────────────────────────────────────────────
   Widget _buildThreeColumnSection(bool isDark) {
     final w = MediaQuery.of(context).size.width;
+    final columns = _isCreator
+        ? [
+            Expanded(child: _buildProjectNeedsSection(isDark)),
+            const SizedBox(width: 14),
+            Expanded(child: _buildAgendaSection(isDark)),
+            const SizedBox(width: 14),
+            Expanded(child: _buildProjectAssetsSection(isDark)),
+          ]
+        : [
+            Expanded(child: _buildProjectNeedsSection(isDark)),
+            const SizedBox(width: 14),
+            Expanded(child: _buildClientProposalsSection(isDark)),
+            const SizedBox(width: 14),
+            Expanded(child: _buildClientActiveProjectsSection(isDark)),
+          ];
+
     if (w > 700) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: _buildProjectNeedsSection(isDark)),
-          const SizedBox(width: 14),
-          Expanded(child: _buildAgendaSection(isDark)),
-          const SizedBox(width: 14),
-          Expanded(child: _buildProjectAssetsSection(isDark)),
-        ],
+        children: columns,
       );
     }
     return Column(
-      children: [
-        _buildProjectNeedsSection(isDark),
-        const SizedBox(height: 14),
-        _buildAgendaSection(isDark),
-        const SizedBox(height: 14),
-        _buildProjectAssetsSection(isDark),
-      ],
+      children: _isCreator
+          ? [
+              _buildProjectNeedsSection(isDark),
+              const SizedBox(height: 14),
+              _buildAgendaSection(isDark),
+              const SizedBox(height: 14),
+              _buildProjectAssetsSection(isDark),
+            ]
+          : [
+              _buildProjectNeedsSection(isDark),
+              const SizedBox(height: 14),
+              _buildClientProposalsSection(isDark),
+              const SizedBox(height: 14),
+              _buildClientActiveProjectsSection(isDark),
+            ],
     );
   }
 
@@ -1091,8 +1122,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       child: _projectNeeds.isEmpty
           ? AppEmptyState(
               icon: Icons.folder_open_outlined,
-              title: 'Belum ada proyek',
-              subtitle: 'Kebutuhan atau proyek akan muncul di sini',
+              title: _isCreator ? 'Belum ada proyek' : 'Belum ada kebutuhan',
+              subtitle: _isCreator
+                  ? 'Aktivitas proyek Anda akan muncul di sini'
+                  : 'Kebutuhan proyek Anda akan muncul di sini',
               iconSize: 48,
             )
           : Column(
@@ -1359,6 +1392,257 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Client Sections: Proposal Masuk & Proyek Berjalan ─────────────────────────
+  Widget _buildClientProposalsSection(bool isDark) {
+    return _SectionCard(
+      title: 'Proposal Masuk',
+      viewAllLabel: 'Lihat Semua',
+      onViewAll: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ProyekSayaScreen(
+            user: widget.user,
+            onUserUpdated: widget.onUserUpdated,
+          ),
+        ),
+      ),
+      isDark: isDark,
+      child: _incomingProposals.isEmpty
+          ? AppEmptyState(
+              icon: Icons.mark_email_unread_outlined,
+              title: 'Belum ada proposal',
+              subtitle: 'Penawaran dari kreator akan muncul di sini',
+              iconSize: 48,
+            )
+          : Column(
+              children: _incomingProposals
+                  .take(4)
+                  .map((prop) => _buildProposalItem(prop, isDark))
+                  .toList(),
+            ),
+    );
+  }
+
+  Widget _buildProposalItem(Map<String, dynamic> prop, bool isDark) {
+    final creatorName = prop['creator_name']?.toString() ?? 'Kreator';
+    final opportunityTitle =
+        prop['opportunity_title']?.toString() ?? 'Kebutuhan Proyek';
+    final bidPrice = prop['bid_price']?.toString() ?? 'Sesuai Budget';
+    final status = prop['status']?.toString() ?? 'submitted';
+    final avatarUrl = prop['creator_avatar']?.toString();
+
+    final isApproved = status == 'approved';
+    final statusColor =
+        isApproved ? const Color(0xFF10B981) : AppTheme.primaryPurple;
+    final statusText = isApproved ? 'Disetujui' : 'Menunggu Review';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.inputDark : AppTheme.inputLight,
+        borderRadius: BorderRadius.circular(AppTheme.radiusSM),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 17,
+            backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.12),
+            backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
+                ? NetworkImage(avatarUrl)
+                : null,
+            child: (avatarUrl == null || avatarUrl.isEmpty)
+                ? Text(
+                    creatorName.isNotEmpty ? creatorName[0].toUpperCase() : 'K',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: AppTheme.primaryPurple,
+                    ),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  creatorName,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  opportunityTitle,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color:
+                        isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  bidPrice,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.primaryPurple,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              statusText,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                color: statusColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClientActiveProjectsSection(bool isDark) {
+    return _SectionCard(
+      title: 'Proyek Berjalan',
+      viewAllLabel: 'Lihat Semua',
+      onViewAll: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ProyekSayaScreen(
+            user: widget.user,
+            onUserUpdated: widget.onUserUpdated,
+          ),
+        ),
+      ),
+      isDark: isDark,
+      child: _runningContracts.isEmpty
+          ? AppEmptyState(
+              icon: Icons.handshake_outlined,
+              title: 'Belum ada proyek aktif',
+              subtitle: 'Proyek berjalan bersama kreator akan tampil di sini',
+              iconSize: 48,
+            )
+          : Column(
+              children: _runningContracts
+                  .take(4)
+                  .map((contract) => _buildRunningContractItem(contract, isDark))
+                  .toList(),
+            ),
+    );
+  }
+
+  Widget _buildRunningContractItem(Map<String, dynamic> c, bool isDark) {
+    final title = c['title']?.toString() ?? 'Proyek Kontrak';
+    final creatorName = c['creator_name']?.toString() ?? 'Kreator';
+    final agreedPrice = c['agreed_price']?.toString() ?? 'Rp0';
+    final deadline = c['deadline']?.toString() ?? '-';
+    final workStatus =
+        c['work_status']?.toString().toLowerCase() ?? 'in_progress';
+
+    String statusLabel = 'Dikerjakan';
+    Color statusColor = const Color(0xFF3B82F6);
+    if (workStatus == 'submitted' || workStatus == 'review') {
+      statusLabel = 'Perlu Review';
+      statusColor = const Color(0xFFF59E0B);
+    } else if (workStatus == 'revision') {
+      statusLabel = 'Revisi';
+      statusColor = const Color(0xFFEF4444);
+    } else if (workStatus == 'completed') {
+      statusLabel = 'Selesai';
+      statusColor = const Color(0xFF10B981);
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.inputDark : AppTheme.inputLight,
+        borderRadius: BorderRadius.circular(AppTheme.radiusSM),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.handshake_outlined, color: statusColor, size: 16),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  'Kreator: $creatorName • DL: $deadline',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color:
+                        isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  agreedPrice,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.primaryPurple,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              statusLabel,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                color: statusColor,
+              ),
             ),
           ),
         ],
