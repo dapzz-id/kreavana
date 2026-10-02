@@ -109,6 +109,10 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
 
     if (_addressText.isEmpty) {
       _reverseGeocode(_currentPoint);
+      // Auto-detect user's real GPS position if no saved pin was provided
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _detectCurrentGpsLocation();
+      });
     }
   }
 
@@ -241,17 +245,40 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
   Future<void> _detectCurrentGpsLocation() async {
     setState(() => _isLocatingGps = true);
     try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Layanan GPS/Lokasi perangkat Anda dinonaktifkan. Silakan aktifkan GPS.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
 
-      if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
-        final pos = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(timeLimit: Duration(seconds: 5)),
-        );
-        final point = LatLng(pos.latitude, pos.longitude);
+      if (permission == LocationPermission.deniedForever) {
         if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Izin lokasi diblokir oleh browser. Silakan izinkan akses lokasi di pengaturan browser.'),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
+      }
+
+      if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+        final lastPos = await Geolocator.getLastKnownPosition();
+        if (lastPos != null && mounted) {
+          final point = LatLng(lastPos.latitude, lastPos.longitude);
           setState(() {
             _currentPoint = point;
             _searchResults = [];
@@ -259,6 +286,23 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
           });
           _mapController.move(point, 16.5);
           _reverseGeocode(point);
+        }
+
+        final pos = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 8),
+          ),
+        );
+        final freshPoint = LatLng(pos.latitude, pos.longitude);
+        if (mounted) {
+          setState(() {
+            _currentPoint = freshPoint;
+            _searchResults = [];
+            _searchNotFound = false;
+          });
+          _mapController.move(freshPoint, 16.5);
+          _reverseGeocode(freshPoint);
         }
       }
     } catch (_) {
@@ -680,10 +724,52 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                             height: 32,
                             child: ListView.separated(
                               scrollDirection: Axis.horizontal,
-                              itemCount: currentCityHotspots.length,
+                              itemCount: currentCityHotspots.length + 1,
                               separatorBuilder: (_, _) => const SizedBox(width: 6),
                               itemBuilder: (context, idx) {
-                                final spot = currentCityHotspots[idx];
+                                if (idx == 0) {
+                                  return InkWell(
+                                    onTap: _isLocatingGps ? null : _detectCurrentGpsLocation,
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF0891B2).withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color: const Color(0xFF0891B2).withValues(alpha: 0.6),
+                                          width: 1.2,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (_isLocatingGps)
+                                            const SizedBox(
+                                              width: 12,
+                                              height: 12,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 1.8,
+                                                color: Color(0xFF0891B2),
+                                              ),
+                                            )
+                                          else
+                                            const Icon(Icons.my_location_rounded, size: 13, color: Color(0xFF0891B2)),
+                                          const SizedBox(width: 5),
+                                          const Text(
+                                            'Lokasi Saya',
+                                            style: TextStyle(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF0891B2),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }
+                                final spot = currentCityHotspots[idx - 1];
                                 return InkWell(
                                   onTap: () => _jumpToHotspot(
                                     spot['lat'] as double,
