@@ -1,11 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
 import '../app/theme.dart';
+import '../services/location_search_service.dart';
 
 class LocationPickResult {
   final double latitude;
@@ -54,20 +53,6 @@ class LocationPickerDialog extends StatefulWidget {
   State<LocationPickerDialog> createState() => _LocationPickerDialogState();
 }
 
-class _LocationSearchResult {
-  final String title;
-  final String subtitle;
-  final double latitude;
-  final double longitude;
-
-  _LocationSearchResult({
-    required this.title,
-    required this.subtitle,
-    required this.latitude,
-    required this.longitude,
-  });
-}
-
 class _LocationPickerDialogState extends State<LocationPickerDialog> {
   final MapController _mapController = MapController();
   final TextEditingController _searchController = TextEditingController();
@@ -79,7 +64,7 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
   bool _isLocatingGps = false;
   bool _searchNotFound = false;
   String _lastSearchedText = '';
-  List<_LocationSearchResult> _searchResults = [];
+  List<LocationSearchResult> _searchResults = [];
   Timer? _searchDebounce;
 
   static const Map<String, List<Map<String, dynamic>>> _cityHotspots = {
@@ -138,21 +123,14 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
   Future<void> _reverseGeocode(LatLng point) async {
     setState(() => _isGeocoding = true);
     try {
-      final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/reverse?lat=${point.latitude}&lon=${point.longitude}&format=json&addressdetails=1',
+      final address = await LocationSearchService.instance.reverseGeocode(
+        point.latitude,
+        point.longitude,
       );
-      final response = await http.get(url, headers: {
-        'User-Agent': 'Kreavana-App/1.0 (contact@kreavana.id)',
-      }).timeout(const Duration(seconds: 4));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final displayName = data['display_name'] as String?;
-        if (displayName != null && mounted) {
-          setState(() {
-            _addressText = displayName;
-          });
-        }
+      if (address != null && mounted) {
+        setState(() {
+          _addressText = address;
+        });
       }
     } catch (_) {
       // Fallback
@@ -209,104 +187,39 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
       _lastSearchedText = cleanQuery;
     });
 
-    final List<_LocationSearchResult> combinedResults = [];
-    final seenKeys = <String>{};
-
     try {
-      // Step A: Search with Photon API (Fast OSM-based search by Komoot)
-      final photonQuery = widget.cityName != null && !cleanQuery.toLowerCase().contains(widget.cityName!.toLowerCase())
-          ? '$cleanQuery, ${widget.cityName}'
-          : cleanQuery;
-
-      final photonUri = Uri.parse(
-        'https://photon.komoot.io/api/?q=${Uri.encodeComponent(photonQuery)}&limit=6',
+      final results = await LocationSearchService.instance.search(
+        cleanQuery,
+        city: widget.cityName,
       );
-      final photonRes = await http.get(photonUri).timeout(const Duration(seconds: 4));
 
-      if (photonRes.statusCode == 200) {
-        final data = json.decode(utf8.decode(photonRes.bodyBytes));
-        final features = (data['features'] as List?) ?? [];
-        for (final f in features) {
-          final props = f['properties'] as Map<String, dynamic>? ?? {};
-          final geom = f['geometry'] as Map<String, dynamic>? ?? {};
-          final coords = (geom['coordinates'] as List?) ?? [];
-          if (coords.length >= 2) {
-            final lon = (coords[0] as num).toDouble();
-            final lat = (coords[1] as num).toDouble();
-            final name = (props['name'] ?? props['street'] ?? cleanQuery) as String;
-            final parts = <String>[];
-            if (props['street'] != null && props['street'] != name) parts.add(props['street'].toString());
-            if (props['district'] != null) parts.add(props['district'].toString());
-            if (props['city'] != null) parts.add(props['city'].toString());
-            if (props['state'] != null) parts.add(props['state'].toString());
-            if (props['country'] != null) parts.add(props['country'].toString());
-            final subtitle = parts.join(', ');
-
-            final key = '${lat.toStringAsFixed(4)}_${lon.toStringAsFixed(4)}';
-            if (!seenKeys.contains(key)) {
-              seenKeys.add(key);
-              combinedResults.add(_LocationSearchResult(
-                title: name,
-                subtitle: subtitle.isNotEmpty ? subtitle : name,
-                latitude: lat,
-                longitude: lon,
-              ));
-            }
-          }
-        }
-      }
-
-      // Step B: Search with Nominatim if Photon yielded few results
-      if (combinedResults.length < 3) {
-        final nominatimUri = Uri.parse(
-          'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(cleanQuery)}&format=json&countrycodes=id&limit=6',
-        );
-        final nomRes = await http.get(nominatimUri, headers: {
-          'User-Agent': 'Kreavana-App/1.0 (contact@kreavana.id)',
-        }).timeout(const Duration(seconds: 4));
-
-        if (nomRes.statusCode == 200) {
-          final list = List<Map<String, dynamic>>.from(json.decode(nomRes.body));
-          for (final item in list) {
-            final lat = double.tryParse(item['lat']?.toString() ?? '');
-            final lon = double.tryParse(item['lon']?.toString() ?? '');
-            final displayName = (item['display_name'] ?? '') as String;
-            if (lat != null && lon != null && displayName.isNotEmpty) {
-              final key = '${lat.toStringAsFixed(4)}_${lon.toStringAsFixed(4)}';
-              if (!seenKeys.contains(key)) {
-                seenKeys.add(key);
-                final commaIdx = displayName.indexOf(',');
-                final title = commaIdx != -1 ? displayName.substring(0, commaIdx) : displayName;
-                final subtitle = commaIdx != -1 ? displayName.substring(commaIdx + 1).trim() : displayName;
-                combinedResults.add(_LocationSearchResult(
-                  title: title,
-                  subtitle: subtitle,
-                  latitude: lat,
-                  longitude: lon,
-                ));
-              }
-            }
-          }
-        }
-      }
-    } catch (_) {
-      // Network or timeout error
-    } finally {
       if (mounted) {
         setState(() {
-          _isSearching = false;
-          _searchResults = combinedResults;
-          _searchNotFound = combinedResults.isEmpty;
+          _searchResults = results;
+          _searchNotFound = results.isEmpty;
         });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _searchResults = [];
+          _searchNotFound = true;
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSearching = false);
       }
     }
   }
 
-  void _selectSearchResult(_LocationSearchResult result) {
+  void _selectSearchResult(LocationSearchResult result) {
     final point = LatLng(result.latitude, result.longitude);
     setState(() {
       _currentPoint = point;
-      _addressText = '${result.title}, ${result.subtitle}';
+      _addressText = result.subtitle.isNotEmpty
+          ? '${result.title}, ${result.subtitle}'
+          : result.title;
       _searchResults = [];
       _searchNotFound = false;
       _searchController.text = result.title;
@@ -438,7 +351,7 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Ketik nama tempat/gedung lalu klik "Cari", atau ketuk langsung di peta.',
+                          'Ketik nama tempat/gedung/perumahan lalu klik "Cari", atau ketuk langsung di peta.',
                           style: TextStyle(
                             fontSize: 12,
                             color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
@@ -559,7 +472,7 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                                     color: isDark ? Colors.white : Colors.black87,
                                   ),
                                   decoration: InputDecoration(
-                                    hintText: 'Cari gedung, mall, hotel, nama jalan, atau koordinat...',
+                                    hintText: 'Cari gedung, perumahan, mall, jalan, atau koordinat...',
                                     hintStyle: TextStyle(
                                       fontSize: 13,
                                       color: isDark ? Colors.white38 : Colors.grey.shade400,
@@ -617,7 +530,7 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                         if (_searchResults.isNotEmpty)
                           Container(
                             margin: const EdgeInsets.only(top: 8),
-                            constraints: const BoxConstraints(maxHeight: 220),
+                            constraints: const BoxConstraints(maxHeight: 250),
                             decoration: BoxDecoration(
                               color: isDark ? const Color(0xFF1E1B2E) : Colors.white,
                               borderRadius: BorderRadius.circular(14),
@@ -647,16 +560,46 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                                   leading: Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF0891B2).withValues(alpha: 0.12),
+                                      color: item.isGoogle
+                                          ? const Color(0xFF4285F4).withValues(alpha: 0.12)
+                                          : const Color(0xFF0891B2).withValues(alpha: 0.12),
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(Icons.place_rounded, size: 18, color: Color(0xFF0891B2)),
+                                    child: Icon(
+                                      Icons.place_rounded,
+                                      size: 18,
+                                      color: item.isGoogle ? const Color(0xFF1A73E8) : const Color(0xFF0891B2),
+                                    ),
                                   ),
-                                  title: Text(
-                                    item.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  title: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          item.title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                        decoration: BoxDecoration(
+                                          color: item.isGoogle
+                                              ? const Color(0xFF4285F4).withValues(alpha: 0.12)
+                                              : (isDark ? Colors.white10 : const Color(0xFFF1F5F9)),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          item.isGoogle ? 'Google' : 'OSM',
+                                          style: TextStyle(
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: item.isGoogle ? const Color(0xFF1A73E8) : Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   subtitle: Text(
                                     item.subtitle,

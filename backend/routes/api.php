@@ -12,8 +12,15 @@ use App\Http\Controllers\{
     PortfolioController, SubscriptionController,
     StorageController, DisputeController, OpportunityReviewController,
     AiController, JobContractController, JobContractTransitionController,
-    MarketingController, AdminSystemSettingController, CollaborationController
+    MarketingController, AdminSystemSettingController, CollaborationController,
+    LocationController
 };
+
+// Locations & Map Search (Google Places / Geocoding with OSM fallback)
+Route::prefix('locations')->group(function () {
+    Route::get('search', [LocationController::class, 'search']);
+    Route::get('reverse', [LocationController::class, 'reverse']);
+});
 
 // Public: serve avatar images with CORS headers (for Flutter Web)
 Route::get('avatars/{file}', [AvatarController::class, 'show'])
