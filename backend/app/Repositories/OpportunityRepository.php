@@ -72,7 +72,6 @@ class OpportunityRepository extends BaseRepository
             'requirements',
         ])
             ->where('status', 'open')
-            ->where('type', 'location')
             ->whereNotNull('latitude')
             ->whereNotNull('longitude');
 

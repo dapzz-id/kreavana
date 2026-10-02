@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import '../app/theme.dart';
 import '../app/app_animations.dart';
 import '../utils/app_errors.dart';
@@ -10,6 +11,7 @@ import '../models/user_model.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import '../widgets/app_breadcrumbs.dart';
 import '../widgets/app_sweet_alert.dart';
+import '../widgets/location_picker_dialog.dart';
 import '../services/verification_service.dart';
 import 'client_verification_page.dart';
 
@@ -131,6 +133,43 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   // Lokasi state
   bool _isRemote = false;
   String _selectedCity = 'Jakarta';
+  double? _customLat;
+  double? _customLng;
+  String? _customLocationName;
+
+  Future<void> _openLocationPicker() async {
+    final cityData = _cityPresets.firstWhere(
+      (c) => c['name'] == _selectedCity,
+      orElse: () => _cityPresets.first,
+    );
+    final initialPoint = _customLat != null && _customLng != null
+        ? LatLng(_customLat!, _customLng!)
+        : LatLng(cityData['lat'] as double, cityData['lng'] as double);
+
+    final res = await LocationPickerDialog.show(
+      context,
+      initialLocation: initialPoint,
+      initialAddress: _alamatController.text.trim().isNotEmpty
+          ? _alamatController.text.trim()
+          : _customLocationName,
+      cityName: _selectedCity,
+    );
+
+    if (res != null && mounted) {
+      setState(() {
+        _customLat = res.latitude;
+        _customLng = res.longitude;
+        if (res.address != null && res.address!.trim().isNotEmpty) {
+          _customLocationName = res.address;
+          _alamatController.text = res.address!;
+        }
+      });
+      AppSnackbar.success(
+        context,
+        'Titik lokasi acara berhasil ditandai pada peta.',
+      );
+    }
+  }
 
   String _selectedBudget = '< Rp 500.000';
   String _selectedDeadline = '1 Minggu';
@@ -604,8 +643,8 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
         bannerUrl: _bannerUrl,
         location: locationName,
         address: addressDetail,
-        latitude: _isRemote ? null : (cityData['lat'] as double),
-        longitude: _isRemote ? null : (cityData['lng'] as double),
+        latitude: _isRemote ? null : (_customLat ?? (cityData['lat'] as double)),
+        longitude: _isRemote ? null : (_customLng ?? (cityData['lng'] as double)),
         budgetRange: _selectedBudget,
         deadline: deadlineDate,
         eventDate: _eventStartDate.toIso8601String().substring(0, 10),
@@ -1483,7 +1522,14 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                                 'label': c['name'] as String,
                               })
                           .toList(),
-                      onChanged: (v) => setState(() => _selectedCity = v!),
+                      onChanged: (v) {
+                        setState(() {
+                          _selectedCity = v!;
+                          // Reset custom coordinates if city changes and was default
+                          _customLat = null;
+                          _customLng = null;
+                        });
+                      },
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -1493,8 +1539,13 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                       controller: _alamatController,
                       label: 'Detail Lokasi / Tempat Acara',
                       hint: 'Misal: Hotel Mulia Senayan, Studio Foto Cipete, dsb.',
-                      icon: Icons.map_rounded,
+                      icon: Icons.place_rounded,
                       textInputAction: TextInputAction.next,
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.pin_drop_rounded, color: Color(0xFF0891B2)),
+                        tooltip: 'Pilih Titik di Peta',
+                        onPressed: _openLocationPicker,
+                      ),
                     ),
                   ),
                 ],
@@ -1510,17 +1561,116 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                           'label': c['name'] as String,
                         })
                     .toList(),
-                onChanged: (v) => setState(() => _selectedCity = v!),
+                onChanged: (v) {
+                  setState(() {
+                    _selectedCity = v!;
+                    _customLat = null;
+                    _customLng = null;
+                  });
+                },
               ),
               const SizedBox(height: 14),
               AnimatedInputField(
                 controller: _alamatController,
                 label: 'Detail Lokasi / Tempat Acara',
                 hint: 'Misal: Hotel Mulia Senayan, Studio Foto Cipete, dsb.',
-                icon: Icons.map_rounded,
+                icon: Icons.place_rounded,
                 textInputAction: TextInputAction.next,
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.pin_drop_rounded, color: Color(0xFF0891B2)),
+                  tooltip: 'Pilih Titik di Peta',
+                  onPressed: _openLocationPicker,
+                ),
               ),
             ],
+            const SizedBox(height: 12),
+
+            // ── Interactive Map Pin Banner ──
+            InkWell(
+              onTap: _openLocationPicker,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: _customLat != null
+                      ? const Color(0xFF0891B2).withValues(alpha: 0.1)
+                      : (isDark ? const Color(0xFF1E1B2E) : const Color(0xFFF1F5F9)),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _customLat != null
+                        ? const Color(0xFF0891B2).withValues(alpha: 0.5)
+                        : (isDark ? AppTheme.inputBorder : const Color(0xFFCBD5E1)),
+                    width: 1.2,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: _customLat != null
+                            ? const Color(0xFF0891B2).withValues(alpha: 0.2)
+                            : Colors.grey.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _customLat != null ? Icons.pin_drop_rounded : Icons.map_rounded,
+                        size: 18,
+                        color: _customLat != null ? const Color(0xFF0891B2) : Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _customLat != null
+                                ? 'Titik Lokasi Acara Telah Ditandai di Peta'
+                                : 'Tandai Titik Lokasi / Tempat Acara di Peta',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: _customLat != null
+                                  ? const Color(0xFF0891B2)
+                                  : (isDark ? Colors.white : Colors.black87),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _customLat != null
+                                ? 'Koordinat: ${_customLat!.toStringAsFixed(5)}, ${_customLng!.toStringAsFixed(5)} • Acara akan muncul akurat di peta kreator.'
+                                : 'Kreator dapat melihat event Anda langsung pada peta rekomendasi di sekitar mereka.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _customLat != null ? const Color(0xFF0891B2) : AppTheme.primaryPurple,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onPressed: _openLocationPicker,
+                      icon: Icon(
+                        _customLat != null ? Icons.edit_location_alt_rounded : Icons.add_location_alt_rounded,
+                        size: 15,
+                        color: Colors.white,
+                      ),
+                      label: Text(
+                        _customLat != null ? 'Ubah Titik' : 'Buka Peta',
+                        style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ] else ...[
             Container(
               padding: const EdgeInsets.all(12),

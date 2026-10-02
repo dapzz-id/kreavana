@@ -34,6 +34,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
   String _selectedCategory = 'all';
   LatLng? _userLocation;
   double? _selectedRadiusKm;
+  OpportunityModel? _selectedOpportunity;
 
   static const _categories = [
     {'slug': 'all', 'name': 'Semua', 'color': Colors.indigo},
@@ -435,15 +436,236 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
     }
   }
 
-  Future<void> _onMarkerTap(OpportunityModel opp) async {
-    // Show detail sheet immediately — don't wait for API
-    if (mounted) {
-      OpportunityDetailSheet.show(
-        context,
-        opportunity: opp,
-        currentUserId: widget.user.id,
-      );
+  void _onMarkerTap(OpportunityModel opp) {
+    setState(() {
+      _selectedOpportunity = opp;
+    });
+    if (opp.latitude != null && opp.longitude != null) {
+      _animatedMapMove(LatLng(opp.latitude!, opp.longitude!), 15.0);
     }
+  }
+
+  Widget _buildFloatingOpportunityCard(OpportunityModel opp, bool isDark, bool isMobile) {
+    String distanceStr = '';
+    if (_userLocation != null && opp.latitude != null && opp.longitude != null) {
+      final dKm = Geolocator.distanceBetween(
+            _userLocation!.latitude,
+            _userLocation!.longitude,
+            opp.latitude!,
+            opp.longitude!,
+          ) / 1000.0;
+      distanceStr = dKm < 1.0 ? '${(dKm * 1000).toInt()} m dari Anda' : '${dKm.toStringAsFixed(1)} km dari Anda';
+    }
+
+    final reqs = opp.requirements;
+
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(maxHeight: 280),
+      padding: EdgeInsets.all(isMobile ? 14 : 18),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1B192A) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.15),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Row: Category Chip + Distance + Close Button
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0891B2).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.event_available_rounded, size: 13, color: Color(0xFF0891B2)),
+                      SizedBox(width: 4),
+                      Text(
+                        'EVENT / PROYEK TERBUKA',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF0891B2)),
+                      ),
+                    ],
+                  ),
+                ),
+                if (distanceStr.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    '•  $distanceStr',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.tealAccent : const Color(0xFF0D9488),
+                    ),
+                  ),
+                ],
+                const Spacer(),
+                InkWell(
+                  onTap: () => setState(() => _selectedOpportunity = null),
+                  borderRadius: BorderRadius.circular(16),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(Icons.close_rounded, size: 18),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Title
+            Text(
+              opp.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: isMobile ? 15 : 16,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 6),
+
+            // Location & Date
+            Row(
+              children: [
+                const Icon(Icons.place_rounded, size: 14, color: Color(0xFFE11D48)),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    opp.address ?? opp.location ?? 'Lokasi Fisik Terpilih',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (opp.eventDate != null || opp.budgetRange != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  if (opp.eventDate != null) ...[
+                    const Icon(Icons.calendar_today_rounded, size: 12, color: Color(0xFFF59E0B)),
+                    const SizedBox(width: 4),
+                    Text(
+                      opp.eventDate!,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  if (opp.budgetRange != null) ...[
+                    const Icon(Icons.payments_rounded, size: 13, color: Color(0xFF10B981)),
+                    const SizedBox(width: 4),
+                    Text(
+                      opp.budgetRange!,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF059669),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+            const SizedBox(height: 10),
+
+            // Requirements Section ("Butuh Apa Aja")
+            Text(
+              'Posisi & Kebutuhan Acara:',
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white70 : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 6),
+            if (reqs.isNotEmpty)
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: reqs.map((r) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryPurple.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: AppTheme.primaryPurple.withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Text(
+                      '${r.subRoleTitle} (${r.quantity} org)',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryPurple,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              )
+            else
+              Text(
+                opp.subRoleLabel,
+                style: const TextStyle(fontSize: 11.5, color: AppTheme.primaryPurple, fontWeight: FontWeight.w600),
+              ),
+            const SizedBox(height: 12),
+
+            // Actions: Detail & Apply
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryPurple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () {
+                      OpportunityDetailSheet.show(
+                        context,
+                        opportunity: opp,
+                        currentUserId: widget.user.id,
+                      );
+                    },
+                    icon: const Icon(Icons.touch_app_rounded, size: 16),
+                    label: const Text(
+                      'Lihat Detail & Ajukan Lamaran',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Zoom button widget ────────────────────────────────────────────────────
@@ -825,9 +1047,12 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                                       l.latitude != null && l.longitude != null,
                                 )
                                 .map((loc) {
+                                  final isSelected = loc.id == _selectedOpportunity?.id;
                                   final color = _markerColor(loc.subRoleSlug);
-                                  final markerWidth = isMobile ? 90.0 : 120.0;
-                                  final markerHeight = isMobile ? 50.0 : 65.0;
+                                  final markerWidth = isMobile ? (isSelected ? 115.0 : 100.0) : (isSelected ? 140.0 : 125.0);
+                                  final markerHeight = isMobile ? (isSelected ? 68.0 : 60.0) : (isSelected ? 80.0 : 70.0);
+                                  final reqCount = loc.requirements.length;
+
                                   return Marker(
                                     point: LatLng(
                                       loc.latitude!,
@@ -842,17 +1067,21 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                                         children: [
                                           Container(
                                             padding: EdgeInsets.all(
-                                              isMobile ? 4 : 6,
+                                              isMobile ? (isSelected ? 5 : 4) : (isSelected ? 7 : 6),
                                             ),
                                             decoration: BoxDecoration(
-                                              color: color,
+                                              color: isSelected ? const Color(0xFFF59E0B) : color,
                                               shape: BoxShape.circle,
+                                              border: isSelected
+                                                  ? Border.all(color: Colors.white, width: 2.5)
+                                                  : null,
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: color.withValues(
-                                                    alpha: 0.4,
+                                                  color: (isSelected ? const Color(0xFFF59E0B) : color).withValues(
+                                                    alpha: isSelected ? 0.6 : 0.4,
                                                   ),
-                                                  blurRadius: 8,
+                                                  blurRadius: isSelected ? 12 : 8,
+                                                  spreadRadius: isSelected ? 2 : 0,
                                                   offset: const Offset(0, 2),
                                                 ),
                                               ],
@@ -860,51 +1089,67 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                                             child: Icon(
                                               Icons.location_on,
                                               color: Colors.white,
-                                              size: isMobile ? 16.0 : 20.0,
+                                              size: isMobile ? (isSelected ? 18.0 : 16.0) : (isSelected ? 22.0 : 20.0),
                                             ),
                                           ),
                                           const SizedBox(height: 2),
                                           Container(
                                             padding: EdgeInsets.symmetric(
-                                              horizontal: isMobile ? 4 : 6,
+                                              horizontal: isMobile ? 5 : 7,
                                               vertical: isMobile ? 2 : 3,
                                             ),
                                             constraints: BoxConstraints(
-                                              maxWidth: isMobile ? 80 : 110,
+                                              maxWidth: isMobile ? 95 : 125,
                                             ),
                                             decoration: BoxDecoration(
-                                              color: isDark
-                                                  ? AppTheme.cardBg
-                                                  : Colors.white,
-                                              borderRadius:
-                                                  BorderRadius.circular(6),
+                                              color: isSelected
+                                                  ? (isDark ? const Color(0xFF2D1457) : const Color(0xFFEDE9FE))
+                                                  : (isDark ? AppTheme.cardBg : Colors.white),
+                                              borderRadius: BorderRadius.circular(7),
                                               border: Border.all(
-                                                color: isDark
-                                                    ? AppTheme.inputBorder
-                                                    : Colors.grey.shade300,
-                                                width: 0.5,
+                                                color: isSelected
+                                                    ? AppTheme.primaryPurple
+                                                    : (isDark ? AppTheme.inputBorder : Colors.grey.shade300),
+                                                width: isSelected ? 1.5 : 0.5,
                                               ),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: Colors.black
-                                                      .withValues(alpha: 0.1),
-                                                  blurRadius: 4,
+                                                  color: Colors.black.withValues(alpha: isSelected ? 0.2 : 0.1),
+                                                  blurRadius: isSelected ? 6 : 4,
                                                   offset: const Offset(0, 1),
                                                 ),
                                               ],
                                             ),
-                                            child: Text(
-                                              loc.title,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                fontSize: isMobile ? 8 : 9,
-                                                fontWeight: FontWeight.bold,
-                                                color: isDark
-                                                    ? Colors.white
-                                                    : Colors.black87,
-                                              ),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  loc.title,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(
+                                                    fontSize: isMobile ? 8.5 : 9.5,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: isSelected
+                                                        ? AppTheme.primaryPurple
+                                                        : (isDark ? Colors.white : Colors.black87),
+                                                  ),
+                                                ),
+                                                if (reqCount > 0)
+                                                  Text(
+                                                    reqCount > 1 ? '$reqCount Posisi' : loc.subRoleLabel,
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                      fontSize: isMobile ? 7 : 8,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: isSelected
+                                                          ? AppTheme.primaryPurple
+                                                          : const Color(0xFF0891B2),
+                                                    ),
+                                                  ),
+                                              ],
                                             ),
                                           ),
                                         ],
@@ -999,70 +1244,72 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                           ),
                         ),
 
-                      // ── Bottom info bar ──────────────────────────────────
+                      // ── Bottom Floating Card or Info Bar ───────────────────
                       Positioned(
                         bottom: isMobile ? 8 : 16,
                         left: isMobile ? 12 : 16,
                         right: isMobile ? 12 : 16,
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: isMobile ? 12 : 16,
-                            vertical: isMobile ? 10 : 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? AppTheme.cardBg
-                                : Colors.white.withValues(alpha: 0.95),
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 10,
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.touch_app,
-                                size: isMobile ? 18 : 20,
-                                color: Colors.teal.shade600,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  isMobile
-                                      ? 'Ketuk marker untuk detail'
-                                      : 'Ketuk marker untuk lihat kontak pembuat & laporkan',
-                                  style: TextStyle(
-                                    fontSize: isMobile ? 10 : 12,
-                                    color: isDark
-                                        ? AppTheme.textMuted
-                                        : Colors.grey.shade700,
-                                  ),
-                                ),
-                              ),
-                              Container(
+                        child: _selectedOpportunity != null
+                            ? _buildFloatingOpportunityCard(_selectedOpportunity!, isDark, isMobile)
+                            : Container(
                                 padding: EdgeInsets.symmetric(
-                                  horizontal: isMobile ? 8 : 10,
-                                  vertical: isMobile ? 3 : 4,
+                                  horizontal: isMobile ? 12 : 16,
+                                  vertical: isMobile ? 10 : 12,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.teal.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: isDark
+                                      ? AppTheme.cardBg
+                                      : Colors.white.withValues(alpha: 0.95),
+                                  borderRadius: BorderRadius.circular(14),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.1),
+                                      blurRadius: 10,
+                                    ),
+                                  ],
                                 ),
-                                child: Text(
-                                  '${filtered.length} lokasi',
-                                  style: TextStyle(
-                                    fontSize: isMobile ? 10 : 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.teal.shade700,
-                                  ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.touch_app,
+                                      size: isMobile ? 18 : 20,
+                                      color: Colors.teal.shade600,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        isMobile
+                                            ? 'Ketuk marker untuk lihat event & kebutuhannya'
+                                            : 'Ketuk marker event untuk lihat detail peran & ajukan lamaran',
+                                        style: TextStyle(
+                                          fontSize: isMobile ? 10 : 12,
+                                          color: isDark
+                                              ? AppTheme.textMuted
+                                              : Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: isMobile ? 8 : 10,
+                                        vertical: isMobile ? 3 : 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.teal.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        '${filtered.length} lokasi',
+                                        style: TextStyle(
+                                          fontSize: isMobile ? 10 : 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.teal.shade700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
                       ),
 
                       // ── Zoom controls (top-right) ────────────────────────
