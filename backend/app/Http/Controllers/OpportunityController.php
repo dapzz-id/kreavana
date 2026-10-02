@@ -147,6 +147,55 @@ class OpportunityController extends Controller
         }
     }
 
+    public function considerApplication(Request $request, string $applicationId)
+    {
+        $user = Auth::guard('api')->user();
+        $counterOfferPrice = $request->input('counter_offer_price');
+        $notes = $request->input('notes') ?? $request->input('reason');
+
+        if (!$counterOfferPrice || !is_numeric($counterOfferPrice) || (float) $counterOfferPrice <= 0) {
+            return $this->errorResponse('Nominal tawaran dana harus berupa angka lebih dari 0.', 422);
+        }
+
+        try {
+            $result = $this->opportunityService->reviewApplication(
+                $applicationId,
+                $user->id,
+                'consider',
+                null,
+                (float) $counterOfferPrice,
+                $notes
+            );
+            return $this->successResponse('Lamaran dialihkan ke status pertimbangan dengan tawaran dana baru.', $result);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function respondCounterOffer(Request $request, string $applicationId)
+    {
+        $user = Auth::guard('api')->user();
+        $action = $request->input('action');
+
+        if (!in_array($action, ['accept', 'decline'])) {
+            return $this->errorResponse('Tindakan tidak valid. Pilihan: accept atau decline.', 422);
+        }
+
+        try {
+            $result = $this->opportunityService->respondCounterOffer($applicationId, $user->id, $action);
+            $msg = $action === 'accept'
+                ? 'Tawaran dana berhasil diterima. Lamaran kini siap difinalisasi oleh pemilik proyek.'
+                : 'Tawaran dana telah ditolak.';
+            return $this->successResponse($msg, $result);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
     public function submitReport(SubmitReportRequest $request)
     {
         $user = Auth::guard('api')->user();

@@ -51,6 +51,9 @@ class OpportunityApplicationModel {
   final String pitchMessage;
   final String? questionsNotes;
   final double? bidPrice;
+  final double? counterOfferPrice;
+  final String? counterOfferNotes;
+  final String? counterOfferStatus; // 'pending', 'accepted', 'declined'
   final String status;
   final String? rejectionReason;
   final String? reviewedAt;
@@ -65,6 +68,9 @@ class OpportunityApplicationModel {
     required this.pitchMessage,
     this.questionsNotes,
     this.bidPrice,
+    this.counterOfferPrice,
+    this.counterOfferNotes,
+    this.counterOfferStatus,
     this.status = 'pending',
     this.rejectionReason,
     this.reviewedAt,
@@ -75,6 +81,7 @@ class OpportunityApplicationModel {
   bool get isPending => status == 'pending';
   bool get isApproved => status == 'approved';
   bool get isRejected => status == 'rejected';
+  bool get isConsideration => status == 'under_consideration';
   String get creatorId => creator?.id ?? '';
 
   String get subRoleLabel {
@@ -121,6 +128,9 @@ class OpportunityApplicationModel {
       pitchMessage: json['pitch_message'] ?? '',
       questionsNotes: json['questions_notes'],
       bidPrice: json['bid_price'] != null ? double.tryParse(json['bid_price'].toString()) : null,
+      counterOfferPrice: json['counter_offer_price'] != null ? double.tryParse(json['counter_offer_price'].toString()) : null,
+      counterOfferNotes: json['counter_offer_notes']?.toString(),
+      counterOfferStatus: json['counter_offer_status']?.toString(),
       status: json['status'] ?? 'pending',
       rejectionReason: json['rejection_reason'],
       reviewedAt: json['reviewed_at']?.toString(),

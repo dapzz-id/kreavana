@@ -218,21 +218,58 @@ class OpportunityService {
 
   static Future<Map<String, dynamic>> reviewApplication({
     required String applicationId,
-    required String decision, // 'approve' or 'reject'
+    required String decision, // 'approve', 'reject', or 'consider'
     String? reason,
+    double? counterOfferPrice,
+    String? counterOfferNotes,
   }) async {
     try {
-      final endpoint = decision == 'approve'
-          ? 'opportunities/applications/$applicationId/approve'
-          : 'opportunities/applications/$applicationId/reject';
+      String endpoint;
+      Map<String, dynamic> body = {};
 
-      final response = await ApiService.post(endpoint, {
-        if (reason != null && reason.isNotEmpty) 'reason': reason,
-      });
+      if (decision == 'approve') {
+        endpoint = 'opportunities/applications/$applicationId/approve';
+      } else if (decision == 'reject') {
+        endpoint = 'opportunities/applications/$applicationId/reject';
+        if (reason != null && reason.isNotEmpty) body['reason'] = reason;
+      } else {
+        endpoint = 'opportunities/applications/$applicationId/consider';
+        if (counterOfferPrice != null) body['counter_offer_price'] = counterOfferPrice;
+        if (counterOfferNotes != null && counterOfferNotes.isNotEmpty) {
+          body['notes'] = counterOfferNotes;
+        } else if (reason != null && reason.isNotEmpty) {
+          body['notes'] = reason;
+        }
+      }
+
+      final response = await ApiService.post(endpoint, body);
 
       return {
         'status': response['status'] == true,
         'message': response['message'] ?? 'Status lamaran berhasil diperbarui.',
+        'data': response['data'],
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> respondCounterOffer({
+    required String applicationId,
+    required String action, // 'accept' or 'decline'
+  }) async {
+    try {
+      final response = await ApiService.post(
+        'opportunities/applications/$applicationId/respond-counter-offer',
+        {'action': action},
+      );
+      return {
+        'status': response['status'] == true,
+        'message': response['message'] ?? 'Tanggapan tawaran berhasil dikirim.',
+        'data': response['data'],
       };
     } catch (e) {
       return {

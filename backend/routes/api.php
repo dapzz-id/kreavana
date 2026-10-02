@@ -180,6 +180,8 @@ Route::middleware('auth:api')->group(function () {
         Route::get('{id}/applications', [OpportunityController::class, 'applications']);
         Route::post('applications/{id}/approve', [OpportunityController::class, 'approveApplication']);
         Route::post('applications/{id}/reject', [OpportunityController::class, 'rejectApplication']);
+        Route::post('applications/{id}/consider', [OpportunityController::class, 'considerApplication']);
+        Route::post('applications/{id}/respond-counter-offer', [OpportunityController::class, 'respondCounterOffer']);
         Route::post('{id}/start-event', [OpportunityController::class, 'startEvent']);
         Route::post('{id}/update-progress', [OpportunityController::class, 'updateProgress']);
         Route::post('{id}/schedule-meeting', [OpportunityController::class, 'scheduleMeeting']);

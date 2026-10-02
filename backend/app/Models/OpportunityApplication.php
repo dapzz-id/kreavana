@@ -18,6 +18,9 @@ class OpportunityApplication extends Model
         'questions_notes',
         'submitted_documents',
         'bid_price',
+        'counter_offer_price',
+        'counter_offer_notes',
+        'counter_offer_status',
         'status',
         'rejection_reason',
         'reviewed_at',
@@ -25,6 +28,7 @@ class OpportunityApplication extends Model
 
     protected $casts = [
         'bid_price' => 'decimal:2',
+        'counter_offer_price' => 'decimal:2',
         'submitted_documents' => 'array',
         'reviewed_at' => 'datetime',
     ];

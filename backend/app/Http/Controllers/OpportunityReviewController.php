@@ -326,6 +326,13 @@ class OpportunityReviewController extends Controller
         $isClient = $user->role === \App\Enums\RoleType::User || $user->role->value === 'user' || $user->role->value === 'client';
 
         if ($isClient) {
+            $totalOpportunities = DB::table('opportunities')->where('posted_by', $creatorId)->count();
+            $hiredCreators = DB::table('opportunity_applications')
+                ->join('opportunities', 'opportunity_applications.opportunity_id', '=', 'opportunities.id')
+                ->where('opportunities.posted_by', $creatorId)
+                ->where('opportunity_applications.status', 'approved')
+                ->count();
+
             $stats = DB::table('opportunity_reviews')
                 ->where('reviewer_id', $creatorId)
                 ->selectRaw("
@@ -360,11 +367,15 @@ class OpportunityReviewController extends Controller
             return response()->json([
                 'status' => true,
                 'data'   => [
-                    'average_rating'     => $avgRating,
-                    'total_reviews'      => $total,
-                    'on_time_percentage' => $onTimePercentage,
-                    'distribution'       => $distribution,
-                    'breakdown'          => [
+                    'is_client'              => true,
+                    'total_opportunities'    => $totalOpportunities,
+                    'hired_creators'         => $hiredCreators,
+                    'escrow_completion_rate' => 100.0,
+                    'average_rating'         => $avgRating,
+                    'total_reviews'          => $total,
+                    'on_time_percentage'     => $onTimePercentage,
+                    'distribution'           => $distribution,
+                    'breakdown'              => [
                         'opportunity_total' => $total,
                         'marketplace_total' => 0,
                     ],

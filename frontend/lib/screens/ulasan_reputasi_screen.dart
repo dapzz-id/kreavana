@@ -480,24 +480,36 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Key Stats Row
+          // Key Stats Row (Adaptive for Creator vs Client)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildStatItem('$total Ulasan', 'Diverifikasi',
-                  Icons.rate_review_rounded),
-              Container(
-                  width: 1,
-                  height: 35,
-                  color: Colors.white.withValues(alpha: 0.2)),
-              _buildStatItem(
-                  onTimeStr, 'Tepat Waktu', Icons.alarm_on_rounded),
-              Container(
-                  width: 1,
-                  height: 35,
-                  color: Colors.white.withValues(alpha: 0.2)),
-              _buildStatItem(satisfactionStr, 'Klien Puas', Icons.thumb_up_alt_rounded),
-            ],
+            children: isCreator
+                ? [
+                    _buildStatItem('$total Ulasan', 'Diverifikasi', Icons.rate_review_rounded),
+                    Container(width: 1, height: 35, color: Colors.white.withValues(alpha: 0.2)),
+                    _buildStatItem(onTimeStr, 'Tepat Waktu', Icons.alarm_on_rounded),
+                    Container(width: 1, height: 35, color: Colors.white.withValues(alpha: 0.2)),
+                    _buildStatItem(satisfactionStr, 'Klien Puas', Icons.thumb_up_alt_rounded),
+                  ]
+                : [
+                    _buildStatItem(
+                      '${_dbStats?['total_opportunities'] ?? 0} Acara',
+                      'Kebutuhan Dibuat',
+                      Icons.event_note_rounded,
+                    ),
+                    Container(width: 1, height: 35, color: Colors.white.withValues(alpha: 0.2)),
+                    _buildStatItem(
+                      '${_dbStats?['hired_creators'] ?? 0} Kreator',
+                      'Telah Direkrut',
+                      Icons.groups_rounded,
+                    ),
+                    Container(width: 1, height: 35, color: Colors.white.withValues(alpha: 0.2)),
+                    _buildStatItem(
+                      '100%',
+                      'Escrow Aman',
+                      Icons.verified_user_rounded,
+                    ),
+                  ],
           ),
         ],
       ),
