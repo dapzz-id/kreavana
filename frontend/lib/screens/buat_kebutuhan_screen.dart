@@ -1420,6 +1420,8 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
 
   // ── Location & Wilayah Section ──────────────────────────────────────────────
   Widget _buildLocationSection(bool isDark, bool isDesktop) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -1525,7 +1527,6 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                       onChanged: (v) {
                         setState(() {
                           _selectedCity = v!;
-                          // Reset custom coordinates if city changes and was default
                           _customLat = null;
                           _customLng = null;
                         });
@@ -1535,17 +1536,102 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     flex: 2,
-                    child: AnimatedInputField(
-                      controller: _alamatController,
-                      label: 'Detail Lokasi / Tempat Acara',
-                      hint: 'Misal: Hotel Mulia Senayan, Studio Foto Cipete, dsb.',
-                      icon: Icons.place_rounded,
-                      textInputAction: TextInputAction.next,
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.pin_drop_rounded, color: Color(0xFF0891B2)),
-                        tooltip: 'Pilih Titik di Peta',
-                        onPressed: _openLocationPicker,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Detail Lokasi / Tempat Acara',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.white70 : Colors.grey.shade700,
+                              ),
+                            ),
+                            const Spacer(),
+                            if (_customLat != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0891B2).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  '✓ Pin Tersimpan',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    color: Color(0xFF0891B2),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _alamatController,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: isDark ? AppTheme.inputDark : AppTheme.inputLight,
+                            hintText: 'Misal: Hotel Mulia Senayan, Studio Foto Cipete, dsb.',
+                            hintStyle: TextStyle(
+                              fontSize: 13,
+                              color: isDark ? Colors.white38 : Colors.grey.shade400,
+                            ),
+                            prefixIcon: Padding(
+                              padding: const EdgeInsets.only(left: 14, right: 10),
+                              child: Icon(
+                                Icons.place_rounded,
+                                size: 20,
+                                color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                              ),
+                            ),
+                            prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 20),
+                            suffixIcon: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                              child: ElevatedButton.icon(
+                                onPressed: _openLocationPicker,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _customLat != null ? const Color(0xFF0891B2) : AppTheme.primaryPurple,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                icon: Icon(
+                                  _customLat != null ? Icons.edit_location_alt_rounded : Icons.add_location_alt_rounded,
+                                  size: 14,
+                                ),
+                                label: Text(
+                                  _customLat != null ? 'Ubah di Peta' : 'Tandai di Peta',
+                                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                              borderSide: BorderSide(
+                                color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
+                                width: 1,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                              borderSide: BorderSide(
+                                color: primary,
+                                width: 1.8,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -1570,107 +1656,185 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                 },
               ),
               const SizedBox(height: 14),
-              AnimatedInputField(
-                controller: _alamatController,
-                label: 'Detail Lokasi / Tempat Acara',
-                hint: 'Misal: Hotel Mulia Senayan, Studio Foto Cipete, dsb.',
-                icon: Icons.place_rounded,
-                textInputAction: TextInputAction.next,
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.pin_drop_rounded, color: Color(0xFF0891B2)),
-                  tooltip: 'Pilih Titik di Peta',
-                  onPressed: _openLocationPicker,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Detail Lokasi / Tempat Acara',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white70 : Colors.grey.shade700,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (_customLat != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0891B2).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            '✓ Pin Tersimpan',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              color: Color(0xFF0891B2),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _alamatController,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: isDark ? AppTheme.inputDark : AppTheme.inputLight,
+                      hintText: 'Misal: Hotel Mulia Senayan, Studio Foto Cipete, dsb.',
+                      hintStyle: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? Colors.white38 : Colors.grey.shade400,
+                      ),
+                      prefixIcon: Padding(
+                        padding: const EdgeInsets.only(left: 14, right: 10),
+                        child: Icon(
+                          Icons.place_rounded,
+                          size: 20,
+                          color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                        ),
+                      ),
+                      prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 20),
+                      suffixIcon: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                        child: ElevatedButton.icon(
+                          onPressed: _openLocationPicker,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _customLat != null ? const Color(0xFF0891B2) : AppTheme.primaryPurple,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          icon: Icon(
+                            _customLat != null ? Icons.edit_location_alt_rounded : Icons.add_location_alt_rounded,
+                            size: 14,
+                          ),
+                          label: Text(
+                            _customLat != null ? 'Ubah di Peta' : 'Tandai di Peta',
+                            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                        borderSide: BorderSide(
+                          color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
+                          width: 1,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+                        borderSide: BorderSide(
+                          color: primary,
+                          width: 1.8,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
-            const SizedBox(height: 12),
 
-            // ── Interactive Map Pin Banner ──
-            InkWell(
-              onTap: _openLocationPicker,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            // ── Information & Status Badge ──
+            if (_customLat != null)
+              Container(
+                margin: const EdgeInsets.only(top: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                 decoration: BoxDecoration(
-                  color: _customLat != null
-                      ? const Color(0xFF0891B2).withValues(alpha: 0.1)
-                      : (isDark ? const Color(0xFF1E1B2E) : const Color(0xFFF1F5F9)),
-                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFF0891B2).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: _customLat != null
-                        ? const Color(0xFF0891B2).withValues(alpha: 0.5)
-                        : (isDark ? AppTheme.inputBorder : const Color(0xFFCBD5E1)),
-                    width: 1.2,
+                    color: const Color(0xFF0891B2).withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: _customLat != null
-                            ? const Color(0xFF0891B2).withValues(alpha: 0.2)
-                            : Colors.grey.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _customLat != null ? Icons.pin_drop_rounded : Icons.map_rounded,
-                        size: 18,
-                        color: _customLat != null ? const Color(0xFF0891B2) : Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
+                    const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF0891B2)),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _customLat != null
-                                ? 'Titik Lokasi Acara Telah Ditandai di Peta'
-                                : 'Tandai Titik Lokasi / Tempat Acara di Peta',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.bold,
-                              color: _customLat != null
-                                  ? const Color(0xFF0891B2)
-                                  : (isDark ? Colors.white : Colors.black87),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _customLat != null
-                                ? 'Koordinat: ${_customLat!.toStringAsFixed(5)}, ${_customLng!.toStringAsFixed(5)} • Acara akan muncul akurat di peta kreator.'
-                                : 'Kreator dapat melihat event Anda langsung pada peta rekomendasi di sekitar mereka.',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        'Titik Peta: ${_customLat!.toStringAsFixed(5)}, ${_customLng!.toStringAsFixed(5)}'
+                        '${_customLocationName != null && _customLocationName!.isNotEmpty ? ' • $_customLocationName' : ''}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF0891B2),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _customLat != null ? const Color(0xFF0891B2) : AppTheme.primaryPurple,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
+                    TextButton(
                       onPressed: _openLocationPicker,
-                      icon: Icon(
-                        _customLat != null ? Icons.edit_location_alt_rounded : Icons.add_location_alt_rounded,
-                        size: 15,
-                        color: Colors.white,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      label: Text(
-                        _customLat != null ? 'Ubah Titik' : 'Buka Peta',
-                        style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
+                      child: const Text('Buka Peta', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 16),
+                      tooltip: 'Hapus Titik Pin',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                      color: Colors.grey,
+                      onPressed: () {
+                        setState(() {
+                          _customLat = null;
+                          _customLng = null;
+                          _customLocationName = null;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 14,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Klik tombol "Tandai di Peta" untuk menandai pin titik lokasi acara secara presisi agar tampil di Peta Rekomendasi kreator.',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
           ] else ...[
             Container(
               padding: const EdgeInsets.all(12),
