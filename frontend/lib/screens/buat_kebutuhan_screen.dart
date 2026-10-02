@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:io' show File;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:latlong2/latlong.dart';
 import '../app/theme.dart';
 import '../app/app_animations.dart';
@@ -911,7 +915,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                         // ── Judul ──
                         AnimatedInputField(
                           controller: _judulController,
-                          label: _isSchool ? 'Nama Program / Magang Siswa' : 'Judul Kebutuhan Proyek',
+                          label: _isSchool ? 'Nama Program / Magang Siswa *' : 'Judul Kebutuhan Proyek *',
                           hint: _isSchool
                               ? 'Contoh: Magang Siswa SMK Jurusan Animasi 3D & Rigging di Studio Mitra'
                               : 'Contoh: Foto Marathon 10Km & Video Highlight Dokumentasi',
@@ -940,7 +944,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                         // ── Deskripsi ──
                         _AnimatedTextArea(
                           controller: _deskripsiController,
-                          label: _isSchool ? 'Deskripsi Program & Kriteria Siswa' : 'Deskripsi Kebutuhan & Ruang Lingkup',
+                          label: _isSchool ? 'Deskripsi Program & Kriteria Siswa *' : 'Deskripsi Kebutuhan & Ruang Lingkup *',
                           hint: _isSchool
                               ? 'Jelaskan syarat siswa (kelas, jurusan), fasilitas yang disediakan sekolah/industri, serta target capaian pembelajaran...'
                               : 'Jelaskan ekspektasi hasil, konsep visual, rundown acara, atau detail spesifik lainnya...',
@@ -958,7 +962,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                             children: [
                               Expanded(
                                 child: _AnimatedDropdown(
-                                  label: _isSchool ? 'Uang Saku / Tunjangan Magang' : 'Budget Estimasi',
+                                  label: _isSchool ? 'Uang Saku / Tunjangan Magang *' : 'Budget Estimasi *',
                                   icon: Icons.payments_rounded,
                                   value: _currentBudgetItems.contains(_selectedBudget)
                                       ? _selectedBudget
@@ -972,7 +976,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                               const SizedBox(width: 16),
                               Expanded(
                                 child: _AnimatedDropdown(
-                                  label: _isSchool ? 'Batas Akhir Pendaftaran' : 'Target Deadline',
+                                  label: _isSchool ? 'Batas Akhir Pendaftaran *' : 'Target Deadline *',
                                   icon: Icons.event_rounded,
                                   value: _selectedDeadline,
                                   items: _deadlineItems
@@ -990,7 +994,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                           )
                         else ...[
                           _AnimatedDropdown(
-                            label: _isSchool ? 'Uang Saku / Tunjangan Magang' : 'Budget Estimasi',
+                            label: _isSchool ? 'Uang Saku / Tunjangan Magang *' : 'Budget Estimasi *',
                             icon: Icons.payments_rounded,
                             value: _currentBudgetItems.contains(_selectedBudget)
                                 ? _selectedBudget
@@ -1002,7 +1006,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                           ),
                           const SizedBox(height: 20),
                           _AnimatedDropdown(
-                            label: _isSchool ? 'Batas Akhir Pendaftaran' : 'Target Deadline',
+                            label: _isSchool ? 'Batas Akhir Pendaftaran *' : 'Target Deadline *',
                             icon: Icons.event_rounded,
                             value: _selectedDeadline,
                             items: _deadlineItems
@@ -1107,12 +1111,24 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                       color: AppTheme.primaryPurple,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      _isSchool ? 'Posisi / Kebutuhan Bidang Magang' : 'Peran Kreator yang Dibutuhkan',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black87,
+                    Text.rich(
+                      TextSpan(
+                        text: _isSchool ? 'Posisi / Kebutuhan Bidang Magang' : 'Peran Kreator yang Dibutuhkan',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                        children: const [
+                          TextSpan(
+                            text: ' *',
+                            style: TextStyle(
+                              color: Color(0xFFEF4444),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -1202,12 +1218,24 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    _isSchool ? 'Kuota Siswa' : 'Jumlah Orang',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white70 : Colors.grey.shade700,
+                  Text.rich(
+                    TextSpan(
+                      text: _isSchool ? 'Kuota Siswa' : 'Jumlah Orang',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white70 : Colors.grey.shade700,
+                      ),
+                      children: const [
+                        TextSpan(
+                          text: ' *',
+                          style: TextStyle(
+                            color: Color(0xFFEF4444),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1268,14 +1296,26 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
           const SizedBox(height: 14),
 
           // Tags section
-          Text(
-            _isSchool
-                ? 'Kompetensi & Keahlian Siswa yang Dibutuhkan:'
-                : 'Tag Spesialisasi & Keahlian (Bisa dicari oleh kreator):',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white70 : Colors.grey.shade700,
+          Text.rich(
+            TextSpan(
+              text: _isSchool
+                  ? 'Kompetensi & Keahlian Siswa yang Dibutuhkan'
+                  : 'Tag Spesialisasi & Keahlian (Bisa dicari oleh kreator)',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white70 : Colors.grey.shade700,
+              ),
+              children: const [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                    color: Color(0xFFEF4444),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 8),
@@ -1439,12 +1479,24 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
             children: [
               const Icon(Icons.location_on_rounded, size: 20, color: Color(0xFF06B6D4)),
               const SizedBox(width: 8),
-              Text(
-                'Wilayah & Lokasi Pelaksanaan',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black87,
+              Text.rich(
+                TextSpan(
+                  text: 'Wilayah & Lokasi Pelaksanaan',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                  children: const [
+                    TextSpan(
+                      text: ' *',
+                      style: TextStyle(
+                        color: Color(0xFFEF4444),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -1863,6 +1915,100 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   }
 
   // ─── Banner Upload Section ──────────────────────────────────────────────────
+  Future<void> _pickBannerImage() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      final pickedFile = result.files.first;
+      final fileSize = pickedFile.size;
+
+      const maxSizeBytes = 5 * 1024 * 1024; // 5 MB
+      if (fileSize > maxSizeBytes) {
+        if (!mounted) return;
+        AppSweetAlert.warning(
+          context,
+          'Ukuran file banner (${(fileSize / (1024 * 1024)).toStringAsFixed(1)} MB) melebihi batas maksimal 5 MB. Silakan pilih foto dengan ukuran lebih kecil.',
+          title: 'Ukuran Melebihi Batas',
+        );
+        return;
+      }
+
+      Uint8List? fileBytes = pickedFile.bytes;
+      if (fileBytes == null && pickedFile.path != null && !kIsWeb) {
+        final file = File(pickedFile.path!);
+        if (await file.exists()) {
+          fileBytes = await file.readAsBytes();
+        }
+      }
+
+      if (fileBytes == null || fileBytes.isEmpty) {
+        if (!mounted) return;
+        AppSweetAlert.error(
+          context,
+          'Tidak dapat membaca file foto. Pastikan izin akses file telah diberikan.',
+          title: 'Gagal Membaca File',
+        );
+        return;
+      }
+
+      final ext = (pickedFile.extension?.toLowerCase() ?? 'jpg').replaceAll('.', '');
+      final mimeType = ext == 'png'
+          ? 'image/png'
+          : (ext == 'webp'
+              ? 'image/webp'
+              : (ext == 'gif' ? 'image/gif' : 'image/jpeg'));
+
+      final base64Str = base64Encode(fileBytes);
+      final dataUri = 'data:$mimeType;base64,$base64Str';
+
+      setState(() {
+        _bannerUrl = dataUri;
+        _bannerUrlController.text = dataUri;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Text('Banner berhasil diupload (${(fileSize / 1024).toStringAsFixed(0)} KB)'),
+              ],
+            ),
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSweetAlert.error(
+          context,
+          'Gagal memilih gambar banner: $e',
+          title: 'Upload Gagal',
+        );
+      }
+    }
+  }
+
+  ImageProvider _getBannerImageProvider(String url) {
+    if (url.startsWith('data:image')) {
+      final commaIndex = url.indexOf(',');
+      final base64Part = commaIndex != -1 ? url.substring(commaIndex + 1) : url;
+      return MemoryImage(base64Decode(base64Part));
+    }
+    return NetworkImage(url);
+  }
+
+  // ─── Banner Upload Section ──────────────────────────────────────────────────
   Widget _buildBannerUploadSection(bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1904,8 +2050,8 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
         const SizedBox(height: 4),
         Text(
           _isSchool
-              ? 'Upload poster kegiatan magang atau flyer program sekolah untuk dipajang di bagian atas detail program.'
-              : 'Upload foto banner atau pilih gambar tema untuk dipajang di bagian atas detail acara.',
+              ? 'Upload foto poster kegiatan magang atau pilih template tema resmi untuk dipajang di halaman proyek.'
+              : 'Upload foto banner acara langsung dari perangkat atau pilih template tema resmi untuk menarik minat kreator.',
           style: TextStyle(
             fontSize: 12,
             color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
@@ -1914,7 +2060,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
         const SizedBox(height: 12),
         if (_bannerUrl != null && _bannerUrl!.isNotEmpty) ...[
           Container(
-            height: 180,
+            height: 200,
             width: double.infinity,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
@@ -1922,30 +2068,88 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                 color: isDark ? AppTheme.inputBorder : Colors.grey.shade300,
               ),
               image: DecorationImage(
-                image: NetworkImage(_bannerUrl!),
+                image: _getBannerImageProvider(_bannerUrl!),
                 fit: BoxFit.cover,
               ),
             ),
             child: Stack(
               children: [
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.35),
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.7),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 12,
+                  left: 14,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.65),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.aspect_ratio_rounded, color: Colors.white70, size: 14),
+                        SizedBox(width: 4),
+                        Text(
+                          '1200 × 675 px (16:9)',
+                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 Positioned(
                   top: 12,
                   right: 12,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black.withValues(alpha: 0.7),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  child: Wrap(
+                    spacing: 8,
+                    children: [
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black.withValues(alpha: 0.75),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        ),
+                        icon: const Icon(Icons.file_upload_outlined, size: 15),
+                        label: const Text('Ganti Foto', style: TextStyle(fontSize: 11)),
+                        onPressed: _pickBannerImage,
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    ),
-                    icon: const Icon(Icons.delete_outline, size: 16),
-                    label: const Text('Hapus Banner', style: TextStyle(fontSize: 12)),
-                    onPressed: () => setState(() {
-                      _bannerUrl = null;
-                      _bannerUrlController.clear();
-                    }),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFEF4444).withValues(alpha: 0.9),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        ),
+                        icon: const Icon(Icons.delete_outline, size: 15),
+                        label: const Text('Hapus', style: TextStyle(fontSize: 11)),
+                        onPressed: () => setState(() {
+                          _bannerUrl = null;
+                          _bannerUrlController.clear();
+                        }),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -1954,54 +2158,104 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
         ] else ...[
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E1B33) : Colors.grey.shade50,
+              color: isDark ? const Color(0xFF1E1B33) : const Color(0xFFFAF5FF),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isDark ? AppTheme.inputBorder : Colors.grey.shade300,
-                style: BorderStyle.solid,
+                color: isDark ? AppTheme.primaryPurple.withValues(alpha: 0.3) : const Color(0xFFDDD6FE),
+                width: 1.5,
               ),
             ),
             child: Column(
               children: [
-                Icon(
-                  Icons.add_photo_alternate_outlined,
-                  size: 38,
-                  color: isDark ? Colors.white54 : Colors.grey.shade400,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Belum ada banner acara',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white70 : Colors.grey.shade700,
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryPurple.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.cloud_upload_outlined,
+                    size: 32,
+                    color: AppTheme.primaryPurple,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
+                Text(
+                  'Upload Banner Acara dari Perangkat',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.black26 : Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isDark ? Colors.white12 : Colors.grey.shade200,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.photo_size_select_actual_outlined, size: 13, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
+                          const SizedBox(width: 5),
+                          Text(
+                            'Dimensi Rekomendasi: 1200 × 675 piksel (Rasio 16:9)',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white70 : Colors.grey.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Format yang didukung: JPG, PNG, WebP • Ukuran Maksimal: 5 MB',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
                 Wrap(
                   spacing: 10,
                   runSpacing: 8,
                   alignment: WrapAlignment.center,
                   children: [
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      icon: const Icon(Icons.palette_outlined, size: 16),
-                      label: const Text('Pilih Tema Acara', style: TextStyle(fontSize: 12)),
-                      onPressed: () => _showBannerThemePicker(context, isDark),
-                    ),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryPurple,
                         foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      icon: const Icon(Icons.link_rounded, size: 16),
-                      label: const Text('Input URL Banner', style: TextStyle(fontSize: 12)),
-                      onPressed: () => _showBannerUrlDialog(context, isDark),
+                      icon: const Icon(Icons.file_upload_outlined, size: 18),
+                      label: const Text('Upload Foto dari Perangkat', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      onPressed: _pickBannerImage,
+                    ),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primaryPurple,
+                        side: const BorderSide(color: AppTheme.primaryPurple),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.palette_outlined, size: 16),
+                      label: const Text('Pilih Template Tema', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                      onPressed: () => _showBannerThemePicker(context, isDark),
                     ),
                   ],
                 ),
@@ -2099,40 +2353,6 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
     );
   }
 
-  void _showBannerUrlDialog(BuildContext context, bool isDark) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF161426) : Colors.white,
-        title: const Text('Input URL Banner Acara'),
-        content: TextField(
-          controller: _bannerUrlController,
-          decoration: const InputDecoration(
-            hintText: 'https://example.com/banner.jpg',
-            labelText: 'URL Gambar Banner',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final url = _bannerUrlController.text.trim();
-              if (url.isNotEmpty) {
-                setState(() => _bannerUrl = url);
-              }
-              Navigator.pop(ctx);
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ─── Duration Section (Tanggal Mulai - Selesai) ──────────────────────────────
   Widget _buildDurationSection(bool isDark, bool isDesktop) {
     final diffDays = _eventEndDate.difference(_eventStartDate).inDays + 1;
@@ -2150,12 +2370,24 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
               color: AppTheme.primaryPurple,
             ),
             const SizedBox(width: 8),
-            Text(
-              _isSchool ? 'Periode Magang / PKL Siswa' : 'Durasi Acara / Kegiatan Proyek',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : Colors.black87,
+            Text.rich(
+              TextSpan(
+                text: _isSchool ? 'Periode Magang / PKL Siswa' : 'Durasi Acara / Kegiatan Proyek',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+                children: const [
+                  TextSpan(
+                    text: ' *',
+                    style: TextStyle(
+                      color: Color(0xFFEF4444),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: 8),
@@ -2225,9 +2457,17 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              _isSchool ? 'Mulai Magang' : 'Tanggal Mulai',
-                              style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey.shade600),
+                            Text.rich(
+                              TextSpan(
+                                text: _isSchool ? 'Mulai Magang' : 'Tanggal Mulai',
+                                style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey.shade600),
+                                children: const [
+                                  TextSpan(
+                                    text: ' *',
+                                    style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
                             ),
                             Text(
                               startStr,
@@ -2273,9 +2513,17 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              _isSchool ? 'Selesai Magang' : 'Tanggal Selesai',
-                              style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey.shade600),
+                            Text.rich(
+                              TextSpan(
+                                text: _isSchool ? 'Selesai Magang' : 'Tanggal Selesai',
+                                style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey.shade600),
+                                children: const [
+                                  TextSpan(
+                                    text: ' *',
+                                    style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
                             ),
                             Text(
                               endStr,
@@ -2389,7 +2637,15 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Tanggal Pertemuan', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                              const Text.rich(
+                                TextSpan(
+                                  text: 'Tanggal Pertemuan',
+                                  style: TextStyle(fontSize: 10, color: Colors.grey),
+                                  children: [
+                                    TextSpan(text: ' *', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
                               Text(meetingDateStr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                             ],
                           ),
@@ -2425,7 +2681,15 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Waktu / Jam', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                              const Text.rich(
+                                TextSpan(
+                                  text: 'Waktu / Jam',
+                                  style: TextStyle(fontSize: 10, color: Colors.grey),
+                                  children: [
+                                    TextSpan(text: ' *', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
                               Text(meetingTimeStr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                             ],
                           ),
@@ -2489,11 +2753,18 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
           else
             TextField(
               controller: _meetingLocationController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Masukkan nama hotel, cafe, kantor atau koordinat lokasi pertemuan...',
-                labelText: 'Detail Alamat Pertemuan MoU',
-                prefixIcon: Icon(Icons.place_rounded, color: Colors.amber),
-                border: OutlineInputBorder(),
+                label: const Text.rich(
+                  TextSpan(
+                    text: 'Detail Alamat Pertemuan MoU',
+                    children: [
+                      TextSpan(text: ' *', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+                prefixIcon: const Icon(Icons.place_rounded, color: Colors.amber),
+                border: const OutlineInputBorder(),
                 filled: true,
               ),
               style: const TextStyle(fontSize: 13),
@@ -2714,12 +2985,26 @@ class _AnimatedDropdown extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: isDark ? Colors.white70 : Colors.grey.shade700,
+        Text.rich(
+          TextSpan(
+            text: label.replaceAll('*', '').trim(),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white70 : Colors.grey.shade700,
+            ),
+            children: label.contains('*')
+                ? const [
+                    TextSpan(
+                      text: ' *',
+                      style: TextStyle(
+                        color: Color(0xFFEF4444),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ]
+                : [],
           ),
         ),
         const SizedBox(height: 8),
@@ -2877,7 +3162,23 @@ class _AnimatedTextAreaState extends State<_AnimatedTextArea> {
                 ? primary
                 : (isDark ? Colors.white70 : Colors.grey.shade600),
           ),
-          child: Text(widget.label),
+          child: Text.rich(
+            TextSpan(
+              text: widget.label.replaceAll('*', '').trim(),
+              children: widget.label.contains('*')
+                  ? const [
+                      TextSpan(
+                        text: ' *',
+                        style: TextStyle(
+                          color: Color(0xFFEF4444),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ]
+                  : [],
+            ),
+          ),
         ),
         const SizedBox(height: 8),
         TextFormField(

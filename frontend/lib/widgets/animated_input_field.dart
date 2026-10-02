@@ -84,7 +84,22 @@ class _AnimatedInputFieldState extends State<AnimatedInputField> {
       ),
       cursorColor: primary,
       decoration: InputDecoration(
-        labelText: widget.label,
+        label: widget.label.contains('*')
+            ? Text.rich(
+                TextSpan(
+                  text: widget.label.replaceAll('*', '').trim(),
+                  children: const [
+                    TextSpan(
+                      text: ' *',
+                      style: TextStyle(
+                        color: Color(0xFFEF4444),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : Text(widget.label),
         hintText: widget.hint,
         filled: true,
         fillColor: fill,

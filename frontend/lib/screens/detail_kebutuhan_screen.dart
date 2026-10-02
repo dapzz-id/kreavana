@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:io' show File;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -15,6 +19,7 @@ import '../widgets/app_breadcrumbs.dart';
 import '../widgets/user_profile_modal.dart';
 import '../widgets/verification_badge.dart';
 import '../widgets/upgrade_plan_modal.dart';
+import '../widgets/app_sweet_alert.dart';
 import 'proyek_saya_screen.dart';
 
 class DetailKebutuhanScreen extends StatefulWidget {
@@ -760,48 +765,152 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
     }
   }
 
+  Widget _buildBannerDisplay(String url) {
+    if (url.startsWith('data:image')) {
+      final commaIndex = url.indexOf(',');
+      final base64Part = commaIndex != -1 ? url.substring(commaIndex + 1) : url;
+      try {
+        return Image.memory(
+          base64Decode(base64Part),
+          width: double.infinity,
+          height: 200,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => const SizedBox.shrink(),
+        );
+      } catch (_) {
+        return const SizedBox.shrink();
+      }
+    }
+    return Image.network(
+      url,
+      width: double.infinity,
+      height: 200,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+    );
+  }
+
   Future<void> _handleUpdateBanner() async {
-    final urlCtrl = TextEditingController(text: _opp.bannerUrl ?? '');
-    final result = await showDialog<bool>(
+    final result = await showDialog<String?>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Ganti / Pasang Banner Acara'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.photo_library_outlined, color: AppTheme.primaryPurple, size: 22),
+            SizedBox(width: 8),
+            Text('Ganti / Pasang Banner Acara', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Masukkan tautan gambar URL banner acara atau pilih salah satu preset resmi.',
-                style: TextStyle(fontSize: 13),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: urlCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'URL Gambar Banner',
-                  hintText: 'https://images.unsplash.com/...',
-                  border: OutlineInputBorder(),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryPurple.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTheme.primaryPurple.withValues(alpha: 0.25)),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: AppTheme.primaryPurple),
+                        SizedBox(width: 6),
+                        Text(
+                          'Ketentuan Format & Ukuran Banner:',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryPurple),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      '• Dimensi Rekomendasi: 1200 × 675 px (Rasio 16:9)\n• Ukuran Maksimal: 5 MB\n• Format: JPG, PNG, WebP',
+                      style: TextStyle(fontSize: 11.5, height: 1.4),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 14),
-              const Text('Preset Banner Cepat:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryPurple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.file_upload_outlined, size: 20),
+                  label: const Text('Upload Foto dari Perangkat', style: TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed: () async {
+                    try {
+                      final fileRes = await FilePicker.platform.pickFiles(
+                        type: FileType.image,
+                        allowMultiple: false,
+                        withData: true,
+                      );
+                      if (fileRes == null || fileRes.files.isEmpty) return;
+                      final file = fileRes.files.first;
+                      if (file.size > 5 * 1024 * 1024) {
+                        if (ctx.mounted) {
+                          AppSweetAlert.warning(
+                            ctx,
+                            'Ukuran file banner (${(file.size / (1024 * 1024)).toStringAsFixed(1)} MB) melebihi batas maksimal 5 MB.',
+                            title: 'Ukuran Melebihi Batas',
+                          );
+                        }
+                        return;
+                      }
+                      Uint8List? bytes = file.bytes;
+                      if (bytes == null && file.path != null && !kIsWeb) {
+                        final f = File(file.path!);
+                        if (await f.exists()) bytes = await f.readAsBytes();
+                      }
+                      if (bytes != null && bytes.isNotEmpty) {
+                        final ext = (file.extension?.toLowerCase() ?? 'jpg').replaceAll('.', '');
+                        final mime = ext == 'png' ? 'image/png' : (ext == 'webp' ? 'image/webp' : 'image/jpeg');
+                        final dataUri = 'data:$mime;base64,${base64Encode(bytes)}';
+                        Navigator.pop(ctx, dataUri);
+                      }
+                    } catch (e) {
+                      if (ctx.mounted) {
+                        AppSnackbar.error(ctx, 'Gagal memilih gambar: $e');
+                      }
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text('Atau Pilih Preset Tema Siap Pakai:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
-                runSpacing: 6,
+                runSpacing: 8,
                 children: [
                   ActionChip(
-                    label: const Text('Konser Musik'),
-                    onPressed: () => urlCtrl.text = 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=1200&q=80',
+                    avatar: const Icon(Icons.music_note, size: 14),
+                    label: const Text('Konser Musik', style: TextStyle(fontSize: 12)),
+                    onPressed: () => Navigator.pop(ctx, 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=1200&q=80'),
                   ),
                   ActionChip(
-                    label: const Text('Marathon 10Km'),
-                    onPressed: () => urlCtrl.text = 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=1200&q=80',
+                    avatar: const Icon(Icons.directions_run, size: 14),
+                    label: const Text('Marathon & Olahraga', style: TextStyle(fontSize: 12)),
+                    onPressed: () => Navigator.pop(ctx, 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=1200&q=80'),
                   ),
                   ActionChip(
-                    label: const Text('Pameran Kreatif'),
-                    onPressed: () => urlCtrl.text = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&q=80',
+                    avatar: const Icon(Icons.palette, size: 14),
+                    label: const Text('Pameran Kreatif', style: TextStyle(fontSize: 12)),
+                    onPressed: () => Navigator.pop(ctx, 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&q=80'),
+                  ),
+                  ActionChip(
+                    avatar: const Icon(Icons.favorite, size: 14),
+                    label: const Text('Wedding & Event', style: TextStyle(fontSize: 12)),
+                    onPressed: () => Navigator.pop(ctx, 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1200&q=80'),
                   ),
                 ],
               ),
@@ -809,23 +918,27 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryPurple),
-            child: const Text('Simpan Banner', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
+          if (_opp.bannerUrl != null && _opp.bannerUrl!.isNotEmpty)
+            TextButton.icon(
+              onPressed: () => Navigator.pop(ctx, ''),
+              icon: const Icon(Icons.delete_outline, size: 16, color: Color(0xFFEF4444)),
+              label: const Text('Hapus Banner', style: TextStyle(color: Color(0xFFEF4444))),
+            ),
+          TextButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('Batal')),
         ],
       ),
     );
 
-    if (result != true || urlCtrl.text.trim().isEmpty) return;
+    if (result == null) return;
 
     setState(() {
-      _opp = _opp.copyWith(bannerUrl: urlCtrl.text.trim());
+      _opp = _opp.copyWith(bannerUrl: result.isEmpty ? null : result);
     });
     if (mounted) {
-      AppSnackbar.success(context, 'Banner acara berhasil diperbarui!');
+      AppSnackbar.success(
+        context,
+        result.isEmpty ? 'Banner acara berhasil dihapus.' : 'Banner acara berhasil diperbarui!',
+      );
     }
   }
 
@@ -1030,13 +1143,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
               borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
               child: Stack(
                 children: [
-                  Image.network(
-                    _opp.effectiveBannerUrl,
-                    width: double.infinity,
-                    height: 200,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                  ),
+                  _buildBannerDisplay(_opp.effectiveBannerUrl),
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(
