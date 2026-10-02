@@ -183,7 +183,53 @@ class OpportunityReviewController extends Controller
 
     public function listCreatorReviews(Request $request, $creatorId)
     {
+        $user = User::findOrFail($creatorId);
         $perPage = (int) $request->input('per_page', 15);
+        $isClient = $user->role === \App\Enums\RoleType::User || $user->role->value === 'user' || $user->role->value === 'client';
+
+        if ($isClient) {
+            $reviews = OpportunityReview::with(['creator:id,name,avatar_url,sub_role', 'opportunity:id,title,sub_role_slug'])
+                ->where('reviewer_id', $creatorId)
+                ->orderByDesc('created_at')
+                ->paginate($perPage);
+
+            $items = collect($reviews->items())->map(function ($r) {
+                return [
+                    'id' => $r->id,
+                    'creator_id' => $r->creator_id,
+                    'reviewer_id' => $r->reviewer_id,
+                    'reference_id' => $r->opportunity_id,
+                    'rating' => (float) $r->rating,
+                    'is_on_time' => is_null($r->is_on_time) ? null : (bool) $r->is_on_time,
+                    'delivery_days' => is_null($r->delivery_days) ? null : (int) $r->delivery_days,
+                    'comment' => $r->comment,
+                    'created_at' => $r->created_at?->toIso8601String(),
+                    'source' => 'opportunity',
+                    'reviewer' => $r->creator ? [
+                        'id' => $r->creator->id,
+                        'name' => $r->creator->name,
+                        'avatar_url' => $r->creator->avatar_url,
+                        'sub_role' => $r->creator->sub_role instanceof \BackedEnum ? $r->creator->sub_role->value : $r->creator->sub_role,
+                        'company' => 'Kreator Kreavana',
+                    ] : null,
+                    'project' => $r->opportunity?->title ?? 'Kontrak Proyek',
+                ];
+            })->values();
+
+            return response()->json([
+                'status' => true,
+                'data'   => [
+                    'items'      => $items,
+                    'pagination' => [
+                        'total'        => $reviews->total(),
+                        'per_page'     => $reviews->perPage(),
+                        'current_page' => $reviews->currentPage(),
+                        'last_page'    => $reviews->lastPage(),
+                        'has_more'     => $reviews->hasMorePages(),
+                    ],
+                ],
+            ]);
+        }
 
         $oppReviews = OpportunityReview::with(['reviewer:id,name,avatar_url,sub_role'])
             ->where('creator_id', $creatorId)
@@ -276,14 +322,62 @@ class OpportunityReviewController extends Controller
 
     public function getCreatorReviewSummary($creatorId)
     {
-        User::findOrFail($creatorId);
+        $user = User::findOrFail($creatorId);
+        $isClient = $user->role === \App\Enums\RoleType::User || $user->role->value === 'user' || $user->role->value === 'client';
+
+        if ($isClient) {
+            $stats = DB::table('opportunity_reviews')
+                ->where('reviewer_id', $creatorId)
+                ->selectRaw("
+                    COUNT(*) as total,
+                    COALESCE(AVG(rating), 0) as avg_rating,
+                    SUM(CASE WHEN is_on_time IS TRUE THEN 1 ELSE 0 END) as on_time_count,
+                    SUM(CASE WHEN is_on_time IS NOT NULL THEN 1 ELSE 0 END) as on_time_eligible,
+                    SUM(CASE WHEN rating >= 4.5 THEN 1 ELSE 0 END) as r5,
+                    SUM(CASE WHEN rating >= 3.5 AND rating < 4.5 THEN 1 ELSE 0 END) as r4,
+                    SUM(CASE WHEN rating >= 2.5 AND rating < 3.5 THEN 1 ELSE 0 END) as r3,
+                    SUM(CASE WHEN rating >= 1.5 AND rating < 2.5 THEN 1 ELSE 0 END) as r2,
+                    SUM(CASE WHEN rating < 1.5 THEN 1 ELSE 0 END) as r1
+                ")
+                ->first();
+
+            $total = (int) ($stats->total ?? 0);
+            $avgRating = $total > 0 ? round((float) $stats->avg_rating, 2) : 0.0;
+            $onTimePercentage = 100.0;
+            $eligible = (int) ($stats->on_time_eligible ?? 0);
+            if ($eligible > 0) {
+                $onTimePercentage = round(((int) ($stats->on_time_count ?? 0)) / $eligible * 100, 1);
+            }
+
+            $distribution = [
+                5 => (int) ($stats->r5 ?? 0),
+                4 => (int) ($stats->r4 ?? 0),
+                3 => (int) ($stats->r3 ?? 0),
+                2 => (int) ($stats->r2 ?? 0),
+                1 => (int) ($stats->r1 ?? 0),
+            ];
+
+            return response()->json([
+                'status' => true,
+                'data'   => [
+                    'average_rating'     => $avgRating,
+                    'total_reviews'      => $total,
+                    'on_time_percentage' => $onTimePercentage,
+                    'distribution'       => $distribution,
+                    'breakdown'          => [
+                        'opportunity_total' => $total,
+                        'marketplace_total' => 0,
+                    ],
+                ],
+            ]);
+        }
 
         $oppStats = DB::table('opportunity_reviews')
             ->where('creator_id', $creatorId)
             ->selectRaw("
                 COUNT(*) as total,
                 COALESCE(AVG(rating), 0) as avg_rating,
-                SUM(CASE WHEN is_on_time = 1 THEN 1 ELSE 0 END) as on_time_count,
+                SUM(CASE WHEN is_on_time IS TRUE THEN 1 ELSE 0 END) as on_time_count,
                 SUM(CASE WHEN is_on_time IS NOT NULL THEN 1 ELSE 0 END) as on_time_eligible,
                 SUM(CASE WHEN rating >= 4.5 THEN 1 ELSE 0 END) as r5,
                 SUM(CASE WHEN rating >= 3.5 AND rating < 4.5 THEN 1 ELSE 0 END) as r4,

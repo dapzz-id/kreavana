@@ -3,6 +3,7 @@ import '../app/theme.dart';
 import '../app/subrole_theme_engine.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
+import '../services/verification_service.dart';
 import '../widgets/skeleton/skeleton_list.dart';
 import '../widgets/app_breadcrumbs.dart';
 import 'main_navigation.dart';
@@ -30,12 +31,41 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
   int _onTimePct = 0;
   Map<int, int> _distribution = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
   int _totalReviews = 0;
+  bool? _isVerifiedRealtime;
 
   @override
   void initState() {
     super.initState();
+    _fetchVerificationStatus();
     _fetchRealtimeReviews();
     _fetchReviewSummary();
+  }
+
+  Future<void> _fetchVerificationStatus() async {
+    try {
+      final status = await VerificationService.getStatus();
+      if (status != null && mounted) {
+        setState(() {
+          final isCreator = widget.user?.isCreator ?? false;
+          if (isCreator) {
+            _isVerifiedRealtime = status.isVerified && status.verificationType == 'creator';
+          } else {
+            _isVerifiedRealtime = status.isVerified ||
+                status.verificationType == 'client' ||
+                (status.latestApplication?.status == 'approved' &&
+                    status.latestApplication?.type == 'client_verification');
+          }
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _refreshAll() async {
+    await Future.wait([
+      _fetchVerificationStatus(),
+      _fetchRealtimeReviews(),
+      _fetchReviewSummary(),
+    ]);
   }
 
   String? get _currentUserId {
@@ -193,14 +223,14 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: _fetchRealtimeReviews,
+            onPressed: _refreshAll,
             tooltip: 'Perbarui Data Realtime',
           ),
           SizedBox(width: isDesktop ? 24 : 8),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _fetchRealtimeReviews,
+        onRefresh: _refreshAll,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.symmetric(
@@ -304,9 +334,10 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
         : '0%';
 
     final isCreator = widget.user?.isCreator ?? false;
-    final isVerified = isCreator
-        ? (widget.user?.isCreatorVerified ?? false)
-        : (widget.user?.isClientVerified ?? false);
+    final isVerified = _isVerifiedRealtime ??
+        (isCreator
+            ? (widget.user?.isCreatorVerified ?? false)
+            : (widget.user?.isClientVerified ?? false));
 
     // Color and label according to Kreavana VerificationBadge rules:
     // Creator: Green (0xFF10B981) -> "Kreator Terverifikasi"
@@ -551,9 +582,11 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Distribusi Penilaian Klien',
-                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
+              Text(
+                (widget.user?.isCreator ?? false)
+                    ? 'Distribusi Penilaian Klien'
+                    : 'Distribusi Penilaian Ulasan',
+                style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
               ),
               Text(
                 'Total $total Review',
@@ -638,7 +671,9 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
           controller: _searchController,
           onChanged: (v) => setState(() => _searchQuery = v),
           decoration: InputDecoration(
-            hintText: 'Cari ulasan klien, peran, atau nama proyek...',
+            hintText: (widget.user?.isCreator ?? false)
+                ? 'Cari ulasan klien, peran, atau nama proyek...'
+                : 'Cari ulasan, peran, atau nama proyek...',
             prefixIcon: const Icon(Icons.search_rounded, size: 20),
             suffixIcon: _searchQuery.isNotEmpty
                 ? IconButton(
@@ -772,7 +807,10 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
                       children: [
                         Flexible(
                           child: Text(
-                            r['name'] as String? ?? 'Klien Terverifikasi',
+                            r['name'] as String? ??
+                                ((widget.user?.isCreator ?? false)
+                                    ? 'Klien Terverifikasi'
+                                    : 'Kreator Terverifikasi'),
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14.5,
@@ -789,7 +827,7 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${r['role'] ?? 'Klien'} • ${r['company'] ?? 'Perusahaan'}',
+                      '${r['role'] ?? ((widget.user?.isCreator ?? false) ? 'Klien' : 'Kreator')} • ${r['company'] ?? 'Kreavana'}',
                       style: TextStyle(
                         fontSize: 11.5,
                         color:

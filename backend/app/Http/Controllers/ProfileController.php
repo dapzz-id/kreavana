@@ -48,6 +48,8 @@ class ProfileController extends Controller
                 'sub_role' => $user->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user->sub_role,
                 'avatar_url' => $user->avatar_url,
                 'is_creator_approved' => (bool) $user->is_creator_approved,
+                'is_verified' => (bool) $user->is_verified,
+                'verification_type' => $user->verification_type,
                 'max_work_capacity' => $user->max_work_capacity,
                 'balance' => $user->balance,
                 'followers_count' => $followRepo->getFollowersCount($user->id),
