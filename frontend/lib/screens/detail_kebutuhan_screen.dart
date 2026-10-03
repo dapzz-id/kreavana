@@ -501,7 +501,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Sebagai Tim Marketing / Admin Kreavana, konfirmasikan bahwa dokumen MoU hitam di atas putih telah ditandatangani dan dana proyek (>= 20 Jt) telah diterima secara sah.',
+              'Sebagai Tim Marketing / Admin Kreavana, konfirmasikan bahwa dokumen perjanjian kerjasama (MoU) formal telah ditandatangani dan dana proyek (>= 20 Jt) telah diverifikasi secara sah.',
               style: TextStyle(fontSize: 13, height: 1.4),
             ),
             const SizedBox(height: 14),
@@ -674,7 +674,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Pertemuan tatap muka bersama perwakilan Kreavana untuk penandatanganan berkas MoU hitam di atas putih proyek >= Rp 20.000.000.',
+                'Pertemuan tatap muka bersama perwakilan Kreavana untuk penandatanganan berkas perjanjian kerjasama (MoU) formal proyek >= Rp 20.000.000.',
                 style: TextStyle(fontSize: 12.5, height: 1.4),
               ),
               const SizedBox(height: 14),
@@ -3348,7 +3348,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                       ],
                     ),
                     Text(
-                      'Kepatuhan Hukum & Kontrak Hitam di Atas Putih Resmi Kreavana',
+                      'Kepatuhan Regulasi & Perjanjian Kerjasama Legal (MoU Resmi) Kreavana',
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
@@ -3364,7 +3364,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  isMoUConfirmed ? 'MoU & DANA SAH' : 'PERLU MoU FISIK',
+                  isMoUConfirmed ? 'MoU & DANA SAH' : 'PERLU TTD KONTRAK MoU',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -3392,7 +3392,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Untuk mencegah sengketa hukum dan mematuhi regulasi perbankan, transaksi bernilai Rp 20 Juta ke atas tidak ditransfer langsung ke rekening biasa. Pembuat event dan tim Kreavana wajib menandatangani dokumen hitam di atas putih serta bertemu secara tatap muka.',
+                    'Untuk mencegah sengketa hukum dan mematuhi regulasi perbankan, transaksi bernilai Rp 20 Juta ke atas tidak ditransfer langsung ke rekening biasa. Pembuat event dan perwakilan resmi Kreavana wajib menandatangani dokumen perjanjian kerjasama (MoU) formal serta bertemu secara tatap muka.',
                     style: TextStyle(
                       fontSize: 12,
                       color: isDark ? Colors.white70 : Colors.grey.shade800,

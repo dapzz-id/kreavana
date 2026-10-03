@@ -72,7 +72,11 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   TimeOfDay _meetingTime = const TimeOfDay(hour: 14, minute: 0);
   String _selectedMeetingPlaceType = 'office'; // 'office' | 'client_location'
 
-  bool get _isLargeBudget => _selectedBudget.contains('20.000.000');
+  bool get _isLargeBudget {
+    final b = _selectedBudget.toLowerCase();
+    if (b.contains('5.000.000 - 20.000.000')) return false;
+    return b.startsWith('>=') || b.contains('skala besar');
+  }
 
   bool get _isSchool {
     final sub = (widget.user?.subRole ?? '').toLowerCase();
@@ -2575,7 +2579,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '⚖️ Prosedur Hukum MoU Resmi (Anggaran >= Rp 20.000.000)',
+                      '⚖️ Prosedur Perjanjian Kerjasama Legal (Anggaran >= Rp 20.000.000)',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -2584,7 +2588,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Wajib Hitam di Atas Putih Bersama Tim Marketing Kreavana',
+                      'Wajib Penandatanganan Dokumen Kontrak Kerjasama (MoU) Resmi',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -2598,7 +2602,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Demi kepatuhan regulasi perbankan & hukum perdata Indonesia, dana proyek bernilai besar (>= 20 Jt) tidak diperkenankan ditransfer langsung ke sistem tanpa kontrak formal. Silakan tentukan jadwal & lokasi pertemuan dengan tim Marketing Kreavana:',
+            'Demi kepatuhan regulasi perbankan & hukum perdata Indonesia, dana proyek bernilai besar (>= 20 Jt) memerlukan kontrak formal tertulis. Silakan tentukan jadwal & lokasi pertemuan untuk penandatanganan MoU bersama perwakilan Kreavana:',
             style: TextStyle(
               fontSize: 12,
               height: 1.45,

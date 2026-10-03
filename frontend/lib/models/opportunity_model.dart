@@ -274,7 +274,12 @@ class OpportunityModel {
 
   bool get isLargeTransaction {
     final b = (budgetRange ?? '').toLowerCase();
-    return b.contains('20.000.000') || b.contains('50.000.000') || b.contains('mou') || meetingStatus != 'not_required';
+    if (b.contains('5.000.000 - 20.000.000')) return false;
+    return b.startsWith('>=') ||
+        b.contains('>= 20.000.000') ||
+        b.contains('skala besar') ||
+        b.contains('mou') ||
+        (meetingStatus != 'not_required' && meetingStatus.isNotEmpty);
   }
 
   String get effectiveBannerUrl => (bannerUrl != null && bannerUrl!.isNotEmpty)
