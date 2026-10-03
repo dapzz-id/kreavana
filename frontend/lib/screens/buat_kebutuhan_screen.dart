@@ -1917,7 +1917,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   // ─── Banner Upload Section ──────────────────────────────────────────────────
   Future<void> _pickBannerImage() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.image,
         allowMultiple: false,
         withData: true,

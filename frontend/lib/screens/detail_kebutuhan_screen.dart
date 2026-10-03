@@ -849,7 +849,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                   label: const Text('Upload Foto dari Perangkat', style: TextStyle(fontWeight: FontWeight.bold)),
                   onPressed: () async {
                     try {
-                      final fileRes = await FilePicker.platform.pickFiles(
+                      final fileRes = await FilePicker.pickFiles(
                         type: FileType.image,
                         allowMultiple: false,
                         withData: true,
