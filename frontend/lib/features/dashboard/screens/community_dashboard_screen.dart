@@ -167,13 +167,13 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              RepaintBoundary(child: _buildHeroBanner(isDark)),
-              const SizedBox(height: 24),
-              RepaintBoundary(child: _buildMetricCards(isDark)),
-              const SizedBox(height: 24),
-              RepaintBoundary(child: _buildTopThreeColumns(isDark)),
-              const SizedBox(height: 24),
-              RepaintBoundary(child: _buildBottomThreeColumns(isDark)),
+              _buildHeroBanner(isDark),
+              const SizedBox(height: 20),
+              _buildMetricCards(isDark),
+              const SizedBox(height: 20),
+              _buildTopThreeColumns(isDark),
+              const SizedBox(height: 20),
+              _buildBottomThreeColumns(isDark),
             ],
           ),
         ),
@@ -303,56 +303,66 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
   }
 
   Widget _buildHeroBanner(bool isDark) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(
-                    'Selamat datang, ${widget.user.name}!',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const WavingHandEmoji(fontSize: 24),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Kelola komunitas, kegiatan, dan jaringan untuk memberi dampak lebih luas bersama Kreavana.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                ),
-              ),
-            ],
-          ),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardBg : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
         ),
-        const SizedBox(width: 16),
-        ElevatedButton.icon(
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: widget.user)),
-          ),
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('Buat Kegiatan / Proyek Baru'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _commPurple,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      'Selamat datang, ${widget.user.name}!',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const WavingHandEmoji(fontSize: 22),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Kelola komunitas, kegiatan, dan jaringan untuk memberi dampak lebih luas.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 16),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: widget.user)),
+            ),
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text('Buat Kegiatan'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _commPurple,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -395,10 +405,10 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
         final isMobile = constraints.maxWidth < 600;
         Widget buildCard(Map<String, dynamic> m) {
           return Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: isDark ? AppTheme.cardBg : Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
               ),
@@ -409,51 +419,41 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: Text(
-                        m['label'] as String,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      m['label'] as String,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey,
                       ),
                     ),
-                    const SizedBox(width: 6),
                     Container(
-                      width: 36,
-                      height: 36,
+                      width: 32,
+                      height: 32,
                       decoration: BoxDecoration(
-                        color: (m['color'] as Color).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
+                        color: (m['color'] as Color).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
                         (m['icon'] as IconData?) ?? Icons.image_outlined,
                         color: m['color'] as Color,
-                        size: 18,
+                        size: 16,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    m['value'] as String,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                const SizedBox(height: 12),
+                Text(
+                  m['value'] as String,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   m['sub'] as String,
-                  style: const TextStyle(fontSize: 10, color: Colors.grey),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
                 ),
               ],
             ),
@@ -465,10 +465,10 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
           for (var i = 0; i < metrics.length; i += 2) {
             final rc = <Widget>[Expanded(child: buildCard(metrics[i]))];
             if (i + 1 < metrics.length) {
-              rc.add(const SizedBox(width: 10));
+              rc.add(const SizedBox(width: 12));
               rc.add(Expanded(child: buildCard(metrics[i + 1])));
             }
-            if (i > 0) rows.add(const SizedBox(height: 10));
+            if (i > 0) rows.add(const SizedBox(height: 12));
             rows.add(Row(children: rc));
           }
           return Column(children: rows);
@@ -478,7 +478,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
           children: metrics.map((m) {
             return Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
                 child: buildCard(m),
               ),
             );
@@ -494,150 +494,33 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(flex: 3, child: _buildLineChartCard(isDark)),
+          Expanded(flex: 2, child: _buildUpcomingEventsCard(isDark)),
           const SizedBox(width: 16),
-          Expanded(flex: 2, child: _buildDonutChartCard(isDark)),
+          Expanded(flex: 2, child: _buildActivityCard(isDark)),
           const SizedBox(width: 16),
-          Expanded(flex: 3, child: _buildUpcomingEventsCard(isDark)),
+          Expanded(flex: 2, child: _buildActiveMembersCard(isDark)),
         ],
       );
     }
     return Column(
       children: [
-        _buildLineChartCard(isDark),
-        const SizedBox(height: 16),
-        _buildDonutChartCard(isDark),
-        const SizedBox(height: 16),
         _buildUpcomingEventsCard(isDark),
+        const SizedBox(height: 16),
+        _buildActivityCard(isDark),
+        const SizedBox(height: 16),
+        _buildActiveMembersCard(isDark),
       ],
     );
   }
 
   Widget _buildLineChartCard(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Grafik Aktivitas Komunitas',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 200,
-            child: LineChart(
-              LineChartData(
-                gridData: const FlGridData(show: true, drawVerticalLine: false),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: const [
-                      FlSpot(0, 10),
-                      FlSpot(1, 15),
-                      FlSpot(2, 14),
-                      FlSpot(3, 22),
-                      FlSpot(4, 18),
-                      FlSpot(5, 25),
-                    ],
-                    isCurved: true,
-                    color: _commPurple,
-                    barWidth: 3,
-                  ),
-                  LineChartBarData(
-                    spots: const [
-                      FlSpot(0, 5),
-                      FlSpot(1, 8),
-                      FlSpot(2, 9),
-                      FlSpot(3, 14),
-                      FlSpot(4, 11),
-                      FlSpot(5, 16),
-                    ],
-                    isCurved: true,
-                    color: const Color(0xFF10B981),
-                    barWidth: 3,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    // Simplified - replaced with upcoming events card
+    return _buildUpcomingEventsCard(isDark);
   }
 
   Widget _buildDonutChartCard(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Kegiatan Berdasarkan Kategori',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 140,
-            child: PieChart(
-              PieChartData(
-                sectionsSpace: 2,
-                centerSpaceRadius: 35,
-                sections: [
-                  PieChartSectionData(
-                    value: 37.5,
-                    color: _commPurple,
-                    radius: 18,
-                    showTitle: false,
-                  ),
-                  PieChartSectionData(
-                    value: 25.0,
-                    color: const Color(0xFF10B981),
-                    radius: 18,
-                    showTitle: false,
-                  ),
-                  PieChartSectionData(
-                    value: 16.7,
-                    color: const Color(0xFFF59E0B),
-                    radius: 18,
-                    showTitle: false,
-                  ),
-                  PieChartSectionData(
-                    value: 12.5,
-                    color: const Color(0xFFEC4899),
-                    radius: 18,
-                    showTitle: false,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildCatRow('Fotografi', '37.5% (9)', _commPurple),
-          _buildCatRow(
-            'Edukasi & Workshop',
-            '25% (6)',
-            const Color(0xFF10B981),
-          ),
-          _buildCatRow('Hunting & Trip', '16.7% (4)', const Color(0xFFF59E0B)),
-          _buildCatRow('Pameran & Event', '12.5% (3)', const Color(0xFFEC4899)),
-        ],
-      ),
-    );
+    // Simplified - replaced with activity card
+    return _buildActivityCard(isDark);
   }
 
   Widget _buildCatRow(String name, String val, Color color) {
@@ -665,10 +548,10 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
     final events = _events;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
         ),
@@ -681,7 +564,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
             children: [
               const Text(
                 'Kegiatan Mendatang',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
               TextButton(
                 onPressed: () {
@@ -694,28 +577,28 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
                 },
                 child: const Text(
                   'Lihat Semua',
-                  style: TextStyle(fontSize: 12),
+                  style: TextStyle(fontSize: 11),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           if (events.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
+              padding: const EdgeInsets.symmetric(vertical: 20),
               child: Center(
                 child: Column(
                   children: [
                     Icon(
                       Icons.event_busy_outlined,
-                      size: 36,
+                      size: 32,
                       color: isDark ? Colors.white38 : Colors.grey.shade400,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Belum ada kegiatan mendatang',
+                      'Belum ada kegiatan',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
                       ),
                     ),
@@ -724,13 +607,18 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
               ),
             )
           else
-            ...events.take(4).map(
+            ...events.take(3).map(
               (e) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      backgroundColor: _commPurple.withValues(alpha: 0.1),
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: _commPurple.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       child: const Icon(
                         Icons.camera_alt_outlined,
                         color: _commPurple,
@@ -746,11 +634,12 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
                             e['title']!,
                             style: const TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
+                          const SizedBox(height: 2),
                           Text(
                             '${e['date']} • ${e['participants']}',
                             style: const TextStyle(
@@ -773,36 +662,16 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
   }
 
   Widget _buildBottomThreeColumns(bool isDark) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth > 700) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: _buildActivityCard(isDark)),
-          const SizedBox(width: 16),
-          Expanded(child: _buildActiveMembersCard(isDark)),
-          const SizedBox(width: 16),
-          Expanded(child: _buildParticipationCard(isDark)),
-        ],
-      );
-    }
-    return Column(
-      children: [
-        _buildActivityCard(isDark),
-        const SizedBox(height: 16),
-        _buildActiveMembersCard(isDark),
-        const SizedBox(height: 16),
-        _buildParticipationCard(isDark),
-      ],
-    );
+    // Simplified - only show participation card at bottom
+    return _buildParticipationCard(isDark);
   }
 
   Widget _buildActivityCard(bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
         ),
@@ -812,25 +681,25 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
         children: [
           const Text(
             'Aktivitas Terbaru',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           if (_activities.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
+              padding: const EdgeInsets.symmetric(vertical: 20),
               child: Center(
                 child: Column(
                   children: [
                     Icon(
                       Icons.history_outlined,
-                      size: 36,
+                      size: 32,
                       color: isDark ? Colors.white38 : Colors.grey.shade400,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Belum ada aktivitas terbaru',
+                      'Belum ada aktivitas',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
                       ),
                     ),
@@ -839,7 +708,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
               ),
             )
           else
-            ..._activities.take(4).map(
+            ..._activities.take(3).map(
               (act) => _buildActItem(
                 act['title'] as String,
                 act['time'] as String,
@@ -852,13 +721,17 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
 
   Widget _buildActItem(String title, String time) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 14,
-            backgroundColor: _commPurple.withValues(alpha: 0.1),
-            child: const Icon(Icons.group_add, color: _commPurple, size: 14),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: _commPurple.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.group_add, color: _commPurple, size: 16),
           ),
           const SizedBox(width: 10),
           Expanded(child: Text(title, style: const TextStyle(fontSize: 12))),
@@ -872,10 +745,10 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
     final members = _members;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
         ),
@@ -885,25 +758,25 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
         children: [
           const Text(
             'Anggota Aktif',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           if (members.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
+              padding: const EdgeInsets.symmetric(vertical: 20),
               child: Center(
                 child: Column(
                   children: [
                     Icon(
                       Icons.people_outline,
-                      size: 36,
+                      size: 32,
                       color: isDark ? Colors.white38 : Colors.grey.shade400,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Belum ada anggota aktif',
+                      'Belum ada anggota',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
                       ),
                     ),
@@ -912,19 +785,25 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
               ),
             )
           else
-            ...members.take(4).map(
+            ...members.take(3).map(
               (m) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundColor: _commPurple.withValues(alpha: 0.1),
-                      child: Text(
-                        (m['name'] as String).isNotEmpty ? (m['name'] as String)[0] : 'A',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: _commPurple.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          (m['name'] as String).isNotEmpty ? (m['name'] as String)[0] : 'A',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ),
@@ -934,25 +813,25 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
                         m['name']!,
                         style: const TextStyle(
                           fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
+                        horizontal: 6,
+                        vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: _commPurple.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
+                        color: _commPurple.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         m['role']!,
                         style: const TextStyle(
-                          fontSize: 10,
+                          fontSize: 9,
                           color: _commPurple,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -966,79 +845,38 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
   }
 
   Widget _buildParticipationCard(bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isDark ? AppTheme.cardBg : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Top Kategori Favorit',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              const SizedBox(height: 8),
-              _buildCatRow('Fotografi Landscape', '35%', _commPurple),
-              _buildCatRow(
-                'Street Photography',
-                '25%',
-                const Color(0xFF10B981),
-              ),
-              _buildCatRow(
-                'Edukasi & Workshop',
-                '20%',
-                const Color(0xFFF59E0B),
-              ),
-              _buildCatRow('Hunting & Trip', '12%', const Color(0xFFEC4899)),
-            ],
-          ),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardBg : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
         ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: _commPurple.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _commPurple.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Kategori Favorit',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Bangun Dampak Bersama',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Terus berkolaborasi, berbagi ilmu, dan ciptakan karya bermanfaat.',
-                style: TextStyle(fontSize: 11, color: Colors.grey),
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BuatKebutuhanScreen(user: widget.user),
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(backgroundColor: _commPurple),
-                child: const Text(
-                  'Buat Kegiatan Baru',
-                  style: TextStyle(color: Colors.white, fontSize: 11),
-                ),
-              ),
-            ],
+          const SizedBox(height: 12),
+          _buildCatRow('Fotografi Landscape', '35%', _commPurple),
+          _buildCatRow(
+            'Street Photography',
+            '25%',
+            const Color(0xFF10B981),
           ),
-        ),
-      ],
+          _buildCatRow(
+            'Edukasi & Workshop',
+            '20%',
+            const Color(0xFFF59E0B),
+          ),
+          _buildCatRow('Hunting & Trip', '12%', const Color(0xFFEC4899)),
+          _buildCatRow('Event & Komunitas', '8%', Colors.grey),
+        ],
+      ),
     );
   }
 

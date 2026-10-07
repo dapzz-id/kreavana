@@ -6410,53 +6410,62 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                               ),
                             ),
                           ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
-                          child: Container(
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? AppTheme.cardDark2
-                                  : Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: TabBar(
-                              controller: _tabCtrl,
-                              dividerColor: Colors.transparent,
-                              indicator: BoxDecoration(
-                                gradient: AppTheme.primaryGradient,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: AppTheme.cardShadowLight,
+                        // Hide TabBar for community services - simplify UI
+                        if (!widget.data.key.startsWith('komunitas_'))
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
+                            child: Container(
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppTheme.cardDark2
+                                    : Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(14),
                               ),
-                              indicatorSize: TabBarIndicatorSize.tab,
-                              indicatorPadding: const EdgeInsets.all(5),
-                              labelColor: Colors.white,
-                              unselectedLabelColor: isDark
-                                  ? AppTheme.textMuted
-                                  : Colors.grey.shade600,
-                              labelStyle: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
+                              child: TabBar(
+                                controller: _tabCtrl,
+                                dividerColor: Colors.transparent,
+                                indicator: BoxDecoration(
+                                  gradient: AppTheme.primaryGradient,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: AppTheme.cardShadowLight,
+                                ),
+                                indicatorSize: TabBarIndicatorSize.tab,
+                                indicatorPadding: const EdgeInsets.all(5),
+                                labelColor: Colors.white,
+                                unselectedLabelColor: isDark
+                                    ? AppTheme.textMuted
+                                    : Colors.grey.shade600,
+                                labelStyle: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                                tabs: const [
+                                  Tab(text: 'Informasi'),
+                                  Tab(text: 'Ulasan'),
+                                ],
                               ),
-                              tabs: const [
-                                Tab(text: 'Informasi'),
-                                Tab(text: 'Ulasan'),
-                              ],
                             ),
                           ),
-                        ),
                         Expanded(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            child: _tab == 0
-                                ? _buildInfoTab(
-                                    context,
-                                    scrollCtrl,
-                                    isDark,
-                                    isNew,
-                                  )
-                                : _buildReviewTab(context, scrollCtrl, isDark),
-                          ),
+                          child: widget.data.key.startsWith('komunitas_')
+                              ? _buildInfoTab(
+                                  context,
+                                  scrollCtrl,
+                                  isDark,
+                                  isNew,
+                                )
+                              : AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  child: _tab == 0
+                                      ? _buildInfoTab(
+                                          context,
+                                          scrollCtrl,
+                                          isDark,
+                                          isNew,
+                                        )
+                                      : _buildReviewTab(context, scrollCtrl, isDark),
+                                ),
                         ),
                         Container(
                           padding: const EdgeInsets.fromLTRB(20, 12, 20, 22),
@@ -6474,9 +6483,11 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                             top: false,
                             child: Row(
                               children: [
-                                Expanded(
-                                  flex: 1,
-                                  child: OutlinedButton.icon(
+                                // Hide Simpan and Bagikan buttons for community services
+                                if (!widget.data.key.startsWith('komunitas_')) ...[
+                                  Expanded(
+                                    flex: 1,
+                                    child: OutlinedButton.icon(
                                     onPressed: () {
                                       final item = widget.item;
                                       final title =
@@ -6776,6 +6787,8 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                     ),
                                   ),
                                 ),
+                                const SizedBox(width: 10),
+                                ],
                                 const SizedBox(width: 10),
                                 Expanded(
                                   flex: 2,
@@ -7743,64 +7756,91 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
     }
 
     final detailValues = isNew
-        ? <(String, IconData, String, String)>[
-            (
-              'Nama item',
-              Icons.drive_file_rename_outline,
-              _formName.isEmpty
-                  ? 'Klik untuk mengisi nama item/layanan'
-                  : _formName,
-              _formName.isNotEmpty ? 'Siap' : 'Wajib',
-            ),
-            (
-              'Deskripsi singkat',
-              Icons.description_outlined,
-              _formDesc.isEmpty
-                  ? 'Klik untuk menulis deskripsi (min. 30 kata)'
-                  : _formDesc,
-              _formDesc.length > 60
-                  ? '${_formDesc.length} karakter'
-                  : (_formDesc.isNotEmpty ? 'Draft' : 'Opsional'),
-            ),
-            (
-              'Kategori / Tag',
-              Icons.label_outline_rounded,
-              _formTag.isEmpty
-                  ? 'Klik untuk memilih tag kategori'
-                  : 'Tag aktif: $_formTag',
-              _formTag.isNotEmpty ? _formTag : 'Pilih',
-            ),
-            (
-              'Nilai / Harga',
-              Icons.price_change_outlined,
-              _formPrice.isEmpty
-                  ? 'Klik untuk memasukkan nilai harga'
-                  : fmtPrice(_formPrice),
-              _formPrice.isNotEmpty ? fmtPrice(_formPrice) : '',
-            ),
-            (
-              _reviewableCreatorPackageKeys.contains(widget.data.key)
-                  ? 'Foto Thumbnail'
-                  : 'Thumbnail / Icon',
-              Icons.image_outlined,
-              _reviewableCreatorPackageKeys.contains(widget.data.key)
-                  ? (_formThumbnailFile?.name ?? 'Pilih foto thumbnail paket')
-                  : (_formIcon == null
-                        ? 'Klik untuk memilih icon thumbnail'
-                        : 'Icon terpilih'),
-              _reviewableCreatorPackageKeys.contains(widget.data.key)
-                  ? (_formThumbnailFile != null ? 'Foto dipilih' : 'Wajib')
-                  : (_formIcon != null ? 'Terpilih' : ''),
-            ),
-            (
-              'Tanggal dibuat',
-              Icons.event_available_rounded,
-              _formDate == null
-                  ? 'Klik untuk memilih tanggal & waktu'
-                  : '${_formDate!.day} ${_monthId(_formDate!.month)} ${_formDate!.year} • ${_formDate!.hour.toString().padLeft(2, '0')}:${_formDate!.minute.toString().padLeft(2, '0')} WIB',
-              _formDate != null ? 'Terjadwal' : '',
-            ),
-          ]
+        ? (widget.data.key.startsWith('komunitas_')
+            ? <(String, IconData, String, String)>[
+                (
+                  'Nama item',
+                  Icons.drive_file_rename_outline,
+                  _formName.isEmpty
+                      ? 'Klik untuk mengisi nama item/layanan'
+                      : _formName,
+                  _formName.isNotEmpty ? 'Siap' : 'Wajib',
+                ),
+                (
+                  'Deskripsi singkat',
+                  Icons.description_outlined,
+                  _formDesc.isEmpty
+                      ? 'Klik untuk menulis deskripsi'
+                      : _formDesc,
+                  _formDesc.isNotEmpty ? 'Siap' : 'Opsional',
+                ),
+                (
+                  'Status',
+                  Icons.label_outline_rounded,
+                  _formTag.isEmpty
+                      ? 'Menunggu'
+                      : _formTag,
+                  _formTag.isNotEmpty ? _formTag : 'Menunggu',
+                ),
+              ]
+            : <(String, IconData, String, String)>[
+                (
+                  'Nama item',
+                  Icons.drive_file_rename_outline,
+                  _formName.isEmpty
+                      ? 'Klik untuk mengisi nama item/layanan'
+                      : _formName,
+                  _formName.isNotEmpty ? 'Siap' : 'Wajib',
+                ),
+                (
+                  'Deskripsi singkat',
+                  Icons.description_outlined,
+                  _formDesc.isEmpty
+                      ? 'Klik untuk menulis deskripsi (min. 30 kata)'
+                      : _formDesc,
+                  _formDesc.length > 60
+                      ? '${_formDesc.length} karakter'
+                      : (_formDesc.isNotEmpty ? 'Draft' : 'Opsional'),
+                ),
+                (
+                  'Kategori / Tag',
+                  Icons.label_outline_rounded,
+                  _formTag.isEmpty
+                      ? 'Klik untuk memilih tag kategori'
+                      : 'Tag aktif: $_formTag',
+                  _formTag.isNotEmpty ? _formTag : 'Pilih',
+                ),
+                (
+                  'Nilai / Harga',
+                  Icons.price_change_outlined,
+                  _formPrice.isEmpty
+                      ? 'Klik untuk memasukkan nilai harga'
+                      : fmtPrice(_formPrice),
+                  _formPrice.isNotEmpty ? fmtPrice(_formPrice) : '',
+                ),
+                (
+                  _reviewableCreatorPackageKeys.contains(widget.data.key)
+                      ? 'Foto Thumbnail'
+                      : 'Thumbnail / Icon',
+                  Icons.image_outlined,
+                  _reviewableCreatorPackageKeys.contains(widget.data.key)
+                      ? (_formThumbnailFile?.name ?? 'Pilih foto thumbnail paket')
+                      : (_formIcon == null
+                            ? 'Klik untuk memilih icon thumbnail'
+                            : 'Icon terpilih'),
+                  _reviewableCreatorPackageKeys.contains(widget.data.key)
+                      ? (_formThumbnailFile != null ? 'Foto dipilih' : 'Wajib')
+                      : (_formIcon != null ? 'Terpilih' : ''),
+                ),
+                (
+                  'Tanggal dibuat',
+                  Icons.event_available_rounded,
+                  _formDate == null
+                      ? 'Klik untuk memilih tanggal & waktu'
+                      : '${_formDate!.day} ${_monthId(_formDate!.month)} ${_formDate!.year} • ${_formDate!.hour.toString().padLeft(2, '0')}:${_formDate!.minute.toString().padLeft(2, '0')} WIB',
+                  _formDate != null ? 'Terjadwal' : '',
+                ),
+              ])
         : <(String, IconData, String, String)>[
             (
               'Detail Lengkap',

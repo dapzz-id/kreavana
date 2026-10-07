@@ -784,6 +784,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         CreatorSidebarMenus.showKolaborasiInLainnya(
           widget.user.subRole,
         );
+    final showUpgradePromo = CreatorSidebarMenus.showPaymentFeature(
+      widget.user.subRole,
+    );
 
     final layoutScaffold = Scaffold(
       body: Row(
@@ -1333,7 +1336,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
-                          if (!collapsed) _buildUpgradePromoCard(isDark),
+                          if (!collapsed && showUpgradePromo) _buildUpgradePromoCard(isDark),
                         ],
                       ],
                     ),

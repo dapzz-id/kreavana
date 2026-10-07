@@ -54,6 +54,21 @@ class User extends Authenticatable implements JWTSubject
         return $enum?->label();
     }
 
+    public function communityMembers()
+    {
+        return $this->hasMany(\App\Models\CommunityMember::class, 'community_id');
+    }
+
+    public function communityActivities()
+    {
+        return $this->hasMany(\App\Models\CommunityActivity::class, 'community_id');
+    }
+
+    public function communityAnnouncements()
+    {
+        return $this->hasMany(\App\Models\CommunityAnnouncement::class, 'community_id');
+    }
+
     /**
      * Get the identifier that will be stored in the subject claim of the JWT.
      *

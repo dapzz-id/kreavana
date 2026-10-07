@@ -13,7 +13,7 @@ use App\Http\Controllers\{
     StorageController, DisputeController, OpportunityReviewController,
     AiController, JobContractController, JobContractTransitionController,
     MarketingController, AdminSystemSettingController, CollaborationController,
-    LocationController
+    LocationController, CommunityController
 };
 
 // Locations & Map Search (Google Places / Geocoding with OSM fallback)
@@ -215,6 +215,28 @@ Route::middleware('auth:api')->group(function () {
         Route::post('{id}/respond', [CollaborationController::class, 'respond']);
         Route::put('{id}', [CollaborationController::class, 'update']);
         Route::delete('{id}', [CollaborationController::class, 'destroy']);
+    });
+
+    // Community Services
+    Route::prefix('community')->group(function () {
+        // Members
+        Route::get('members', [CommunityController::class, 'getMembers']);
+        Route::post('members', [CommunityController::class, 'addMember']);
+        Route::put('members/{id}', [CommunityController::class, 'updateMember']);
+        Route::delete('members/{id}', [CommunityController::class, 'removeMember']);
+
+        // Activities
+        Route::get('activities', [CommunityController::class, 'getActivities']);
+        Route::post('activities', [CommunityController::class, 'createActivity']);
+        Route::put('activities/{id}', [CommunityController::class, 'updateActivity']);
+        Route::delete('activities/{id}', [CommunityController::class, 'deleteActivity']);
+        Route::post('activities/{id}/join', [CommunityController::class, 'joinActivity']);
+
+        // Announcements
+        Route::get('announcements', [CommunityController::class, 'getAnnouncements']);
+        Route::post('announcements', [CommunityController::class, 'createAnnouncement']);
+        Route::put('announcements/{id}', [CommunityController::class, 'updateAnnouncement']);
+        Route::delete('announcements/{id}', [CommunityController::class, 'deleteAnnouncement']);
     });
 
     // Job Contracts
