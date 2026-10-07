@@ -321,15 +321,7 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
       width: double.infinity,
       padding: EdgeInsets.all(isMobile ? 18 : 22),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            accentColor,
-            HSLColor.fromColor(accentColor).withLightness(0.25).toColor(),
-            const Color(0xFF2D1457),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: accentColor,
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(

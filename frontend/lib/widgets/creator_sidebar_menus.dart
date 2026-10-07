@@ -72,6 +72,14 @@ class CreatorSidebarMenus {
     return sub != 'community' && sub != 'komunitas';
   }
 
+  static bool showMonetizationFeatures(String? subRole) {
+    return true;
+  }
+
+  static bool showPaymentFeature(String? subRole) {
+    return true;
+  }
+
   static bool showPortofolioAgendaTopItems(UserModel user) {
     return isCreatorUser(user) && !hasSpecificSubRole(user.subRole);
   }

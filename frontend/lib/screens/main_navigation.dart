@@ -676,7 +676,7 @@ class _MainNavigationState extends State<MainNavigation> {
         isCollapsed: isCollapsed,
         isMobileDrawer: isMobileDrawer,
       ),
-      if (!isMobileDrawer)
+      if (!isMobileDrawer && CreatorSidebarMenus.showPaymentFeature(_currentUser.subRole))
         _buildUpgradePromoCard(isDark, isCollapsed: isCollapsed),
     ];
   }
@@ -838,7 +838,7 @@ class _MainNavigationState extends State<MainNavigation> {
         isCollapsed: isCollapsed,
         isMobileDrawer: isMobileDrawer,
       ),
-      if (!isMobileDrawer)
+      if (!isMobileDrawer && CreatorSidebarMenus.showPaymentFeature(_currentUser.subRole))
         _buildUpgradePromoCard(isDark, isCollapsed: isCollapsed),
     ];
   }
