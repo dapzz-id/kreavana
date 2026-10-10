@@ -22,6 +22,15 @@ class CreatorRecommendationCard extends StatelessWidget {
         .join(' ');
   }
 
+  String _formatCategory(String category) {
+    if (category.isEmpty) return category;
+    if (category.toLowerCase() == 'eo_event_package') return 'Event';
+    return category
+        .split('_')
+        .map((word) => word.isNotEmpty ? '${word[0].toUpperCase()}${word.substring(1)}' : '')
+        .join(' ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -122,7 +131,11 @@ class CreatorRecommendationCard extends StatelessWidget {
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: creator.serviceCategories.take(3).map((category) {
+                  children: creator.serviceCategories
+                      .map((c) => _formatCategory(c))
+                      .toSet()
+                      .take(3)
+                      .map((category) {
                     return Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,

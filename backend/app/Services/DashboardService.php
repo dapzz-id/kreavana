@@ -255,6 +255,7 @@ class DashboardService extends BaseService implements DashboardServiceInterface
                 'title' => $notification->title,
                 'subtitle' => $notification->message,
                 'type' => $notification->type,
+                'time' => $notification->created_at?->diffForHumans() ?? 'Baru saja',
                 'timestamp' => $notification->created_at?->toIso8601String(),
             ];
         })->toArray();

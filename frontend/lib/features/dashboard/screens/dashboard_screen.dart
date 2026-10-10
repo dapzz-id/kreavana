@@ -52,6 +52,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Map<String, dynamic>> _runningContracts = [];
   List<Map<String, dynamic>> _agenda = [];
   List<Map<String, dynamic>> _projectAssets = [];
+  List<Map<String, dynamic>> _activityFeed = [];
 
   late AnimationController _statsAnimController;
   late List<Animation<double>> _statsAnims;
@@ -114,7 +115,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (mounted) {
         setState(() {
           final data = res['data'] ?? {};
-          if (res['success'] == true && res['data'] != null) {
+          if ((res['success'] == true || res['status'] == true) && res['data'] != null) {
             final summary = data['summary'] ?? {};
             _overviewSummary = {
               'active_needs': summary['active_needs']?.toString() ?? '0',
@@ -150,6 +151,9 @@ class _DashboardScreenState extends State<DashboardScreen>
           _agenda = List<Map<String, dynamic>>.from(data['agenda'] ?? []);
           _projectAssets = List<Map<String, dynamic>>.from(
             data['project_assets'] ?? [],
+          );
+          _activityFeed = List<Map<String, dynamic>>.from(
+            data['activity_feed'] ?? [],
           );
         });
         _statsAnimController.forward(from: 0);
@@ -694,7 +698,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       children: [
         _SectionHeader(
           title: _isCreator ? 'Rekomendasi Untuk Anda' : 'Kreator Rekomendasi',
-          onViewAll: () => _navigateTo('Lihat Semua'),
+          onViewAll: () => _navigateTo(_isCreator ? 'Cari Campaign' : 'Cari Kreator'),
         ),
         const SizedBox(height: 12),
         AiRecommendationCard(
@@ -909,7 +913,13 @@ class _DashboardScreenState extends State<DashboardScreen>
     final gradientColors =
         vendor['gradient_colors'] as List<Color>? ??
         [AppTheme.primaryPurple, AppTheme.deepPurple];
-    final category = vendor['category']?.toString() ?? 'Creator';
+    final categoryRaw = vendor['category']?.toString() ?? 'Creator';
+    final category = categoryRaw.toLowerCase() == 'eo_event_package' 
+        ? 'Event'
+        : categoryRaw
+            .split('_')
+            .map((word) => word.isNotEmpty ? '${word[0].toUpperCase()}${word.substring(1)}' : '')
+            .join(' ');
     return Container(
       width: 200,
       margin: const EdgeInsets.only(right: 14),
@@ -2701,29 +2711,29 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildRecentProjectActivityCard(bool isDark) {
-    final activities = [
-      {
-        'title': 'Proposal Baru Diterima',
-        'desc': 'Videografer mengajukan proposal untuk Proyek TVC.',
-        'time': '2 jam lalu',
-        'icon': Icons.mail_outline_rounded,
-        'color': const Color(0xFF3B82F6),
-      },
-      {
-        'title': 'Milestone 1 Siap Di-review',
-        'desc': 'Fotografi Produk Komersial siap untuk disetujui.',
-        'time': '1 hari lalu',
-        'icon': Icons.assignment_turned_in_outlined,
-        'color': const Color(0xFF10B981),
-      },
-      {
-        'title': 'Pembayaran Escrow Diamankan',
-        'desc': 'Dana DP proyek terlindungi di rekening bersama.',
-        'time': '2 hari lalu',
-        'icon': Icons.account_balance_wallet_outlined,
-        'color': const Color(0xFF8B5CF6),
-      },
-    ];
+    final activities = _activityFeed.isNotEmpty
+        ? _activityFeed.map((e) {
+            IconData iconData = Icons.notifications_none;
+            Color iconColor = const Color(0xFF3B82F6);
+            if (e['type'] == 'contract') {
+              iconData = Icons.assignment_turned_in_outlined;
+              iconColor = const Color(0xFF10B981);
+            } else if (e['type'] == 'payment') {
+              iconData = Icons.account_balance_wallet_outlined;
+              iconColor = const Color(0xFF8B5CF6);
+            } else if (e['type'] == 'opportunity') {
+              iconData = Icons.mail_outline_rounded;
+            }
+
+            return {
+              'title': e['title']?.toString() ?? 'Pemberitahuan Baru',
+              'desc': e['message']?.toString() ?? e['desc']?.toString() ?? '',
+              'time': e['time']?.toString() ?? 'Baru saja',
+              'icon': iconData,
+              'color': iconColor,
+            };
+          }).toList()
+        : [];
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -2760,7 +2770,21 @@ class _DashboardScreenState extends State<DashboardScreen>
             ],
           ),
           const SizedBox(height: 14),
-          ...activities.map((a) {
+          if (activities.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Text(
+                  'Belum ada aktivitas proyek.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                  ),
+                ),
+              ),
+            )
+          else
+            ...activities.map((a) {
             final color = a['color'] as Color;
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),

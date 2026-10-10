@@ -38,6 +38,7 @@ class _RecommendedCreatorsSectionState
   DateTime? _endDate;
 
   final List<Map<String, String>> _subRoleOptions = [
+    {'slug': 'tukang_kendang', 'name': 'Tukang Kendang'},
     {'slug': 'event_organizer', 'name': 'Event Organizer'},
     {'slug': 'wedding_organizer', 'name': 'Wedding Organizer'},
     {'slug': 'mc', 'name': 'MC'},

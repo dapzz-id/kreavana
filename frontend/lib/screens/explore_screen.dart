@@ -33,6 +33,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   final List<Map<String, String>> _filterOptions = [
     {'slug': 'all', 'name': 'Semua'},
+    {'slug': 'tukang_kendang', 'name': 'Tukang Kendang'},
     {'slug': 'institution', 'name': 'Institusi'},
     {'slug': 'government', 'name': 'Pemerintah'},
     {'slug': 'mc', 'name': 'MC'},
@@ -138,6 +139,8 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   Color _getSubRoleColor(String slug) {
     switch (slug) {
+      case 'tukang_kendang':
+        return const Color(0xFFD97706);
       case 'institution':
         return const Color(0xFF10B981);
       case 'government':
@@ -188,6 +191,8 @@ class _ExploreScreenState extends State<ExploreScreen>
         ),
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.center,
           labelStyle: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 13,
