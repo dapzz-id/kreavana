@@ -33,7 +33,11 @@ class CreatorRecommendationService
             $q->where('status', 'active');
 
             if (!empty($filters['category'])) {
-                $q->where('category', $filters['category']);
+                if (strtolower($filters['category']) === 'event') {
+                    $q->whereIn('category', ['Event', 'event', 'eo_event_package']);
+                } else {
+                    $q->where('category', $filters['category']);
+                }
             }
         });
 

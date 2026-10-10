@@ -39,6 +39,29 @@ class UserSeeder extends Seeder
             ]
         );
 
+        // 2.5 Corporate
+        $corp = User::updateOrCreate(
+            ['email' => 'corporate@kreavana.id'],
+            [
+                'name' => 'PT Kreavana Nusantara Korporat',
+                'username' => 'corporate_demo',
+                'password' => Hash::make('password123'),
+                'role' => RoleType::User,
+                'is_creator_approved' => 0,
+                'email_verified_at' => now(),
+            ]
+        );
+        UserSubRole::updateOrCreate(
+            [
+                'user_id' => $corp->id,
+                'sub_role_slug' => 'corporate',
+            ],
+            [
+                'role_type' => RoleType::User->value,
+                'is_active' => true,
+            ]
+        );
+
         // 3. 11 Creators
         $creators = [
             [

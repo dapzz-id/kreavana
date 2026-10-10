@@ -71,6 +71,7 @@ class RecommendationController extends Controller
                 'service_categories' => $creator->creatorServices
                     ->where('status', 'active')
                     ->pluck('category')
+                    ->map(fn($c) => strtolower($c) === 'eo_event_package' ? 'Event' : $c)
                     ->unique()
                     ->values()
                     ->all()
@@ -97,6 +98,7 @@ class RecommendationController extends Controller
     {
         $categories = \App\Models\CreatorService::where('status', 'active')
             ->pluck('category')
+            ->map(fn($c) => strtolower($c) === 'eo_event_package' ? 'Event' : $c)
             ->filter()
             ->unique()
             ->values();

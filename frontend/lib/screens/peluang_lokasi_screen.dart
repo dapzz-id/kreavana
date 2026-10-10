@@ -38,7 +38,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
 
   static const _categories = [
     {'slug': 'all', 'name': 'Semua', 'color': Colors.indigo},
-    {'slug': 'tukang_kendang', 'name': '🥁 Kendang', 'color': Color(0xFFD97706)},
+    {'slug': 'tukang_kendang', 'name': 'Kendang', 'color': Color(0xFFD97706)},
     {'slug': 'institution', 'name': 'Institusi', 'color': Color(0xFF3730A3)},
     {'slug': 'government', 'name': 'Pemerintah', 'color': Color(0xFF475569)},
     {'slug': 'mc', 'name': 'MC', 'color': Color(0xFFF59E0B)},
@@ -1385,7 +1385,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
     String selectedCategory = 'mc';
 
     final subRoles = [
-      {'slug': 'tukang_kendang', 'label': '🥁 Tukang Kendang'},
+      {'slug': 'tukang_kendang', 'label': 'Tukang Kendang'},
       {'slug': 'mc', 'label': '🎤 MC & Host Event'},
       {'slug': 'videografer', 'label': '🎥 Videografer'},
       {'slug': 'fotografer', 'label': '📸 Fotografer'},

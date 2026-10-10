@@ -36,6 +36,7 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
 
   static const List<Map<String, String>> _roleFilters = [
     {'slug': 'all', 'label': 'Semua Peran'},
+    {'slug': 'tukang_kendang', 'label': '🥁 Tukang Kendang'},
     {'slug': 'fotografi', 'label': '📸 Fotografer'},
     {'slug': 'videografi', 'label': '🎥 Videografer'},
     {'slug': 'mc', 'label': '🎤 MC / Host'},
@@ -199,6 +200,8 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
 
   Color _getSubRoleColor(String slug) {
     switch (slug) {
+      case 'tukang_kendang':
+        return const Color(0xFFD97706);
       case 'institution':
         return const Color(0xFF10B981);
       case 'government':

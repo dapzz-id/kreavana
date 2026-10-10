@@ -84,6 +84,7 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
         final d = Map<String, dynamic>.from(res['data']);
         final dist = d['distribution'];
         setState(() {
+          _dbStats = d;
           _avgRating = (d['average_rating'] as num?)?.toDouble() ?? 0.0;
           _onTimePct = (d['on_time_percentage'] as num?)?.toInt() ?? 0;
           _totalReviews = (d['total_reviews'] as num?)?.toInt() ?? 0;
