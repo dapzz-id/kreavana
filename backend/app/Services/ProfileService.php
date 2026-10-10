@@ -311,7 +311,8 @@ class ProfileService extends BaseService
             throw new Exception('Pengguna tidak ditemukan.', 404);
         }
 
-        $isCreator = $user->role->value === 'creator';
+        $roleVal = $user->role instanceof \BackedEnum ? $user->role->value : (string) $user->role;
+        $isCreator = $roleVal === 'creator';
         $authUser = auth('api')->user();
 
         $data = [
@@ -319,7 +320,7 @@ class ProfileService extends BaseService
             'name' => $user->name,
             'username' => $user->username,
             'avatar_url' => $user->avatar_url,
-            'role' => $user->role->value,
+            'role' => $roleVal,
             'sub_role' => $user->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user->sub_role,
             'sub_role_label' => $user->sub_role_label,
             'is_verified' => (bool) $user->is_verified,
@@ -374,6 +375,8 @@ class ProfileService extends BaseService
             $app = $this->creatorAppRepo->findLatestByUserId($userId);
             $data['proyek_eksternal'] = $external->toArray();
             $data['external_experience_text'] = $app?->experience;
+            $data['portfolio_link'] = $app?->portfolio_link;
+            $data['skill_description'] = $app?->skill_description;
             $data['role_label'] = 'Kreator' . ($user->sub_role_label ? ' - ' . $user->sub_role_label : '');
         } else {
             // Klien: Proyek yang pernah dibuat/dipublikasikan di Kreavana

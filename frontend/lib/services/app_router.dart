@@ -5,6 +5,7 @@ import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/email_verification_screen.dart';
 import '../screens/main_navigation.dart';
 import '../models/user_model.dart';
+import '../screens/public_profile_screen.dart';
 import 'user_store.dart';
 import 'system_settings_service.dart';
 import 'auth_session_state.dart';
@@ -185,17 +186,40 @@ final GoRouter appRouter = GoRouter(
     ),
 
     // ── Main routes (mendukung user terautentikasi dan guest browsing) ───
-    ...{..._routeIndexMap.keys, ..._adminRouteIndexMap.keys}.map(
-      (path) => GoRoute(
-        path: path,
-        builder: (context, state) {
-          final user = currentUserNotifier.value ?? UserModel.guest();
-          final initialIndex = user.isAdmin
-              ? (_adminRouteIndexMap[path] ?? 0)
-              : (_routeIndexMap[path] ?? 0);
-          return MainNavigation(initialUser: user, initialIndex: initialIndex);
-        },
-      ),
+    ...{..._routeIndexMap.keys, ..._adminRouteIndexMap.keys}
+        .where((path) => path != AppRoutes.profil)
+        .map(
+          (path) => GoRoute(
+            path: path,
+            builder: (context, state) {
+              final user = currentUserNotifier.value ?? UserModel.guest();
+              final initialIndex = user.isAdmin
+                  ? (_adminRouteIndexMap[path] ?? 0)
+                  : (_routeIndexMap[path] ?? 0);
+              return MainNavigation(initialUser: user, initialIndex: initialIndex);
+            },
+          ),
+        ),
+
+    // ── Route Profil (khusus: jika ada query ?id=, buka profil publik pengguna tersebut) ───
+    GoRoute(
+      path: AppRoutes.profil,
+      builder: (context, state) {
+        final targetId = state.uri.queryParameters['id'];
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        if (targetId != null &&
+            targetId.isNotEmpty &&
+            (user.isGuest || targetId != user.id)) {
+          return PublicProfileScreen(
+            userId: targetId,
+            currentUser: user,
+          );
+        }
+        final initialIndex = user.isAdmin
+            ? (_adminRouteIndexMap[AppRoutes.profil] ?? 0)
+            : (_routeIndexMap[AppRoutes.profil] ?? 0);
+        return MainNavigation(initialUser: user, initialIndex: initialIndex);
+      },
     ),
   ],
 );

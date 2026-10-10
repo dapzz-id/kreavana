@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../models/recommendation_creator_model.dart';
 import '../app/theme.dart';
-import '../services/app_router.dart';
+import '../services/user_store.dart';
 import 'auth_guard_dialog.dart';
+import 'user_profile_modal.dart';
 
 class CreatorRecommendationCard extends StatelessWidget {
   final RecommendationCreatorModel creator;
@@ -39,7 +39,14 @@ class CreatorRecommendationCard extends StatelessWidget {
             actionName: 'melihat profil dan booking kreator ${creator.name}',
           );
           if (isAllowed && context.mounted) {
-            context.push('${AppRoutes.profil}?id=${creator.id}');
+            UserProfileModal.show(
+              context,
+              userId: creator.id.toString(),
+              initialName: creator.name,
+              initialAvatarUrl: creator.avatarUrl,
+              initialRole: 'creator',
+              currentUser: currentUserNotifier.value,
+            );
           }
         },
         child: Padding(

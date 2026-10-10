@@ -26,6 +26,7 @@ import '../../../widgets/opportunity_detail_sheet.dart';
 import '../../../models/opportunity_model.dart';
 import '../../../services/profile_completeness_service.dart';
 import '../../../widgets/upgrade_plan_modal.dart';
+import '../../../widgets/user_profile_modal.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -909,154 +910,98 @@ class _DashboardScreenState extends State<DashboardScreen>
     final gradientColors =
         vendor['gradient_colors'] as List<Color>? ??
         [AppTheme.primaryPurple, AppTheme.deepPurple];
-    final category = vendor['category']?.toString() ?? 'Creator';
-    return Container(
-      width: 200,
-      margin: const EdgeInsets.only(right: 14),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.cardDark : Colors.white,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-        border: Border.all(
-          color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
-        ),
-        boxShadow: isDark ? null : AppTheme.cardShadowLight,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 90,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: gradientColors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(AppTheme.radiusMD),
-              ),
-            ),
-            child: Stack(
-              children: [
-                Center(
-                  child: Icon(
-                    Icons.person_outline,
-                    color: Colors.white.withValues(alpha: 0.4),
-                    size: 40,
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      category,
-                      style: const TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+    final categoryRaw = vendor['category']?.toString() ?? 'Creator';
+    final category = categoryRaw.toLowerCase() == 'eo_event_package'
+        ? 'Event'
+        : categoryRaw
+            .split('_')
+            .map((word) => word.isNotEmpty ? '${word[0].toUpperCase()}${word.substring(1)}' : '')
+            .join(' ');
+    final vendorId = vendor['id']?.toString() ?? '';
+    final vendorName = vendor['name']?.toString() ?? '';
+    final avatarUrl = vendor['avatar_url']?.toString();
+
+    void openProfile() async {
+      if (vendorId.isEmpty) return;
+      final isAllowed = await AuthGuardDialog.check(
+        context,
+        actionName: 'melihat profil kreator $vendorName',
+      );
+      if (isAllowed && mounted) {
+        UserProfileModal.show(
+          context,
+          userId: vendorId,
+          initialName: vendorName,
+          initialAvatarUrl: avatarUrl,
+          initialRole: 'creator',
+          currentUser: widget.user,
+        );
+      }
+    }
+
+    return InkWell(
+      onTap: openProfile,
+      borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+      child: Container(
+        width: 200,
+        margin: const EdgeInsets.only(right: 14),
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.cardDark : Colors.white,
+          borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+          border: Border.all(
+            color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          boxShadow: isDark ? null : AppTheme.cardShadowLight,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 90,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: gradientColors,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(AppTheme.radiusMD),
+                ),
+              ),
+              child: Stack(
                 children: [
-                  Text(
-                    vendor['name']?.toString() ?? '-',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        size: 10,
-                        color: AppTheme.textMuted,
-                      ),
-                      const SizedBox(width: 2),
-                      Expanded(
-                        child: Text(
-                          vendor['location']?.toString() ?? '',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: AppTheme.textMuted,
+                  Center(
+                    child: avatarUrl != null && avatarUrl.isNotEmpty
+                        ? CircleAvatar(
+                            radius: 28,
+                            backgroundImage: NetworkImage(
+                              ApiService.resolveAssetUrl(avatarUrl),
+                            ),
+                          )
+                        : Icon(
+                            Icons.person_outline,
+                            color: Colors.white.withValues(alpha: 0.4),
+                            size: 40,
                           ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.star, size: 11, color: Colors.amber.shade600),
-                      const SizedBox(width: 2),
-                      Text(
-                        '${vendor['rating'] ?? '4.8'} (${vendor['review_count'] ?? '0'})',
-                        style: const TextStyle(fontSize: 10),
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
                       ),
-                    ],
-                  ),
-                  const Spacer(),
-                  Text(
-                    vendor['starting_price']?.toString() ?? '',
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.primaryPurple,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 28,
-                    child: OutlinedButton(
-                      onPressed: () async {
-                        final vendorId = vendor['id'];
-                        if (vendorId == null) return;
-                        final isAllowed = await AuthGuardDialog.check(
-                          context,
-                          actionName: 'melihat profil kreator ${vendor['name'] ?? ''}',
-                        );
-                        if (isAllowed && mounted) {
-                          context.push('${AppRoutes.profil}?id=$vendorId');
-                        }
-                      },
-                      style: OutlinedButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        side: BorderSide(
-                          color: AppTheme.primaryPurple.withValues(alpha: 0.4),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        foregroundColor: AppTheme.primaryPurple,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text(
-                        'Lihat Profil',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
+                      child: Text(
+                        category,
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black87,
                         ),
                       ),
                     ),
@@ -1064,8 +1009,93 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ],
               ),
             ),
-          ),
-        ],
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      vendor['name']?.toString() ?? '-',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 10,
+                          color: AppTheme.textMuted,
+                        ),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: Text(
+                            vendor['location']?.toString() ?? '',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: AppTheme.textMuted,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.star, size: 11, color: Colors.amber.shade600),
+                        const SizedBox(width: 2),
+                        Text(
+                          '${vendor['rating'] ?? '4.8'} (${vendor['review_count'] ?? '0'})',
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    Text(
+                      vendor['starting_price']?.toString() ?? '',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.primaryPurple,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 28,
+                      child: OutlinedButton(
+                        onPressed: openProfile,
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          side: BorderSide(
+                            color: AppTheme.primaryPurple.withValues(alpha: 0.4),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          foregroundColor: AppTheme.primaryPurple,
+                        ),
+                        child: const Text(
+                          'Lihat Profil',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

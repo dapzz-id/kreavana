@@ -422,54 +422,201 @@ class _UserProfileModalState extends State<UserProfileModal>
         final category = item['category'] ?? 'Portofolio';
         final imageUrl = item['image_url'];
 
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppTheme.cardBg : const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+        return InkWell(
+          onTap: () => _showPortfolioDetailDialog(item, isDark),
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardBg : const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+              ),
             ),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: imageUrl != null && imageUrl.isNotEmpty
-                    ? Image.network(
-                        ApiService.resolveAssetUrl(imageUrl),
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (ctx, err, stack) => _buildPlaceholderMedia(isDark),
-                      )
-                    : _buildPlaceholderMedia(isDark),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      category,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: imageUrl != null && imageUrl.isNotEmpty
+                      ? Image.network(
+                          ApiService.resolveAssetUrl(imageUrl),
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (ctx, err, stack) => _buildPlaceholderMedia(isDark),
+                        )
+                      : _buildPlaceholderMedia(isDark),
                 ),
-              ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              category,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Icon(
+                            Icons.fullscreen_rounded,
+                            size: 14,
+                            color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  void _showPortfolioDetailDialog(Map<String, dynamic> item, bool isDark) {
+    final title = item['title'] ?? 'Portofolio';
+    final category = item['category'] ?? 'Karya';
+    final description = item['description']?.toString() ?? '';
+    final imageUrl = item['image_url']?.toString();
+    final clientName = item['client_name']?.toString() ?? '';
+    final location = item['location']?.toString() ?? '';
+    final eventDate = item['event_date']?.toString() ?? '';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: isDark ? const Color(0xFF1E1A33) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (imageUrl != null && imageUrl.isNotEmpty)
+                  Stack(
+                    children: [
+                      Image.network(
+                        ApiService.resolveAssetUrl(imageUrl),
+                        width: double.infinity,
+                        height: 280,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _buildPlaceholderMedia(isDark),
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: CircleAvatar(
+                          backgroundColor: Colors.black54,
+                          radius: 16,
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(Icons.close, size: 18, color: Colors.white),
+                            onPressed: () => Navigator.pop(ctx),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryPurple.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              category,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryPurple,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (clientName.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.person_outline, size: 14, color: AppTheme.textMuted),
+                            const SizedBox(width: 4),
+                            Text('Klien: $clientName', style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                          ],
+                        ),
+                      ],
+                      if (location.isNotEmpty || eventDate.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            if (location.isNotEmpty) ...[
+                              const Icon(Icons.location_on_outlined, size: 14, color: AppTheme.textMuted),
+                              const SizedBox(width: 4),
+                              Text(location, style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                              const SizedBox(width: 12),
+                            ],
+                            if (eventDate.isNotEmpty) ...[
+                              const Icon(Icons.calendar_today_outlined, size: 14, color: AppTheme.textMuted),
+                              const SizedBox(width: 4),
+                              Text(eventDate, style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                            ],
+                          ],
+                        ),
+                      ],
+                      if (description.isNotEmpty) ...[
+                        const SizedBox(height: 14),
+                        const Divider(),
+                        const SizedBox(height: 8),
+                        Text(
+                          description,
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.5,
+                            color: isDark ? Colors.white70 : Colors.grey.shade800,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
