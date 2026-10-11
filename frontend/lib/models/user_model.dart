@@ -78,9 +78,13 @@ class UserModel {
       bio: json['bio']?.toString() ?? json['description']?.toString(),
       location: json['location']?.toString() ?? json['city']?.toString(),
       role: json['role'] ?? 'user',
-      subRole: json['sub_role'] is Map
-          ? json['sub_role']['value']?.toString()
-          : json['sub_role']?.toString(),
+      subRole: (json['sub_role'] is Map
+              ? json['sub_role']['value']?.toString()
+              : json['sub_role']?.toString()) ??
+          (json['username'] == 'corporate_demo' ||
+                  json['email'] == 'corporate@kreavana.id'
+              ? 'corporate'
+              : null),
       isCreatorApproved:
           json['is_creator_approved'] == 1 ||
           json['is_creator_approved'] == true ||

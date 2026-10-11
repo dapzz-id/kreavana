@@ -128,11 +128,14 @@ class InstitutionResourceController extends Controller
     private function ensureInstitutionAccount(Request $request): void
     {
         $user = $request->user();
-        $subRole = $user?->getRawOriginal('sub_role');
+        $subRole = $user?->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user?->sub_role;
         abort_unless(
-            $user && in_array($subRole, ['institution', 'government', 'pemerintah', 'instansi', 'school', 'sekolah'], true),
+            $user && in_array($subRole, [
+                'institution', 'government', 'pemerintah', 'instansi', 'school', 'sekolah',
+                'corporate', 'company', 'business', 'perusahaan', 'bisnis',
+            ], true),
             403,
-            'Fitur ini hanya tersedia untuk akun instansi.',
+            'Fitur ini hanya tersedia untuk akun instansi atau perusahaan.',
         );
     }
 }

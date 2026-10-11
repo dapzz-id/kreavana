@@ -126,6 +126,7 @@ class _MainNavigationState extends State<MainNavigation> {
       setState(() {
         if (result.success == true && result.user != null) {
           _currentUser = result.user!;
+          _screenCache.clear();
         }
       });
     }
@@ -381,6 +382,18 @@ class _MainNavigationState extends State<MainNavigation> {
 
   bool get _hasSpecificCreatorSubRole =>
       CreatorSidebarMenus.hasSpecificSubRole(_currentUser.subRole);
+
+  bool get _isCompany {
+    final sub = CreatorSidebarMenus.normalizeSubRole(_currentUser.subRole);
+    return !_currentUser.isAdmin &&
+        (sub == 'company' ||
+            sub == 'corporate' ||
+            sub == 'business' ||
+            sub == 'perusahaan' ||
+            sub == 'bisnis' ||
+            _currentUser.username == 'corporate_demo' ||
+            _currentUser.email.startsWith('corporate@'));
+  }
 
   /// Index → URL mapping (kebalikan dari _routeIndexMap di app_router.dart)
   static const _indexRouteMap = {
@@ -948,7 +961,7 @@ class _MainNavigationState extends State<MainNavigation> {
           isMobileDrawer: isMobileDrawer,
           isAi: true,
         ),
-      if (_isCreatorUser && !_isGovernment && !_isSchool)
+      if ((_isCreatorUser || _isCompany) && !_isGovernment && !_isSchool)
         _buildSidebarItem(
           icon: Icons.explore_outlined,
           activeIcon: Icons.explore,
@@ -981,7 +994,7 @@ class _MainNavigationState extends State<MainNavigation> {
           isCollapsed: isCollapsed,
           isMobileDrawer: isMobileDrawer,
         ),
-      if (!_hasSpecificCreatorSubRole) ...[
+      if (!_hasSpecificCreatorSubRole && !_isCompany) ...[
         if (SystemSettingsService.isMarketplaceEnabled || _currentUser.isAdmin)
           _buildSidebarItem(
             icon: Icons.storefront_outlined,
@@ -1011,9 +1024,13 @@ class _MainNavigationState extends State<MainNavigation> {
       ] else if (!isCollapsed && _isGovernment) ...[
         const SizedBox(height: 18),
         _buildSidebarSectionHeader('PENGELOLAAN', isDark),
+      ] else if (!isCollapsed && _isCompany) ...[
+        const SizedBox(height: 18),
+        _buildSidebarSectionHeader('PENGELOLAAN PERUSAHAAN', isDark),
       ] else if (!isCollapsed &&
           !_isGovernment &&
           !_isSchool &&
+          !_isCompany &&
           !_hasSpecificCreatorSubRole) ...[
         const SizedBox(height: 18),
         _buildSidebarSectionHeader('LAINNYA', isDark),
@@ -1492,6 +1509,141 @@ class _MainNavigationState extends State<MainNavigation> {
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'tim_hak_akses',
+          isMobileDrawer: isMobileDrawer,
+        ),
+      ] else if (_isCompany) ...[
+        _buildSidebarLink(
+          icon: Icons.assignment_outlined,
+          label: 'Pengadaan & Tender (RFP)',
+          onTap: () {
+            setState(() => _activeGovRoute = 'tender_kolaborasi');
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'tenders',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'tender_kolaborasi',
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarLink(
+          icon: Icons.business_center_outlined,
+          label: 'Mitra & Vendor B2B',
+          onTap: () {
+            setState(() => _activeGovRoute = 'mitra_komunitas');
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'partners',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'mitra_komunitas',
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarLink(
+          icon: Icons.verified_outlined,
+          label: 'Otorisasi PO & MoU',
+          onTap: () {
+            setState(() => _activeGovRoute = 'dokumen_instansi');
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'documents',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'dokumen_instansi',
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarLink(
+          icon: Icons.account_balance_outlined,
+          label: 'Alokasi Anggaran & Pajak',
+          onTap: () {
+            setState(() => _activeGovRoute = 'realisasi_anggaran');
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'budgets',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'realisasi_anggaran',
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarLink(
+          icon: Icons.summarize_outlined,
+          label: 'Laporan & Audit B2B',
+          onTap: () {
+            setState(() => _activeGovRoute = 'laporan');
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'reports',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'laporan',
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarLink(
+          icon: Icons.storefront_outlined,
+          label: 'Cari Kreator & Vendor',
+          onTap: () => _navigateToScreenIndex(3),
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _currentIndex == 3 && _activeGovRoute == null,
+          isMobileDrawer: isMobileDrawer,
+        ),
+        if (!isCollapsed) ...[
+          const SizedBox(height: 18),
+          _buildSidebarSectionHeader('LAINNYA', isDark),
+        ],
+        if (SystemSettingsService.isWalletEnabled || _currentUser.isAdmin)
+          _buildSidebarItem(
+            icon: Icons.payment_outlined,
+            activeIcon: Icons.payment,
+            label: 'Pembayaran',
+            index: 7,
+            theme: theme,
+            isDark: isDark,
+            isCollapsed: isCollapsed,
+            isMobileDrawer: isMobileDrawer,
+          ),
+        if (!isMobileDrawer)
+          _buildSidebarLink(
+            icon: Icons.workspace_premium_outlined,
+            label: 'Upgrade Plan / Paket',
+            onTap: () => UpgradePlanModal.show(context),
+            isDark: isDark,
+            isCollapsed: isCollapsed,
+            isSelected: false,
+            isMobileDrawer: isMobileDrawer,
+          ),
+        _buildSidebarItem(
+          icon: Icons.settings_outlined,
+          activeIcon: Icons.settings,
+          label: 'Pengaturan',
+          index: 8,
+          theme: theme,
+          isDark: isDark,
+          isCollapsed: isCollapsed,
           isMobileDrawer: isMobileDrawer,
         ),
       ] else if (_isCreatorUser && _hasSpecificCreatorSubRole) ...[
@@ -1973,6 +2125,13 @@ class _MainNavigationState extends State<MainNavigation> {
 
     if (_currentUser.role == 'creator' || _currentUser.isCreator) {
       return _buildCreatorDashboardScreen();
+    }
+
+    if (_isCompany) {
+      return CompanyDashboardScreen(
+        user: _currentUser,
+        onUserUpdated: _onUserUpdated,
+      );
     }
 
     final subRole = (_currentUser.subRole ?? '').toLowerCase().trim();

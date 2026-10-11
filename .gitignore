@@ -20,3 +20,8 @@ phase_*_report.txt
 # OS files
 .DS_Store
 Thumbs.db
+
+# Knowledge graph outputs
+graphify-out/
+.agents/
+*graphify*.md

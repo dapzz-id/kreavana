@@ -47,6 +47,7 @@ class UserSeeder extends Seeder
                 'username' => 'corporate_demo',
                 'password' => Hash::make('password123'),
                 'role' => RoleType::User,
+                'sub_role' => 'corporate',
                 'is_creator_approved' => 0,
                 'email_verified_at' => now(),
             ]
