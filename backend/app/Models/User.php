@@ -43,9 +43,20 @@ class User extends Authenticatable implements JWTSubject
     protected function castAttribute($key, $value)
     {
         if ($key === 'sub_role') {
-            return $value !== null ? \App\Enums\CreatorSubRole::tryFrom($value) : null;
+            if ($value === null) {
+                return \App\Models\UserSubRole::where('user_id', $this->id)->where('is_active', true)->value('sub_role_slug');
+            }
+            return \App\Enums\CreatorSubRole::tryFrom($value) ?? $value;
         }
         return parent::castAttribute($key, $value);
+    }
+
+    public function getSubRoleAttribute($value)
+    {
+        if (!empty($value)) {
+            return $value;
+        }
+        return \App\Models\UserSubRole::where('user_id', $this->id)->where('is_active', true)->value('sub_role_slug');
     }
 
     public function getSubRoleLabelAttribute(): ?string

@@ -96,6 +96,18 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
             sub == 'kampus');
   }
 
+  bool get _isCompany {
+    final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
+    return !widget.user.isAdmin &&
+        (sub == 'company' ||
+            sub == 'corporate' ||
+            sub == 'business' ||
+            sub == 'perusahaan' ||
+            sub == 'bisnis' ||
+            widget.user.username == 'corporate_demo' ||
+            widget.user.email.startsWith('corporate@'));
+  }
+
   void _pushNoAnimation(Widget destination) {
     if (_sidebarScrollController.hasClients) {
       _savedSidebarScrollOffset = _sidebarScrollController.offset;
@@ -452,7 +464,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
       case 'tender_kolaborasi':
       case 'tenders':
       case 'pengadaan_vendor':
-        destination = _isSchool
+        destination = (_isSchool || _isCompany)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'tenders',
@@ -462,7 +474,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'mitra_komunitas':
       case 'partners':
-        destination = _isSchool
+        destination = (_isSchool || _isCompany)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'partners',
@@ -472,7 +484,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'laporan':
       case 'reports':
-        destination = _isSchool
+        destination = (_isSchool || _isCompany)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'reports',
@@ -482,7 +494,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'realisasi_anggaran':
       case 'budgets':
-        destination = _isSchool
+        destination = (_isSchool || _isCompany)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'budgets',
@@ -492,7 +504,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'monitoring_evaluasi':
       case 'monitoring':
-        destination = _isSchool
+        destination = (_isSchool || _isCompany)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'monitoring',
@@ -502,7 +514,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'dokumen_instansi':
       case 'documents':
-        destination = _isSchool
+        destination = (_isSchool || _isCompany)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'documents',
@@ -512,7 +524,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'pengumuman_publik':
       case 'announcements':
-        destination = _isSchool
+        destination = (_isSchool || _isCompany)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'announcements',
@@ -947,7 +959,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isCollapsed: collapsed,
                             activeColor: const Color(0xFF8B5CF6),
                           ),
-                        if (_isCreatorUser && !_isGovernment && !_isSchool)
+                        if ((_isCreatorUser || _isCompany) && !_isGovernment && !_isSchool)
                           _buildNavRow(
                             icon: Icons.explore_outlined,
                             label: 'Rekomendasi Peluang',
@@ -974,7 +986,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
-                        if (!_hasSpecificCreatorSubRole) ...[
+                        if (!_hasSpecificCreatorSubRole && !_isCompany) ...[
                           if (SystemSettingsService.isMarketplaceEnabled || widget.user.isAdmin)
                             _buildNavRow(
                               icon: Icons.storefront_outlined,
@@ -1249,6 +1261,92 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             label: 'Tim & Hak Akses',
                             onTap: () => _pushLink('tim_hak_akses'),
                             isSelected: _isRouteActive('tim_hak_akses'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                        ] else if (_isCompany) ...[
+                          if (!collapsed) ...[
+                            const SizedBox(height: 18),
+                            _buildSectionHeader('PENGELOLAAN PERUSAHAAN', isDark),
+                          ] else ...[
+                            const SizedBox(height: 8),
+                          ],
+                          _buildNavRow(
+                            icon: Icons.assignment_outlined,
+                            label: 'Pengadaan & Tender (RFP)',
+                            onTap: () => _pushLink('tender_kolaborasi'),
+                            isSelected: _isRouteActive('tender_kolaborasi'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          _buildNavRow(
+                            icon: Icons.business_center_outlined,
+                            label: 'Mitra & Vendor B2B',
+                            onTap: () => _pushLink('mitra_komunitas'),
+                            isSelected: _isRouteActive('mitra_komunitas'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          _buildNavRow(
+                            icon: Icons.verified_outlined,
+                            label: 'Otorisasi PO & MoU',
+                            onTap: () => _pushLink('dokumen_instansi'),
+                            isSelected: _isRouteActive('dokumen_instansi'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          _buildNavRow(
+                            icon: Icons.account_balance_outlined,
+                            label: 'Alokasi Anggaran & Pajak',
+                            onTap: () => _pushLink('realisasi_anggaran'),
+                            isSelected: _isRouteActive('realisasi_anggaran'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          _buildNavRow(
+                            icon: Icons.summarize_outlined,
+                            label: 'Laporan & Audit B2B',
+                            onTap: () => _pushLink('laporan'),
+                            isSelected: _isRouteActive('laporan'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          _buildNavRow(
+                            icon: Icons.storefront_outlined,
+                            label: 'Cari Kreator & Vendor',
+                            onTap: () => _pushLink('marketplace'),
+                            isSelected: _isRouteActive('marketplace'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          if (!collapsed) ...[
+                            const SizedBox(height: 18),
+                            _buildSectionHeader('LAINNYA', isDark),
+                          ] else ...[
+                            const SizedBox(height: 8),
+                          ],
+                          if (SystemSettingsService.isWalletEnabled || widget.user.isAdmin)
+                            _buildNavRow(
+                              icon: Icons.payment_outlined,
+                              label: 'Pembayaran',
+                              onTap: () => _pushLink('pembayaran'),
+                              isSelected: _isRouteActive('pembayaran'),
+                              isDark: isDark,
+                              isCollapsed: collapsed,
+                            ),
+                          _buildNavRow(
+                            icon: Icons.workspace_premium_outlined,
+                            label: 'Upgrade Plan / Paket',
+                            onTap: () => UpgradePlanModal.show(context),
+                            isSelected: false,
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          _buildNavRow(
+                            icon: Icons.settings_outlined,
+                            label: 'Pengaturan',
+                            onTap: () => _pushLink('pengaturan'),
+                            isSelected: _isRouteActive('pengaturan'),
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
