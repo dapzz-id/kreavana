@@ -30,6 +30,9 @@ class Opportunity extends Model
         'event_start_time',
         'event_end_time',
         'budget_range',
+        'external_rating',
+        'external_rating_source',
+        'external_proof_url',
         'status',
         'banner_url',
         'meeting_date',
@@ -54,6 +57,7 @@ class Opportunity extends Model
         'meeting_lat' => 'decimal:7',
         'meeting_lng' => 'decimal:7',
         'event_progress' => 'integer',
+        'external_rating' => 'decimal:2',
         'created_at' => 'datetime',
     ];
 

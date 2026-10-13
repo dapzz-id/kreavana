@@ -181,35 +181,64 @@ class _ExploreScreenState extends State<ExploreScreen>
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: Navigator.canPop(context),
-        toolbarHeight: 80,
+        automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
+        toolbarHeight: 64,
         titleSpacing: isDesktop ? 32 : 16,
         elevation: 0,
         title: const Text(
           'Jelajahi Kolaborasi',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
         ),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabAlignment: TabAlignment.center,
-          labelStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-          ),
-          tabs: [
-            const Tab(
-              icon: Icon(Icons.map_outlined, size: 18),
-              text: 'Peluang Lokasi',
-            ),
-            if (_isCreator)
-              const Tab(
-                icon: Icon(Icons.work_outline, size: 18),
-                text: 'Peluang Proyek',
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark
+                      ? AppTheme.dividerDark
+                      : AppTheme.dividerLight,
+                  width: 1,
+                ),
               ),
-            const Tab(icon: Icon(Icons.grid_view, size: 18), text: 'Semua'),
-            const Tab(icon: Icon(Icons.person_search, size: 18), text: 'Kreator'),
-          ],
+            ),
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: false,
+              indicatorColor: AppTheme.primaryPurple,
+              indicatorWeight: 3,
+              labelColor: AppTheme.primaryPurple,
+              unselectedLabelColor:
+                  isDark ? Colors.white60 : Colors.grey.shade600,
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelPadding:
+                  EdgeInsets.symmetric(horizontal: isDesktop ? 16 : 4),
+              labelStyle: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: isDesktop ? 13.5 : 12,
+              ),
+              unselectedLabelStyle: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: isDesktop ? 13.5 : 12,
+              ),
+              tabs: [
+                const Tab(
+                  icon: Icon(Icons.map_outlined, size: 18),
+                  text: 'Peluang Lokasi',
+                ),
+                if (_isCreator)
+                  const Tab(
+                    icon: Icon(Icons.work_outline, size: 18),
+                    text: 'Peluang Proyek',
+                  ),
+                const Tab(icon: Icon(Icons.grid_view, size: 18), text: 'Semua'),
+                const Tab(
+                  icon: Icon(Icons.person_search, size: 18),
+                  text: 'Kreator',
+                ),
+              ],
+            ),
+          ),
         ),
       ),
       body: TabBarView(
@@ -246,31 +275,90 @@ class _ExploreScreenState extends State<ExploreScreen>
                   ),
                 ),
               ),
-              SizedBox(
-                height: 50,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _filterOptions.length,
-                  itemBuilder: (context, index) {
-                    final opt = _filterOptions[index];
-                    final isSelected = _selectedSubRole == opt['slug'];
-                    final itemColor = _getSubRoleColor(opt['slug']!);
-
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8, top: 8),
-                      child: FilterChip(
-                        label: Text(opt['name']!),
-                        selected: isSelected,
-                        selectedColor: itemColor.withValues(alpha: 0.2),
-                        checkmarkColor: itemColor,
-                        onSelected: (_) {
-                          setState(() => _selectedSubRole = opt['slug']!);
-                          _loadOpportunities();
-                        },
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+                child: Container(
+                  height: 46,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.cardBg : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isDark
+                          ? AppTheme.inputBorder
+                          : const Color(0xFFE2E8F0),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: _selectedSubRole,
+                      icon: Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: isDark ? Colors.white70 : Colors.black54,
+                        size: 22,
                       ),
-                    );
-                  },
+                      dropdownColor: isDark
+                          ? const Color(0xFF1E1E2D)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      elevation: 4,
+                      menuMaxHeight: 380,
+                      onChanged: (newSlug) {
+                        if (newSlug != null) {
+                          setState(() => _selectedSubRole = newSlug);
+                          _loadOpportunities();
+                        }
+                      },
+                      items: _filterOptions.map((opt) {
+                        final slug = opt['slug']!;
+                        final name = opt['name']!;
+                        final isSelected = _selectedSubRole == slug;
+                        final color = _getSubRoleColor(slug);
+                        return DropdownMenuItem<String>(
+                          value: slug,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  name,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                    color: isSelected
+                                        ? (isDark
+                                            ? Colors.white
+                                            : AppTheme.primaryPurple)
+                                        : (isDark
+                                            ? Colors.white70
+                                            : Colors.black87),
+                                  ),
+                                ),
+                              ),
+                              if (isSelected)
+                                const Icon(
+                                  Icons.check_rounded,
+                                  size: 18,
+                                  color: AppTheme.primaryPurple,
+                                ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
                 ),
               ),
               Expanded(

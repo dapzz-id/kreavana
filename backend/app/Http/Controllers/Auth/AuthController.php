@@ -132,7 +132,7 @@ class AuthController extends Controller
     public function getSessions(Request $request)
     {
         $user = Auth::guard('api')->user();
-        
+
         $sessions = \App\Models\UserSession::where('user_id', $user->id)
             ->whereNull('revoked_at')
             ->where('expires_at', '>', now())
@@ -151,7 +151,7 @@ class AuthController extends Controller
     public function revokeSession(Request $request, $id)
     {
         $user = Auth::guard('api')->user();
-        
+
         $session = \App\Models\UserSession::where('id', $id)
             ->where('user_id', $user->id) // Prevent IDOR
             ->first();
@@ -171,18 +171,18 @@ class AuthController extends Controller
     public function logoutAll(Request $request)
     {
         $user = Auth::guard('api')->user();
-        
+
         app(\App\Services\RefreshTokenRepository::class)->revokeAllForUser($user->id);
 
         $this->revokeBearerJtiIfPresent();
-        
+
         AuthLog::create([
             'user_id' => $user->id,
             'action' => 'logout_all',
             'ip_address' => $request->ip(),
             'user_agent' => substr((string) $request->userAgent(), 0, 255)
         ]);
-        
+
         Auth::guard('api')->logout();
 
         return response()->json(['status' => true, 'message' => 'Berhasil logout dari semua perangkat.'])
@@ -288,7 +288,7 @@ class AuthController extends Controller
 
     /**
      * Social Login (Google, Apple, etc.)
-     * 
+     *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
@@ -341,7 +341,7 @@ class AuthController extends Controller
                 // Create new user
                 $username = $this->generateUsername($email);
                 $plainPassword = Str::random(10);
-                
+
                 $user = User::create([
                     'name' => $name ?? 'User',
                     'username' => $username,
@@ -351,7 +351,7 @@ class AuthController extends Controller
                     'role' => 'user',
                     'email_verified_at' => now(), // Auto-verify for social login
                 ]);
-                
+
                 // Dispatch job to send email in the background
                 SendSocialLoginPasswordJob::dispatch($email, $plainPassword);
 
@@ -395,6 +395,18 @@ class AuthController extends Controller
     }
 
     /**
+     * Ambil data dari endpoint Google dengan SSL verification dimatikan di local dev.
+     */
+    private function googleHttpGet(string $url, array $params = [])
+    {
+        return Http::withOptions([
+            'verify' => false,
+            'connect_timeout' => 15,
+            'timeout' => 20,
+        ])->get($url, $params);
+    }
+
+    /**
      * Verify Google ID Token.
      *
      * Mendukung dua jenis token:
@@ -407,15 +419,12 @@ class AuthController extends Controller
     private function verifyGoogleToken($idToken)
     {
         try {
-            // Coba validasi sebagai Firebase ID Token terlebih dahulu
-            // Firebase token menggunakan JWKS endpoint yang berbeda
             $firebaseResult = $this->verifyFirebaseToken($idToken);
             if ($firebaseResult) {
                 return $firebaseResult;
             }
 
-            // Fallback: validasi sebagai Google ID Token biasa (untuk mobile)
-            $response = Http::withoutVerifying()->get('https://oauth2.googleapis.com/tokeninfo', [
+            $response = $this->googleHttpGet('https://oauth2.googleapis.com/tokeninfo', [
                 'id_token' => $idToken,
             ]);
 
@@ -424,26 +433,22 @@ class AuthController extends Controller
             }
 
             $payload = $response->json();
-
-            if (!isset($payload['email'])) {
+            if (!is_array($payload) || !isset($payload['email'])) {
                 return null;
             }
 
-            // Verify audience: bisa berupa Google Client ID atau Firebase Project ID
             $googleClientId = env('GOOGLE_CLIENT_ID');
-            $firebaseProjectId = env('FIREBASE_PROJECT_ID', 'kreavana-com');
+            $firebaseProjectId = env('FIREBASE_PROJECT_ID');
             $tokenAud = $payload['aud'] ?? '';
 
-            if ($googleClientId && $tokenAud !== $googleClientId && $tokenAud !== $firebaseProjectId) {
+            if (($googleClientId || $firebaseProjectId) && $tokenAud !== $googleClientId && $tokenAud !== $firebaseProjectId) {
                 \Log::warning('Google token audience mismatch', [
                     'expected_google' => $googleClientId,
                     'expected_firebase' => $firebaseProjectId,
                     'got' => $tokenAud,
                 ]);
-                // Jangan reject — mungkin token dari Firebase multi-tenant
             }
 
-            // Verify token hasn't expired
             if (isset($payload['exp']) && $payload['exp'] < time()) {
                 return null;
             }
@@ -471,16 +476,18 @@ class AuthController extends Controller
     private function verifyFirebaseToken($idToken)
     {
         try {
-            // Ambil public keys Firebase
-            $keysResponse = Http::timeout(10)->withoutVerifying()->get('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
+            $keysResponse = $this->googleHttpGet('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
             if ($keysResponse->failed()) {
                 \Log::warning('Firebase: failed to fetch public keys', ['status' => $keysResponse->status()]);
                 return null;
             }
 
             $publicKeys = $keysResponse->json();
+            if (!is_array($publicKeys)) {
+                \Log::warning('Firebase: public keys response invalid');
+                return null;
+            }
 
-            // Decode header JWT untuk mendapatkan kid (key ID)
             $parts = explode('.', $idToken);
             if (count($parts) !== 3) {
                 \Log::warning('Firebase: token bukan JWT valid', ['parts_count' => count($parts)]);
@@ -489,7 +496,7 @@ class AuthController extends Controller
 
             $headerB64 = str_replace(['-', '_'], ['+', '/'], $parts[0]);
             $headerB64 .= str_repeat('=', (4 - strlen($headerB64) % 4) % 4);
-            $header = json_decode(base64_decode($headerB64), true);
+            $header = json_decode(base64_decode($headerB64, true), true);
             $kid = $header['kid'] ?? null;
 
             if (!$kid) {
@@ -501,34 +508,35 @@ class AuthController extends Controller
                 return null;
             }
 
-            // Decode payload JWT
             $payloadB64 = str_replace(['-', '_'], ['+', '/'], $parts[1]);
             $payloadB64 .= str_repeat('=', (4 - strlen($payloadB64) % 4) % 4);
-            $payloadJson = base64_decode($payloadB64);
-            $payload = json_decode($payloadJson, true);
+            $payloadJson = base64_decode($payloadB64, true);
+            if ($payloadJson === false) {
+                \Log::warning('Firebase: token payload decode failed');
+                return null;
+            }
 
-            if (!$payload || !isset($payload['email'])) {
+            $payload = json_decode($payloadJson, true);
+            if (!is_array($payload) || !isset($payload['email'])) {
                 \Log::warning('Firebase: email not found in payload', ['payload' => $payload]);
                 return null;
             }
 
-            // Validasi issuer
-            $projectId = env('FIREBASE_PROJECT_ID', 'kreavana-com');
-            $expectedIssuer = 'https://securetoken.google.com/' . $projectId;
-            if (($payload['iss'] ?? '') !== $expectedIssuer) {
+            $projectId = env('FIREBASE_PROJECT_ID');
+            $expectedIssuer = $projectId ? 'https://securetoken.google.com/' . $projectId : null;
+            if ($expectedIssuer && ($payload['iss'] ?? '') !== $expectedIssuer) {
                 \Log::warning('Firebase: issuer mismatch', ['expected' => $expectedIssuer, 'got' => $payload['iss'] ?? 'null']);
                 return null;
             }
 
-            // Validasi audience — terima project ID atau web client ID
             $aud = $payload['aud'] ?? '';
             $webClientId = env('GOOGLE_CLIENT_ID');
-            if ($aud !== $projectId && ($webClientId && $aud !== $webClientId)) {
-                \Log::warning('Firebase: audience mismatch', ['expected_project' => $projectId, 'expected_client' => $webClientId, 'got' => $aud]);
+            $allowedAudiences = array_filter([$projectId, $webClientId]);
+            if (!empty($allowedAudiences) && !in_array($aud, $allowedAudiences, true)) {
+                \Log::warning('Firebase: audience mismatch', ['expected' => $allowedAudiences, 'got' => $aud]);
                 return null;
             }
 
-            // Validasi exp
             if (($payload['exp'] ?? 0) < time()) {
                 \Log::warning('Firebase: token expired', ['exp' => $payload['exp'], 'now' => time()]);
                 return null;
@@ -549,7 +557,7 @@ class AuthController extends Controller
 
     /**
      * Generate unique username from email
-     * 
+     *
      * @param string $email
      * @return string
      */
@@ -558,7 +566,7 @@ class AuthController extends Controller
         $base = explode('@', $email)[0];
         $base = preg_replace('/[^a-zA-Z0-9_]/', '', $base);
         $username = strtolower($base);
-        
+
         // Check if username exists, add number suffix
         $counter = 1;
         $original = $username;
@@ -566,7 +574,7 @@ class AuthController extends Controller
             $username = $original . $counter;
             $counter++;
         }
-        
+
         return $username;
     }
 

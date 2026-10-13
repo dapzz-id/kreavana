@@ -65,6 +65,11 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   final _meetingLocationController = TextEditingController();
   final _meetingNotesController = TextEditingController();
 
+  bool _hasExternalRating = false;
+  final _externalRatingController = TextEditingController();
+  final _externalRatingSourceController = TextEditingController();
+  final _externalProofUrlController = TextEditingController();
+
   String? _bannerUrl;
   DateTime _eventStartDate = DateTime.now().add(const Duration(days: 3));
   DateTime _eventEndDate = DateTime.now().add(const Duration(days: 5));
@@ -493,6 +498,9 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
     _bannerUrlController.dispose();
     _meetingLocationController.dispose();
     _meetingNotesController.dispose();
+    _externalRatingController.dispose();
+    _externalRatingSourceController.dispose();
+    _externalProofUrlController.dispose();
     if (_requirements != null) {
       for (final item in _requirements!) {
         item.dispose();
@@ -671,6 +679,15 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
             ? _meetingNotesController.text.trim()
             : null,
         requirements: requirementsPayload,
+        externalRating: (_hasExternalRating && _externalRatingController.text.trim().isNotEmpty)
+            ? double.tryParse(_externalRatingController.text.trim())
+            : null,
+        externalRatingSource: (_hasExternalRating && _externalRatingSourceController.text.trim().isNotEmpty)
+            ? _externalRatingSourceController.text.trim()
+            : null,
+        externalProofUrl: (_hasExternalRating && _externalProofUrlController.text.trim().isNotEmpty)
+            ? _externalProofUrlController.text.trim()
+            : null,
       );
 
       if (!mounted) return;
@@ -728,7 +745,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
             constraints: const BoxConstraints(maxWidth: 860),
             child: Row(
               children: [
-                if (Navigator.canPop(context))
+                if (!isDesktop && Navigator.canPop(context))
                   InkWell(
                     borderRadius: BorderRadius.circular(10),
                     onTap: () => Navigator.pop(context),
@@ -748,7 +765,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                       ),
                     ),
                   ),
-                if (Navigator.canPop(context)) const SizedBox(width: 16),
+                if (!isDesktop && Navigator.canPop(context)) const SizedBox(width: 16),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -1030,6 +1047,9 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                           _buildMoUMeetingSection(isDark, isDesktop)
                         else
                           _buildEscrowProtectionCard(isDark),
+
+                        // ── Rekam Jejak & Rating Luar ──
+                        _buildExternalRatingSection(isDark, isDesktop),
 
                         const SizedBox(height: 36),
 
@@ -2773,6 +2793,130 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
               ),
               style: const TextStyle(fontSize: 13),
             ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Rekam Jejak & Rating Luar (Opsional) ──────────────────────────────────
+  Widget _buildExternalRatingSection(bool isDark, bool isDesktop) {
+    return Container(
+      margin: const EdgeInsets.only(top: 24),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardBg : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.star_rate_rounded, color: Color(0xFFF59E0B), size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Rekam Jejak & Rating Acara Sebelumnya (Opsional)',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Pernah mengadakan acara serupa di luar Kreavana? Cantumkan rating dan bukti publikasi untuk meyakinkan kreator bahwa acara Anda bonafit.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _hasExternalRating,
+                activeThumbColor: const Color(0xFFF59E0B),
+                onChanged: (val) => setState(() => _hasExternalRating = val),
+              ),
+            ],
+          ),
+          if (_hasExternalRating) ...[
+            const SizedBox(height: 18),
+            const Divider(height: 1),
+            const SizedBox(height: 18),
+            if (isDesktop)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 1,
+                    child: AnimatedInputField(
+                      controller: _externalRatingController,
+                      label: 'Skor Rating Luar (1.0 - 5.0)',
+                      hint: 'Contoh: 4.8',
+                      icon: Icons.star_half_rounded,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: AnimatedInputField(
+                      controller: _externalRatingSourceController,
+                      label: 'Sumber Rating / Platform',
+                      hint: 'Contoh: Google Reviews, Loket.com, Tiket.com, Survei Acara',
+                      icon: Icons.public_rounded,
+                    ),
+                  ),
+                ],
+              )
+            else ...[
+              AnimatedInputField(
+                controller: _externalRatingController,
+                label: 'Skor Rating Luar (1.0 - 5.0)',
+                hint: 'Contoh: 4.8',
+                icon: Icons.star_half_rounded,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 14),
+              AnimatedInputField(
+                controller: _externalRatingSourceController,
+                label: 'Sumber Rating / Platform',
+                hint: 'Contoh: Google Reviews, Loket.com, Tiket.com, Survei Acara',
+                icon: Icons.public_rounded,
+              ),
+            ],
+            const SizedBox(height: 14),
+            AnimatedInputField(
+              controller: _externalProofUrlController,
+              label: 'Link Bukti Publikasi / Portofolio Luar',
+              hint: 'https://instagram.com/recap_event atau link liputan berita...',
+              icon: Icons.link_rounded,
+              keyboardType: TextInputType.url,
+            ),
+          ],
         ],
       ),
     );

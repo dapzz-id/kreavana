@@ -62,7 +62,7 @@ class DashboardService extends BaseService implements DashboardServiceInterface
         return [
             'summary' => $isGuest ? $this->getGuestOverviewSummary() : $this->getOverviewSummary($userId, $roleType),
             'client_types' => $this->getClientTypes(),
-            'activity_feed' => $isGuest ? [] : $this->formatActivityFeed($this->notificationRepo->getRecentByUser($userId, 5)),
+            'activity_feed' => $isGuest ? [] : $this->getActivityFeed($userId),
             'vendor_recommendations' => $this->formatVendorRecommendations($this->userRepo->getRecommendedCreators(8)),
             'recommended_opportunities' => $recommendedOpps->map(fn($opp) => [
                 'id' => $opp->id,
@@ -248,13 +248,72 @@ class DashboardService extends BaseService implements DashboardServiceInterface
         ];
     }
 
+    protected function getActivityFeed(string $userId): array
+    {
+        $notifications = $this->notificationRepo->getRecentByUser($userId, 6);
+        if ($notifications->isNotEmpty()) {
+            return $this->formatActivityFeed($notifications);
+        }
+
+        return $this->buildFallbackActivityFeed($userId);
+    }
+
+    protected function buildFallbackActivityFeed(string $userId): array
+    {
+        $contracts = \App\Models\JobContract::query()
+            ->where('creator_id', $userId)
+            ->orWhere('client_id', $userId)
+            ->with(['creator', 'client'])
+            ->orderByDesc('updated_at')
+            ->limit(5)
+            ->get();
+
+        if ($contracts->isNotEmpty()) {
+            return $contracts->map(function ($c) {
+                $workStatusStr = is_object($c->work_status) ? $c->work_status->value : (string) $c->work_status;
+                $title = match ($workStatusStr) {
+                    'completed' => "Event & proyek '{$c->title}' berhasil diselesaikan dan dinilai",
+                    'in_progress' => "Koordinasi teknis & rundown '{$c->title}' sedang berjalan",
+                    'review' => "Pengajuan review berkas & hasil '{$c->title}' telah dikirim",
+                    'pending' => "Penawaran paket event '{$c->title}' dalam tahap konfirmasi",
+                    default => "Pembaruan status operasional event '{$c->title}'",
+                };
+
+                return [
+                    'title' => $title,
+                    'subtitle' => "Status: " . ucfirst(str_replace('_', ' ', $workStatusStr)),
+                    'type' => 'contract',
+                    'time' => $c->updated_at ? $c->updated_at->diffForHumans() : 'Hari ini',
+                    'timestamp' => $c->updated_at?->toIso8601String() ?? now()->toIso8601String(),
+                ];
+            })->toArray();
+        }
+
+        return [
+            [
+                'title' => 'Sistem operasional dan sinkronisasi vendor siap digunakan',
+                'subtitle' => 'Dashboard event organizer aktif',
+                'type' => 'system',
+                'time' => 'Hari ini',
+                'timestamp' => now()->toIso8601String(),
+            ],
+            [
+                'title' => 'Kalender pelaksanaan event dan alokasi anggaran aktif',
+                'subtitle' => 'Pantau timeline dan agenda terkini',
+                'type' => 'system',
+                'time' => 'Hari ini',
+                'timestamp' => now()->toIso8601String(),
+            ],
+        ];
+    }
+
     protected function formatActivityFeed($notifications): array
     {
         return $notifications->map(function ($notification) {
             return [
                 'title' => $notification->title,
                 'subtitle' => $notification->message,
-                'type' => $notification->type,
+                'type' => is_object($notification->type) ? $notification->type->value : (string) $notification->type,
                 'time' => $notification->created_at?->diffForHumans() ?? 'Baru saja',
                 'timestamp' => $notification->created_at?->toIso8601String(),
             ];

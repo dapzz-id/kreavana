@@ -444,12 +444,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: List.generate(6, (index) {
-                                  return Expanded(
-                                    child: Padding(
-                                      padding: EdgeInsets.only(
-                                        left: index == 0 ? 0 : 5,
-                                        right: index == 5 ? 0 : 5,
-                                      ),
+                                  return Padding(
+                                    padding: EdgeInsets.only(
+                                      left: index == 0 ? 0 : 6,
+                                      right: index == 5 ? 0 : 6,
+                                    ),
+                                    child: SizedBox(
+                                      width: 36,
                                       child: KeyboardListener(
                                         focusNode: FocusNode(),
                                         onKeyEvent: (event) =>
@@ -615,7 +616,7 @@ class _OtpBox extends StatelessWidget {
 
         return AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          height: 58,
+          height: 48,
           decoration: BoxDecoration(
             color: isDark ? AppTheme.inputDark : AppTheme.inputLight,
             borderRadius: BorderRadius.circular(AppTheme.radiusSM),
@@ -641,10 +642,10 @@ class _OtpBox extends StatelessWidget {
         maxLength: 6, // Allow paste of full code
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         style: TextStyle(
-          fontSize: 22,
+          fontSize: 18,
           fontWeight: FontWeight.w800,
           color: theme.colorScheme.onSurface,
-          letterSpacing: 2,
+          letterSpacing: 0,
         ),
         decoration: const InputDecoration(
           counterText: '',

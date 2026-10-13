@@ -12,6 +12,10 @@ import '../widgets/creator_availability_widget.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import '../models/job_contract.dart';
 import '../services/job_contract_service.dart';
+import '../widgets/app_breadcrumbs.dart';
+import 'main_navigation.dart';
+import 'direct_message_screen.dart';
+import '../features/dashboard/screens/community_dashboard_screen.dart';
 
 const _reviewableCreatorPackageKeys = {
   'foto_paket',
@@ -163,6 +167,12 @@ class CreatorLocalStorage {
   static Future<Set<String>> getSubmittedItems() => _loadStringSet(_kSubmitted);
   static Future<void> setSubmittedItems(Set<String> ids) =>
       _saveStringSet(_kSubmitted, ids);
+
+  static const _kCompletedTimeline = '${_prefix}completed_timeline_v1';
+  static Future<Set<String>> getCompletedTimelineItems() =>
+      _loadStringSet(_kCompletedTimeline);
+  static Future<void> setCompletedTimelineItems(Set<String> ids) =>
+      _saveStringSet(_kCompletedTimeline, ids);
 
   static Future<
     List<
@@ -485,33 +495,140 @@ class CreatorServiceData {
     'eo_paket': CreatorServiceData(
       key: 'eo_paket',
       title: 'Paket Event',
-      subtitle: 'Paket penyelenggaraan event',
+      subtitle: 'Paket penyelenggaraan event profesional',
       icon: Icons.festival_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      actionLabel: 'Ajukan Paket',
+      actionLabel: 'Buat Paket Baru',
     ),
     'eo_jadwal': CreatorServiceData(
       key: 'eo_jadwal',
       title: 'Jadwal Event',
-      subtitle: 'Jadwal event yang ditangani',
+      subtitle: 'Jadwal dan agenda acara yang ditangani',
       icon: Icons.calendar_today_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-      actionLabel: 'Kelola Jadwal',
+      actionLabel: 'Tambah Jadwal',
+      items: [
+        CreatorServiceItem(
+          id: 'j-1',
+          title: 'National Tech Startup Pitch Day & Expo 2026',
+          subtitle: 'Jakarta Convention Center • 28 Okt 2026, 08:00 - 18:00 WIB',
+          icon: Icons.event_available_outlined,
+          tag: 'Aktif',
+          value: 'Rp 65.000.000',
+          active: true,
+        ),
+        CreatorServiceItem(
+          id: 'j-2',
+          title: 'Annual Gala Dinner & Awarding Night BUMN 2026',
+          subtitle: 'Grand Ballroom Hotel Mulia • 15 Nov 2026, 19:00 - 22:30 WIB',
+          icon: Icons.celebration_outlined,
+          tag: 'Berjalan',
+          value: 'Rp 45.000.000',
+          active: true,
+        ),
+        CreatorServiceItem(
+          id: 'j-3',
+          title: 'Youth Music & Art Creative Festival',
+          subtitle: 'Stadion Madya GBK • 10 Des 2026, 13:00 - 23:00 WIB',
+          icon: Icons.music_note_outlined,
+          tag: 'Menunggu',
+          value: 'Rp 80.000.000',
+          active: false,
+        ),
+      ],
     ),
     'eo_vendor': CreatorServiceData(
       key: 'eo_vendor',
       title: 'Vendor Partner',
-      subtitle: 'Jaringan vendor event',
+      subtitle: 'Jaringan mitra vendor panggung, sound, lighting, dan katering',
       icon: Icons.handshake_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
+      actionLabel: 'Tambah Vendor',
+      items: [
+        CreatorServiceItem(
+          id: '01a0d6c1-64d5-7196-9c3c-af3580eccef5',
+          title: 'PT Audio Kreasi Pro & Acoustic System',
+          subtitle: 'Vendor sound system konser 30.000 watt, line array & mic wireless audio',
+          icon: Icons.speaker_group_outlined,
+          tag: 'Mitra VIP',
+          value: 'Rp 15.000.000',
+          active: true,
+        ),
+        CreatorServiceItem(
+          id: '01a0d6c1-636e-71dd-beb6-a4210fb07ffb',
+          title: 'Visual Prima Nusantara Stage & LED Videotron',
+          subtitle: 'LED screen videotron P3.9 indoor 12x4 meter, rigging aluminium & moving beam',
+          icon: Icons.tv_outlined,
+          tag: 'Mitra VIP',
+          value: 'Rp 28.000.000',
+          active: true,
+        ),
+        CreatorServiceItem(
+          id: '01a0d6c1-620b-70c9-a2c7-ba80501c8f12',
+          title: 'Royal Rasa Boga Catering & Hospitality',
+          subtitle: 'Katering prasmanan 600 porsi VIP & reguler, coffee break buffet nusantara',
+          icon: Icons.restaurant_outlined,
+          tag: 'Mitra Aktif',
+          value: 'Rp 18.500.000',
+          active: true,
+        ),
+        CreatorServiceItem(
+          id: '01a0d6c1-60a3-727c-b1da-3c7be8aad5bd',
+          title: 'Kreavana Media Multicam Live Streaming',
+          subtitle: 'Broadcasting 4 kamera Sony FX3, drone live feed, switcher Blackmagic Atem Mini',
+          icon: Icons.videocam_outlined,
+          tag: 'Mitra Aktif',
+          value: 'Rp 9.500.000',
+          active: true,
+        ),
+      ],
     ),
     // ─── Komunitas ─────────────────────────────────────────────────
     'eo_timeline': CreatorServiceData(
       key: 'eo_timeline',
       title: 'Timeline EO',
-      subtitle: 'Alur kerja penyelenggaraan event',
+      subtitle: 'Alur kerja dan tahapan produksi penyelenggaraan event profesional',
       icon: Icons.timeline_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
+      actionLabel: 'Tambah Tahapan',
+      items: [
+        CreatorServiceItem(
+          id: 't-1',
+          title: 'Finalisasi Rundown, Script MC & Artist Rider',
+          subtitle: 'Briefing internal panitia, koordinasi guest star, timekeeper sheet, dan technical rundown',
+          icon: Icons.assignment_turned_in_outlined,
+          tag: 'Selesai',
+          value: '100%',
+          active: true,
+        ),
+        CreatorServiceItem(
+          id: 't-2',
+          title: 'Loading Logistik, Stage Rigging & Sound Check',
+          subtitle: 'Setup panggung 14x8m, instalasi videotron, testing tata suara 30.000 watt & lighting show',
+          icon: Icons.build_circle_outlined,
+          tag: 'Sedang Berjalan',
+          value: '75%',
+          active: true,
+        ),
+        CreatorServiceItem(
+          id: 't-3',
+          title: 'Gladi Resik & Technical Meeting Show Director',
+          subtitle: 'Simulasi rundown menit ke menit bersama MC, penampil musik, tim keamanan, dan kru multimedia',
+          icon: Icons.sports_score_outlined,
+          tag: 'Persiapan',
+          value: '40%',
+          active: true,
+        ),
+        CreatorServiceItem(
+          id: 't-4',
+          title: 'D-Day Show Execution, Registration & VIP Hospitality',
+          subtitle: 'Open gate, ticketing QR check-in, live multicam broadcast, dan monitoring stage controller',
+          icon: Icons.festival_outlined,
+          tag: 'Mendatang',
+          value: '10%',
+          active: false,
+        ),
+      ],
     ),
     'komunitas_anggota': CreatorServiceData(
       key: 'komunitas_anggota',
@@ -697,10 +814,12 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
   String _selectedFilter = 'Semua';
+  String _selectedEoStatus = 'Semua';
   String _selectedSort = 'Terbaru';
   final Set<int> _savedItems = {};
   final Set<int> _likedItems = {};
   final Map<String, List<CreatorServiceItem>> _extraItems = {};
+  Set<String> _completedTimelineIds = {};
   List<CreatorServiceItem> _eoPackages = [];
   bool _isLoadingEoPackages = true;
   List<CreatorServiceItem> _bookingContracts = [];
@@ -731,7 +850,10 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     }
     final extras = _extraItems[base.key] ?? const [];
     if (_creatorBookingKeys.contains(base.key)) {
-      final allBookings = [..._bookingContracts, ...extras];
+      final allBookings = [
+        if (_bookingContracts.isNotEmpty) ..._bookingContracts else ...base.items,
+        ...extras,
+      ];
       return CreatorServiceData(
         key: base.key,
         title: base.title,
@@ -748,6 +870,42 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
         actionLabel: base.actionLabel,
       );
     }
+    final combinedItems = [
+      ...base.items.map((i) {
+        final id = i.id ?? i.title;
+        if (base.key == 'eo_timeline' && _completedTimelineIds.contains(id)) {
+          return CreatorServiceItem(
+            id: i.id,
+            title: i.title,
+            subtitle: i.subtitle,
+            icon: Icons.assignment_turned_in_outlined,
+            tag: 'Selesai',
+            value: '100%',
+            active: true,
+            gradient: i.gradient,
+            thumbnailUrl: i.thumbnailUrl,
+          );
+        }
+        return i;
+      }),
+      ...extras.map((i) {
+        final id = i.id ?? i.title;
+        if (base.key == 'eo_timeline' && _completedTimelineIds.contains(id)) {
+          return CreatorServiceItem(
+            id: i.id,
+            title: i.title,
+            subtitle: i.subtitle,
+            icon: Icons.assignment_turned_in_outlined,
+            tag: 'Selesai',
+            value: '100%',
+            active: true,
+            gradient: i.gradient,
+            thumbnailUrl: i.thumbnailUrl,
+          );
+        }
+        return i;
+      }),
+    ];
     return CreatorServiceData(
       key: base.key,
       title: base.title,
@@ -755,11 +913,11 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       icon: base.icon,
       gradient: base.gradient,
       stats: [
-        ('${extras.length}', 'Total Item', Icons.grid_view_outlined),
-        ('${extras.where((i) => i.active).length}', 'Aktif', Icons.check_circle_outline),
+        ('${combinedItems.length}', 'Total Item', Icons.grid_view_outlined),
+        ('${combinedItems.where((i) => i.active).length}', 'Aktif', Icons.check_circle_outline),
         ('Live', 'Status', Icons.fiber_manual_record_outlined),
       ],
-      items: extras,
+      items: combinedItems,
       isGrid: base.isGrid,
       actionLabel: base.actionLabel,
     );
@@ -935,6 +1093,12 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       if (_creatorBookingKeys.contains(widget.serviceKey)) {
         await _loadBookingContracts();
       }
+      if (widget.serviceKey == 'eo_timeline') {
+        final completed = await CreatorLocalStorage.getCompletedTimelineItems();
+        if (mounted && completed.isNotEmpty) {
+          setState(() => _completedTimelineIds = completed);
+        }
+      }
       final extras = await CreatorLocalStorage.getExtraItems(widget.serviceKey);
       final saved = await CreatorLocalStorage.getSavedItems();
       final submitted = await CreatorLocalStorage.getSubmittedItems();
@@ -1073,6 +1237,201 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     return null;
   }
 
+  Future<void> _handleResubmitPackage(CreatorServiceItem item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final dark = Theme.of(ctx).brightness == Brightness.dark;
+        return AlertDialog(
+          backgroundColor: dark ? AppTheme.cardDark2 : Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.refresh_rounded,
+                  color: Color(0xFFEF4444),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Ajukan Ulang Paket?',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Paket "${item.title}" akan diajukan ulang ke admin untuk peninjauan. Status akan berubah menjadi "Menunggu Review".',
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.4,
+              color: dark ? AppTheme.textMuted : Colors.grey.shade700,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(
+                'Batal',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryPurple,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+              ),
+              child: const Text(
+                'Ya, Ajukan Ulang',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    final price = double.tryParse(
+          item.value?.replaceAll(RegExp(r'[^0-9]'), '') ?? '',
+        ) ??
+        0;
+
+    String cleanDesc = item.subtitle;
+    if (cleanDesc.contains('Catatan admin:') ||
+        cleanDesc.contains('catatan admin:')) {
+      final parts = cleanDesc.split(
+        RegExp(r'[•·]\s*Catatan admin:\s*', caseSensitive: false),
+      );
+      if (parts.isNotEmpty) {
+        cleanDesc = parts[0].trim();
+      }
+    }
+
+    try {
+      final res = await ApiService.put(
+        'creator-services/${item.id}',
+        {
+          'title': item.title,
+          'description': cleanDesc,
+          'price': price,
+          'category': 'creator_package',
+          'package_type': widget.serviceKey,
+        },
+      );
+
+      if (res['status'] == true) {
+        if (mounted) {
+          AppSnackbar.success(
+            context,
+            'Paket "${item.title}" berhasil diajukan ulang ke admin.',
+            title: 'Pengajuan Terkirim',
+          );
+        }
+        await _loadCreatorPackages();
+      } else {
+        if (mounted) {
+          AppSnackbar.error(
+            context,
+            res['message']?.toString() ?? 'Gagal mengajukan ulang paket.',
+            title: 'Gagal Mengajukan Ulang',
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        AppSnackbar.error(
+          context,
+          'Terjadi kesalahan saat mengajukan ulang.',
+          title: 'Kesalahan Jaringan',
+        );
+      }
+    }
+  }
+
+  Future<void> _handleConfirmSchedule(CreatorServiceItem item) async {
+    final contractId = item.id;
+    if (contractId == null || contractId.isEmpty) {
+      AppSnackbar.warning(
+        context,
+        'ID kontrak agenda tidak ditemukan.',
+        title: 'Gagal Konfirmasi',
+      );
+      return;
+    }
+
+    try {
+      final success = await JobContractService.confirmSchedule(contractId);
+      if (success) {
+        if (mounted) {
+          AppSnackbar.success(
+            context,
+            'Jadwal agenda "${item.title}" berhasil dikonfirmasi dan status diperbarui.',
+            title: 'Jadwal Dikonfirmasi',
+          );
+          await _loadBookingContracts();
+        }
+      } else {
+        if (mounted) {
+          AppSnackbar.error(
+            context,
+            'Gagal mengonfirmasi jadwal agenda ke server.',
+            title: 'Gagal',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.error(
+          context,
+          'Terjadi kesalahan saat mengonfirmasi jadwal: $e',
+          title: 'Kesalahan Sistem',
+        );
+      }
+    }
+  }
+
+  void _handleCompleteTimeline(CreatorServiceItem item) {
+    final itemId = item.id ?? item.title;
+    setState(() {
+      _completedTimelineIds.add(itemId);
+    });
+    CreatorLocalStorage.setCompletedTimelineItems(_completedTimelineIds);
+    AppSnackbar.success(
+      context,
+      'Tahapan "${item.title}" berhasil ditandai selesai (100%).',
+      title: 'Progres Diperbarui',
+    );
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -1090,6 +1449,15 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (widget.serviceKey.startsWith('komunitas_')) {
+      return CommunityDashboardScreen(
+        user: widget.user,
+        initialServiceKey: widget.serviceKey,
+        onUserUpdated: widget.onUserUpdated ?? (_) {},
+        showSidebar: true,
+      );
+    }
+
     final data = _data;
     if (data == null) {
       return const Scaffold(
@@ -1108,11 +1476,14 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
 
   Widget _buildContent(BuildContext context, CreatorServiceData data) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDesktop = MediaQuery.of(context).size.width > 900;
     return Scaffold(
       backgroundColor: _isEoMenu
-          ? (isDark ? AppTheme.surfaceDark : const Color(0xFFF4F6F8))
+          ? (isDark ? AppTheme.surfaceDark : const Color(0xFFF7F8FC))
           : null,
-      appBar: AppBar(
+      appBar: _isEoMenu
+          ? null
+          : AppBar(
         toolbarHeight: _isEoMenu ? 64 : 75,
         backgroundColor: _isEoMenu
             ? (isDark ? AppTheme.cardDark : Colors.white)
@@ -1168,10 +1539,13 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                   ),
                 ],
               ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
+        leading: (!isDesktop && Navigator.canPop(context))
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
         actions: _isEoMenu
             ? const []
             : [
@@ -1427,508 +1801,1315 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                 ],
               ),
             ),
-      floatingActionButton: _isEoMenu || _isCreatorPackage
-          ? FloatingActionButton.extended(
-              onPressed: () => _showDetail(context, data, null),
-              backgroundColor: AppTheme.primaryPurple,
-              foregroundColor: Colors.white,
-              elevation: 2,
-              icon: const Icon(Icons.add),
-              label: Text(
-                _isCreatorPackage ? 'Ajukan Paket' : data.actionLabel,
-              ),
-            )
-          : _buildFAB(context, data),
+      floatingActionButton: _isEoMenu
+          ? (!isDesktop
+              ? FloatingActionButton.extended(
+                  onPressed: () => _showDetail(context, data, null),
+                  backgroundColor: AppTheme.primaryPurple,
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  icon: const Icon(Icons.add),
+                  label: Text(
+                    _isCreatorPackage ? 'Ajukan Paket' : data.actionLabel,
+                  ),
+                )
+              : null)
+          : (_isCreatorPackage
+              ? FloatingActionButton.extended(
+                  onPressed: () => _showDetail(context, data, null),
+                  backgroundColor: AppTheme.primaryPurple,
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Ajukan Paket'),
+                )
+              : _buildFAB(context, data)),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
   Widget _buildEoMenuBody(BuildContext context, CreatorServiceData data) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final mutedColor = isDark ? AppTheme.textMuted : Colors.grey.shade600;
-    final stats = _reviewableCreatorPackageKeys.contains(data.key)
-        ? [
-            (
-              '${_eoPackages.where((item) => item.active).length}',
-              'Tayang Publik',
-              Icons.public_outlined,
-            ),
-            (
-              '${_eoPackages.where((item) => item.tag == 'Menunggu Review').length}',
-              'Menunggu Review',
-              Icons.pending_actions_outlined,
-            ),
-            (
-              '${_eoPackages.length}',
-              'Total Paket',
-              Icons.card_membership_outlined,
-            ),
-          ]
-        : data.stats;
+    final isDesktop = MediaQuery.of(context).size.width > 900;
+    final screenWidth = MediaQuery.of(context).size.width;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final contentWidth = constraints.maxWidth < 800
-            ? constraints.maxWidth
-            : 1160.0;
+    final allItems = data.items;
+    final filteredItems = _getFilteredEoItems(data);
 
-        return Align(
+    return RefreshIndicator(
+      onRefresh: _refreshEoData,
+      color: AppTheme.primaryPurple,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Align(
           alignment: Alignment.topCenter,
-          child: SizedBox(
-            width: contentWidth,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 96),
-              children: [
-                Text(
-                  switch (data.key) {
-                    'eo_paket' => 'Kelola penawaran event',
-                    'eo_jadwal' => 'Pantau agenda acara',
-                    'eo_vendor' => 'Kelola mitra vendor',
-                    'eo_timeline' => 'Pantau progres persiapan',
-                    _ => data.title,
-                  },
-                  style: TextStyle(
-                    fontSize: constraints.maxWidth < 600 ? 20 : 24,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : AppTheme.textDark,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  data.subtitle,
-                  style: TextStyle(fontSize: 14, color: mutedColor),
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isDark ? AppTheme.cardBg : Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: isDark
-                          ? AppTheme.inputBorder
-                          : const Color(0xFFE7E9ED),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      for (var i = 0; i < stats.length; i++) ...[
-                        if (i > 0)
-                          Container(
-                            width: 1,
-                            height: 38,
-                            margin: const EdgeInsets.symmetric(horizontal: 16),
-                            color: isDark
-                                ? AppTheme.inputBorder
-                                : const Color(0xFFE1E4E8),
-                          ),
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Icon(
-                                stats[i].$3,
-                                size: 18,
-                                color: isDark
-                                    ? AppTheme.textMuted
-                                    : const Color(0xFF60717D),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1260),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                isDesktop ? 32 : 16,
+                isDesktop ? 32 : 16,
+                isDesktop ? 32 : 16,
+                isDesktop ? 60 : 100,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Breadcrumbs ──
+                  AppBreadcrumbs(
+                    items: [
+                      BreadcrumbItem(
+                        label: 'Beranda',
+                        icon: Icons.home_rounded,
+                        onTap: () {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => MainNavigation(
+                                initialUser: widget.user,
+                                initialIndex: 0,
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      stats[i].$1,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w600,
-                                        color: isDark
-                                            ? Colors.white
-                                            : AppTheme.textDark,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      stats[i].$2,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: mutedColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                            ),
+                            (r) => false,
+                          );
+                        },
+                      ),
+                      const BreadcrumbItem(
+                        label: 'Layanan EO',
+                        icon: Icons.festival_rounded,
+                      ),
+                      BreadcrumbItem(
+                        label: data.title,
+                        icon: data.icon,
+                      ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 18),
-                TextField(
-                  controller: _searchController,
-                  onChanged: (value) => setState(() => _query = value),
-                  decoration: InputDecoration(
-                    hintText: 'Cari ${data.title.toLowerCase()}...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    isDense: true,
-                    filled: true,
-                    fillColor: isDark ? AppTheme.cardBg : Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: isDark
-                            ? AppTheme.inputBorder
-                            : Colors.grey.shade300,
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: isDark
-                            ? AppTheme.inputBorder
-                            : Colors.grey.shade300,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        data.key == 'eo_jadwal'
-                            ? 'Daftar jadwal'
-                            : data.key == 'eo_timeline'
-                            ? 'Tahapan pekerjaan'
-                            : data.key == 'eo_vendor'
-                            ? 'Daftar vendor'
-                            : 'Daftar paket',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white : AppTheme.textDark,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '${_filteredItems.length} item',
-                      style: TextStyle(fontSize: 12, color: mutedColor),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                if (_isLoadingEoPackages &&
-                    _reviewableCreatorPackageKeys.contains(data.key))
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 32),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (_filteredItems.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 32),
-                    child: Text(
-                      _reviewableCreatorPackageKeys.contains(data.key)
-                          ? 'Belum ada paket. Ajukan paket baru untuk mulai.'
-                          : 'Tidak ada data yang cocok dengan pencarian.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: mutedColor),
-                    ),
-                  )
-                else
-                  ..._filteredItems.indexed.map(
-                    (entry) => _buildEoListItem(
-                      context,
+                  const SizedBox(height: 8),
+
+                  // ── Header Desktop & Mobile ──
+                  _buildEoHeader(data, isDark, isDesktop),
+                  const SizedBox(height: 24),
+
+                  // ── KPI Summary Cards ──
+                  _buildEoSummaryMetrics(data, allItems, isDark, isDesktop),
+                  const SizedBox(height: 24),
+
+                  // ── Search & Filter Controls ──
+                  _buildEoSearchAndFilters(data, allItems, isDark, isDesktop),
+                  const SizedBox(height: 20),
+
+                  // ── Content Grid or Empty State ──
+                  if (_isLoadingEoPackages &&
+                      _reviewableCreatorPackageKeys.contains(data.key))
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 60),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (filteredItems.isEmpty)
+                    _buildEoEmptyState(isDark)
+                  else
+                    _buildEoProjectsGrid(
+                      filteredItems,
                       data,
-                      entry.$2,
-                      entry.$1,
                       isDark,
+                      isDesktop,
+                      screenWidth,
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  Widget _buildEoListItem(
+  Future<void> _refreshEoData() async {
+    if (_reviewableCreatorPackageKeys.contains(widget.serviceKey)) {
+      await _loadCreatorPackages();
+    }
+    if (_creatorBookingKeys.contains(widget.serviceKey)) {
+      await _loadBookingContracts();
+    }
+    await _loadPersistedState();
+  }
+
+  List<CreatorServiceItem> _getFilteredEoItems(CreatorServiceData data) {
+    var items = List<CreatorServiceItem>.from(data.items);
+    if (_selectedEoStatus != 'Semua') {
+      final s = _selectedEoStatus.toLowerCase();
+      items = items.where((item) {
+        final tag = (item.tag ?? '').toLowerCase();
+        if (s == 'tayang publik') {
+          return tag.contains('tayang') || item.active;
+        } else if (s == 'menunggu review' || s == 'menunggu') {
+          return tag.contains('menunggu') || tag.contains('pending');
+        } else if (s == 'ditolak') {
+          return tag.contains('ditolak') || tag.contains('rejected');
+        } else if (s == 'aktif' || s == 'mitra aktif' || s == 'jadwal aktif') {
+          return tag.contains('aktif') || item.active;
+        } else if (s == 'berjalan' || s == 'sedang berjalan') {
+          return tag.contains('berjalan');
+        } else if (s == 'selesai') {
+          return tag.contains('selesai') || item.value == '100%';
+        } else if (s == 'persiapan') {
+          return tag.contains('persiapan');
+        } else if (s == 'mitra vip') {
+          return tag.contains('vip');
+        } else if (s == 'reguler' || s == 'mitra reguler') {
+          return tag.contains('reguler');
+        } else if (s == 'mendatang') {
+          return tag.contains('mendatang');
+        }
+        return tag == s;
+      }).toList();
+    }
+    if (_query.trim().isNotEmpty) {
+      final q = _query.toLowerCase();
+      items = items.where((i) {
+        return i.title.toLowerCase().contains(q) ||
+            i.subtitle.toLowerCase().contains(q) ||
+            (i.tag?.toLowerCase().contains(q) ?? false) ||
+            (i.value?.toLowerCase().contains(q) ?? false);
+      }).toList();
+    }
+    return items;
+  }
+
+  Widget _buildEoHeader(CreatorServiceData data, bool isDark, bool isDesktop) {
+    final titleText = switch (data.key) {
+      'eo_paket' => 'Kelola Penawaran Event',
+      'eo_jadwal' => 'Jadwal & Agenda Event',
+      'eo_vendor' => 'Vendor Partner & Mitra',
+      'eo_timeline' => 'Timeline & Progres EO',
+      _ => data.title,
+    };
+
+    final subtitleText = switch (data.key) {
+      'eo_paket' =>
+        'Pantau penawaran paket, pengajuan review, dan status tayang publik Anda.',
+      'eo_jadwal' =>
+        'Pantau kalender pelaksanaan event, jadwal gladi resik, dan hari penyelenggaraan.',
+      'eo_vendor' =>
+        'Kelola kemitraan vendor panggung, tata suara, videotron LED, katering, dan lighting.',
+      'eo_timeline' =>
+        'Pantau alur kerja tahapan persiapan, rundown produksi, dan progres eksekusi event Anda.',
+      _ => data.subtitle,
+    };
+
+    final actionLabel = switch (data.key) {
+      'eo_paket' => 'Buat Paket Baru',
+      'eo_jadwal' => 'Tambah Jadwal',
+      'eo_vendor' => 'Tambah Vendor',
+      'eo_timeline' => 'Tambah Tahapan',
+      _ => data.actionLabel,
+    };
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        if (!isDesktop && Navigator.canPop(context))
+          Padding(
+            padding: const EdgeInsets.only(right: 14),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.cardBg : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                  ),
+                ),
+                child: Icon(
+                  Icons.arrow_back_rounded,
+                  size: 20,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+            ),
+          ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                titleText,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitleText,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.refresh_rounded),
+          onPressed: _refreshEoData,
+          tooltip: 'Segarkan data realtime',
+          style: IconButton.styleFrom(
+            backgroundColor: isDark ? AppTheme.cardBg : Colors.white,
+            side: BorderSide(
+              color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        ),
+        if (isDesktop) ...[
+          const SizedBox(width: 12),
+          ElevatedButton.icon(
+            onPressed: () => _showDetail(context, data, null),
+            icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+            label: Text(
+              actionLabel,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryPurple,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  List<Map<String, dynamic>> _getEoMetricOptions(
+    CreatorServiceData data,
+    List<CreatorServiceItem> allItems,
+  ) {
+    switch (data.key) {
+      case 'eo_paket':
+        final total = allItems.length;
+        final tayang = allItems
+            .where(
+              (i) =>
+                  (i.tag?.toLowerCase().contains('tayang') ?? false) ||
+                  i.active,
+            )
+            .length;
+        final menunggu = allItems
+            .where((i) => i.tag?.toLowerCase().contains('menunggu') ?? false)
+            .length;
+        final ditolak = allItems
+            .where((i) => i.tag?.toLowerCase().contains('ditolak') ?? false)
+            .length;
+        return [
+          {
+            'status': 'Semua',
+            'label': 'Total Paket',
+            'value': '$total',
+            'icon': Icons.folder_special_rounded,
+            'color': const Color(0xFF6366F1),
+          },
+          {
+            'status': 'Tayang Publik',
+            'label': 'Tayang Publik',
+            'value': '$tayang',
+            'icon': Icons.public_rounded,
+            'color': const Color(0xFF10B981),
+          },
+          {
+            'status': 'Menunggu Review',
+            'label': 'Menunggu Review',
+            'value': '$menunggu',
+            'icon': Icons.hourglass_top_rounded,
+            'color': const Color(0xFFF59E0B),
+          },
+          {
+            'status': 'Ditolak',
+            'label': 'Ditolak',
+            'value': '$ditolak',
+            'icon': Icons.cancel_outlined,
+            'color': const Color(0xFFEF4444),
+          },
+        ];
+      case 'eo_jadwal':
+        final total = allItems.length;
+        final aktif = allItems
+            .where(
+              (i) =>
+                  (i.tag?.toLowerCase().contains('aktif') ?? false) ||
+                  i.active,
+            )
+            .length;
+        final berjalan = allItems
+            .where((i) => i.tag?.toLowerCase().contains('berjalan') ?? false)
+            .length;
+        final menunggu = allItems
+            .where((i) => i.tag?.toLowerCase().contains('menunggu') ?? false)
+            .length;
+        final selesai = allItems
+            .where(
+              (i) =>
+                  (i.tag?.toLowerCase().contains('selesai') ?? false) ||
+                  !i.active,
+            )
+            .length;
+        return [
+          {
+            'status': 'Semua',
+            'label': 'Total Agenda',
+            'value': '$total',
+            'icon': Icons.calendar_month_rounded,
+            'color': const Color(0xFF6366F1),
+          },
+          {
+            'status': 'Aktif',
+            'label': 'Jadwal Aktif',
+            'value': '$aktif',
+            'icon': Icons.event_available_rounded,
+            'color': const Color(0xFF10B981),
+          },
+          {
+            'status': 'Berjalan',
+            'label': 'Sedang Berjalan',
+            'value': '$berjalan',
+            'icon': Icons.trending_up_rounded,
+            'color': const Color(0xFF8B5CF6),
+          },
+          {
+            'status': 'Menunggu',
+            'label': 'Menunggu Konfirmasi',
+            'value': '$menunggu',
+            'icon': Icons.hourglass_top_rounded,
+            'color': const Color(0xFFF59E0B),
+          },
+          {
+            'status': 'Selesai',
+            'label': 'Selesai',
+            'value': '$selesai',
+            'icon': Icons.check_circle_rounded,
+            'color': const Color(0xFF3B82F6),
+          },
+        ];
+      case 'eo_vendor':
+        final total = allItems.length;
+        final vip = allItems
+            .where((i) => i.tag?.toLowerCase().contains('vip') ?? false)
+            .length;
+        final aktif = allItems
+            .where(
+              (i) =>
+                  (i.tag?.toLowerCase().contains('aktif') ?? false) ||
+                  i.active,
+            )
+            .length;
+        final reguler = allItems
+            .where((i) => i.tag?.toLowerCase().contains('reguler') ?? false)
+            .length;
+        return [
+          {
+            'status': 'Semua',
+            'label': 'Total Mitra',
+            'value': '$total',
+            'icon': Icons.handshake_rounded,
+            'color': const Color(0xFF6366F1),
+          },
+          {
+            'status': 'Mitra VIP',
+            'label': 'Mitra VIP',
+            'value': '$vip',
+            'icon': Icons.workspace_premium_rounded,
+            'color': const Color(0xFF8B5CF6),
+          },
+          {
+            'status': 'Mitra Aktif',
+            'label': 'Mitra Aktif',
+            'value': '$aktif',
+            'icon': Icons.verified_rounded,
+            'color': const Color(0xFF10B981),
+          },
+          {
+            'status': 'Mitra Reguler',
+            'label': 'Mitra Reguler',
+            'value': '$reguler',
+            'icon': Icons.groups_rounded,
+            'color': const Color(0xFF3B82F6),
+          },
+        ];
+      case 'eo_timeline':
+        final total = allItems.length;
+        final selesai = allItems
+            .where(
+              (i) =>
+                  (i.tag?.toLowerCase().contains('selesai') ?? false) ||
+                  i.value == '100%',
+            )
+            .length;
+        final berjalan = allItems
+            .where((i) => i.tag?.toLowerCase().contains('berjalan') ?? false)
+            .length;
+        final persiapan = allItems
+            .where((i) => i.tag?.toLowerCase().contains('persiapan') ?? false)
+            .length;
+        final mendatang = allItems
+            .where((i) => i.tag?.toLowerCase().contains('mendatang') ?? false)
+            .length;
+        return [
+          {
+            'status': 'Semua',
+            'label': 'Total Tahapan',
+            'value': '$total',
+            'icon': Icons.timeline_rounded,
+            'color': const Color(0xFF6366F1),
+          },
+          {
+            'status': 'Selesai',
+            'label': 'Tahap Selesai',
+            'value': '$selesai',
+            'icon': Icons.check_circle_rounded,
+            'color': const Color(0xFF10B981),
+          },
+          {
+            'status': 'Berjalan',
+            'label': 'Sedang Berjalan',
+            'value': '$berjalan',
+            'icon': Icons.trending_up_rounded,
+            'color': const Color(0xFFF59E0B),
+          },
+          {
+            'status': 'Persiapan',
+            'label': 'Tahap Persiapan',
+            'value': '$persiapan',
+            'icon': Icons.pending_actions_rounded,
+            'color': const Color(0xFF8B5CF6),
+          },
+          {
+            'status': 'Mendatang',
+            'label': 'Mendatang',
+            'value': '$mendatang',
+            'icon': Icons.schedule_rounded,
+            'color': const Color(0xFF64748B),
+          },
+        ];
+      default:
+        return [
+          {
+            'status': 'Semua',
+            'label': 'Total Item',
+            'value': '${allItems.length}',
+            'icon': Icons.folder_special_rounded,
+            'color': const Color(0xFF6366F1),
+          },
+          {
+            'status': 'Aktif',
+            'label': 'Aktif',
+            'value': '${allItems.where((i) => i.active).length}',
+            'icon': Icons.check_circle_rounded,
+            'color': const Color(0xFF10B981),
+          },
+        ];
+    }
+  }
+
+  Widget _buildEoSummaryMetrics(
+    CreatorServiceData data,
+    List<CreatorServiceItem> allItems,
+    bool isDark,
+    bool isDesktop,
+  ) {
+    final metricData = _getEoMetricOptions(data, allItems);
+
+    if (isDesktop) {
+      return Row(
+        children: metricData.map((m) {
+          final isSelected = _selectedEoStatus == m['status'];
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 5),
+              child: _buildEoMetricCard(m, isSelected, isDark),
+            ),
+          );
+        }).toList(),
+      );
+    }
+
+    return SizedBox(
+      height: 100,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: metricData.length,
+        separatorBuilder: (ctx, i) => const SizedBox(width: 10),
+        itemBuilder: (context, idx) {
+          final m = metricData[idx];
+          final isSelected = _selectedEoStatus == m['status'];
+          return SizedBox(
+            width: 155,
+            child: _buildEoMetricCard(m, isSelected, isDark),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEoMetricCard(
+    Map<String, dynamic> m,
+    bool isSelected,
+    bool isDark,
+  ) {
+    final color = m['color'] as Color;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () {
+        setState(() {
+          if (_selectedEoStatus == m['status']) {
+            _selectedEoStatus = 'Semua';
+          } else {
+            _selectedEoStatus = m['status'] as String;
+          }
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.cardBg : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected
+                ? color
+                : (isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected
+                  ? color.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.03),
+              blurRadius: isSelected ? 12 : 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(m['icon'] as IconData, size: 18, color: color),
+                ),
+                Text(
+                  m['value'] as String,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              m['label'] as String,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                color: isSelected
+                    ? color
+                    : (isDark ? AppTheme.textMuted : Colors.grey.shade600),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEoSearchAndFilters(
+    CreatorServiceData data,
+    List<CreatorServiceItem> allItems,
+    bool isDark,
+    bool isDesktop,
+  ) {
+    final statusOptions = _getEoMetricOptions(data, allItems).map((m) => {
+      'key': m['status'] as String,
+      'label': m['label'] as String,
+      'count': int.tryParse(m['value'] as String) ?? 0,
+    }).toList();
+
+    final searchField = TextField(
+      controller: _searchController,
+      onChanged: (v) {
+        setState(() => _query = v);
+      },
+      decoration: InputDecoration(
+        hintText: 'Cari ${data.title.toLowerCase()}...',
+        hintStyle: TextStyle(
+          fontSize: 13,
+          color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+        ),
+        prefixIcon: const Icon(Icons.search_rounded, size: 20),
+        suffixIcon: _query.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.close_rounded, size: 18),
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _query = '');
+                },
+              )
+            : null,
+        filled: true,
+        fillColor: isDark ? AppTheme.cardBg : Colors.white,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: AppTheme.primaryPurple,
+            width: 1.6,
+          ),
+        ),
+      ),
+    );
+
+    final filterChips = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: statusOptions.map((opt) {
+          final key = opt['key'] as String;
+          final label = opt['label'] as String;
+          final count = opt['count'] as int;
+          final isSel = _selectedEoStatus == key;
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(label),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSel
+                          ? Colors.white.withValues(alpha: 0.25)
+                          : (isDark
+                              ? Colors.white.withValues(alpha: 0.1)
+                              : Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      count.toString(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: isSel
+                            ? Colors.white
+                            : (isDark ? Colors.white70 : Colors.black87),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              selected: isSel,
+              selectedColor: AppTheme.primaryPurple,
+              backgroundColor: isDark ? AppTheme.cardBg : Colors.white,
+              side: BorderSide(
+                color: isSel
+                    ? AppTheme.primaryPurple
+                    : (isDark ? AppTheme.inputBorder : Colors.grey.shade200),
+              ),
+              labelStyle: TextStyle(
+                color: isSel
+                    ? Colors.white
+                    : (isDark ? Colors.white70 : Colors.grey.shade800),
+                fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                fontSize: 12,
+              ),
+              onSelected: (val) {
+                if (val) setState(() => _selectedEoStatus = key);
+              },
+            ),
+          );
+        }).toList(),
+      ),
+    );
+
+    if (isDesktop) {
+      return Row(
+        children: [
+          Expanded(flex: 3, child: searchField),
+          const SizedBox(width: 16),
+          Expanded(flex: 4, child: filterChips),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        searchField,
+        const SizedBox(height: 12),
+        filterChips,
+      ],
+    );
+  }
+
+  Widget _buildEoEmptyState(bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 24),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardBg : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryPurple.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.search_off_rounded,
+              size: 40,
+              color: AppTheme.primaryPurple,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Tidak ada item yang sesuai',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Coba sesuaikan kata kunci pencarian atau pilih filter status lainnya.',
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton(
+            onPressed: () {
+              setState(() {
+                _selectedEoStatus = 'Semua';
+                _query = '';
+                _searchController.clear();
+              });
+            },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.primaryPurple,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Reset Filter'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEoProjectsGrid(
+    List<CreatorServiceItem> items,
+    CreatorServiceData data,
+    bool isDark,
+    bool isDesktop,
+    double screenWidth,
+  ) {
+    if (isDesktop) {
+      return Wrap(
+        spacing: 16,
+        runSpacing: 16,
+        children: items.indexed.map((entry) {
+          final cardWidth =
+              (screenWidth > 1260 ? 1260 : screenWidth) / 2 - 40;
+          return SizedBox(
+            width: cardWidth > 450 ? cardWidth : double.infinity,
+            child: _buildEoUnifiedCard(
+              context,
+              data,
+              entry.$2,
+              entry.$1,
+              isDark,
+            ),
+          );
+        }).toList(),
+      );
+    }
+
+    return Column(
+      children: items.indexed.map((entry) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: _buildEoUnifiedCard(
+            context,
+            data,
+            entry.$2,
+            entry.$1,
+            isDark,
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildEoUnifiedCard(
     BuildContext context,
     CreatorServiceData data,
     CreatorServiceItem item,
     int index,
     bool isDark,
   ) {
-    final status = item.tag?.toLowerCase() ?? '';
+    final status = (item.tag ?? '').toLowerCase();
 
-    // Enhanced tag colors with gradients
-    Color tagColor;
-    Color tagBgColor;
-    IconData? tagIcon;
-
-    if (status.contains('populer') || status.contains('best value')) {
-      tagColor = const Color(0xFF8B5CF6);
-      tagBgColor = const Color(0xFF8B5CF6);
-      tagIcon = Icons.local_fire_department;
-    } else if (status.contains('premium') || status.contains('eksklusif')) {
-      tagColor = const Color(0xFFEC4899);
-      tagBgColor = const Color(0xFFEC4899);
-      tagIcon = Icons.workspace_premium;
-    } else if (status.contains('intimate') || status.contains('personal')) {
-      tagColor = const Color(0xFF10B981);
-      tagBgColor = const Color(0xFF10B981);
-      tagIcon = Icons.favorite;
-    } else if (status.contains('selesai') || status.contains('aktif')) {
-      tagColor = const Color(0xFF27845A);
-      tagBgColor = const Color(0xFF27845A);
-      tagIcon = Icons.check_circle;
-    } else if (status.contains('berjalan') || status.contains('persiapan')) {
-      tagColor = const Color(0xFF9A6A16);
-      tagBgColor = const Color(0xFF9A6A16);
-      tagIcon = Icons.pending;
+    Color statusColor;
+    if (status.contains('tayang') ||
+        status.contains('aktif') ||
+        status.contains('vip') ||
+        status.contains('selesai') ||
+        status.contains('disetujui')) {
+      statusColor = const Color(0xFF10B981);
+    } else if (status.contains('menunggu') ||
+        status.contains('pending') ||
+        status.contains('persiapan') ||
+        status.contains('berjalan')) {
+      statusColor = const Color(0xFFF59E0B);
+    } else if (status.contains('ditolak') || status.contains('rejected')) {
+      statusColor = const Color(0xFFEF4444);
+    } else if (status.contains('mendatang')) {
+      statusColor = const Color(0xFF64748B);
     } else {
-      tagColor = isDark ? AppTheme.textMuted : Colors.grey.shade600;
-      tagBgColor = isDark ? AppTheme.textMuted : Colors.grey.shade600;
-      tagIcon = null;
+      statusColor = const Color(0xFF8B5CF6);
     }
 
-    // Enhanced icon background with gradient
-    final iconGradient = LinearGradient(
-      colors: isDark
-          ? [AppTheme.cardDark2, AppTheme.cardDark2.withValues(alpha: 0.8)]
-          : [const Color(0xFFF1F4F6), const Color(0xFFE8EBF0)],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    );
+    final categoryIcon = switch (data.key) {
+      'eo_paket' => Icons.festival_rounded,
+      'eo_jadwal' => Icons.calendar_month_rounded,
+      'eo_vendor' => Icons.handshake_rounded,
+      'eo_timeline' => Icons.timeline_rounded,
+      _ => item.icon,
+    };
 
-    // Card shadow
-    final cardShadow = isDark
-        ? [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.25),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ]
-        : [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-            BoxShadow(
-              color: AppTheme.primaryPurple.withValues(alpha: 0.04),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ];
+    final categoryLabel = switch (data.key) {
+      'eo_paket' => 'Paket Event',
+      'eo_jadwal' => 'Jadwal Acara',
+      'eo_vendor' => 'Mitra Vendor',
+      'eo_timeline' => 'Tahapan Rundown',
+      _ => data.title,
+    };
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        hoverColor: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : AppTheme.primaryPurple.withValues(alpha: 0.05),
-        splashColor: isDark
-            ? Colors.white.withValues(alpha: 0.08)
-            : AppTheme.primaryPurple.withValues(alpha: 0.08),
-        onTap: () => _showDetail(context, data, item),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isDark ? AppTheme.cardBg : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isDark ? AppTheme.inputBorder : const Color(0xFFE8EBF0),
-              width: 1.5,
-            ),
-            boxShadow: cardShadow,
+    final buttonLabel = switch (data.key) {
+      'eo_paket' => 'Detail Paket',
+      'eo_jadwal' => 'Detail Jadwal',
+      'eo_vendor' => 'Detail Vendor',
+      'eo_timeline' => 'Detail Tahapan',
+      _ => 'Detail Item',
+    };
+
+    String mainDesc = item.subtitle;
+    String? adminNote;
+    if (mainDesc.contains('Catatan admin:') ||
+        mainDesc.contains('catatan admin:')) {
+      final parts = mainDesc.split(
+        RegExp(r'[•·]\s*Catatan admin:\s*', caseSensitive: false),
+      );
+      if (parts.length > 1) {
+        mainDesc = parts[0].trim();
+        adminNote = parts[1].trim();
+      }
+    }
+
+    double? progressDouble;
+    if (data.key == 'eo_timeline' || (item.value?.contains('%') ?? false)) {
+      progressDouble = _parseProgress(item.value);
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardBg : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Top Type Pill & Status Badge ──
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Enhanced icon container
               Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  gradient: iconGradient,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark
-                        ? AppTheme.inputBorder
-                        : const Color(0xFFE0E4E8),
-                    width: 1,
-                  ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
                 ),
-                child: item.thumbnailUrl != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(11),
-                        child: Image.network(
-                          ApiService.resolveAssetUrl(item.thumbnailUrl),
-                          width: 42,
-                          height: 42,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Icon(
-                            item.icon,
-                            size: 22,
-                            color: isDark
-                                ? AppTheme.primaryPurple
-                                : AppTheme.deepPurple,
-                          ),
-                        ),
-                      )
-                    : data.key == 'eo_timeline'
-                    ? Center(
-                        child: Text(
-                          '${index + 1}'.padLeft(2, '0'),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : AppTheme.textDark,
-                          ),
-                        ),
-                      )
-                    : Icon(
-                        item.icon,
-                        size: 22,
-                        color: isDark
-                            ? AppTheme.primaryPurple
-                            : AppTheme.deepPurple,
-                      ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      item.title,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white : AppTheme.textDark,
-                        letterSpacing: -0.2,
-                      ),
+                    Icon(
+                      categoryIcon,
+                      size: 14,
+                      color: const Color(0xFF8B5CF6),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(width: 6),
                     Text(
-                      item.subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark
-                            ? AppTheme.textMuted
-                            : Colors.grey.shade600,
-                        height: 1.4,
+                      categoryLabel,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF8B5CF6),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        if (item.tag != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  tagBgColor.withValues(alpha: 0.15),
-                                  tagBgColor.withValues(alpha: 0.08),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: tagBgColor.withValues(alpha: 0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (tagIcon != null) ...[
-                                  Icon(tagIcon, size: 10, color: tagColor),
-                                  const SizedBox(width: 3),
-                                ],
-                                Text(
-                                  item.tag!,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: tagColor,
-                                    letterSpacing: 0.2,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        if (item.tag != null && item.value != null)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
-                            child: Text(
-                              '·',
-                              style: TextStyle(
-                                color: isDark
-                                    ? AppTheme.textMuted
-                                    : Colors.grey.shade400,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        if (item.value != null)
-                          Flexible(
-                            child: Text(
-                              item.value!,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: data.key == 'eo_paket'
-                                    ? FontWeight.w700
-                                    : FontWeight.w600,
-                                color: data.key == 'eo_paket'
-                                    ? (isDark
-                                          ? AppTheme.primaryPurple
-                                          : AppTheme.deepPurple)
-                                    : (isDark
-                                          ? Colors.white70
-                                          : Colors.grey.shade700),
-                              ),
-                            ),
-                          ),
-                      ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 6),
               Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: isDark ? AppTheme.cardDark2 : const Color(0xFFF5F7FA),
-                  borderRadius: BorderRadius.circular(6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
                 ),
-                child: Icon(
-                  Icons.chevron_right_rounded,
-                  size: 18,
-                  color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: statusColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      item.tag ?? (item.active ? 'Aktif' : 'Nonaktif'),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: statusColor,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 12),
+
+          // ── Title ──
+          Text(
+            item.title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              height: 1.3,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (mainDesc.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              mainDesc,
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.4,
+                color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+
+          // ── Admin Rejection Note (Alert Badge) ──
+          if (adminNote != null && adminNote.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 6,
+              ),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.2),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    size: 14,
+                    color: Color(0xFFEF4444),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Catatan Admin: $adminNote',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFEF4444),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+
+          // ── Metadata Pills (Category, Price/Value, Thumbnail) ──
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildEoMetaChip(categoryIcon, categoryLabel, isDark),
+              if (item.value != null && item.value!.isNotEmpty)
+                _buildEoMetaChip(
+                  (progressDouble != null)
+                      ? Icons.trending_up_rounded
+                      : Icons.payments_rounded,
+                  item.value!,
+                  isDark,
+                  highlight: true,
+                ),
+              if (item.thumbnailUrl != null)
+                _buildEoMetaChip(
+                  Icons.image_rounded,
+                  'Foto Thumbnail',
+                  isDark,
+                ),
+            ],
+          ),
+
+          // ── Progress Bar (for Timeline or % items) ──
+          if (progressDouble != null) ...[
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Progres Tahapan',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppTheme.textMuted
+                        : Colors.grey.shade600,
+                  ),
+                ),
+                Text(
+                  item.value ?? '${(progressDouble * 100).toInt()}%',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: statusColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: progressDouble,
+                minHeight: 6,
+                backgroundColor: isDark
+                    ? Colors.grey.shade800
+                    : Colors.grey.shade200,
+                valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+
+          // ── Action Buttons ──
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (item.tag?.toLowerCase().contains('ditolak') ?? false) ...[
+                OutlinedButton.icon(
+                  onPressed: () => _handleResubmitPackage(item),
+                  icon: const Icon(Icons.refresh_rounded, size: 14),
+                  label: const Text(
+                    'Ajukan Ulang',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: const Color(
+                      0xFFEF4444,
+                    ).withValues(alpha: 0.1),
+                    foregroundColor: const Color(0xFFDC2626),
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
+                    side: const BorderSide(
+                      color: Color(0xFFEF4444),
+                      width: 1,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                  ).copyWith(
+                    overlayColor: WidgetStateProperty.all(
+                      const Color(0xFFEF4444).withValues(alpha: 0.15),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              OutlinedButton(
+                onPressed: () => _showDetail(context, data, item),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.primaryPurple,
+                  side: BorderSide(
+                    color: AppTheme.primaryPurple.withValues(alpha: 0.4),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                ),
+                child: Text(
+                  buttonLabel,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEoMetaChip(
+    IconData icon,
+    String text,
+    bool isDark, {
+    bool highlight = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: highlight
+            ? AppTheme.primaryPurple.withValues(alpha: 0.08)
+            : (isDark
+                ? Colors.white.withValues(alpha: 0.04)
+                : Colors.grey.shade100),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: highlight
+              ? AppTheme.primaryPurple.withValues(alpha: 0.2)
+              : (isDark ? AppTheme.inputBorder : Colors.grey.shade200),
         ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 13,
+            color: highlight
+                ? AppTheme.primaryPurple
+                : (isDark ? AppTheme.textMuted : Colors.grey.shade600),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: highlight ? FontWeight.bold : FontWeight.w500,
+              color: highlight
+                  ? AppTheme.primaryPurple
+                  : (isDark ? Colors.white70 : Colors.grey.shade800),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -4860,6 +6041,11 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
         onSubmitCreatorPackage: _reviewableCreatorPackageKeys.contains(data.key)
             ? _submitCreatorPackage
             : null,
+        onResubmitPackage: _reviewableCreatorPackageKeys.contains(data.key)
+            ? _handleResubmitPackage
+            : null,
+        onConfirmSchedule: _handleConfirmSchedule,
+        onCompleteTimeline: _handleCompleteTimeline,
       ),
     );
   }
@@ -4936,6 +6122,9 @@ class _ServiceDetailSheet extends StatefulWidget {
   final ValueChanged<CreatorServiceItem>? onAddItem;
   final Future<String?> Function(CreatorServiceItem, PlatformFile?, Uint8List?)?
   onSubmitCreatorPackage;
+  final Future<void> Function(CreatorServiceItem)? onResubmitPackage;
+  final Future<void> Function(CreatorServiceItem)? onConfirmSchedule;
+  final void Function(CreatorServiceItem)? onCompleteTimeline;
 
   const _ServiceDetailSheet({
     required this.data,
@@ -4947,6 +6136,9 @@ class _ServiceDetailSheet extends StatefulWidget {
     this.reviewDistribution = const {5: 0, 4: 0, 3: 0, 2: 0, 1: 0},
     this.onAddItem,
     this.onSubmitCreatorPackage,
+    this.onResubmitPackage,
+    this.onConfirmSchedule,
+    this.onCompleteTimeline,
   });
 
   @override
@@ -4962,6 +6154,143 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
   int _tab = 0;
   final Set<int> _likedReviews = {};
   int _selectedFilterReview = 0;
+
+  bool get _isEo => widget.data.key.startsWith('eo_');
+
+  Future<void> _openEoVendorChat(String? vendorId, String vendorName) async {
+    Navigator.pop(context);
+    final targetId = (vendorId != null &&
+            vendorId.isNotEmpty &&
+            vendorId != widget.user.id &&
+            !vendorId.startsWith('v-'))
+        ? vendorId
+        : '01a0d6c1-64d5-7196-9c3c-af3580eccef5';
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DirectMessageScreen(
+          currentUser: widget.user,
+          targetUserId: targetId,
+        ),
+      ),
+    );
+  }
+
+  void _handleEoSubmit({required bool isNew}) {
+    if (_formName.trim().isEmpty) {
+      AppSnackbar.warning(
+        context,
+        'Nama item belum diisi. Silakan isi terlebih dahulu.',
+        title: 'Nama Wajib Diisi',
+      );
+      return;
+    }
+    final newItem = CreatorServiceItem(
+      title: _formName.trim(),
+      subtitle: _formDesc.trim().isEmpty
+          ? 'Item layanan baru ${widget.data.title}'
+          : _formDesc.trim(),
+      icon: _formIcon ?? widget.data.icon,
+      tag: _formTag.isNotEmpty
+          ? _formTag
+          : (widget.data.key == 'eo_timeline' ? 'Sedang Berjalan' : 'Aktif'),
+      value: _formPrice.isNotEmpty
+          ? _formPrice
+          : (widget.data.key == 'eo_timeline' ? '0%' : '-'),
+      active: true,
+    );
+    widget.onAddItem?.call(newItem);
+    Navigator.pop(context);
+    AppSnackbar.success(
+      context,
+      '"${_formName.trim()}" berhasil ditambahkan ke ${widget.data.title}.',
+      title: 'Berhasil Ditambahkan',
+    );
+  }
+
+  void _handleEoFormTap(int i) {
+    if (widget.data.key == 'eo_timeline') {
+      switch (i) {
+        case 0:
+          _openTextField(
+            title: 'Nama Tahapan',
+            initial: _formName,
+            maxLines: 1,
+            keyboardType: TextInputType.text,
+            hint: 'Misal: Gladi Resik Panggung Utama',
+            prefix: '',
+            onSave: (v) => setState(() => _formName = v),
+          );
+          break;
+        case 1:
+          _openTextField(
+            title: 'Deskripsi Tahapan',
+            initial: _formDesc,
+            maxLines: 3,
+            keyboardType: TextInputType.multiline,
+            hint: 'Rincian alur kerja dan tim pelaksana...',
+            prefix: '',
+            onSave: (v) => setState(() => _formDesc = v),
+          );
+          break;
+        case 2:
+          _openTagPicker((v) => setState(() => _formTag = v));
+          break;
+        case 3:
+          _openTextField(
+            title: 'Target Progres',
+            initial: _formPrice,
+            maxLines: 1,
+            keyboardType: TextInputType.text,
+            hint: 'Misal: 75% atau 100%',
+            prefix: '',
+            onSave: (v) => setState(() => _formPrice = v),
+          );
+          break;
+      }
+    } else if (widget.data.key == 'eo_vendor') {
+      switch (i) {
+        case 0:
+          _openTextField(
+            title: 'Nama Mitra Vendor',
+            initial: _formName,
+            maxLines: 1,
+            keyboardType: TextInputType.text,
+            hint: 'Misal: PT Sound Prima Nusantara',
+            prefix: '',
+            onSave: (v) => setState(() => _formName = v),
+          );
+          break;
+        case 1:
+          _openTextField(
+            title: 'Spesifikasi & Layanan',
+            initial: _formDesc,
+            maxLines: 3,
+            keyboardType: TextInputType.multiline,
+            hint: 'Detail peralatan, panggung, atau katering...',
+            prefix: '',
+            onSave: (v) => setState(() => _formDesc = v),
+          );
+          break;
+        case 2:
+          _openTagPicker((v) => setState(() => _formTag = v));
+          break;
+        case 3:
+          _openTextField(
+            title: 'Nilai Kontrak / Biaya',
+            initial: _formPrice,
+            maxLines: 1,
+            keyboardType: TextInputType.number,
+            hint: 'Masukkan angka biaya',
+            prefix: 'Rp ',
+            onSave: (v) => setState(() => _formPrice = v),
+          );
+          break;
+      }
+    } else {
+      _handleFormTap(i);
+    }
+  }
 
   // State untuk menampilkan detail konten di dalam modal yang sama
   String? _expandedDetailTitle;
@@ -6190,6 +7519,18 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
     final isNew = widget.item == null;
     final item = widget.item;
 
+    final isRejected = item?.tag?.toLowerCase().contains('ditolak') ?? false;
+    final isVendor = widget.data.key == 'eo_vendor';
+    final isTimelineNotDone = widget.data.key == 'eo_timeline' &&
+        !(item?.tag?.toLowerCase().contains('selesai') ?? false);
+    final isJadwal = widget.data.key == 'eo_jadwal';
+    final isJadwalPending = isJadwal &&
+        (item?.tag?.toUpperCase() == 'SCHEDULED' ||
+            item?.tag?.toLowerCase() == 'terjadwal' ||
+            item?.tag?.toLowerCase() == 'pending');
+    final hasSecondaryAction =
+        isRejected || isVendor || isTimelineNotDone || isJadwalPending;
+
     return GestureDetector(
       onTap: () => Navigator.pop(context),
       child: Container(
@@ -6231,22 +7572,29 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                           child: Row(
                             children: [
                               Container(
-                                width: 46,
-                                height: 46,
+                                width: 44,
+                                height: 44,
                                 decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: widget.data.gradient,
-                                  ),
-                                  borderRadius: BorderRadius.circular(15),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppTheme.primaryPurple.withValues(
-                                        alpha: 0.28,
-                                      ),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 5),
-                                    ),
-                                  ],
+                                  color: _isEo
+                                      ? AppTheme.primaryPurple.withValues(alpha: 0.1)
+                                      : null,
+                                  gradient: _isEo
+                                      ? null
+                                      : LinearGradient(
+                                          colors: widget.data.gradient,
+                                        ),
+                                  borderRadius: BorderRadius.circular(14),
+                                  boxShadow: _isEo
+                                      ? null
+                                      : [
+                                          BoxShadow(
+                                            color: AppTheme.primaryPurple.withValues(
+                                              alpha: 0.28,
+                                            ),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 5),
+                                          ),
+                                        ],
                                 ),
                                 clipBehavior: Clip.antiAlias,
                                 child: !isNew && item?.thumbnailUrl != null
@@ -6254,21 +7602,25 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                         ApiService.resolveAssetUrl(
                                           item!.thumbnailUrl,
                                         ),
-                                        width: 46,
-                                        height: 46,
+                                        width: 44,
+                                        height: 44,
                                         fit: BoxFit.cover,
                                         errorBuilder: (_, _, _) => Icon(
                                           item.icon,
-                                          color: Colors.white,
-                                          size: 22,
+                                          color: _isEo
+                                              ? AppTheme.primaryPurple
+                                              : Colors.white,
+                                          size: 20,
                                         ),
                                       )
                                     : Icon(
                                         isNew
                                             ? Icons.add_rounded
                                             : (item?.icon ?? widget.data.icon),
-                                        color: Colors.white,
-                                        size: 22,
+                                        color: _isEo
+                                            ? AppTheme.primaryPurple
+                                            : Colors.white,
+                                        size: 20,
                                       ),
                               ),
                               const SizedBox(width: 12),
@@ -6292,8 +7644,10 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                     Text(
                                       isNew
                                           ? 'Tambah item baru ke ${widget.data.title}'
-                                          : (item?.subtitle ??
-                                                widget.data.subtitle),
+                                          : (_isEo
+                                              ? 'Layanan EO • ${widget.data.title}'
+                                              : (item?.subtitle ??
+                                                  widget.data.subtitle)),
                                       style: TextStyle(
                                         fontSize: 11.5,
                                         color: isDark
@@ -6327,91 +7681,255 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                         if (item != null && item.value != null)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
-                            child: Container(
-                              padding: const EdgeInsets.all(18),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    AppTheme.deepPurple.withValues(alpha: 0.08),
-                                    AppTheme.lightPurple.withValues(
-                                      alpha: 0.08,
-                                    ),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: AppTheme.primaryPurple.withValues(
-                                    alpha: 0.15,
-                                  ),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 44,
-                                    height: 44,
+                            child: _isEo
+                                ? Container(
+                                    padding: const EdgeInsets.all(16),
                                     decoration: BoxDecoration(
-                                      gradient: AppTheme.primaryGradient,
-                                      borderRadius: BorderRadius.circular(14),
+                                      color: isDark
+                                          ? AppTheme.cardDark2
+                                          : Colors.grey.shade50,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: isDark
+                                            ? AppTheme.inputBorder
+                                            : Colors.grey.shade200,
+                                      ),
                                     ),
-                                    child: const Icon(
-                                      Icons.sell_rounded,
-                                      size: 20,
-                                      color: Colors.white,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Container(
+                                              width: 38,
+                                              height: 38,
+                                              decoration: BoxDecoration(
+                                                color: AppTheme.primaryPurple
+                                                    .withValues(alpha: 0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              child: Icon(
+                                                widget.data.key == 'eo_timeline'
+                                                    ? Icons.timeline_rounded
+                                                    : widget.data.key ==
+                                                            'eo_vendor'
+                                                        ? Icons
+                                                            .payments_outlined
+                                                        : widget.data.key ==
+                                                                'eo_jadwal'
+                                                            ? Icons
+                                                                .account_balance_wallet_outlined
+                                                            : Icons
+                                                                .festival_outlined,
+                                                size: 19,
+                                                color: AppTheme.primaryPurple,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    widget.data.key ==
+                                                            'eo_timeline'
+                                                        ? 'Progres Tahapan'
+                                                        : widget.data.key ==
+                                                                'eo_vendor'
+                                                            ? 'Nilai Kontrak / Biaya'
+                                                            : widget.data.key ==
+                                                                    'eo_jadwal'
+                                                                ? 'Estimasi Anggaran'
+                                                                : 'Harga Paket',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: isDark
+                                                          ? AppTheme.textMuted
+                                                          : Colors
+                                                              .grey.shade600,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    item.value!,
+                                                    style: TextStyle(
+                                                      fontSize: 18,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      color: isDark
+                                                          ? Colors.white
+                                                          : AppTheme.textDark,
+                                                      letterSpacing: -0.2,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            if (item.tag != null)
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 10,
+                                                  vertical: 5,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: (item.tag?.toLowerCase().contains('ditolak') ?? false)
+                                                      ? const Color(0xFFEF4444).withValues(alpha: 0.12)
+                                                      : (item.tag == 'Selesai'
+                                                          ? const Color(0xFF10B981)
+                                                              .withValues(
+                                                                alpha: 0.12,
+                                                              )
+                                                          : AppTheme.primaryPurple
+                                                              .withValues(
+                                                                alpha: 0.1,
+                                                              )),
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                ),
+                                                child: Text(
+                                                  item.tag!,
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: (item.tag?.toLowerCase().contains('ditolak') ?? false)
+                                                        ? const Color(0xFFEF4444)
+                                                        : (item.tag == 'Selesai'
+                                                            ? const Color(
+                                                                0xFF10B981,
+                                                              )
+                                                            : AppTheme
+                                                                .primaryPurple),
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                        if (widget.data.key ==
+                                            'eo_timeline') ...[
+                                          const SizedBox(height: 10),
+                                          ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                            child: LinearProgressIndicator(
+                                              value: ((double.tryParse(item
+                                                              .value!
+                                                              .replaceAll(
+                                                                '%',
+                                                                '',
+                                                              )
+                                                              .trim()) ??
+                                                          0) /
+                                                      100)
+                                                  .clamp(0.0, 1.0),
+                                              backgroundColor: isDark
+                                                  ? Colors.white12
+                                                  : Colors.grey.shade200,
+                                              valueColor:
+                                                  const AlwaysStoppedAnimation(
+                                                AppTheme.primaryPurple,
+                                              ),
+                                              minHeight: 6,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  )
+                                : Container(
+                                    padding: const EdgeInsets.all(18),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          AppTheme.deepPurple.withValues(
+                                            alpha: 0.08,
+                                          ),
+                                          AppTheme.lightPurple.withValues(
+                                            alpha: 0.08,
+                                          ),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: AppTheme.primaryPurple
+                                            .withValues(alpha: 0.15),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 44,
+                                          height: 44,
+                                          decoration: BoxDecoration(
+                                            gradient: AppTheme.primaryGradient,
+                                            borderRadius:
+                                                BorderRadius.circular(14),
+                                          ),
+                                          child: const Icon(
+                                            Icons.sell_rounded,
+                                            size: 20,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Nilai / Harga',
+                                              style: TextStyle(
+                                                fontSize: 10.5,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppTheme.primaryPurple,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 3),
+                                            Text(
+                                              item.value!,
+                                              style: const TextStyle(
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.w900,
+                                                color: AppTheme.primaryPurple,
+                                                letterSpacing: -0.2,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const Spacer(),
+                                        if (item.tag != null)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 6,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              gradient: AppTheme.primaryGradient,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              boxShadow:
+                                                  AppTheme.cardShadowLight,
+                                            ),
+                                            child: Text(
+                                              item.tag!,
+                                              style: const TextStyle(
+                                                fontSize: 10.5,
+                                                fontWeight: FontWeight.w900,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Nilai / Harga',
-                                        style: TextStyle(
-                                          fontSize: 10.5,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppTheme.primaryPurple,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        item.value!,
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w900,
-                                          color: AppTheme.primaryPurple,
-                                          letterSpacing: -0.2,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const Spacer(),
-                                  if (item.tag != null)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        gradient: AppTheme.primaryGradient,
-                                        borderRadius: BorderRadius.circular(12),
-                                        boxShadow: AppTheme.cardShadowLight,
-                                      ),
-                                      child: Text(
-                                        item.tag!,
-                                        style: const TextStyle(
-                                          fontSize: 10.5,
-                                          fontWeight: FontWeight.w900,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
                           ),
-                        // Hide TabBar for community services - simplify UI
-                        if (!widget.data.key.startsWith('komunitas_'))
+                        // Hide TabBar for community and EO services - simplify UI
+                        if (!widget.data.key.startsWith('komunitas_') && !_isEo)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
                             child: Container(
@@ -6448,7 +7966,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                             ),
                           ),
                         Expanded(
-                          child: widget.data.key.startsWith('komunitas_')
+                          child: (widget.data.key.startsWith('komunitas_') || _isEo)
                               ? _buildInfoTab(
                                   context,
                                   scrollCtrl,
@@ -6483,8 +8001,212 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                             top: false,
                             child: Row(
                               children: [
-                                // Hide Simpan and Bagikan buttons for community services
-                                if (!widget.data.key.startsWith('komunitas_')) ...[
+                                if (_isEo) ...[
+                                  if (isNew) ...[
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        style: OutlinedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 14,
+                                          ),
+                                          side: BorderSide(
+                                            color: isDark
+                                                ? AppTheme.inputBorder
+                                                : Colors.grey.shade300,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(14),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'Batal',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 13,
+                                            color: isDark
+                                                ? AppTheme.textMuted
+                                                : Colors.grey.shade700,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      flex: 2,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () =>
+                                            _handleEoSubmit(isNew: true),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor:
+                                              AppTheme.primaryPurple,
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 14,
+                                          ),
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(14),
+                                          ),
+                                        ),
+                                        icon: const Icon(
+                                          Icons.check_rounded,
+                                          size: 17,
+                                        ),
+                                        label: Text(
+                                          widget.data.actionLabel,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ] else ...[
+                                    if (!hasSecondaryAction) ...[
+                                      Expanded(
+                                        child: OutlinedButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context),
+                                          style: OutlinedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 14,
+                                            ),
+                                            side: BorderSide(
+                                              color: isDark
+                                                  ? AppTheme.inputBorder
+                                                  : Colors.grey.shade300,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'Tutup',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                              color: isDark
+                                                  ? AppTheme.textMuted
+                                                  : Colors.grey.shade700,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ] else ...[
+                                      Expanded(
+                                        child: OutlinedButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context),
+                                          style: OutlinedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 14,
+                                            ),
+                                            side: BorderSide(
+                                              color: isDark
+                                                  ? AppTheme.inputBorder
+                                                  : Colors.grey.shade300,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'Tutup',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                              color: isDark
+                                                  ? AppTheme.textMuted
+                                                  : Colors.grey.shade700,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        flex: isVendor ? 2 : 1,
+                                        child: ElevatedButton.icon(
+                                          onPressed: () {
+                                            if (isRejected) {
+                                              Navigator.pop(context);
+                                              if (item != null) {
+                                                widget.onResubmitPackage
+                                                    ?.call(item);
+                                              }
+                                            } else if (isVendor) {
+                                              _openEoVendorChat(
+                                                item?.id,
+                                                item?.title ?? 'Vendor',
+                                              );
+                                            } else if (widget.data.key ==
+                                                'eo_timeline') {
+                                              Navigator.pop(context);
+                                              if (item != null) {
+                                                widget.onCompleteTimeline
+                                                    ?.call(item);
+                                              }
+                                            } else if (widget.data.key ==
+                                                'eo_jadwal') {
+                                              Navigator.pop(context);
+                                              if (item != null) {
+                                                widget.onConfirmSchedule
+                                                    ?.call(item);
+                                              }
+                                            }
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: isRejected
+                                                ? const Color(0xFFEF4444)
+                                                : AppTheme.primaryPurple,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 14,
+                                            ),
+                                            elevation: 0,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
+                                            ),
+                                          ),
+                                          icon: Icon(
+                                            isRejected
+                                                ? Icons.refresh_rounded
+                                                : (isVendor
+                                                    ? Icons
+                                                        .chat_bubble_outline_rounded
+                                                    : (widget.data.key ==
+                                                            'eo_timeline'
+                                                        ? Icons.task_alt_rounded
+                                                        : Icons
+                                                            .check_circle_outline_rounded)),
+                                            size: 17,
+                                          ),
+                                          label: Text(
+                                            isRejected
+                                                ? 'Ajukan Ulang'
+                                                : (isVendor
+                                                    ? 'Hubungi Vendor'
+                                                    : (widget.data.key ==
+                                                            'eo_timeline'
+                                                        ? 'Tandai Selesai'
+                                                        : 'Konfirmasi Jadwal')),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ] else ...[
+                                  // Hide Simpan and Bagikan buttons for community services
+                                  if (!widget.data.key.startsWith('komunitas_')) ...[
                                   Expanded(
                                     flex: 1,
                                     child: OutlinedButton.icon(
@@ -7682,6 +9404,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                   ),
                                 ),
                               ],
+                            ],
                             ),
                           ),
                         ),
@@ -7756,129 +9479,335 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
     }
 
     final detailValues = isNew
-        ? (widget.data.key.startsWith('komunitas_')
+        ? (_isEo
             ? <(String, IconData, String, String)>[
                 (
-                  'Nama item',
+                  widget.data.key == 'eo_timeline'
+                      ? 'Nama Tahapan'
+                      : widget.data.key == 'eo_vendor'
+                          ? 'Nama Mitra Vendor'
+                          : widget.data.key == 'eo_jadwal'
+                              ? 'Nama Acara'
+                              : 'Nama Paket',
                   Icons.drive_file_rename_outline,
                   _formName.isEmpty
-                      ? 'Klik untuk mengisi nama item/layanan'
+                      ? 'Klik untuk mengisi nama item'
                       : _formName,
                   _formName.isNotEmpty ? 'Siap' : 'Wajib',
                 ),
                 (
-                  'Deskripsi singkat',
+                  widget.data.key == 'eo_timeline'
+                      ? 'Deskripsi Tahapan'
+                      : widget.data.key == 'eo_vendor'
+                          ? 'Spesifikasi & Layanan'
+                          : widget.data.key == 'eo_jadwal'
+                              ? 'Deskripsi & Agenda'
+                              : 'Deskripsi Paket',
                   Icons.description_outlined,
                   _formDesc.isEmpty
-                      ? 'Klik untuk menulis deskripsi'
+                      ? 'Klik untuk menulis rincian'
                       : _formDesc,
                   _formDesc.isNotEmpty ? 'Siap' : 'Opsional',
                 ),
                 (
-                  'Status',
+                  widget.data.key == 'eo_timeline'
+                      ? 'Status Tahapan'
+                      : widget.data.key == 'eo_vendor'
+                          ? 'Kategori Mitra'
+                          : widget.data.key == 'eo_jadwal'
+                              ? 'Status Jadwal'
+                              : 'Tag Paket',
                   Icons.label_outline_rounded,
                   _formTag.isEmpty
-                      ? 'Menunggu'
+                      ? 'Pilih status'
                       : _formTag,
-                  _formTag.isNotEmpty ? _formTag : 'Menunggu',
-                ),
-              ]
-            : <(String, IconData, String, String)>[
-                (
-                  'Nama item',
-                  Icons.drive_file_rename_outline,
-                  _formName.isEmpty
-                      ? 'Klik untuk mengisi nama item/layanan'
-                      : _formName,
-                  _formName.isNotEmpty ? 'Siap' : 'Wajib',
-                ),
-                (
-                  'Deskripsi singkat',
-                  Icons.description_outlined,
-                  _formDesc.isEmpty
-                      ? 'Klik untuk menulis deskripsi (min. 30 kata)'
-                      : _formDesc,
-                  _formDesc.length > 60
-                      ? '${_formDesc.length} karakter'
-                      : (_formDesc.isNotEmpty ? 'Draft' : 'Opsional'),
-                ),
-                (
-                  'Kategori / Tag',
-                  Icons.label_outline_rounded,
-                  _formTag.isEmpty
-                      ? 'Klik untuk memilih tag kategori'
-                      : 'Tag aktif: $_formTag',
                   _formTag.isNotEmpty ? _formTag : 'Pilih',
                 ),
                 (
-                  'Nilai / Harga',
-                  Icons.price_change_outlined,
+                  widget.data.key == 'eo_timeline'
+                      ? 'Target Progres (%)'
+                      : widget.data.key == 'eo_vendor'
+                          ? 'Estimasi Biaya / Kontrak'
+                          : widget.data.key == 'eo_jadwal'
+                              ? 'Estimasi Anggaran'
+                              : 'Harga Paket',
+                  widget.data.key == 'eo_timeline'
+                      ? Icons.timeline_rounded
+                      : Icons.price_change_outlined,
                   _formPrice.isEmpty
-                      ? 'Klik untuk memasukkan nilai harga'
-                      : fmtPrice(_formPrice),
-                  _formPrice.isNotEmpty ? fmtPrice(_formPrice) : '',
+                      ? 'Klik untuk memasukkan nilai'
+                      : _formPrice,
+                  _formPrice.isNotEmpty ? _formPrice : '',
+                ),
+              ]
+            : widget.data.key.startsWith('komunitas_')
+                ? <(String, IconData, String, String)>[
+                    (
+                      'Nama item',
+                      Icons.drive_file_rename_outline,
+                      _formName.isEmpty
+                          ? 'Klik untuk mengisi nama item/layanan'
+                          : _formName,
+                      _formName.isNotEmpty ? 'Siap' : 'Wajib',
+                    ),
+                    (
+                      'Deskripsi singkat',
+                      Icons.description_outlined,
+                      _formDesc.isEmpty
+                          ? 'Klik untuk menulis deskripsi'
+                          : _formDesc,
+                      _formDesc.isNotEmpty ? 'Siap' : 'Opsional',
+                    ),
+                    (
+                      'Status',
+                      Icons.label_outline_rounded,
+                      _formTag.isEmpty
+                          ? 'Menunggu'
+                          : _formTag,
+                      _formTag.isNotEmpty ? _formTag : 'Menunggu',
+                    ),
+                  ]
+                : <(String, IconData, String, String)>[
+                    (
+                      'Nama item',
+                      Icons.drive_file_rename_outline,
+                      _formName.isEmpty
+                          ? 'Klik untuk mengisi nama item/layanan'
+                          : _formName,
+                      _formName.isNotEmpty ? 'Siap' : 'Wajib',
+                    ),
+                    (
+                      'Deskripsi singkat',
+                      Icons.description_outlined,
+                      _formDesc.isEmpty
+                          ? 'Klik untuk menulis deskripsi (min. 30 kata)'
+                          : _formDesc,
+                      _formDesc.length > 60
+                          ? '${_formDesc.length} karakter'
+                          : (_formDesc.isNotEmpty ? 'Draft' : 'Opsional'),
+                    ),
+                    (
+                      'Kategori / Tag',
+                      Icons.label_outline_rounded,
+                      _formTag.isEmpty
+                          ? 'Klik untuk memilih tag kategori'
+                          : 'Tag aktif: $_formTag',
+                      _formTag.isNotEmpty ? _formTag : 'Pilih',
+                    ),
+                    (
+                      'Nilai / Harga',
+                      Icons.price_change_outlined,
+                      _formPrice.isEmpty
+                          ? 'Klik untuk memasukkan nilai harga'
+                          : fmtPrice(_formPrice),
+                      _formPrice.isNotEmpty ? fmtPrice(_formPrice) : '',
+                    ),
+                    (
+                      _reviewableCreatorPackageKeys.contains(widget.data.key)
+                          ? 'Foto Thumbnail'
+                          : 'Thumbnail / Icon',
+                      Icons.image_outlined,
+                      _reviewableCreatorPackageKeys.contains(widget.data.key)
+                          ? (_formThumbnailFile?.name ??
+                              'Pilih foto thumbnail paket')
+                          : (_formIcon == null
+                              ? 'Klik untuk memilih icon thumbnail'
+                              : 'Icon terpilih'),
+                      _reviewableCreatorPackageKeys.contains(widget.data.key)
+                          ? (_formThumbnailFile != null
+                              ? 'Foto dipilih'
+                              : 'Wajib')
+                          : (_formIcon != null ? 'Terpilih' : ''),
+                    ),
+                    (
+                      'Tanggal dibuat',
+                      Icons.event_available_rounded,
+                      _formDate == null
+                          ? 'Klik untuk memilih tanggal & waktu'
+                          : '${_formDate!.day} ${_monthId(_formDate!.month)} ${_formDate!.year} • ${_formDate!.hour.toString().padLeft(2, '0')}:${_formDate!.minute.toString().padLeft(2, '0')} WIB',
+                      _formDate != null ? 'Terjadwal' : '',
+                    ),
+                  ])
+        : (_isEo
+            ? (widget.data.key == 'eo_timeline'
+                ? <(String, IconData, String, String)>[
+                    (
+                      'Tahapan',
+                      Icons.checklist_rounded,
+                      item?.title ?? '-',
+                      '',
+                    ),
+                    (
+                      'Status',
+                      Icons.flag_outlined,
+                      item?.tag ?? 'Aktif',
+                      '',
+                    ),
+                    (
+                      'Progres',
+                      Icons.trending_up_rounded,
+                      item?.value ?? '0%',
+                      '',
+                    ),
+                    (
+                      'Penanggung Jawab',
+                      Icons.person_outline_rounded,
+                      user.name,
+                      'EO Team',
+                    ),
+                    (
+                      'Terakhir Diperbarui',
+                      Icons.schedule_rounded,
+                      '${updatedDate.day} ${_monthId(updatedDate.month)} ${updatedDate.year} • 09:12 WIB',
+                      '',
+                    ),
+                  ]
+                : widget.data.key == 'eo_vendor'
+                    ? <(String, IconData, String, String)>[
+                        (
+                          'Mitra Vendor',
+                          Icons.handshake_outlined,
+                          item?.title ?? '-',
+                          '',
+                        ),
+                        (
+                          'Status Kemitraan',
+                          Icons.verified_outlined,
+                          item?.tag ?? 'Mitra Aktif',
+                          '',
+                        ),
+                        (
+                          'Biaya Kontrak',
+                          Icons.payments_outlined,
+                          item?.value ?? '-',
+                          '',
+                        ),
+                        (
+                          'PIC / Kontak',
+                          Icons.contact_phone_outlined,
+                          switch (item?.id) {
+                            '01a0d6c1-64d5-7196-9c3c-af3580eccef5' =>
+                              'Aditya Pratama (Sound Lead)',
+                            '01a0d6c1-636e-71dd-beb6-a4210fb07ffb' =>
+                              'Kevin Jonathan (Stage & LED Lead)',
+                            '01a0d6c1-620b-70c9-a2c7-ba80501c8f12' =>
+                              'Sarah Putri (Catering & F&B Lead)',
+                            '01a0d6c1-60a3-727c-b1da-3c7be8aad5bd' =>
+                              'Dimas Arya (Broadcast Lead)',
+                            _ => 'PIC Vendor Rekanan',
+                          },
+                          '',
+                        ),
+                        (
+                          'Terakhir Diperbarui',
+                          Icons.update_outlined,
+                          '${updatedDate.day} ${_monthId(updatedDate.month)} ${updatedDate.year}',
+                          '',
+                        ),
+                      ]
+                    : widget.data.key == 'eo_jadwal'
+                        ? <(String, IconData, String, String)>[
+                            (
+                              'Nama Acara',
+                              Icons.festival_outlined,
+                              item?.title ?? '-',
+                              '',
+                            ),
+                            (
+                              'Status Jadwal',
+                              Icons.event_available_outlined,
+                              item?.tag ?? 'Terjadwal',
+                              '',
+                            ),
+                            (
+                              'Estimasi Anggaran',
+                              Icons.account_balance_wallet_outlined,
+                              item?.value ?? '-',
+                              '',
+                            ),
+                            (
+                              'Penyelenggara',
+                              Icons.business_outlined,
+                              user.name,
+                              '',
+                            ),
+                            (
+                              'Terakhir Diperbarui',
+                              Icons.update_outlined,
+                              '${updatedDate.day} ${_monthId(updatedDate.month)} ${updatedDate.year}',
+                              '',
+                            ),
+                          ]
+                        : <(String, IconData, String, String)>[
+                            (
+                              'Paket Event',
+                              Icons.card_giftcard_outlined,
+                              item?.title ?? '-',
+                              '',
+                            ),
+                            (
+                              'Status Paket',
+                              Icons.sell_outlined,
+                              item?.tag ?? 'Aktif',
+                              '',
+                            ),
+                            (
+                              'Harga Paket',
+                              Icons.payments_outlined,
+                              item?.value ?? '-',
+                              '',
+                            ),
+                            (
+                              'Penyedia Layanan',
+                              Icons.storefront_outlined,
+                              user.name,
+                              '',
+                            ),
+                            (
+                              'Dibuat Pada',
+                              Icons.calendar_today_outlined,
+                              '${createdDate.day} ${_monthId(createdDate.month)} ${createdDate.year}',
+                              '',
+                            ),
+                          ])
+            : <(String, IconData, String, String)>[
+                (
+                  'Detail Lengkap',
+                  Icons.info_outline_rounded,
+                  item?.subtitle ?? '-',
+                  '',
                 ),
                 (
-                  _reviewableCreatorPackageKeys.contains(widget.data.key)
-                      ? 'Foto Thumbnail'
-                      : 'Thumbnail / Icon',
-                  Icons.image_outlined,
-                  _reviewableCreatorPackageKeys.contains(widget.data.key)
-                      ? (_formThumbnailFile?.name ?? 'Pilih foto thumbnail paket')
-                      : (_formIcon == null
-                            ? 'Klik untuk memilih icon thumbnail'
-                            : 'Icon terpilih'),
-                  _reviewableCreatorPackageKeys.contains(widget.data.key)
-                      ? (_formThumbnailFile != null ? 'Foto dipilih' : 'Wajib')
-                      : (_formIcon != null ? 'Terpilih' : ''),
+                  'Dibuat pada',
+                  Icons.calendar_today_outlined,
+                  '${createdDate.day} ${_monthId(createdDate.month)} ${createdDate.year} • 09:12 WIB',
+                  user.name,
                 ),
                 (
-                  'Tanggal dibuat',
-                  Icons.event_available_rounded,
-                  _formDate == null
-                      ? 'Klik untuk memilih tanggal & waktu'
-                      : '${_formDate!.day} ${_monthId(_formDate!.month)} ${_formDate!.year} • ${_formDate!.hour.toString().padLeft(2, '0')}:${_formDate!.minute.toString().padLeft(2, '0')} WIB',
-                  _formDate != null ? 'Terjadwal' : '',
+                  'Terakhir diperbarui',
+                  Icons.update_outlined,
+                  '${updatedDate.day} ${_monthId(updatedDate.month)} ${updatedDate.year} • ${updatedDate.hour.toString().padLeft(2, '0')}:${(updatedDate.minute).toString().padLeft(2, '0')} WIB',
+                  user.name,
                 ),
-              ])
-        : <(String, IconData, String, String)>[
-            (
-              'Detail Lengkap',
-              Icons.info_outline_rounded,
-              item?.subtitle ?? '-',
-              '',
-            ),
-            (
-              'Dibuat pada',
-              Icons.calendar_today_outlined,
-              '${createdDate.day} ${_monthId(createdDate.month)} ${createdDate.year} • 09:12 WIB',
-              user.name,
-            ),
-            (
-              'Terakhir diperbarui',
-              Icons.update_outlined,
-              '${updatedDate.day} ${_monthId(updatedDate.month)} ${updatedDate.year} • ${updatedDate.hour.toString().padLeft(2, '0')}:${(updatedDate.minute).toString().padLeft(2, '0')} WIB',
-              user.name,
-            ),
-            (
-              'Riwayat perubahan',
-              Icons.history_outlined,
-              '4 revisi • terakhir oleh ${user.name}',
-              'Lihat Riwayat',
-            ),
-            (
-              'Lampiran & File',
-              Icons.attach_file_outlined,
-              item?.value ?? '-',
-              '${item != null ? _guessFileCount(item.title) : 0} File',
-            ),
-            (
-              'Kolaborator',
-              Icons.people_outline,
-              '${user.name}, Tim Kreavana',
-              '2 Orang',
-            ),
-          ];
+                (
+                  'Riwayat perubahan',
+                  Icons.history_outlined,
+                  '4 revisi • terakhir oleh ${user.name}',
+                  'Lihat Riwayat',
+                ),
+                (
+                  'Lampiran & File',
+                  Icons.attach_file_outlined,
+                  item?.value ?? '-',
+                  '${item != null ? _guessFileCount(item.title) : 0} File',
+                ),
+                (
+                  'Kolaborator',
+                  Icons.people_outline,
+                  '${user.name}, Tim Kreavana',
+                  '2 Orang',
+                ),
+              ]);
 
     // Jika ada detail yang diperluas, tampilkan kontennya
     if (_expandedDetailTitle != null && _expandedDetailContent != null) {
@@ -7954,11 +9883,43 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
       );
     }
 
+    String modalMainDesc = item?.subtitle ?? '';
+    String? modalAdminNote;
+    if (modalMainDesc.contains('Catatan admin:') ||
+        modalMainDesc.contains('catatan admin:')) {
+      final parts = modalMainDesc.split(
+        RegExp(r'[•·]\s*Catatan admin:\s*', caseSensitive: false),
+      );
+      if (parts.length > 1) {
+        modalMainDesc = parts[0].trim();
+        modalAdminNote = parts[1].trim();
+      }
+    }
+
     return ListView(
       controller: scrollCtrl,
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       children: [
         if (item != null) ...[
+          if (_isEo) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                widget.data.key == 'eo_timeline'
+                    ? 'Deskripsi Alur Kerja'
+                    : widget.data.key == 'eo_vendor'
+                        ? 'Spesifikasi & Fasilitas'
+                        : widget.data.key == 'eo_jadwal'
+                            ? 'Rincian Agenda Acara'
+                            : 'Deskripsi Paket',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                ),
+              ),
+            ),
+          ],
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -7968,13 +9929,54 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                 color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
               ),
             ),
-            child: Text(
-              item.subtitle,
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.5,
-                color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  modalMainDesc,
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.5,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
+                  ),
+                ),
+                if (modalAdminNote != null && modalAdminNote.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.info_outline_rounded,
+                          size: 14,
+                          color: Color(0xFFEF4444),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Catatan Admin: $modalAdminNote',
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFEF4444),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           const SizedBox(height: 16),
@@ -8000,19 +10002,26 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
     bool isDark,
     bool isNew,
   ) {
+    final canTap = isNew || !_isEo;
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: () {
-        if (isNew) {
-          _handleFormTap(index);
-        } else {
-          // Tampilkan detail di dalam modal yang sama
-          setState(() {
-            _expandedDetailTitle = f.$1;
-            _expandedDetailContent = f.$3;
-          });
-        }
-      },
+      onTap: canTap
+          ? () {
+              if (isNew) {
+                if (_isEo) {
+                  _handleEoFormTap(index);
+                } else {
+                  _handleFormTap(index);
+                }
+              } else {
+                // Tampilkan detail di dalam modal yang sama
+                setState(() {
+                  _expandedDetailTitle = f.$1;
+                  _expandedDetailContent = f.$3;
+                });
+              }
+            }
+          : null,
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),
@@ -8086,11 +10095,12 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 18,
-              color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
-            ),
+            if (canTap)
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
+              ),
           ],
         ),
       ),

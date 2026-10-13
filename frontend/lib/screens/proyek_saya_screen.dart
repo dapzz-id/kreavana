@@ -9,6 +9,7 @@ import '../services/opportunity_service.dart';
 import '../models/job_contract.dart';
 import '../models/opportunity_model.dart';
 import 'direct_message_screen.dart';
+import '../services/chat_service.dart';
 import 'buat_kebutuhan_screen.dart';
 import 'detail_kebutuhan_screen.dart';
 import '../widgets/app_breadcrumbs.dart';
@@ -17,6 +18,7 @@ import 'main_navigation.dart';
 import '../services/verification_service.dart';
 import 'client_verification_page.dart';
 import '../widgets/user_profile_modal.dart';
+import '../widgets/opportunity_review_dialog.dart';
 
 enum ProjectItemType {
   opportunity,
@@ -61,20 +63,28 @@ class UnifiedProjectItem {
   });
 
   factory UnifiedProjectItem.fromOpportunity(OpportunityModel opp) {
-    final isOpen = opp.status.toLowerCase() == 'open';
-    final isClosed = opp.status.toLowerCase() == 'closed';
+    final statusLower = opp.status.toLowerCase();
+    final isOpen = statusLower == 'open';
+    final isClosed = statusLower == 'closed' || statusLower == 'completed';
+    final isInProgress = statusLower == 'in_progress' || statusLower == 'active';
 
     final statusCategory = isOpen
         ? 'Mencari Kreator'
-        : (isClosed ? 'Selesai' : 'Menunggu');
+        : (isInProgress
+            ? 'Berjalan'
+            : (isClosed ? 'Selesai' : 'Menunggu'));
 
     final statusLabel = isOpen
         ? 'Mencari Kreator'
-        : (isClosed ? 'Kebutuhan Selesai' : opp.status.toUpperCase());
+        : (isInProgress
+            ? 'Acara Berlangsung'
+            : (isClosed ? 'Kebutuhan Selesai' : 'Menunggu Konfirmasi'));
 
     final statusColor = isOpen
         ? const Color(0xFF8B5CF6)
-        : (isClosed ? const Color(0xFF10B981) : const Color(0xFFF59E0B));
+        : (isInProgress
+            ? const Color(0xFF10B981)
+            : (isClosed ? const Color(0xFF3B82F6) : const Color(0xFFF59E0B)));
 
     final count = opp.applicationsCount;
     final partnerText = count > 0
@@ -115,7 +125,7 @@ class UnifiedProjectItem {
     );
   }
 
-  factory UnifiedProjectItem.fromContract(JobContract c) {
+  factory UnifiedProjectItem.fromContract(JobContract c, {String? currentUserId}) {
     final cs = c.contractStatus.toLowerCase();
     String statusCategory;
     Color statusColor;
@@ -177,6 +187,10 @@ class UnifiedProjectItem {
       formattedDeadline = DateFormat('dd MMM yyyy').format(c.scheduledEndDate!);
     }
 
+    final currentUserIdStr = currentUserId ?? '';
+    final isCreator = currentUserIdStr.isNotEmpty && c.creatorId == currentUserIdStr;
+    final partnerDisplay = isCreator ? 'Klien: ${c.clientName}' : 'Kreator: ${c.creatorName}';
+
     return UnifiedProjectItem(
       id: c.id,
       title: c.title,
@@ -187,7 +201,7 @@ class UnifiedProjectItem {
       statusColor: statusColor,
       priceOrBudget: currencyFormat.format(c.agreedPrice),
       deadline: formattedDeadline,
-      partnerOrApplicants: 'Kreator: ${c.creatorName}',
+      partnerOrApplicants: partnerDisplay,
       applicationsCount: 0,
       progress: progressPct / 100.0,
       type: ProjectItemType.contract,
@@ -269,7 +283,10 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
       }
 
       for (final contract in contracts) {
-        unified.add(UnifiedProjectItem.fromContract(contract));
+        unified.add(UnifiedProjectItem.fromContract(
+          contract,
+          currentUserId: widget.user?.id,
+        ));
       }
 
       // Sort by creation date descending
@@ -400,6 +417,150 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
         ),
       ),
     ).then((_) => _fetchRealtimeProjects());
+  }
+
+  String _getPartnerId(JobContract contract) {
+    final currentUserId = widget.user?.id ?? '';
+    if (currentUserId.isNotEmpty && contract.creatorId == currentUserId) {
+      return contract.clientId;
+    }
+    return contract.creatorId;
+  }
+
+  String _getPartnerName(JobContract contract) {
+    final currentUserId = widget.user?.id ?? '';
+    if (currentUserId.isNotEmpty && contract.creatorId == currentUserId) {
+      return contract.clientName;
+    }
+    return contract.creatorName;
+  }
+
+  String _getPartnerRole(JobContract contract) {
+    final currentUserId = widget.user?.id ?? '';
+    if (currentUserId.isNotEmpty && contract.creatorId == currentUserId) {
+      return 'client';
+    }
+    return 'creator';
+  }
+
+  Future<void> _openChatWithPartner(String targetUserId, String? targetUserName) async {
+    final cleanId = targetUserId.trim();
+    if (cleanId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('ID partner tidak ditemukan pada kontrak ini.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    if (widget.user?.id != null && widget.user!.id == cleanId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tidak dapat mengirim pesan ke akun sendiri.'),
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+      return;
+    }
+
+    // Tampilkan loading modal dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 20,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: AppTheme.primaryPurple),
+              const SizedBox(height: 16),
+              Text(
+                targetUserName != null && targetUserName.isNotEmpty
+                    ? 'Membuka obrolan dengan $targetUserName...'
+                    : 'Membuka obrolan...',
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final res = await ChatService.startPersonalChat(cleanId);
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop(); // Tutup dialog loading
+
+      if (res['status'] == true && res['data'] != null) {
+        final chatData = Map<String, dynamic>.from(res['data']);
+        final isDesktop = MediaQuery.of(context).size.width > 800;
+
+        if (isDesktop) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DirectMessageScreen(
+                currentUser: widget.user,
+                initialChat: chatData,
+                chatId: chatData['id'],
+                targetUserId: cleanId,
+              ),
+            ),
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => Scaffold(
+                body: ChatDetailSection(
+                  chat: chatData,
+                  isMobile: true,
+                  currentUser: widget.user,
+                ),
+              ),
+            ),
+          );
+        }
+      } else {
+        // Fallback navigasi langsung ke DirectMessageScreen dengan targetUserId
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DirectMessageScreen(
+              currentUser: widget.user,
+              targetUserId: cleanId,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error starting personal chat: $e');
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Tutup dialog jika error
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DirectMessageScreen(
+              currentUser: widget.user,
+              targetUserId: cleanId,
+            ),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -552,7 +713,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        if (Navigator.canPop(context))
+        if (!isDesktop && Navigator.canPop(context))
           Padding(
             padding: const EdgeInsets.only(right: 14),
             child: InkWell(
@@ -1131,6 +1292,13 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                   item.deadline!,
                   isDark,
                 ),
+              if (item.opportunity != null && item.opportunity!.hasExternalRating)
+                _buildMetaChip(
+                  Icons.star_rounded,
+                  '${item.opportunity!.externalRating!.toStringAsFixed(1)} (${item.opportunity!.externalRatingSource ?? 'Rating Luar'})',
+                  isDark,
+                  highlight: true,
+                ),
             ],
           ),
           const SizedBox(height: 14),
@@ -1201,15 +1369,20 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               children: [
                 InkWell(
                   onTap: () {
-                    final creatorId = item.contract?.creatorId;
-                    if (creatorId != null && creatorId.isNotEmpty) {
-                      UserProfileModal.show(
-                        context,
-                        userId: creatorId,
-                        initialName: item.contract?.creatorName,
-                        initialRole: 'creator',
-                        currentUser: widget.user,
-                      );
+                    final c = item.contract;
+                    if (c != null) {
+                      final partnerId = _getPartnerId(c);
+                      final partnerName = _getPartnerName(c);
+                      final partnerRole = _getPartnerRole(c);
+                      if (partnerId.isNotEmpty) {
+                        UserProfileModal.show(
+                          context,
+                          userId: partnerId,
+                          initialName: partnerName,
+                          initialRole: partnerRole,
+                          currentUser: widget.user,
+                        );
+                      }
                     }
                   },
                   borderRadius: BorderRadius.circular(6),
@@ -1223,25 +1396,36 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                           color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          item.partnerOrApplicants ?? '-',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.white70 : Colors.grey.shade800,
-                            decoration: (item.contract?.creatorId.isNotEmpty == true)
-                                ? TextDecoration.underline
-                                : null,
-                          ),
+                        Builder(
+                          builder: (context) {
+                            final c = item.contract;
+                            final partnerId = c != null ? _getPartnerId(c) : '';
+                            return Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  item.partnerOrApplicants ?? '-',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white70 : Colors.grey.shade800,
+                                    decoration: partnerId.isNotEmpty
+                                        ? TextDecoration.underline
+                                        : null,
+                                  ),
+                                ),
+                                if (partnerId.isNotEmpty) ...[
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.open_in_new_rounded,
+                                    size: 11,
+                                    color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                                  ),
+                                ],
+                              ],
+                            );
+                          },
                         ),
-                        if (item.contract?.creatorId.isNotEmpty == true) ...[
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.open_in_new_rounded,
-                            size: 11,
-                            color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -1298,17 +1482,52 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   ),
                 ),
+                if (item.opportunity != null && item.opportunity!.isClosed) ...[
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      final opp = item.opportunity!;
+                      final approvedCreator = opp.approvedCreators.isNotEmpty ? opp.approvedCreators.first : null;
+                      OpportunityReviewDialog.show(
+                        context,
+                        opportunityId: opp.id ?? '',
+                        projectTitle: opp.title,
+                        targetUserId: approvedCreator?.id ?? opp.postedBy ?? '',
+                        targetUserName: approvedCreator?.name ?? 'Kreator Terkait',
+                        targetUserAvatar: approvedCreator?.avatarUrl,
+                        targetUserSubRole: approvedCreator?.capability ?? approvedCreator?.subRole,
+                        onReviewSubmitted: _fetchRealtimeProjects,
+                      );
+                    },
+                    icon: const Icon(Icons.star_rounded, size: 16, color: Color(0xFFD97706)),
+                    label: const Text('Beri Ulasan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                      foregroundColor: const Color(0xFFD97706),
+                      elevation: 0,
+                      side: const BorderSide(color: Color(0xFFF59E0B), width: 1),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    ),
+                  ),
+                ],
               ] else ...[
                 IconButton(
                   icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
                   tooltip: 'Chat Partner',
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const DirectMessageScreen(),
-                      ),
-                    );
+                    final c = item.contract;
+                    if (c != null) {
+                      final partnerId = _getPartnerId(c);
+                      final partnerName = _getPartnerName(c);
+                      _openChatWithPartner(partnerId, partnerName);
+                    } else if (item.opportunity != null) {
+                      final opp = item.opportunity!;
+                      final targetId = opp.postedBy ?? '';
+                      _openChatWithPartner(targetId, opp.poster?.name);
+                    }
                   },
                   style: IconButton.styleFrom(
                     backgroundColor: isDark
@@ -1335,6 +1554,37 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ),
+                if (item.contract != null &&
+                    (item.contract!.isCompleted || item.progress >= 1.0)) ...[
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      final c = item.contract!;
+                      final partnerId = _getPartnerId(c);
+                      final partnerName = _getPartnerName(c);
+                      OpportunityReviewDialog.show(
+                        context,
+                        opportunityId: c.opportunityId ?? '',
+                        projectTitle: item.title,
+                        targetUserId: partnerId,
+                        targetUserName: partnerName,
+                        onReviewSubmitted: _fetchRealtimeProjects,
+                      );
+                    },
+                    icon: const Icon(Icons.star_rounded, size: 16, color: Color(0xFFD97706)),
+                    label: const Text('Beri Ulasan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                      foregroundColor: const Color(0xFFD97706),
+                      elevation: 0,
+                      side: const BorderSide(color: Color(0xFFF59E0B), width: 1),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    ),
+                  ),
+                ],
               ],
             ],
           ),
@@ -1392,6 +1642,10 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     final c = item.contract;
     if (c == null) return;
 
+    final partnerId = _getPartnerId(c);
+    final partnerName = _getPartnerName(c);
+    final partnerRole = _getPartnerRole(c);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1417,7 +1671,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
             const SizedBox(height: 8),
-            Text('Partner: ${c.creatorName}'),
+            Text('Partner: $partnerName'),
             Text('Nilai Kontrak: ${item.priceOrBudget}'),
             Text('Status Kontrak: ${item.statusLabel}'),
             Text('Status Kerja: ${c.workStatus}'),
@@ -1431,14 +1685,14 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
           ],
         ),
         actions: [
-          if (c.creatorId.isNotEmpty)
+          if (partnerId.isNotEmpty)
             OutlinedButton.icon(
               onPressed: () {
                 UserProfileModal.show(
                   context,
-                  userId: c.creatorId,
-                  initialName: c.creatorName,
-                  initialRole: 'creator',
+                  userId: partnerId,
+                  initialName: partnerName,
+                  initialRole: partnerRole,
                   currentUser: widget.user,
                 );
               },
@@ -1455,10 +1709,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const DirectMessageScreen()),
-              );
+              _openChatWithPartner(partnerId, partnerName);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryPurple,

@@ -104,6 +104,10 @@ class JobContract {
   double get amount => agreedPrice;
   String get creatorName => creator?['name'] ?? 'Kreator';
   String get clientName => client?['name'] ?? 'Klien';
+  String get status => contractStatus;
+  bool get isCompleted =>
+      contractStatus.toLowerCase() == 'completed' ||
+      workStatus.toLowerCase() == 'completed';
 
   bool get isPastDeadline {
     if (deadline == null) return false;

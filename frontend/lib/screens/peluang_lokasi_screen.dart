@@ -713,10 +713,11 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
     final filtered = _filtered;
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
+    final isDesktop = screenWidth > 900;
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: Navigator.canPop(context),
+        automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
         toolbarHeight: isMobile ? 65 : 80,
         titleSpacing: isMobile ? 16 : 32,
         elevation: 0,
@@ -751,42 +752,95 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
       ),
       body: Column(
         children: [
-          // ── Category filter chips ────────────────────────────────────────
-          SizedBox(
-            height: isMobile ? 40 : 44,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 32),
-              itemCount: _categories.length,
-              itemBuilder: (context, index) {
-                final cat = _categories[index];
-                final isSelected = _selectedCategory == cat['slug'];
-                final color = cat['color'] as Color;
-                return Padding(
-                  padding: EdgeInsets.only(right: isMobile ? 6 : 8),
-                  child: FilterChip(
-                    label: Text(
-                      cat['name'] as String,
-                      style: TextStyle(fontSize: isMobile ? 11 : 12),
-                    ),
-                    selected: isSelected,
-                    selectedColor: color.withValues(alpha: 0.2),
-                    checkmarkColor: color,
-                    labelStyle: TextStyle(
-                      fontSize: isMobile ? 11 : 12,
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      color: isSelected
-                          ? color
-                          : (isDark ? Colors.white70 : Colors.black87),
-                    ),
-                    onSelected: (_) {
-                      setState(() => _selectedCategory = cat['slug'] as String);
-                    },
+          // ── Category filter dropdown ─────────────────────────────────────
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              isMobile ? 12 : 24,
+              6,
+              isMobile ? 12 : 24,
+              4,
+            ),
+            child: Container(
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.cardBg : Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDark
+                      ? AppTheme.inputBorder
+                      : const Color(0xFFE2E8F0),
+                  width: 1.2,
+                ),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  value: _selectedCategory,
+                  icon: Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: isDark ? Colors.white70 : Colors.black54,
+                    size: 22,
                   ),
-                );
-              },
+                  dropdownColor: isDark
+                      ? const Color(0xFF1E1E2D)
+                      : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  elevation: 4,
+                  menuMaxHeight: 380,
+                  onChanged: (newCat) {
+                    if (newCat != null) {
+                      setState(() => _selectedCategory = newCat);
+                    }
+                  },
+                  items: _categories.map((cat) {
+                    final slug = cat['slug'] as String;
+                    final name = cat['name'] as String;
+                    final color = cat['color'] as Color;
+                    final isSelected = _selectedCategory == slug;
+                    return DropdownMenuItem<String>(
+                      value: slug,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              name,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                color: isSelected
+                                    ? (isDark
+                                        ? Colors.white
+                                        : color)
+                                    : (isDark
+                                        ? Colors.white70
+                                        : Colors.black87),
+                              ),
+                            ),
+                          ),
+                          if (isSelected)
+                            Icon(
+                              Icons.check_rounded,
+                              size: 18,
+                              color: color,
+                            ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
             ),
           ),
 
@@ -898,48 +952,105 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                 const VerticalDivider(width: 1, thickness: 1),
                 const SizedBox(width: 8),
 
-                // Radius filter options
+                // Radius filter dropdown
                 Expanded(
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _radiusOptions.length,
-                    itemBuilder: (context, index) {
-                      final opt = _radiusOptions[index];
-                      final isSelected = _selectedRadiusKm == opt['value'];
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: ChoiceChip(
-                          label: Text(
-                            opt['label'] as String,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected
-                                  ? Colors.teal.shade900
-                                  : (isDark ? Colors.white70 : Colors.black87),
-                            ),
-                          ),
-                          selected: isSelected,
-                          selectedColor: Colors.teal.shade100,
-                          onSelected: (_) {
-                            final radius = opt['value'] as double?;
-                            setState(() {
-                              _selectedRadiusKm = radius;
-                            });
-                            if (_userLocation == null && radius != null) {
-                              _detectUserLocation(autoCenter: true);
-                            } else {
-                              if (radius != null && _userLocation != null) {
-                                _fitMapToRadius(radius, _userLocation!);
-                              } else if (radius == null && _userLocation != null) {
-                                _animatedMapMove(_userLocation!, 13.0);
-                              }
-                              _loadLocations();
-                            }
-                          },
+                  child: Container(
+                    height: 34,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: _selectedRadiusKm != null
+                          ? Colors.teal.withValues(alpha: 0.12)
+                          : (isDark
+                              ? Colors.grey.shade800
+                              : Colors.grey.shade100),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _selectedRadiusKm != null
+                            ? Colors.teal
+                            : Colors.transparent,
+                        width: 1,
+                      ),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<double?>(
+                        isExpanded: true,
+                        value: _selectedRadiusKm,
+                        icon: Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 18,
+                          color: _selectedRadiusKm != null
+                              ? Colors.teal
+                              : (isDark ? Colors.white70 : Colors.black87),
                         ),
-                      );
-                    },
+                        dropdownColor: isDark
+                            ? const Color(0xFF1E1E2D)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        elevation: 4,
+                        onChanged: (radius) {
+                          setState(() {
+                            _selectedRadiusKm = radius;
+                          });
+                          if (_userLocation == null && radius != null) {
+                            _detectUserLocation(autoCenter: true);
+                          } else {
+                            if (radius != null && _userLocation != null) {
+                              _fitMapToRadius(radius, _userLocation!);
+                            } else if (radius == null &&
+                                _userLocation != null) {
+                              _animatedMapMove(_userLocation!, 13.0);
+                            }
+                            _loadLocations();
+                          }
+                        },
+                        items: _radiusOptions.map((opt) {
+                          final radius = opt['value'] as double?;
+                          final label = opt['label'] as String;
+                          final isSelected = _selectedRadiusKm == radius;
+                          return DropdownMenuItem<double?>(
+                            value: radius,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  radius == null
+                                      ? Icons.all_inclusive_rounded
+                                      : Icons.radar_rounded,
+                                  size: 14,
+                                  color: isSelected
+                                      ? Colors.teal
+                                      : (isDark
+                                          ? Colors.white60
+                                          : Colors.grey.shade600),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    label,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                      color: isSelected
+                                          ? Colors.teal
+                                          : (isDark
+                                              ? Colors.white70
+                                              : Colors.black87),
+                                    ),
+                                  ),
+                                ),
+                                if (isSelected)
+                                  const Icon(
+                                    Icons.check_rounded,
+                                    size: 16,
+                                    color: Colors.teal,
+                                  ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
                   ),
                 ),
               ],

@@ -20,7 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ValidateJti::class,
             \App\Http\Middleware\TouchLastOnline::class,
         ]);
-        
+
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'permission' => \App\Http\Middleware\PermissionMiddleware::class,
@@ -45,19 +45,22 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('api/*')) {
                 // Biarkan error validasi lewat seperti biasa
                 if ($e instanceof \Illuminate\Validation\ValidationException) {
-                    return null; 
+                    return null;
                 }
-                
+
                 // Let HTTP exceptions pass through (e.g. 404 Not Found, 429 Too Many Attempts)
                 if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
                     return null;
                 }
-                
+
+                $debugMessage = app()->environment(['local', 'testing']) || env('APP_DEBUG')
+                    ? $e->getMessage()
+                    : null;
+
                 return response()->json([
                     'status' => false,
                     'message' => 'Terjadi kesalahan internal pada server.',
-                    // Optional: hapus baris di bawah jika tidak ingin error debug sama sekali
-                    // 'debug' => env('APP_DEBUG') ? $e->getMessage() : null,
+                    'debug' => $debugMessage,
                 ], 500);
             }
         });

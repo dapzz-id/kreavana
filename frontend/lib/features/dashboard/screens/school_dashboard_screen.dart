@@ -118,16 +118,22 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
         }
       }
 
-      // 4. Process Agenda / Deadlines
+      // 4. Process Agenda / Deadlines (Rentang Mulai s/d Akhir Lengkap)
       final List<Map<String, dynamic>> loadedAgenda = [];
       final months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
       for (final c in contracts) {
-        if (c.deadline != null) {
-          final dt = c.deadline!;
+        if (c.deadline != null || c.scheduledStartDate != null) {
+          final start = c.scheduledStartDate ?? c.deadline!;
+          final end = c.scheduledEndDate ?? c.deadline ?? start;
+          final isSameDay = start.year == end.year && start.month == end.month && start.day == end.day;
+          final rangeStr = isSameDay
+              ? '${start.day.toString().padLeft(2, '0')} ${months[start.month - 1].toUpperCase()} ${start.year}'
+              : '${start.day.toString().padLeft(2, '0')} - ${end.day.toString().padLeft(2, '0')} ${months[start.month - 1].toUpperCase()} ${start.year}';
+          final isDeadline = c.deadline != null && c.scheduledStartDate == null;
           loadedAgenda.add({
-            'date': '${dt.day.toString().padLeft(2, '0')} ${months[dt.month - 1].toUpperCase()}',
+            'date': rangeStr,
             'title': c.title,
-            'time': 'Tenggat: 23:59 WIB',
+            'time': isDeadline ? 'Tenggat: 23:59 WIB' : '09:00 - 15:00 WIB',
           });
         }
       }

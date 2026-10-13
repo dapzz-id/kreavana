@@ -59,7 +59,7 @@ class _DaftarKebutuhanScreenState extends State<DaftarKebutuhanScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: Navigator.canPop(context),
+        automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
         toolbarHeight: 80,
         titleSpacing: isDesktop ? 32 : 16,
         elevation: 0,

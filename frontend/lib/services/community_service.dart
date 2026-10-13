@@ -1,7 +1,22 @@
-import 'package:dio/dio.dart';
 import 'api_service.dart';
 
 class CommunityService {
+  // ===== OVERVIEW =====
+  static Future<Map<String, dynamic>> getOverview({String? communityId}) async {
+    try {
+      final params = <String, dynamic>{
+        if (communityId != null) 'community_id': communityId,
+      };
+      final response = await ApiService.get(
+        'community/overview',
+        queryParams: params.isNotEmpty ? params : null,
+      );
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // ===== MEMBERS =====
   static Future<Map<String, dynamic>> getMembers({
     String? communityId,

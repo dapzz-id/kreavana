@@ -1081,7 +1081,7 @@ class _CreatorDesainerDashboardScreenState
                           ? Image.network(
                               ApiService.resolveAssetUrl(item.imageUrl!),
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
+                              errorBuilder: (_, _, _) => Container(
                                 color: accentColor.withValues(alpha: 0.1),
                                 child: Icon(
                                   Icons.broken_image,

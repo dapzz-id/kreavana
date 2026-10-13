@@ -176,13 +176,92 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
       final actList = overview['activity_feed'] as List<dynamic>? ?? [];
       for (final a in actList) {
         if (a is Map<String, dynamic>) {
+          final titleStr = (a['title'] ?? a['message'] ?? 'Aktivitas sistem').toString();
+          final typeStr = (a['type'] ?? '').toString().toLowerCase();
+
+          IconData icon = Icons.notifications_active_outlined;
+          Color color = _eoPurple;
+
+          final lower = titleStr.toLowerCase();
+          if (lower.contains('selesai') || typeStr == 'success') {
+            icon = Icons.check_circle_outline_rounded;
+            color = const Color(0xFF10B981);
+          } else if (lower.contains('rundown') || lower.contains('berjalan') || lower.contains('teknis')) {
+            icon = Icons.play_circle_outline_rounded;
+            color = _eoPurple;
+          } else if (lower.contains('vendor') || lower.contains('mitra')) {
+            icon = Icons.handshake_outlined;
+            color = const Color(0xFFF59E0B);
+          } else if (lower.contains('jadwal') || lower.contains('agenda') || lower.contains('gladi')) {
+            icon = Icons.calendar_today_rounded;
+            color = const Color(0xFF3B82F6);
+          } else if (lower.contains('anggaran') || lower.contains('paket') || lower.contains('bayar')) {
+            icon = Icons.account_balance_wallet_outlined;
+            color = const Color(0xFF06B6D4);
+          }
+
           loadedActivities.add({
-            'title': (a['title'] ?? a['message'] ?? 'Aktivitas sistem').toString(),
+            'title': titleStr,
             'time': (a['created_at_human'] ?? a['time'] ?? 'Baru saja').toString(),
-            'icon': Icons.notifications_active_outlined,
-            'color': _eoPurple,
+            'icon': icon,
+            'color': color,
           });
         }
+      }
+
+      if (loadedActivities.isEmpty && contracts.isNotEmpty) {
+        for (final c in contracts.take(5)) {
+          final isDone = c.workStatus.toLowerCase() == 'completed';
+          final isInProg = c.workStatus.toLowerCase() == 'in_progress';
+          final isReview = c.workStatus.toLowerCase() == 'review';
+          final title = isDone
+              ? "Event '${c.title}' selesai dieksekusi"
+              : isInProg
+                  ? "Koordinasi teknis & rundown '${c.title}' sedang berlangsung"
+                  : isReview
+                      ? "Pengajuan review hasil event '${c.title}' telah dikirim"
+                      : "Penawaran paket event '${c.title}' dalam tahap konfirmasi";
+          final icon = isDone
+              ? Icons.check_circle_outline_rounded
+              : isInProg
+                  ? Icons.play_circle_outline_rounded
+                  : isReview
+                      ? Icons.rate_review_outlined
+                      : Icons.assignment_turned_in_outlined;
+          final color = isDone
+              ? const Color(0xFF10B981)
+              : isInProg
+                  ? _eoPurple
+                  : isReview
+                      ? const Color(0xFF3B82F6)
+                      : const Color(0xFFF59E0B);
+
+          loadedActivities.add({
+            'title': title,
+            'time': c.scheduledStartDate != null
+                ? '${c.scheduledStartDate!.day}/${c.scheduledStartDate!.month}/${c.scheduledStartDate!.year}'
+                : 'Hari ini',
+            'icon': icon,
+            'color': color,
+          });
+        }
+      }
+
+      if (loadedActivities.isEmpty) {
+        loadedActivities.addAll([
+          {
+            'title': 'Sistem operasional dan sinkronisasi vendor siap digunakan',
+            'time': 'Hari ini',
+            'icon': Icons.verified_outlined,
+            'color': const Color(0xFF10B981),
+          },
+          {
+            'title': 'Kalender pelaksanaan event dan alokasi anggaran aktif',
+            'time': 'Hari ini',
+            'icon': Icons.calendar_month_outlined,
+            'color': const Color(0xFF3B82F6),
+          },
+        ]);
       }
 
       final totalEventVal = stats.isNotEmpty
@@ -281,18 +360,18 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      flex: 6,
                       child: Column(
                         children: [
                           _buildLineChartCard(isDark),
                           const SizedBox(height: 20),
                           _buildActiveEventsCard(isDark),
+                          const SizedBox(height: 20),
+                          _buildActivityCard(isDark),
                         ],
                       ),
                     ),
                     const SizedBox(width: 20),
                     Expanded(
-                      flex: 5,
                       child: Column(
                         children: [
                           _buildDonutChartCard(isDark),
@@ -310,14 +389,14 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
                 const SizedBox(height: 16),
                 _buildActiveEventsCard(isDark),
                 const SizedBox(height: 16),
+                _buildActivityCard(isDark),
+                const SizedBox(height: 16),
                 _buildDonutChartCard(isDark),
                 const SizedBox(height: 16),
                 _buildTopVendorsCard(isDark),
                 const SizedBox(height: 16),
                 _buildSpendingAndRecs(isDark),
               ],
-              const SizedBox(height: 20),
-              _buildActivityCard(isDark),
             ],
           ),
         ),

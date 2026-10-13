@@ -249,7 +249,7 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
             : null,
       ),
       appBar: AppBar(
-        automaticallyImplyLeading: Navigator.canPop(context),
+        automaticallyImplyLeading: !isWide && Navigator.canPop(context),
         toolbarHeight: 84,
         titleSpacing: isWide ? 32 : 16,
         elevation: 0,

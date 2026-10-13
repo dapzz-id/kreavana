@@ -7,6 +7,7 @@ use App\Models\Opportunity;
 use App\Models\OpportunityReview;
 use App\Models\MarketplaceReview;
 use App\Models\MarketplaceItem;
+use App\Models\OpportunityApplication;
 use App\Models\CreatorPerformanceEvent;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,22 @@ use App\Traits\ApiResponse;
 class OpportunityReviewController extends Controller
 {
     use ApiResponse;
+
+    /**
+     * Get reviews submitted for a specific opportunity.
+     */
+    public function getOpportunityReviews($opportunityId)
+    {
+        $reviews = OpportunityReview::with([
+            'reviewer:id,name,username,avatar_url,role,sub_role',
+            'creator:id,name,username,avatar_url,role,sub_role'
+        ])
+            ->where('opportunity_id', $opportunityId)
+            ->latest()
+            ->get();
+
+        return $this->successResponse('Daftar ulasan proyek berhasil diambil.', $reviews->toArray());
+    }
 
     public function store(Request $request, $opportunityId)
     {
@@ -33,11 +50,17 @@ class OpportunityReviewController extends Controller
                 return $this->errorResponse('Opportunity not found.', 404);
             }
 
-            if ($opportunity->status !== 'closed') {
+            if (!in_array(strtolower($opportunity->status), ['closed', 'completed'])) {
                 return $this->errorResponse('You can only review completed opportunities.', 400);
             }
 
-            if ($opportunity->posted_by !== $request->user()->id) {
+            $isPoster = ($opportunity->posted_by === $request->user()->id);
+            $isApprovedCreator = OpportunityApplication::where('opportunity_id', $opportunityId)
+                ->where('creator_id', $request->user()->id)
+                ->where('status', 'approved')
+                ->exists();
+
+            if (!$isPoster && !$isApprovedCreator) {
                 return $this->errorResponse('Unauthorized to review this opportunity.', 403);
             }
 
@@ -48,7 +71,7 @@ class OpportunityReviewController extends Controller
                 ->first();
 
             if ($existingReview) {
-                return $this->errorResponse('You have already reviewed this creator for this opportunity.', 400);
+                return $this->errorResponse('You have already reviewed this party for this opportunity.', 400);
             }
 
             $review = OpportunityReview::create([
@@ -61,7 +84,7 @@ class OpportunityReviewController extends Controller
                 'comment'        => $request->comment,
             ]);
 
-            if ($review->rating > 4.0) {
+            if ($review->rating > 4.0 && $review->creator && method_exists($review->creator, 'updatePerformanceBoost')) {
                 CreatorPerformanceEvent::firstOrCreate(
                     [
                         'user_id'      => $review->creator_id,

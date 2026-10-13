@@ -706,6 +706,20 @@ class _MainNavigationState extends State<MainNavigation> {
 
   void _handleCreatorMenuEntry(CreatorSidebarMenuEntry entry) {
     if (entry.serviceKey != null) {
+      if (entry.serviceKey!.startsWith('komunitas_')) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CommunityDashboardScreen(
+              user: _currentUser,
+              initialServiceKey: entry.serviceKey,
+              onUserUpdated: _onUserUpdated,
+              showSidebar: true,
+            ),
+          ),
+        );
+        return;
+      }
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -2217,6 +2231,7 @@ class _MainNavigationState extends State<MainNavigation> {
         return CommunityDashboardScreen(
           user: _currentUser,
           onUserUpdated: _onUserUpdated,
+          showSidebar: false,
         );
 
       case 'animator':
@@ -2330,6 +2345,7 @@ class _MainNavigationState extends State<MainNavigation> {
         return CommunityDashboardScreen(
           user: _currentUser,
           onUserUpdated: _onUserUpdated,
+          showSidebar: false,
         );
 
       case 'drone':
@@ -2468,6 +2484,7 @@ class _MainNavigationState extends State<MainNavigation> {
           : DirectMessageScreen(
               key: ValueKey('messages_$_messageScreenVersion'),
               currentUser: _currentUser,
+              showSidebar: false,
             ),
       12 => PeluangProyekScreen(user: _currentUser),
       13 => CreatorCalendarScreen(

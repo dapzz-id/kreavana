@@ -19,6 +19,7 @@ import '../screens/pengumuman_publik_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/tim_hak_akses_screen.dart';
 import '../screens/institution_workspace_screen.dart';
+import '../features/dashboard/screens/community_dashboard_screen.dart';
 import 'creator_sidebar_menus.dart';
 import 'kreavana_ai_floating_widget.dart';
 import 'app_sweet_alert.dart';
@@ -340,6 +341,11 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
           current == 'withdraw';
     }
 
+    // Pesan / Chat / Direct Message
+    if (t == 'pesan' || t == 'chat' || t == 'direct_message') {
+      return current == 'pesan' || current == 'chat' || current == 'direct_message';
+    }
+
     // Creator Services
     if (isServiceKey(t)) {
       return current == t || current.startsWith('${t}_');
@@ -363,6 +369,16 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   }
 
   void _pushService(String serviceKey) {
+    if (serviceKey.startsWith('komunitas_')) {
+      _pushNoAnimation(
+        CommunityDashboardScreen(
+          user: widget.user,
+          onUserUpdated: widget.onUserUpdated ?? (_) {},
+          initialServiceKey: serviceKey,
+        ),
+      );
+      return;
+    }
     _pushNoAnimation(
       CreatorServiceScreen(
         user: widget.user,

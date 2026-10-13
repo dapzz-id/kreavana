@@ -76,7 +76,7 @@ class _WalletScreenState extends State<WalletScreen> {
     final content = Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        automaticallyImplyLeading: Navigator.canPop(context),
+        automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
         toolbarHeight: 80,
         titleSpacing: isDesktop ? 32 : 16,
         title: const Text(

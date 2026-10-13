@@ -213,7 +213,7 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: Navigator.canPop(context),
+        automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
         toolbarHeight: 80,
         titleSpacing: isDesktop ? 32 : 18,
         elevation: 0,

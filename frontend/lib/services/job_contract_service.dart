@@ -15,7 +15,8 @@ class JobContractService {
         queryParameters: {'limit': limit},
       );
 
-      if (response.data['status'] == 'success' &&
+      final status = response.data['status'];
+      if ((status == true || status == 'success') &&
           response.data['data'] != null) {
         final List<dynamic> data = response.data['data'];
         return data.map((json) => JobContract.fromJson(json)).toList();
@@ -36,7 +37,8 @@ class JobContractService {
     try {
       final response = await _dio.post('/contracts', data: payload);
 
-      if (response.data['status'] == 'success' &&
+      final status = response.data['status'];
+      if ((status == true || status == 'success') &&
           response.data['data'] != null) {
         return JobContract.fromJson(response.data['data']);
       }
@@ -50,4 +52,18 @@ class JobContractService {
       );
     }
   }
+
+  /// Confirm schedule for a job contract
+  static Future<bool> confirmSchedule(String contractId) async {
+    try {
+      final response = await _dio.post('/contracts/$contractId/confirm-schedule');
+      final status = response.data['status'];
+      return status == true || status == 'success';
+    } on DioException catch (e) {
+      throw Exception(AppErrors.friendly(e));
+    } catch (e) {
+      throw Exception('Gagal mengonfirmasi jadwal: ${e.toString()}');
+    }
+  }
 }
+

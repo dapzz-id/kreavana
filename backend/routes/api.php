@@ -182,6 +182,7 @@ Route::middleware('auth:api')->group(function () {
         Route::get('my', [OpportunityController::class, 'myOpportunities']);
         Route::post('/', [OpportunityController::class, 'store'])->middleware('permission:create_opportunity');
         Route::post('report', [OpportunityController::class, 'submitReport'])->middleware('permission:submit_report');
+        Route::get('{id}/reviews', [OpportunityReviewController::class, 'getOpportunityReviews']);
         Route::post('{id}/reviews', [OpportunityReviewController::class, 'store']);
         Route::post('{id}/applications', [OpportunityController::class, 'apply']);
         Route::get('{id}/applications', [OpportunityController::class, 'applications']);
@@ -219,6 +220,9 @@ Route::middleware('auth:api')->group(function () {
 
     // Community Services
     Route::prefix('community')->group(function () {
+        // Overview & Workflow
+        Route::get('overview', [CommunityController::class, 'getOverview']);
+
         // Members
         Route::get('members', [CommunityController::class, 'getMembers']);
         Route::post('members', [CommunityController::class, 'addMember']);
@@ -244,6 +248,7 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/', [JobContractController::class, 'index']);
         Route::post('/', [JobContractController::class, 'store']);
         Route::get('{id}', [JobContractController::class, 'show']);
+        Route::post('{id}/confirm-schedule', [JobContractController::class, 'confirmSchedule']);
         Route::post('{contract}/transitions', [JobContractTransitionController::class, 'store']);
     });
 

@@ -1855,7 +1855,7 @@ class _AdminVerificationScreenState extends State<AdminVerificationScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: Navigator.canPop(context)
+      appBar: (!isDesktop && Navigator.canPop(context))
           ? AppBar(
               automaticallyImplyLeading: true,
               elevation: 0,

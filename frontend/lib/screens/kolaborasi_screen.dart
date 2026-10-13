@@ -149,7 +149,7 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
     if (widget.user == null || widget.user!.isClient || !_isCreator) {
       return Scaffold(
         appBar: AppBar(
-          automaticallyImplyLeading: Navigator.canPop(context),
+          automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
           toolbarHeight: 80,
           titleSpacing: isDesktop ? 32 : 18,
           title: const Text(
@@ -182,7 +182,7 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: Navigator.canPop(context),
+        automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
         toolbarHeight: 80,
         titleSpacing: isDesktop ? 32 : 18,
         elevation: 0,

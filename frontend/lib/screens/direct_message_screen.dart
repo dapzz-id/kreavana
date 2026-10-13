@@ -32,12 +32,14 @@ import '../models/user_model.dart';
 import '../services/system_settings_service.dart';
 import '../widgets/feature_disabled_view.dart';
 import '../widgets/app_sweet_alert.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 
 class DirectMessageScreen extends StatefulWidget {
   final UserModel? currentUser;
   final dynamic chatId;
   final Map<String, dynamic>? initialChat;
   final String? targetUserId;
+  final bool showSidebar;
 
   const DirectMessageScreen({
     super.key,
@@ -45,6 +47,7 @@ class DirectMessageScreen extends StatefulWidget {
     this.chatId,
     this.initialChat,
     this.targetUserId,
+    this.showSidebar = true,
   });
 
   @override
@@ -56,10 +59,21 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
   Map<String, dynamic>? selectedChat;
   final GlobalKey<ChatListSectionState> chatListKey =
       GlobalKey<ChatListSectionState>();
+  UserModel? _resolvedUser;
 
   @override
   void initState() {
     super.initState();
+    _resolvedUser = widget.currentUser;
+    if (_resolvedUser == null) {
+      AuthService.getCurrentUser().then((u) {
+        if (mounted && u != null) {
+          setState(() {
+            _resolvedUser = u;
+          });
+        }
+      });
+    }
     SystemSettingsService.moduleStatuses.addListener(_onModuleStatusesChanged);
     BadgeService().markMessagesRead();
     if (widget.initialChat != null) {
@@ -136,8 +150,10 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!SystemSettingsService.isDirectMessageEnabled && !(widget.currentUser?.isAdmin == true)) {
-      return Scaffold(
+    final effectiveUser = _resolvedUser ?? widget.currentUser;
+
+    if (!SystemSettingsService.isDirectMessageEnabled && !(effectiveUser?.isAdmin == true)) {
+      final disabledPage = Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
           backgroundColor: Theme.of(context).colorScheme.surface,
@@ -149,9 +165,19 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
           icon: Icons.chat_bubble_outline_rounded,
         ),
       );
+      if (widget.showSidebar &&
+          effectiveUser != null &&
+          MediaQuery.of(context).size.width > 900) {
+        return DesktopSidebarLayout(
+          user: effectiveUser,
+          activeRoute: 'direct_message',
+          child: disabledPage,
+        );
+      }
+      return disabledPage;
     }
 
-    return Scaffold(
+    final page = Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -163,7 +189,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                   width: 380,
                   child: ChatListSection(
                     key: chatListKey,
-                    currentUser: widget.currentUser,
+                    currentUser: effectiveUser,
                     onChatSelected: (chat) {
                       setState(() {
                         selectedChat = chat;
@@ -187,7 +213,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                       : ChatDetailSection(
                           key: ValueKey(selectedChat!['id'].toString()),
                           chat: selectedChat!,
-                          currentUser: widget.currentUser,
+                          currentUser: effectiveUser,
                           onMessageSent: () {
                             chatListKey.currentState?.loadChats();
                           },
@@ -205,7 +231,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
             // Jika lebar layar kecil (Mobile), hanya tampilkan daftar chat
             return ChatListSection(
               key: chatListKey,
-              currentUser: widget.currentUser,
+              currentUser: effectiveUser,
               onChatSelected: (chat) {
                 Navigator.push(
                   context,
@@ -214,7 +240,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                       body: ChatDetailSection(
                         chat: chat,
                         isMobile: true,
-                        currentUser: widget.currentUser,
+                        currentUser: effectiveUser,
                         onMessageSent: () {
                           chatListKey.currentState?.loadChats();
                         },
@@ -231,6 +257,18 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
         },
       ),
     );
+
+    if (widget.showSidebar &&
+        effectiveUser != null &&
+        MediaQuery.of(context).size.width > 900) {
+      return DesktopSidebarLayout(
+        user: effectiveUser,
+        activeRoute: 'direct_message',
+        child: page,
+      );
+    }
+
+    return page;
   }
 
   Widget _buildEmptyState(BuildContext context) {
@@ -5389,7 +5427,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                 ),
                 Switch(
                   value: onlyAdminCanAdd,
-                  activeColor: AppTheme.primaryPurple,
+                  activeThumbColor: AppTheme.primaryPurple,
                   onChanged: (val) {
                     ChatService.updateGroupSettings(
                       widget.chat['id'].toString(),

@@ -325,6 +325,9 @@ class OpportunityService {
     String? meetingNotes,
     List<Map<String, dynamic>>? requirements,
     OpportunityPoster? poster,
+    double? externalRating,
+    String? externalRatingSource,
+    String? externalProofUrl,
   }) async {
     OpportunityModel? apiResult;
     String? errorMessage;
@@ -349,6 +352,9 @@ class OpportunityService {
         'event_start_time': eventStartTime,
         'event_end_time': eventEndTime,
         'budget_range': budgetRange,
+        if (externalRating != null) 'external_rating': externalRating,
+        if (externalRatingSource != null) 'external_rating_source': externalRatingSource,
+        if (externalProofUrl != null) 'external_proof_url': externalProofUrl,
         if (meetingDate != null) 'meeting_date': meetingDate,
         if (meetingTime != null) 'meeting_time': meetingTime,
         if (meetingLocation != null) 'meeting_location': meetingLocation,
@@ -405,6 +411,9 @@ class OpportunityService {
               : 'pending_deposit',
           status: 'open',
           poster: poster,
+          externalRating: externalRating,
+          externalRatingSource: externalRatingSource,
+          externalProofUrl: externalProofUrl,
         );
 
     if (apiResult == null) {
@@ -539,6 +548,49 @@ class OpportunityService {
       return null;
     } catch (_) {
       return null;
+    }
+  }
+
+  /// Ambil ulasan yang sudah diberikan untuk suatu proyek/opportunity
+  static Future<List<Map<String, dynamic>>> getOpportunityReviews(String opportunityId) async {
+    try {
+      final res = await ApiService.get('opportunities/$opportunityId/reviews');
+      if (res['status'] == true && res['data'] is List) {
+        return List<Map<String, dynamic>>.from(res['data']);
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  /// Kirim ulasan dan rating untuk proyek/opportunity yang telah selesai
+  static Future<Map<String, dynamic>> submitOpportunityReview({
+    required String opportunityId,
+    required String creatorId,
+    required double rating,
+    String? comment,
+    bool? isOnTime,
+    int? deliveryDays,
+  }) async {
+    try {
+      final payload = <String, dynamic>{
+        'creator_id': creatorId,
+        'rating': rating,
+        if (comment != null && comment.isNotEmpty) 'comment': comment,
+        if (isOnTime != null) 'is_on_time': isOnTime,
+        if (deliveryDays != null) 'delivery_days': deliveryDays,
+      };
+
+      final res = await ApiService.post('opportunities/$opportunityId/reviews', payload);
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Ulasan berhasil dikirim.',
+        'data': res['data'],
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
     }
   }
 }

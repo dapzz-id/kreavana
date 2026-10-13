@@ -256,7 +256,7 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
     final content = Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F0D15) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        automaticallyImplyLeading: Navigator.canPop(context),
+        automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
         toolbarHeight: 76,
         titleSpacing: isDesktop ? 32 : 16,
         elevation: 0,
@@ -348,84 +348,190 @@ class _PeluangProyekScreenState extends State<PeluangProyekScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // 2. Role Selector Chips
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _roleFilters.map((rf) {
-                      final isSelected = _selectedRole == rf['slug'];
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: FilterChip(
-                          label: Text(rf['label']!),
-                          selected: isSelected,
-                          selectedColor: AppTheme.primaryPurple.withValues(alpha: 0.18),
-                          checkmarkColor: AppTheme.primaryPurple,
-                          labelStyle: TextStyle(
-                            fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: isSelected ? AppTheme.primaryPurple : null,
-                          ),
-                          onSelected: (val) {
-                            setState(() {
-                              _selectedRole = val ? rf['slug']! : 'all';
-                            });
-                            _loadProjects();
-                          },
+                // 2. Filter Dropdowns (Peran & Wilayah)
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isNarrow = constraints.maxWidth < 600;
+                    final roleDropdown = Container(
+                      height: 46,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppTheme.cardBg : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isDark
+                              ? AppTheme.inputBorder
+                              : const Color(0xFFE2E8F0),
+                          width: 1.2,
                         ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // 3. Wilayah Selector Chips
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.place_rounded, size: 14, color: isDark ? Colors.white60 : Colors.grey.shade600),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Wilayah:',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white60 : Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
                       ),
-                      ..._cityFilters.map((city) {
-                        final isSelected = _selectedCity == city;
-                        final label = city == 'all' ? 'Semua Wilayah' : city;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: ChoiceChip(
-                            visualDensity: VisualDensity.compact,
-                            label: Text(label),
-                            selected: isSelected,
-                            selectedColor: const Color(0xFF06B6D4).withValues(alpha: 0.18),
-                            labelStyle: TextStyle(
-                              fontSize: 11,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected ? const Color(0xFF0891B2) : null,
-                            ),
-                            onSelected: (val) {
-                              setState(() {
-                                _selectedCity = val ? city : 'all';
-                              });
-                              _filter();
-                            },
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          value: _selectedRole,
+                          icon: Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: isDark ? Colors.white70 : Colors.black54,
+                            size: 22,
                           ),
-                        );
-                      }),
-                    ],
-                  ),
+                          dropdownColor: isDark
+                              ? const Color(0xFF1E1E2D)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          elevation: 4,
+                          menuMaxHeight: 380,
+                          onChanged: (newRole) {
+                            if (newRole != null) {
+                              setState(() => _selectedRole = newRole);
+                              _loadProjects();
+                            }
+                          },
+                          items: _roleFilters.map((rf) {
+                            final slug = rf['slug']!;
+                            final label = rf['label']!;
+                            final isSelected = _selectedRole == slug;
+                            return DropdownMenuItem<String>(
+                              value: slug,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      label,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                        color: isSelected
+                                            ? (isDark
+                                                ? Colors.white
+                                                : AppTheme.primaryPurple)
+                                            : (isDark
+                                                ? Colors.white70
+                                                : Colors.black87),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (isSelected)
+                                    const Icon(
+                                      Icons.check_rounded,
+                                      size: 18,
+                                      color: AppTheme.primaryPurple,
+                                    ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    );
+
+                    final cityDropdown = Container(
+                      height: 46,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppTheme.cardBg : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isDark
+                              ? AppTheme.inputBorder
+                              : const Color(0xFFE2E8F0),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          value: _selectedCity,
+                          icon: Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: isDark ? Colors.white70 : Colors.black54,
+                            size: 22,
+                          ),
+                          dropdownColor: isDark
+                              ? const Color(0xFF1E1E2D)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          elevation: 4,
+                          menuMaxHeight: 380,
+                          onChanged: (newCity) {
+                            if (newCity != null) {
+                              setState(() => _selectedCity = newCity);
+                              _filter();
+                            }
+                          },
+                          items: _cityFilters.map((city) {
+                            final label =
+                                city == 'all' ? 'Semua Wilayah' : city;
+                            final isSelected = _selectedCity == city;
+                            return DropdownMenuItem<String>(
+                              value: city,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    city == 'all'
+                                        ? Icons.public_rounded
+                                        : Icons.location_on_outlined,
+                                    size: 16,
+                                    color: isSelected
+                                        ? const Color(0xFF0891B2)
+                                        : (isDark
+                                            ? Colors.white60
+                                            : Colors.grey.shade600),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      label,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                        color: isSelected
+                                            ? const Color(0xFF0891B2)
+                                            : (isDark
+                                                ? Colors.white70
+                                                : Colors.black87),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (isSelected)
+                                    const Icon(
+                                      Icons.check_rounded,
+                                      size: 18,
+                                      color: Color(0xFF0891B2),
+                                    ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    );
+
+                    if (isNarrow) {
+                      return Column(
+                        children: [
+                          roleDropdown,
+                          const SizedBox(height: 8),
+                          cityDropdown,
+                        ],
+                      );
+                    } else {
+                      return Row(
+                        children: [
+                          Expanded(child: roleDropdown),
+                          const SizedBox(width: 12),
+                          Expanded(child: cityDropdown),
+                        ],
+                      );
+                    }
+                  },
                 ),
                 const SizedBox(height: 8),
 

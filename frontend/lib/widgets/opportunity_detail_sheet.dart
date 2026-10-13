@@ -9,6 +9,7 @@ import '../widgets/responsive_modal.dart';
 import '../app/theme.dart';
 import '../widgets/auth_guard_dialog.dart';
 import '../widgets/user_profile_modal.dart';
+import '../widgets/opportunity_review_dialog.dart';
 
 class OpportunityDetailSheet extends StatefulWidget {
   final OpportunityModel opportunity;
@@ -46,12 +47,75 @@ class OpportunityDetailSheet extends StatefulWidget {
 }
 
 class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
+  List<Map<String, dynamic>> _reviews = [];
+  bool _loadingReviews = false;
+
   bool get _isOwner =>
       widget.currentUserId.isNotEmpty &&
       widget.opportunity.postedBy != null &&
       widget.opportunity.postedBy == widget.currentUserId;
 
   bool get _isGuest => widget.currentUserId.isEmpty;
+
+  bool get _isApprovedCreator =>
+      widget.currentUserId.isNotEmpty &&
+      widget.opportunity.approvedCreators.any((c) => c.id == widget.currentUserId);
+
+  bool get _canReview {
+    final status = widget.opportunity.status.toLowerCase();
+    if (status != 'closed' && status != 'completed') return false;
+    if (_isOwner && widget.opportunity.approvedCreators.isNotEmpty) return true;
+    if (_isApprovedCreator) return true;
+    return false;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReviews();
+  }
+
+  Future<void> _loadReviews() async {
+    final oppId = widget.opportunity.id;
+    if (oppId == null || oppId.isEmpty) return;
+    setState(() => _loadingReviews = true);
+    final reviews = await OpportunityService.getOpportunityReviews(oppId);
+    if (!mounted) return;
+    setState(() {
+      _reviews = reviews;
+      _loadingReviews = false;
+    });
+  }
+
+  void _openReviewDialog() {
+    final opp = widget.opportunity;
+    if (_isOwner) {
+      final targetCreator =
+          opp.approvedCreators.isNotEmpty ? opp.approvedCreators.first : null;
+      if (targetCreator == null) return;
+      OpportunityReviewDialog.show(
+        context,
+        opportunityId: opp.id ?? '',
+        projectTitle: opp.title,
+        targetUserId: targetCreator.id,
+        targetUserName: targetCreator.name,
+        targetUserAvatar: targetCreator.avatarUrl,
+        targetUserSubRole: targetCreator.capability ?? targetCreator.subRole,
+        onReviewSubmitted: _loadReviews,
+      );
+    } else if (_isApprovedCreator) {
+      OpportunityReviewDialog.show(
+        context,
+        opportunityId: opp.id ?? '',
+        projectTitle: opp.title,
+        targetUserId: opp.postedBy ?? '',
+        targetUserName: opp.poster?.name ?? 'Pemilik Proyek',
+        targetUserAvatar: opp.poster?.avatarUrl,
+        targetUserSubRole: 'Klien',
+        onReviewSubmitted: _loadReviews,
+      );
+    }
+  }
 
   void _openChat(
     BuildContext context, {
@@ -604,6 +668,32 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
                 ),
               ),
             ),
+            if (opp.hasExternalRating) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star_rounded, size: 14, color: Color(0xFFD97706)),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${opp.externalRating!.toStringAsFixed(1)} (${opp.externalRatingSource ?? 'Rating Luar'})',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFD97706),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
         const SizedBox(height: 16),
@@ -683,6 +773,44 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
             ],
           ),
         ),
+        if (opp.hasExternalRating) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF59E0B).withValues(alpha: isDark ? 0.08 : 0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.verified_rounded, color: Color(0xFFD97706), size: 18),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Rekam Jejak Acara Sebelumnya (Terverifikasi Eksternal)',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFD97706)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Acara ini memiliki rekam jejak eksternal dengan rating ${opp.externalRating!.toStringAsFixed(1)} dari 5.0 (Sumber: ${opp.externalRatingSource ?? "Eksternal"}).',
+                  style: TextStyle(fontSize: 12, height: 1.4, color: isDark ? Colors.white70 : Colors.grey.shade800),
+                ),
+                if (opp.externalProofUrl != null && opp.externalProofUrl!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tautan Bukti/Liputan: ${opp.externalProofUrl!}',
+                    style: const TextStyle(fontSize: 11.5, color: AppTheme.primaryPurple, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
 
         // 4. Required Capabilities (Multi-Role Breakdown)
@@ -848,7 +976,10 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
           const SizedBox(height: 20),
         ],
 
-        // 7. Action Area
+        // 7. Reviews Section
+        _buildReviewsSection(isDark),
+
+        // 8. Action Area
         if (_isOwner) ...[
           ElevatedButton.icon(
             onPressed: () => _showApplicationsManagerDialog(context),
@@ -860,6 +991,19 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
+          if (_canReview) ...[
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _openReviewDialog,
+              icon: const Icon(Icons.star_rounded, color: Color(0xFFD97706), size: 18),
+              label: const Text('Beri Ulasan Kreator Proyek', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD97706))),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 44),
+                side: const BorderSide(color: Color(0xFFF59E0B)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
         ] else ...[
           Row(
             children: [
@@ -896,7 +1040,271 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
               ],
             ],
           ),
+          if (_canReview) ...[
+            const SizedBox(height: 10),
+            ElevatedButton.icon(
+              onPressed: _openReviewDialog,
+              icon: const Icon(Icons.star_rounded, color: Colors.white, size: 18),
+              label: const Text('Beri Ulasan Pemilik Proyek', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF59E0B),
+                minimumSize: const Size(double.infinity, 46),
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
         ],
+      ],
+    );
+  }
+
+  Widget _buildReviewsSection(bool isDark) {
+    final isCompleted = widget.opportunity.status.toLowerCase() == 'closed' ||
+        widget.opportunity.status.toLowerCase() == 'completed';
+
+    if (!isCompleted && _reviews.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.reviews_rounded, size: 18, color: Color(0xFFF59E0B)),
+                const SizedBox(width: 8),
+                Text(
+                  'Ulasan & Penilaian Proyek (${_reviews.length})',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ],
+            ),
+            if (_canReview)
+              TextButton.icon(
+                onPressed: _openReviewDialog,
+                icon: const Icon(Icons.rate_review_rounded, size: 15, color: Color(0xFFD97706)),
+                label: const Text(
+                  'Beri Ulasan',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFD97706),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        if (_loadingReviews)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          )
+        else if (_reviews.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardBg : Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+              ),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.rate_review_outlined,
+                  size: 28,
+                  color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Belum ada ulasan yang ditinggalkan untuk proyek ini.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                  ),
+                ),
+                if (_canReview) ...[
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    onPressed: _openReviewDialog,
+                    icon: const Icon(Icons.star_rounded, size: 15),
+                    label: const Text('Beri Ulasan Sekarang', style: TextStyle(fontSize: 12)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF59E0B),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          )
+        else
+          Column(
+            children: _reviews.map((r) {
+              final reviewer = r['reviewer'] as Map<String, dynamic>? ?? {};
+              final rating = double.tryParse(r['rating']?.toString() ?? '5') ?? 5.0;
+              final comment = r['comment']?.toString();
+              final isOnTime = r['is_on_time'] == true;
+              final deliveryDays = r['delivery_days'];
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.cardBg : Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                          backgroundImage: reviewer['avatar_url'] != null
+                              ? NetworkImage(reviewer['avatar_url'])
+                              : null,
+                          child: reviewer['avatar_url'] == null
+                              ? Text(
+                                  (reviewer['name']?.toString() ?? '?')[0].toUpperCase(),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.primaryPurple,
+                                    fontSize: 12,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                reviewer['name'] ?? 'Pengguna',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                              Text(
+                                reviewer['sub_role'] ?? reviewer['role'] ?? 'Kolaborator',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.star_rounded, size: 14, color: Color(0xFFD97706)),
+                              const SizedBox(width: 3),
+                              Text(
+                                rating.toStringAsFixed(1),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFD97706),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (comment != null && comment.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        comment,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          height: 1.4,
+                          color: isDark ? Colors.white70 : Colors.grey.shade800,
+                        ),
+                      ),
+                    ],
+                    if (isOnTime || deliveryDays != null) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          if (isOnTime)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade50,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: Colors.green.shade200),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.check_circle_rounded, size: 11, color: Colors.green.shade700),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    'Tepat Waktu',
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.green.shade700),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (deliveryDays != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: Colors.blue.shade200),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.timer_outlined, size: 11, color: Colors.blue.shade700),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    'Pengerjaan $deliveryDays Hari',
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.blue.shade700),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        const SizedBox(height: 16),
       ],
     );
   }

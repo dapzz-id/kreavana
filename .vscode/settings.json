@@ -16,5 +16,6 @@
         }
     },
     "java.import.gradle.enabled": false,
-    "java.project.import.enable": false
+    "java.project.import.enable": false,
+    "cmake.sourceDirectory": "C:/laragon/www/Project Sekolah/kreavana/frontend/linux"
 }

@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreJobContractRequest;
 use App\Services\JobContractService;
+use App\Models\JobContract;
+use App\Models\JobStatusHistory;
+use App\Enums\WorkStatus;
 use Illuminate\Http\Request;
 use Exception;
 
@@ -54,4 +57,42 @@ class JobContractController extends Controller
             return $this->errorResponse($e->getMessage(), $e->getCode() ?: 400);
         }
     }
+
+    public function confirmSchedule(Request $request, string $id)
+    {
+        try {
+            $user = $request->user();
+            $contract = JobContract::findOrFail($id);
+
+            if ($contract->client_id !== $user->id && $contract->creator_id !== $user->id) {
+                return $this->errorResponse('Anda tidak memiliki akses ke kontrak ini.', 403);
+            }
+
+            $fromWorkStatus = $contract->work_status?->value ?? (string) $contract->work_status;
+
+            $contract->work_status = WorkStatus::InProgress;
+            $contract->started_at = now();
+            if (!$contract->scheduled_at) {
+                $contract->scheduled_at = now();
+            }
+            $contract->save();
+
+            JobStatusHistory::create([
+                'job_contract_id' => $contract->id,
+                'actor_id' => $user->id,
+                'transition' => 'confirm_schedule',
+                'from_work_status' => $fromWorkStatus,
+                'to_work_status' => WorkStatus::InProgress->value,
+                'from_contract_status' => $contract->contract_status?->value ?? (string) $contract->contract_status,
+                'to_contract_status' => $contract->contract_status?->value ?? (string) $contract->contract_status,
+                'metadata' => ['action' => 'confirm_schedule'],
+                'created_at' => now(),
+            ]);
+
+            return $this->successResponse('Jadwal berhasil dikonfirmasi', $contract->toArray());
+        } catch (Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
 }
+

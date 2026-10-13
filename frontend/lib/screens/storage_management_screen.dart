@@ -1357,7 +1357,7 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
     final content = Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        automaticallyImplyLeading: true,
+        automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
         toolbarHeight: 72,
         titleSpacing: isDesktop ? 32 : 16,
         elevation: 0,

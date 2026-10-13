@@ -228,6 +228,9 @@ class OpportunityModel {
   final List<OpportunityRequirementModel> requirements;
   final List<OpportunityApprovedCreatorModel> approvedCreators;
   final int applicationsCount;
+  final double? externalRating;
+  final String? externalRatingSource;
+  final String? externalProofUrl;
 
   OpportunityModel({
     required this.id,
@@ -265,12 +268,16 @@ class OpportunityModel {
     this.requirements = const [],
     this.approvedCreators = const [],
     this.applicationsCount = 0,
+    this.externalRating,
+    this.externalRatingSource,
+    this.externalProofUrl,
   });
 
   bool get isLocation => type == 'location';
   bool get isProject => type == 'project';
   bool get isOngoing => status.toLowerCase() == 'in_progress' || status.toLowerCase() == 'ongoing';
   bool get isClosed => status.toLowerCase() == 'closed' || status.toLowerCase() == 'completed';
+  bool get hasExternalRating => externalRating != null && externalRating! > 0;
 
   bool get isLargeTransaction {
     final b = (budgetRange ?? '').toLowerCase();
@@ -349,6 +356,9 @@ class OpportunityModel {
     List<OpportunityRequirementModel>? requirements,
     List<OpportunityApprovedCreatorModel>? approvedCreators,
     int? applicationsCount,
+    double? externalRating,
+    String? externalRatingSource,
+    String? externalProofUrl,
   }) {
     return OpportunityModel(
       id: id ?? this.id,
@@ -386,6 +396,9 @@ class OpportunityModel {
       requirements: requirements ?? this.requirements,
       approvedCreators: approvedCreators ?? this.approvedCreators,
       applicationsCount: applicationsCount ?? this.applicationsCount,
+      externalRating: externalRating ?? this.externalRating,
+      externalRatingSource: externalRatingSource ?? this.externalRatingSource,
+      externalProofUrl: externalProofUrl ?? this.externalProofUrl,
     );
   }
 
@@ -464,6 +477,13 @@ class OpportunityModel {
           : (json['applications'] is List
               ? (json['applications'] as List).length
               : 0),
+      externalRating: json['external_rating'] != null
+          ? (json['external_rating'] is num
+              ? (json['external_rating'] as num).toDouble()
+              : double.tryParse(json['external_rating'].toString()))
+          : null,
+      externalRatingSource: json['external_rating_source']?.toString(),
+      externalProofUrl: json['external_proof_url']?.toString(),
     );
   }
 
@@ -503,6 +523,9 @@ class OpportunityModel {
       'poster': poster?.toJson(),
       'requirements': requirements.map((r) => r.toJson()).toList(),
       'approved_creators': approvedCreators.map((c) => c.toJson()).toList(),
+      'external_rating': externalRating,
+      'external_rating_source': externalRatingSource,
+      'external_proof_url': externalProofUrl,
     };
   }
 

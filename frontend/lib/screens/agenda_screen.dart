@@ -3,6 +3,9 @@ import '../app/theme.dart';
 import '../app/subrole_theme_engine.dart';
 import '../models/user_model.dart';
 import '../services/job_contract_service.dart';
+import '../services/opportunity_service.dart';
+import '../models/job_contract.dart';
+import '../models/opportunity_model.dart';
 
 import '../widgets/skeleton/skeleton_list.dart';
 import '../widgets/app_breadcrumbs.dart';
@@ -46,43 +49,106 @@ class _AgendaScreenState extends State<AgendaScreen> {
     _fetchRealtimeAgenda();
   }
 
+  static const List<String> _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+  ];
+
+  String _formatDateRange(DateTime start, [DateTime? end]) {
+    if (end == null || (start.year == end.year && start.month == end.month && start.day == end.day)) {
+      return '${start.day.toString().padLeft(2, '0')} ${_months[start.month - 1]} ${start.year}';
+    }
+
+    if (start.year == end.year && start.month == end.month) {
+      return '${start.day.toString().padLeft(2, '0')} - ${end.day.toString().padLeft(2, '0')} ${_months[start.month - 1]} ${start.year}';
+    }
+
+    if (start.year == end.year) {
+      return '${start.day.toString().padLeft(2, '0')} ${_months[start.month - 1]} - ${end.day.toString().padLeft(2, '0')} ${_months[end.month - 1]} ${start.year}';
+    }
+
+    return '${start.day.toString().padLeft(2, '0')} ${_months[start.month - 1]} ${start.year} - ${end.day.toString().padLeft(2, '0')} ${_months[end.month - 1]} ${end.year}';
+  }
+
   Future<void> _fetchRealtimeAgenda() async {
     setState(() => _isLoading = true);
     try {
-      final contracts = await JobContractService.getUserContracts();
+      final results = await Future.wait([
+        JobContractService.getUserContracts().catchError((_) => <JobContract>[]),
+        OpportunityService.getMyOpportunities().catchError((_) => <OpportunityModel>[]),
+      ]);
+
+      final contracts = results[0] as List<JobContract>;
+      final opportunities = results[1] as List<OpportunityModel>;
       final List<Map<String, dynamic>> list = [];
-      for (final c in contracts) {
-        if (c.deadline != null) {
-          final dt = c.deadline!;
-          final months = [
-            'Jan',
-            'Feb',
-            'Mar',
-            'Apr',
-            'Mei',
-            'Jun',
-            'Jul',
-            'Agu',
-            'Sep',
-            'Okt',
-            'Nov',
-            'Des',
-          ];
-          final monthStr = months[dt.month - 1];
-          list.add({
-            'id': c.id,
-            'title': c.title,
-            'date': dt.day.toString().padLeft(2, '0'),
-            'month': monthStr,
-            'time': '23:59 WIB', // Placeholder
-            'type': 'Deadline',
-            'typeColor': const Color(0xFFEF4444),
-            'icon': Icons.alarm_outlined,
-            'location': 'Kreavana Workspace',
-            'organizer': c.creatorName,
-          });
-        }
+
+      // 1. Process Opportunities (Kegiatan & Event Sekolah)
+      for (final opp in opportunities) {
+        final startStr = opp.eventStartDate ?? opp.eventDate ?? opp.deadline ?? opp.createdAt;
+        final DateTime start = startStr != null ? (DateTime.tryParse(startStr) ?? DateTime.now()) : DateTime.now();
+
+        final endStr = opp.eventEndDate ?? opp.eventDate;
+        final DateTime end = endStr != null ? (DateTime.tryParse(endStr) ?? start) : start;
+
+        list.add({
+          'id': 'opp_${opp.id}',
+          'title': opp.title,
+          'startDate': start,
+          'endDate': end,
+          'date': start.day.toString().padLeft(2, '0'),
+          'month': _months[start.month - 1],
+          'year': '${start.year}',
+          'endDateStr': end.day.toString().padLeft(2, '0'),
+          'endMonthStr': _months[end.month - 1],
+          'endYearStr': '${end.year}',
+          'dateRange': _formatDateRange(start, end),
+          'time': '08:00 - 16:00 WIB',
+          'type': _isSchool ? 'Event' : 'Offline',
+          'typeColor': const Color(0xFFF97316),
+          'icon': Icons.festival_outlined,
+          'location': (opp.location != null && opp.location!.isNotEmpty)
+              ? opp.location!
+              : (opp.address != null && opp.address!.isNotEmpty
+                  ? opp.address!
+                  : 'Kampus / Sekolah'),
+          'organizer': opp.poster?.name ?? widget.user?.name ?? 'Sekolah',
+        });
       }
+
+      // 2. Process Contracts
+      for (final c in contracts) {
+        final start = c.scheduledStartDate ?? c.deadline ?? DateTime.now();
+        final end = c.scheduledEndDate ?? c.deadline ?? start;
+        final isDeadline = c.deadline != null && c.scheduledStartDate == null;
+
+        list.add({
+          'id': 'contract_${c.id}',
+          'title': c.title,
+          'startDate': start,
+          'endDate': end,
+          'date': start.day.toString().padLeft(2, '0'),
+          'month': _months[start.month - 1],
+          'year': '${start.year}',
+          'endDateStr': end.day.toString().padLeft(2, '0'),
+          'endMonthStr': _months[end.month - 1],
+          'endYearStr': '${end.year}',
+          'dateRange': _formatDateRange(start, end),
+          'time': isDeadline ? 'Tenggat: 23:59 WIB' : '09:00 - 17:00 WIB',
+          'type': isDeadline ? 'Deadline' : (_isSchool ? 'Workshop' : 'Client'),
+          'typeColor': isDeadline ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+          'icon': isDeadline ? Icons.alarm_outlined : Icons.school_outlined,
+          'location': 'Kreavana Workspace',
+          'organizer': c.creatorName,
+        });
+      }
+
+      // Sort by startDate ascending (kegiatan terdekat lebih dulu)
+      list.sort((a, b) {
+        final dtA = a['startDate'] as DateTime? ?? DateTime.now();
+        final dtB = b['startDate'] as DateTime? ?? DateTime.now();
+        return dtA.compareTo(dtB);
+      });
+
       if (mounted) {
         setState(() {
           _agendaList = list;
@@ -120,7 +186,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: Navigator.canPop(context),
+        automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
         toolbarHeight: 80,
         titleSpacing: isDesktop ? 32 : 16,
         elevation: 0,
@@ -380,21 +446,24 @@ class _AgendaScreenState extends State<AgendaScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Date Square Badge
+          // Date Square Badge (Menampilkan Tanggal, Bulan, dan Tahun)
           Container(
-            width: 56,
-            height: 56,
+            width: 64,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
             decoration: BoxDecoration(
               color: accentColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: accentColor.withValues(alpha: 0.2)),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  item['date'] as String,
+                  item['endDateStr'] != null && item['endDateStr'] != item['date']
+                      ? '${item['date']}-${item['endDateStr']}'
+                      : item['date'] as String,
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: item['endDateStr'] != null && item['endDateStr'] != item['date'] ? 13 : 18,
                     fontWeight: FontWeight.bold,
                     color: accentColor,
                   ),
@@ -404,6 +473,14 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   style: TextStyle(
                     fontSize: 11,
                     color: accentColor,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  item['year'] != null ? '${item['year']}' : '${DateTime.now().year}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: accentColor.withValues(alpha: 0.8),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -449,7 +526,38 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                // Rentang Tanggal Mulai s/d Akhir Agenda (Tanggal, Bulan, Tahun)
+                Container(
+                  margin: const EdgeInsets.only(top: 6, bottom: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.calendar_month_rounded,
+                        size: 13,
+                        color: accentColor,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        item['dateRange'] as String? ?? '${item['date']} ${item['month']} ${item['year'] ?? ''}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white70 : Colors.grey.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
                 Row(
                   children: [
                     Icon(
@@ -658,6 +766,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
     final titleCtrl = TextEditingController();
     final timeCtrl = TextEditingController();
     final locCtrl = TextEditingController();
+    DateTime startDate = DateTime.now();
+    DateTime endDate = DateTime.now().add(const Duration(days: 2));
     String typeSel = _isSchool ? 'Event' : 'Online';
 
     final schoolTypes = [
@@ -708,6 +818,161 @@ class _AgendaScreenState extends State<AgendaScreen> {
             ),
           ),
           const SizedBox(height: 14),
+          // Pemilihan Tanggal Mulai dan Tanggal Selesai (Tanggal, Bulan, Tahun)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.04)
+                  : Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? AppTheme.inputBorder
+                    : Colors.grey.shade300,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.date_range_rounded, size: 16, color: accentColor),
+                    const SizedBox(width: 8),
+                    Text(
+                      _isSchool ? 'Periode Tanggal Kegiatan (Awal s/d Akhir)' : 'Rentang Tanggal Agenda',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: ctx,
+                            initialDate: startDate,
+                            firstDate: DateTime(2024),
+                            lastDate: DateTime(2030),
+                            helpText: 'Pilih Tanggal Mulai (Awal Agenda)',
+                          );
+                          if (picked != null) {
+                            setModalState(() {
+                              startDate = picked;
+                              if (endDate.isBefore(startDate)) {
+                                endDate = startDate;
+                              }
+                            });
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? AppTheme.cardBg
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? AppTheme.inputBorder
+                                  : Colors.grey.shade300,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Awal Agenda (Mulai)',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? AppTheme.textMuted
+                                      : Colors.grey.shade600,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                '${startDate.day.toString().padLeft(2, '0')} ${_months[startDate.month - 1]} ${startDate.year}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: accentColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 6),
+                      child: Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.grey),
+                    ),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: ctx,
+                            initialDate: endDate.isBefore(startDate) ? startDate : endDate,
+                            firstDate: startDate,
+                            lastDate: DateTime(2030),
+                            helpText: 'Pilih Tanggal Selesai (Akhir Agenda)',
+                          );
+                          if (picked != null) {
+                            setModalState(() {
+                              endDate = picked;
+                            });
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? AppTheme.cardBg
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? AppTheme.inputBorder
+                                  : Colors.grey.shade300,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Akhir Agenda (Selesai)',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? AppTheme.textMuted
+                                      : Colors.grey.shade600,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                '${endDate.day.toString().padLeft(2, '0')} ${_months[endDate.month - 1]} ${endDate.year}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: accentColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
@@ -715,7 +980,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   controller: timeCtrl,
                   decoration: InputDecoration(
                     labelText: 'Waktu / Jam',
-                    hintText: '09:00 - 12:00 WIB',
+                    hintText: '09:00 - 15:00 WIB',
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
@@ -768,7 +1033,6 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   return;
                 }
                 setState(() {
-                  final now = DateTime.now();
                   Color getTypeColor(String type) {
                     if (type == 'Online' || type == 'Client') return const Color(0xFF3B82F6);
                     if (type == 'Offline' || type == 'Event') return const Color(0xFFF97316);
@@ -787,17 +1051,21 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     return Icons.event_note_outlined;
                   }
 
-                  final months = [
-                    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-                    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
-                  ];
+                  final dateRangeText = _formatDateRange(startDate, endDate);
 
                   _agendaList.insert(0, {
-                    'id': '${now.millisecondsSinceEpoch}',
+                    'id': '${DateTime.now().millisecondsSinceEpoch}',
                     'title': titleCtrl.text.trim(),
-                    'date': '${now.day}'.padLeft(2, '0'),
-                    'month': months[now.month - 1],
-                    'time': timeCtrl.text.trim().isEmpty ? '09:00 WIB' : timeCtrl.text.trim(),
+                    'startDate': startDate,
+                    'endDate': endDate,
+                    'date': '${startDate.day}'.padLeft(2, '0'),
+                    'month': _months[startDate.month - 1],
+                    'year': '${startDate.year}',
+                    'endDateStr': '${endDate.day}'.padLeft(2, '0'),
+                    'endMonthStr': _months[endDate.month - 1],
+                    'endYearStr': '${endDate.year}',
+                    'dateRange': dateRangeText,
+                    'time': timeCtrl.text.trim().isEmpty ? '09:00 - 15:00 WIB' : timeCtrl.text.trim(),
                     'type': typeSel,
                     'typeColor': getTypeColor(typeSel),
                     'icon': getTypeIcon(typeSel),
