@@ -25,6 +25,7 @@ import '../../../widgets/app_empty_state.dart';
 import '../../../widgets/opportunity_detail_sheet.dart';
 import '../../../models/opportunity_model.dart';
 import '../../../services/profile_completeness_service.dart';
+import '../../../app/subrole_theme_engine.dart';
 import '../../../widgets/upgrade_plan_modal.dart';
 import '../../../widgets/user_profile_modal.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -2069,6 +2070,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             Builder(
               builder: (context) {
                 final completeness = ProfileCompleteness.calculate(widget.user);
+                final accentColor = SubRoleThemeEngine.getAccentColorForUser(widget.user);
                 return Column(
                   children: [
                     GestureDetector(
@@ -2086,8 +2088,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                               backgroundColor: isDark
                                   ? AppTheme.inputBorder
                                   : AppTheme.dividerLight,
-                              valueColor: const AlwaysStoppedAnimation<Color>(
-                                AppTheme.primaryPurple,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                accentColor,
                               ),
                             ),
                           ),
@@ -2106,10 +2108,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                               ),
                               Text(
                                 '${completeness.percentage}%',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
-                                  color: AppTheme.primaryPurple,
+                                  color: accentColor,
                                 ),
                               ),
                             ],
@@ -2128,9 +2130,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           side: BorderSide(
-                            color: AppTheme.primaryPurple.withValues(alpha: 0.4),
+                            color: accentColor.withValues(alpha: 0.4),
                           ),
-                          foregroundColor: AppTheme.primaryPurple,
+                          foregroundColor: accentColor,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
