@@ -27,7 +27,7 @@ class ProfileScreen extends StatefulWidget {
     required this.user,
     required this.onUserUpdated,
     required this.onLogout,
-    this.showSidebar = false,
+    this.showSidebar = true,
   });
 
   @override

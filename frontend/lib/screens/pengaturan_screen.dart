@@ -87,6 +87,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
           user: widget.user!,
           onUserUpdated: widget.onUserUpdated ?? (_) {},
           onLogout: widget.onLogout ?? () {},
+          showSidebar: true,
         ),
       ),
     );
