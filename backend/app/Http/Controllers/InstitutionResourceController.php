@@ -37,6 +37,18 @@ class InstitutionResourceController extends Controller
             'type' => 'nullable|string|in:' . implode(',', self::TYPES),
         ]);
 
+        $user = $request->user();
+        if ($user) {
+            $subRole = $user->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user->sub_role;
+            $isCorporate = in_array($subRole, [
+                'corporate', 'company', 'business', 'perusahaan', 'bisnis'
+            ], true);
+
+            if ($isCorporate && InstitutionResource::where('user_id', $user->id)->count() === 0) {
+                \Database\Seeders\CorporateDummySeeder::seedForUser($user);
+            }
+        }
+
         $resources = InstitutionResource::query()
             ->where('user_id', $request->user()->id)
             ->when($validated['type'] ?? null, fn ($query, $type) => $query->where('resource_type', $type))

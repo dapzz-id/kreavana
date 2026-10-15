@@ -58,6 +58,8 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
         JobContractService.getUserContracts().catchError((_) => <JobContract>[]),
         ApiService.get('client-dashboard/overview', queryParams: {'role_type': 'user'}).catchError((_) => <String, dynamic>{}),
         ApiService.get('institution/resources', queryParams: {'type': 'tenders'}).catchError((_) => <String, dynamic>{}),
+        ApiService.get('institution/resources', queryParams: {'type': 'partners'}).catchError((_) => <String, dynamic>{}),
+        ApiService.get('institution/resources', queryParams: {'type': 'budgets'}).catchError((_) => <String, dynamic>{}),
       ]);
 
       final contracts = results[0] as List<JobContract>;
@@ -66,11 +68,28 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
       final summary = (overview['summary'] as Map<String, dynamic>?) ?? {};
       final tenderRes = results[2] as Map<String, dynamic>;
       final tenderData = (tenderRes['data'] as List<dynamic>?) ?? [];
+      final partnerRes = results[3] as Map<String, dynamic>;
+      final partnerData = (partnerRes['data'] as List<dynamic>?) ?? [];
+      final budgetRes = results[4] as Map<String, dynamic>;
+      final budgetData = (budgetRes['data'] as List<dynamic>?) ?? [];
 
-      final totalProjects = summary['total_projects'] ?? contracts.length;
-      final activeProjects = summary['active_projects'] ?? summary['running_projects'] ?? contracts.where((c) => c.workStatus == 'in_progress').length;
-      final totalExpenses = summary['total_payments'] ?? summary['estimated_expenses'] ?? 'Rp 145.500.000';
-      final pendingExpenses = summary['pending_payments'] ?? 'Rp 32.000.000';
+      final totalProjects = contracts.isNotEmpty ? contracts.length : (summary['total_projects'] ?? 0);
+      final activeProjects = contracts.isNotEmpty 
+          ? contracts.where((c) => c.workStatus == 'in_progress').length
+          : (summary['active_projects'] ?? 0);
+
+      double totalBudgetVal = 0;
+      for (final b in budgetData) {
+        if (b is Map<String, dynamic>) {
+          final m = b['metadata'] as Map<String, dynamic>? ?? {};
+          final val = double.tryParse(m['allocation']?.toString() ?? '') ?? 0;
+          totalBudgetVal += val;
+        }
+      }
+      final totalExpenses = totalBudgetVal > 0 
+          ? 'Rp ${totalBudgetVal.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.')}'
+          : (summary['total_payments'] ?? 'Rp 0');
+      final pendingExpenses = summary['pending_payments'] ?? 'Rp 0';
 
       final loadedMetrics = <Map<String, dynamic>>[
         {
@@ -124,49 +143,30 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
         });
       }
 
-      if (loadedProjects.isEmpty) {
-        loadedProjects.addAll([
-          {
-            'title': 'Pengadaan Rebranding Brand & Visual Identity 2026',
-            'creator': 'Studio Desain Cipta Kreasi',
-            'progress': 0.70,
-            'status': 'in_progress',
-          },
-          {
-            'title': 'Produksi Video Profil Korporat 4K & Annual Report',
-            'creator': 'PT Visual Kreasi Nusantara',
-            'progress': 0.85,
-            'status': 'review',
-          },
-          {
-            'title': 'Dokumentasi & Media Coverage Gala Dinner RUPS',
-            'creator': 'Creative Media Agency',
-            'progress': 1.0,
-            'status': 'completed',
-          },
-        ]);
-      }
-
       final loadedCreators = <Map<String, dynamic>>[];
-      final vendorList = overview['vendor_recommendations'] as List<dynamic>? ?? [];
-      for (final v in vendorList) {
-        if (v is Map<String, dynamic>) {
+      for (final p in partnerData) {
+        if (p is Map<String, dynamic>) {
+          final meta = p['metadata'] as Map<String, dynamic>? ?? {};
           loadedCreators.add({
-            'name': (v['name'] ?? v['user_name'] ?? 'Mitra B2B').toString(),
-            'cat': (v['category'] ?? v['sub_role'] ?? 'Creative Partner').toString(),
-            'rating': (v['rating'] ?? '4.9').toString(),
+            'name': p['title'] ?? 'Mitra B2B',
+            'cat': meta['category'] ?? 'Creative Partner',
+            'rating': '4.9',
             'verified': true,
           });
         }
       }
-
       if (loadedCreators.isEmpty) {
-        loadedCreators.addAll([
-          {'name': 'PT Visual Kreasi Nusantara', 'cat': 'Production House & Video', 'rating': '4.9', 'verified': true},
-          {'name': 'Studio Cipta Multimedia', 'cat': 'Desain 3D & Brand Identity', 'rating': '5.0', 'verified': true},
-          {'name': 'PT Kreasi Event Indonesia', 'cat': 'Event Organizer & MICE', 'rating': '4.9', 'verified': true},
-          {'name': 'CV Mitra Prima Percetakan', 'cat': 'Percetakan Digital & Merchandise', 'rating': '4.8', 'verified': true},
-        ]);
+        final vendorList = overview['vendor_recommendations'] as List<dynamic>? ?? [];
+        for (final v in vendorList) {
+          if (v is Map<String, dynamic>) {
+            loadedCreators.add({
+              'name': (v['name'] ?? v['user_name'] ?? 'Mitra B2B').toString(),
+              'cat': (v['category'] ?? v['sub_role'] ?? 'Creative Partner').toString(),
+              'rating': (v['rating'] ?? '4.9').toString(),
+              'verified': true,
+            });
+          }
+        }
       }
 
       final loadedActivities = <Map<String, dynamic>>[];
@@ -180,57 +180,25 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
         }
       }
 
-      if (loadedActivities.isEmpty) {
-        loadedActivities.addAll([
-          {'title': 'Kontrak kerja sama "Produksi Video Profil Korporat 4K" memasuki tahap review', 'time': '10 menit lalu'},
-          {'title': 'Mitra "PT Visual Kreasi Nusantara" mengirim laporan progres milestone 3', 'time': '1 jam lalu'},
-          {'title': 'Tender terbuka "RFP-2026-001: Pengadaan Broadcast RUPS" menerima 4 penawaran', 'time': 'Hari ini, 09:30'},
-          {'title': 'Pembayaran escrow terverifikasi untuk kontrak desain visual identity', 'time': 'Kemarin, 16:45'},
-        ]);
-      }
-
       final loadedTenders = <Map<String, dynamic>>[];
       for (final t in tenderData) {
         if (t is Map<String, dynamic>) {
           final meta = t['metadata'] as Map<String, dynamic>? ?? {};
+          final rawBudget = meta['budget'];
+          String formattedBudget = 'Rp 0';
+          if (rawBudget != null) {
+            final bNum = double.tryParse(rawBudget.toString()) ?? 0;
+            formattedBudget = 'Rp ${bNum.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
+          }
           loadedTenders.add({
             'title': t['title'] ?? 'RFP Proyek Korporat',
             'desc': t['description'] ?? '',
             'category': meta['category'] ?? 'Pengadaan Kreatif',
-            'budget': meta['budget'] != null ? 'Rp ${meta['budget']}' : 'Rp 50.000.000',
+            'budget': formattedBudget,
             'status': t['status'] ?? 'open',
             'deadline': meta['deadline'] ?? '2026-11-30',
           });
         }
-      }
-
-      if (loadedTenders.isEmpty) {
-        loadedTenders.addAll([
-          {
-            'title': 'RFP-2026-001: Pengadaan Sistem Dokumentasi & Multi-Camera RUPS',
-            'desc': 'Tender terbuka pengadaan vendor broadcast dan live stream feed cabang RUPS.',
-            'category': 'Broadcast & Media',
-            'budget': 'Rp 65.000.000',
-            'status': 'open',
-            'deadline': '15 Nov 2026',
-          },
-          {
-            'title': 'RFP-2026-002: Tender Desain Kemasan & Brand Identity Ekspor',
-            'desc': 'Perancangan identitas kemasan ramah lingkungan standar ekspor Uni Eropa.',
-            'category': 'Desain & Branding',
-            'budget': 'Rp 85.000.000',
-            'status': 'in_progress',
-            'deadline': '30 Okt 2026',
-          },
-          {
-            'title': 'RFP-2026-003: Jasa Produksi TVC Iklan Digital & Video 3D CGI',
-            'desc': 'Pembuatan iklan komersial 4K photorealistic cutdown multi-platform.',
-            'category': 'Video Advertising',
-            'budget': 'Rp 120.000.000',
-            'status': 'open',
-            'deadline': '01 Des 2026',
-          },
-        ]);
       }
 
       if (mounted) {
@@ -1429,16 +1397,19 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
           const SizedBox(height: 16),
           LayoutBuilder(
             builder: (context, constraints) {
-              final isWide = constraints.maxWidth > 700;
+              final width = constraints.maxWidth;
+              final crossAxisCount = width > 850 ? 4 : (width > 480 ? 2 : 1);
+              final childAspectRatio = width > 850 ? 1.05 : (width > 480 ? 1.25 : 2.6);
+
               return GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: values.length,
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: isWide ? 4 : 2,
+                  crossAxisCount: crossAxisCount,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: isWide ? 1.4 : 1.2,
+                  childAspectRatio: childAspectRatio,
                 ),
                 itemBuilder: (context, i) {
                   final v = values[i];
@@ -1459,7 +1430,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                           backgroundColor: col.withValues(alpha: 0.15),
                           child: Icon(v['icon'] as IconData, size: 16, color: col),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 8),
                         Text(
                           v['title'] as String,
                           style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, height: 1.25),
@@ -1467,14 +1438,16 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          v['desc'] as String,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                        Flexible(
+                          child: Text(
+                            v['desc'] as String,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),

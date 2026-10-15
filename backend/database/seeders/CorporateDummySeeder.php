@@ -24,6 +24,11 @@ class CorporateDummySeeder extends Seeder
             return;
         }
 
+        self::seedForUser($corp);
+    }
+
+    public static function seedForUser(User $corp): void
+    {
         // Pastikan sub_role corporate aktif
         $corp->update([
             'role' => RoleType::User,
