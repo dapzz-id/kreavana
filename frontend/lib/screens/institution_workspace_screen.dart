@@ -359,8 +359,13 @@ class _InstitutionWorkspaceScreenState
   }
 
   Future<void> _openEditor([Map<String, dynamic>? existing]) async {
+    // If triggered from popup menu, wait for popup route to pop cleanly
+    await Future.delayed(const Duration(milliseconds: 100));
+    if (!mounted) return;
+
     final saved = await showDialog<bool>(
       context: context,
+      barrierDismissible: true,
       builder: (dialogContext) => _ResourceEditorDialog(
         resourceType: widget.resourceType,
         title: _title,
@@ -374,17 +379,16 @@ class _InstitutionWorkspaceScreenState
     );
 
     if (saved == true && mounted) {
+      // Let the dialog exit transition finish completely before refreshing records and showing toast
+      await Future.delayed(const Duration(milliseconds: 250));
+      if (!mounted) return;
       await _loadRecords();
       if (mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            AppSweetAlert.success(
-              context,
-              'Data $_title berhasil disimpan ke database backend.',
-              title: 'Berhasil Disimpan',
-            );
-          }
-        });
+        AppSweetAlert.success(
+          context,
+          'Data $_title berhasil disimpan.',
+          title: 'Berhasil Disimpan',
+        );
       }
     }
   }
@@ -1972,14 +1976,14 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                 TextFormField(
                   controller: _titleController,
                   decoration: const InputDecoration(
-                    labelText: 'Judul / Nama Agenda / Judul Dokumen',
-                    hintText: 'Masukkan judul resmi...',
+                    labelText: 'Nama / Judul',
+                    hintText: 'Masukkan nama atau judul resmi...',
                     prefixIcon: Icon(Icons.title_rounded, size: 20),
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) =>
                       value == null || value.trim().isEmpty
-                          ? 'Judul wajib diisi'
+                          ? 'Nama / Judul wajib diisi'
                           : null,
                 ),
                 const SizedBox(height: 12),
@@ -2063,7 +2067,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
           onPressed: _isSaving ? null : _submit,
-          label: Text(_isSaving ? 'Menyimpan...' : 'Simpan ke Backend'),
+          label: Text(_isSaving ? 'Menyimpan...' : 'Simpan'),
         ),
       ],
     );
