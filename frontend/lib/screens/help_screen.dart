@@ -103,18 +103,13 @@ class _HelpScreenState extends State<HelpScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: isDesktop ? 960 : double.infinity,
-          ),
-          child: ListView(
-            padding: EdgeInsets.fromLTRB(
-              isDesktop ? 32 : 16,
-              16,
-              isDesktop ? 32 : 16,
-              40,
-            ),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          isDesktop ? 32 : 16,
+          16,
+          isDesktop ? 32 : 16,
+          40,
+        ),
             children: [
               // ── Breadcrumbs ──────────────────────────────────────────
               AppBreadcrumbs(
@@ -334,9 +329,7 @@ class _HelpScreenState extends State<HelpScreen> {
               onTap: () => _launch('https://instagram.com/kreavana.id'),
             ),
           ),
-            ],
-          ),
-        ),
+        ],
       ),
     );
 

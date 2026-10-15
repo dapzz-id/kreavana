@@ -490,18 +490,15 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
   Widget _buildCreatorNoticeState(bool isDark, bool isDesktop) {
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
-        isDesktop ? 40 : 16,
+        isDesktop ? 32 : 16,
         16,
-        isDesktop ? 40 : 16,
+        isDesktop ? 32 : 16,
         80,
       ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 620),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildBreadcrumbs(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildBreadcrumbs(context),
               const SizedBox(height: 16),
               Container(
                 width: double.infinity,
@@ -617,8 +614,6 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 
@@ -628,18 +623,15 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
-        isDesktop ? 40 : 16,
+        isDesktop ? 32 : 16,
         16,
-        isDesktop ? 40 : 16,
+        isDesktop ? 32 : 16,
         80,
       ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 620),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildBreadcrumbs(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildBreadcrumbs(context),
               const SizedBox(height: 16),
               Container(
                 width: double.infinity,
@@ -792,8 +784,6 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 
@@ -802,18 +792,15 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
-        isDesktop ? 40 : 16,
+        isDesktop ? 32 : 16,
         16,
-        isDesktop ? 40 : 16,
+        isDesktop ? 32 : 16,
         80,
       ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 620),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildBreadcrumbs(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildBreadcrumbs(context),
               const SizedBox(height: 16),
               Container(
                 width: double.infinity,
@@ -998,8 +985,6 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 
@@ -1011,18 +996,15 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
-        isDesktop ? 40 : 16,
+        isDesktop ? 32 : 16,
         16,
-        isDesktop ? 40 : 16,
+        isDesktop ? 32 : 16,
         80,
       ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 620),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildBreadcrumbs(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildBreadcrumbs(context),
               const SizedBox(height: 16),
               Container(
                 width: double.infinity,
@@ -1233,8 +1215,6 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 
@@ -1315,20 +1295,17 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
   Widget _buildForm(bool isDark, bool isDesktop) {
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
-        isDesktop ? 40 : 16,
+        isDesktop ? 32 : 16,
         16,
-        isDesktop ? 40 : 16,
+        isDesktop ? 32 : 16,
         120,
       ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 680),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildBreadcrumbs(context),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildBreadcrumbs(context),
                 if (_isReapplying) ...[
                   Container(
                     margin: const EdgeInsets.only(bottom: 16),
@@ -1667,8 +1644,6 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
               ],
             ),
           ),
-        ),
-      ),
     );
   }
 

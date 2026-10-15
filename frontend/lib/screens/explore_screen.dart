@@ -253,14 +253,15 @@ class _ExploreScreenState extends State<ExploreScreen>
           PeluangLokasiScreen(user: widget.user, subRoleSlug: _selectedSubRole),
           if (_isCreator)
             PeluangProyekScreen(user: widget.user, subRoleSlug: _selectedSubRole),
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1240),
-              child: Column(
-                children: [
+          Column(
+            children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                padding: EdgeInsets.fromLTRB(
+                  isDesktop ? 32 : 16,
+                  12,
+                  isDesktop ? 32 : 16,
+                  0,
+                ),
                 child: SearchBar(
                   controller: _searchController,
                   hintText: 'Cari peluang, lokasi, atau deskripsi...',
@@ -282,7 +283,12 @@ class _ExploreScreenState extends State<ExploreScreen>
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+                padding: EdgeInsets.fromLTRB(
+                  isDesktop ? 32 : 16,
+                  8,
+                  isDesktop ? 32 : 16,
+                  6,
+                ),
                 child: Container(
                   height: 46,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -373,10 +379,10 @@ class _ExploreScreenState extends State<ExploreScreen>
                   child: _isLoading
                       ? isDesktop
                             ? GridView.builder(
-                                padding: const EdgeInsets.fromLTRB(
+                                padding: EdgeInsets.fromLTRB(
+                                  isDesktop ? 32 : 16,
                                   16,
-                                  16,
-                                  16,
+                                  isDesktop ? 32 : 16,
                                   110,
                                 ),
                                 gridDelegate:
@@ -391,10 +397,10 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     const FeatureCardSkeleton(),
                               )
                             : ListView.builder(
-                                padding: const EdgeInsets.fromLTRB(
+                                padding: EdgeInsets.fromLTRB(
+                                  isDesktop ? 32 : 16,
                                   16,
-                                  16,
-                                  16,
+                                  isDesktop ? 32 : 16,
                                   110,
                                 ),
                                 itemCount: 4,
@@ -428,7 +434,12 @@ class _ExploreScreenState extends State<ExploreScreen>
                         )
                       : isDesktop
                       ? GridView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                          padding: EdgeInsets.fromLTRB(
+                            isDesktop ? 32 : 16,
+                            16,
+                            isDesktop ? 32 : 16,
+                            110,
+                          ),
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 2,
@@ -447,7 +458,12 @@ class _ExploreScreenState extends State<ExploreScreen>
                           },
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+                          padding: EdgeInsets.fromLTRB(
+                            isDesktop ? 32 : 16,
+                            16,
+                            isDesktop ? 32 : 16,
+                            110,
+                          ),
                           itemCount: _filteredOpportunities.length,
                           itemBuilder: (context, index) {
                             final op = _filteredOpportunities[index];
@@ -462,9 +478,7 @@ class _ExploreScreenState extends State<ExploreScreen>
               ),
             ],
           ),
-        ),
-      ),
-      const RecommendedCreatorsSection(),
+          const RecommendedCreatorsSection(),
     ],
   ),
 );

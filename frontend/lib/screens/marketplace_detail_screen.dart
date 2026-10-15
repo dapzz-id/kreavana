@@ -252,24 +252,21 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                     slivers: [
                       _buildSliverAppBar(isDark, heroHeight, parallaxOffset),
                       SliverToBoxAdapter(
-                        child: Align(
-                          alignment: Alignment.topCenter,
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: isDesktop ? 1000 : double.infinity,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildTitleSection(isDark),
-                                _buildCreatorSection(isDark),
-                                _buildStatsSection(isDark),
-                                _buildDescriptionSection(isDark),
-                                _buildReviewSection(isDark),
-                                if (canReview) _buildWriteReviewSection(isDark),
-                                const SizedBox(height: 120),
-                              ],
-                            ),
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isDesktop ? 12 : 0,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildTitleSection(isDark),
+                              _buildCreatorSection(isDark),
+                              _buildStatsSection(isDark),
+                              _buildDescriptionSection(isDark),
+                              _buildReviewSection(isDark),
+                              if (canReview) _buildWriteReviewSection(isDark),
+                              const SizedBox(height: 120),
+                            ],
                           ),
                         ),
                       ),
@@ -1123,13 +1120,7 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
       ),
       child: SafeArea(
         top: false,
-        child: Center(
-          heightFactor: 1.0,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: isDesktop ? 1000 : double.infinity,
-            ),
-            child: Row(
+        child: Row(
               children: [
                 Expanded(
                   child: Column(
@@ -1268,9 +1259,7 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                 ),
               ],
             ),
-          ),
         ),
-      ),
     );
   }
 

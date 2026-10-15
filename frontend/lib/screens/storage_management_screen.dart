@@ -1376,15 +1376,12 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(
-          isDesktop ? 40 : 16,
+          isDesktop ? 32 : 16,
           16,
-          isDesktop ? 40 : 16,
+          isDesktop ? 32 : 16,
           80,
         ),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1000),
-            child: Column(
+        child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Breadcrumbs
@@ -1464,8 +1461,6 @@ class _StorageManagementScreenState extends State<StorageManagementScreen> {
                 _buildFileListSection(isDark),
               ],
             ),
-          ),
-        ),
       ),
     );
 

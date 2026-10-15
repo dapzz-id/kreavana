@@ -91,18 +91,13 @@ class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: isDesktop ? 960 : double.infinity,
-          ),
-          child: ListView(
-            padding: EdgeInsets.fromLTRB(
-              isDesktop ? 32 : 20,
-              16,
-              isDesktop ? 32 : 20,
-              40,
-            ),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          isDesktop ? 32 : 20,
+          16,
+          isDesktop ? 32 : 20,
+          40,
+        ),
             children: [
               // ── Breadcrumbs ──────────────────────────────────────────
               AppBreadcrumbs(
@@ -252,8 +247,6 @@ class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
                 ),
               ),
             ],
-          ),
-        ),
       ),
     );
 

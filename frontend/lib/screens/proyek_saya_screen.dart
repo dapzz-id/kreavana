@@ -608,17 +608,13 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
         color: accentColor,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1260),
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  isDesktop ? 32 : 16,
-                  isDesktop ? 32 : 16,
-                  isDesktop ? 32 : 16,
-                  isDesktop ? 60 : 100,
-                ),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              isDesktop ? 32 : 16,
+              isDesktop ? 32 : 16,
+              isDesktop ? 32 : 16,
+              isDesktop ? 60 : 100,
+            ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -691,8 +687,6 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                   ],
                 ),
               ),
-            ),
-          ),
         ),
       ),
       floatingActionButton: (!isDesktop)

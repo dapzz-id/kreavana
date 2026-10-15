@@ -295,17 +295,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: SingleChildScrollView(
                 controller: _scrollController,
                 physics: const BouncingScrollPhysics(),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1200),
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        16,
-                        24,
-                        16,
-                        isDesktop ? 110 : 16,
-                      ),
-                      child: Column(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    isDesktop ? 32 : 16,
+                    24,
+                    isDesktop ? 32 : 16,
+                    isDesktop ? 110 : 16,
+                  ),
+                  child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           AppBreadcrumbs(
@@ -401,8 +398,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
-              ),
-            ),
     );
 
     final isGovOrSchool =

@@ -764,49 +764,37 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
         toolbarHeight: isDesktop ? 70 : 64,
         elevation: 0,
         backgroundColor: isDark ? AppTheme.surfaceDark : Colors.white,
-        title: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: isDesktop ? 1400 : 860),
-            child: Row(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _isSchool ? 'Buka Program / Magang Siswa' : 'Buat Kebutuhan Proyek',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      _isSchool
-                          ? 'Publikasikan lowongan magang, PKL, atau proyek kolaborasi siswa dengan studio mitra'
-                          : 'Dapatkan tawaran & proposal dari berbagai kreator terbaik',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+        titleSpacing: isDesktop ? 32 : 16,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _isSchool ? 'Buka Program / Magang Siswa' : 'Buat Kebutuhan Proyek',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-          ),
+            Text(
+              _isSchool
+                  ? 'Publikasikan lowongan magang, PKL, atau proyek kolaborasi siswa dengan studio mitra'
+                  : 'Dapatkan tawaran & proposal dari berbagai kreator terbaik',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+              ),
+            ),
+          ],
         ),
       ),
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            isDesktop ? 32 : 16,
-            isDesktop ? 20 : 16,
-            isDesktop ? 32 : 16,
-            56,
-          ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: isDesktop ? 1400 : 860),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+      body: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          isDesktop ? 32 : 16,
+          isDesktop ? 20 : 16,
+          isDesktop ? 32 : 16,
+          56,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                 AppBreadcrumbs(
                   items: [
                     BreadcrumbItem(
@@ -1182,9 +1170,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                 ),
               ],
             ),
-          ),
         ),
-      ),
     );
 
     final effectiveUser = widget.user ?? currentUserNotifier.value;

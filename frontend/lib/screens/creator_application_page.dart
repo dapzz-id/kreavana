@@ -271,17 +271,14 @@ class _CreatorApplicationPageState extends State<CreatorApplicationPage> {
   Widget _buildApplicationForm(bool isDark, bool isDesktop) {
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
-        isDesktop ? 40 : 16,
+        isDesktop ? 32 : 16,
         16,
-        isDesktop ? 40 : 16,
+        isDesktop ? 32 : 16,
         120,
       ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
               // Breadcrumbs
               AppBreadcrumbs(
                 items: [
@@ -366,8 +363,6 @@ class _CreatorApplicationPageState extends State<CreatorApplicationPage> {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 }

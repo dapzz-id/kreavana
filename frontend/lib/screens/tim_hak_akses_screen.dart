@@ -771,11 +771,8 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
           ? const Center(
               child: CircularProgressIndicator(color: AppTheme.primaryPurple),
             )
-          : Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1100),
-                child: Column(
-                  children: [
+          : Column(
+              children: [
                     // Top Statistics Cards
                     Container(
                       margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -964,8 +961,6 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
                     ),
                   ],
                 ),
-              ),
-            ),
     );
 
     if (widget.user != null) {

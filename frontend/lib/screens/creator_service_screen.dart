@@ -1841,17 +1841,13 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
       color: AppTheme.primaryPurple,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1260),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                isDesktop ? 32 : 16,
-                isDesktop ? 32 : 16,
-                isDesktop ? 32 : 16,
-                isDesktop ? 60 : 100,
-              ),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            isDesktop ? 32 : 16,
+            isDesktop ? 32 : 16,
+            isDesktop ? 32 : 16,
+            isDesktop ? 60 : 100,
+          ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1916,9 +1912,7 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                       screenWidth,
                     ),
                 ],
-              ),
             ),
-          ),
         ),
       ),
     );

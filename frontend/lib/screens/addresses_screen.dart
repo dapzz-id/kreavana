@@ -211,14 +211,9 @@ class _AddressesScreenState extends State<AddressesScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: isDesktop ? 960 : double.infinity,
-          ),
-          child: _isLoading
-              ? const SkeletonList()
-              : _addresses.isEmpty
+      body: _isLoading
+          ? const SkeletonList()
+          : _addresses.isEmpty
               ? RefreshIndicator(
                   onRefresh: _load,
                   color: AppTheme.primaryPurple,
@@ -271,8 +266,6 @@ class _AddressesScreenState extends State<AddressesScreen> {
                     },
                   ),
                 ),
-        ),
-      ),
     );
 
     if (isDesktop && _user != null) {

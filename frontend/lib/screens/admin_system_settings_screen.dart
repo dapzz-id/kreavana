@@ -409,14 +409,16 @@ class _AdminSystemSettingsScreenState extends State<AdminSystemSettingsScreen>
   }
 
   Widget _buildModulesTab(bool isDark) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 900;
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 860),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      padding: EdgeInsets.symmetric(
+        horizontal: isDesktop ? 32 : 16,
+        vertical: 20,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
               AppBreadcrumbs(
                 items: [
                   BreadcrumbItem(
@@ -668,22 +670,22 @@ class _AdminSystemSettingsScreenState extends State<AdminSystemSettingsScreen>
                 ),
             ],
           ),
-        ),
-      ),
     );
   }
 
   Widget _buildAiConfigTab(bool isDark) {
     final currentModelList = _availableModels[_aiProvider] ?? [];
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 900;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 860),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      padding: EdgeInsets.symmetric(
+        horizontal: isDesktop ? 32 : 16,
+        vertical: 20,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
               AppBreadcrumbs(
                 items: [
                   BreadcrumbItem(
@@ -1111,8 +1113,6 @@ class _AdminSystemSettingsScreenState extends State<AdminSystemSettingsScreen>
               const SizedBox(height: 32),
             ],
           ),
-        ),
-      ),
     );
   }
 

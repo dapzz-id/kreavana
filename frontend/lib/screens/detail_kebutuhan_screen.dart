@@ -978,14 +978,11 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1180),
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: isDesktop ? 32 : 16,
-              vertical: isDesktop ? 28 : 16,
-            ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(
+          horizontal: isDesktop ? 32 : 16,
+          vertical: isDesktop ? 28 : 16,
+        ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1098,9 +1095,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                 const SizedBox(height: 40),
               ],
             ),
-          ),
         ),
-      ),
     );
 
     if (isDesktop && widget.user != null) {

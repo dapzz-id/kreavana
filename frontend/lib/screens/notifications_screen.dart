@@ -1058,16 +1058,13 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       ),
       body: _isLoading
           ? const SkeletonList()
-          : Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1350),
-                child: RefreshIndicator(
-                  onRefresh: _loadNotifications,
-                  child: ListView(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isDesktop ? 20 : 16,
-                      vertical: 8,
-                    ).copyWith(bottom: 120),
+          : RefreshIndicator(
+              onRefresh: _loadNotifications,
+              child: ListView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isDesktop ? 32 : 16,
+                  vertical: 8,
+                ).copyWith(bottom: 120),
                     children: [
                       _buildHeaderHero(isDark),
                       _buildKpiRow(isDark),
@@ -1169,8 +1166,6 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                     ],
                   ),
                 ),
-              ),
-            ),
     );
 
     if (isDesktop && effectiveUser != null) {

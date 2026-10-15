@@ -203,15 +203,11 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
         onRefresh: _fetchRealtimeCollabs,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1240),
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isDesktop ? 32 : 18,
-                  vertical: 16,
-                ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isDesktop ? 32 : 18,
+              vertical: 16,
+            ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -324,20 +320,20 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
               else if (filtered.isEmpty)
                 _buildCenteredEmptyState(accentColor, isDark)
               else if (isDesktop)
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  children: filtered.map((c) {
-                    final cardWidth = (MediaQuery.of(context).size.width > 1240
-                            ? 1240
-                            : MediaQuery.of(context).size.width) /
-                        2 -
-                        48;
-                    return SizedBox(
-                      width: cardWidth > 420 ? cardWidth : double.infinity,
-                      child: _buildCollabCard(c, accentColor, isDark),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final cardWidth = (constraints.maxWidth - 16) / 2;
+                    return Wrap(
+                      spacing: 16,
+                      runSpacing: 16,
+                      children: filtered.map((c) {
+                        return SizedBox(
+                          width: cardWidth > 340 ? cardWidth : constraints.maxWidth,
+                          child: _buildCollabCard(c, accentColor, isDark),
+                        );
+                      }).toList(),
                     );
-                  }).toList(),
+                  },
                 )
               else
                 ...filtered.map(
@@ -349,8 +345,6 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
         ),
       ),
     ),
-  ),
-),
       floatingActionButton: _isCreator
           ? Padding(
               padding: EdgeInsets.only(
