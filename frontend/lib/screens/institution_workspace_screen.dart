@@ -46,7 +46,6 @@ class _InstitutionWorkspaceScreenState
   final _searchController = TextEditingController();
   List<Map<String, dynamic>> _records = [];
   bool _isLoading = true;
-  bool _isSaving = false;
   String? _loadError;
   String _search = '';
   String _statusFilter = 'Semua';
@@ -360,220 +359,33 @@ class _InstitutionWorkspaceScreenState
   }
 
   Future<void> _openEditor([Map<String, dynamic>? existing]) async {
-    final metadata = existing == null
-        ? <String, dynamic>{}
-        : _metadata(existing);
-    final titleController = TextEditingController(
-      text: existing?['title']?.toString() ?? '',
-    );
-    final descriptionController = TextEditingController(
-      text: existing?['description']?.toString() ?? '',
-    );
-    final controllers = {
-      for (final field in _resourceFields)
-        field.key: TextEditingController(
-          text: metadata[field.key]?.toString() ?? '',
-        ),
-    };
-    var status = existing?['status']?.toString() ?? _resourceStatuses.first;
-    final formKey = GlobalKey<FormState>();
-
     final saved = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E3A8A).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(_icons[widget.resourceType] ?? Icons.business, color: const Color(0xFF1E3A8A), size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      existing == null ? _action : 'Edit $_title',
-                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      'Tersimpan langsung ke database backend Kreavana',
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: 520,
-            child: Form(
-              key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: titleController,
-                      autofocus: true,
-                      maxLength: 200,
-                      decoration: const InputDecoration(
-                        labelText: 'Nama / Judul',
-                        hintText: 'Masukkan nama entitas / judul kegiatan',
-                        prefixIcon: Icon(Icons.title_rounded, size: 20),
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                              ? 'Judul wajib diisi'
-                              : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: descriptionController,
-                      minLines: 2,
-                      maxLines: 4,
-                      decoration: const InputDecoration(
-                        labelText: 'Deskripsi / Ruang Lingkup',
-                        hintText: 'Jelaskan ringkasan kebutuhan, spesifikasi, atau catatan...',
-                        prefixIcon: Icon(Icons.notes_rounded, size: 20),
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    for (final field in _resourceFields) ...[
-                      TextFormField(
-                        controller: controllers[field.key],
-                        keyboardType: field.kind == _FieldKind.number
-                            ? TextInputType.number
-                            : (field.kind == _FieldKind.url ? TextInputType.url : TextInputType.text),
-                        decoration: InputDecoration(
-                          labelText: field.label,
-                          hintText: field.hint,
-                          prefixText: field.prefix,
-                          prefixIcon: Icon(
-                            field.kind == _FieldKind.number
-                                ? Icons.payments_outlined
-                                : (field.kind == _FieldKind.date
-                                    ? Icons.calendar_today_outlined
-                                    : (field.kind == _FieldKind.url ? Icons.link_rounded : Icons.label_outline)),
-                            size: 20,
-                          ),
-                          border: const OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    DropdownButtonFormField<String>(
-                      initialValue: status,
-                      decoration: const InputDecoration(
-                        labelText: 'Status Verifikasi / Publikasi',
-                        prefixIcon: Icon(Icons.flag_outlined, size: 20),
-                        border: OutlineInputBorder(),
-                      ),
-                      items: _resourceStatuses
-                          .map(
-                            (value) => DropdownMenuItem(
-                              value: value,
-                              child: Text(_statusLabel(value)),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) => setDialogState(
-                        () => status = value ?? _resourceStatuses.first,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Batal'),
-            ),
-            FilledButton.icon(
-              icon: _isSaving
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Icon(Icons.save_rounded, size: 18),
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1E3A8A),
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: _isSaving
-                  ? null
-                  : () async {
-                      if (!formKey.currentState!.validate()) return;
-                      final payload = <String, dynamic>{
-                        'resource_type': widget.resourceType,
-                        'title': titleController.text.trim(),
-                        'description': descriptionController.text.trim(),
-                        'status': status,
-                        'metadata': {
-                          for (final field in _resourceFields)
-                            if ((controllers[field.key]?.text.trim() ?? '').isNotEmpty)
-                              field.key: controllers[field.key]!.text.trim(),
-                        },
-                      };
-                      try {
-                        setDialogState(() => _isSaving = true);
-                        final response = existing == null
-                            ? await ApiService.post('institution/resources', payload)
-                            : await ApiService.put('institution/resources/${existing['id']}', payload);
-                        if (!dialogContext.mounted || !mounted) return;
-                        setDialogState(() => _isSaving = false);
-                        if (response['status'] == true) {
-                          Navigator.pop(dialogContext, true);
-                        } else {
-                          AppSweetAlert.error(
-                            context,
-                            response['message']?.toString() ?? 'Data gagal disimpan ke backend.',
-                            title: 'Gagal Menyimpan',
-                          );
-                        }
-                      } catch (e) {
-                        if (!dialogContext.mounted || !mounted) return;
-                        setDialogState(() => _isSaving = false);
-                        AppSweetAlert.error(
-                          context,
-                          'Terjadi kendala saat menyimpan data: $e',
-                          title: 'Gagal Menyimpan',
-                        );
-                      }
-                    },
-              label: Text(_isSaving ? 'Menyimpan...' : 'Simpan ke Backend'),
-            ),
-          ],
-        ),
+      builder: (dialogContext) => _ResourceEditorDialog(
+        resourceType: widget.resourceType,
+        title: _title,
+        action: _action,
+        fields: _resourceFields,
+        statuses: _resourceStatuses,
+        existing: existing,
+        statusLabel: _statusLabel,
+        icon: _icons[widget.resourceType] ?? Icons.business,
       ),
     );
 
-    titleController.dispose();
-    descriptionController.dispose();
-    for (final controller in controllers.values) {
-      controller.dispose();
-    }
     if (saved == true && mounted) {
-      AppSweetAlert.success(
-        context,
-        'Data $_title berhasil disimpan ke database backend.',
-        title: 'Berhasil Disimpan',
-      );
       await _loadRecords();
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            AppSweetAlert.success(
+              context,
+              'Data $_title berhasil disimpan ke database backend.',
+              title: 'Berhasil Disimpan',
+            );
+          }
+        });
+      }
     }
   }
 
@@ -2004,3 +1816,257 @@ class _InstitutionWorkspaceScreenState
     return content;
   }
 }
+
+class _ResourceEditorDialog extends StatefulWidget {
+  final String resourceType;
+  final String title;
+  final String action;
+  final List<_WorkspaceField> fields;
+  final List<String> statuses;
+  final Map<String, dynamic>? existing;
+  final String Function(String) statusLabel;
+  final IconData icon;
+
+  const _ResourceEditorDialog({
+    required this.resourceType,
+    required this.title,
+    required this.action,
+    required this.fields,
+    required this.statuses,
+    this.existing,
+    required this.statusLabel,
+    required this.icon,
+  });
+
+  @override
+  State<_ResourceEditorDialog> createState() => _ResourceEditorDialogState();
+}
+
+class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _titleController;
+  late final TextEditingController _descriptionController;
+  late final Map<String, TextEditingController> _controllers;
+  late String _status;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existing;
+    _titleController = TextEditingController(text: existing?['title']?.toString() ?? '');
+    _descriptionController = TextEditingController(text: existing?['description']?.toString() ?? '');
+
+    final rawMeta = existing?['metadata'];
+    final meta = rawMeta is Map ? Map<String, dynamic>.from(rawMeta) : <String, dynamic>{};
+    _controllers = {
+      for (final f in widget.fields)
+        f.key: TextEditingController(text: meta[f.key]?.toString() ?? ''),
+    };
+
+    final currentStatus = existing?['status']?.toString();
+    _status = (currentStatus != null && widget.statuses.contains(currentStatus))
+        ? currentStatus
+        : (widget.statuses.isNotEmpty ? widget.statuses.first : 'draft');
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    for (final c in _controllers.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate() || _isSaving) return;
+
+    final payload = <String, dynamic>{
+      'resource_type': widget.resourceType,
+      'title': _titleController.text.trim(),
+      'description': _descriptionController.text.trim(),
+      'status': _status,
+      'metadata': {
+        for (final field in widget.fields)
+          if ((_controllers[field.key]?.text.trim() ?? '').isNotEmpty)
+            field.key: _controllers[field.key]!.text.trim(),
+      },
+    };
+
+    setState(() => _isSaving = true);
+
+    try {
+      final response = widget.existing == null
+          ? await ApiService.post('institution/resources', payload)
+          : await ApiService.put('institution/resources/${widget.existing!['id']}', payload);
+
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+
+      if (response['status'] == true) {
+        Navigator.of(context).pop(true);
+      } else {
+        AppSweetAlert.error(
+          context,
+          response['message']?.toString() ?? 'Data gagal disimpan ke backend.',
+          title: 'Gagal Menyimpan',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      AppSweetAlert.error(
+        context,
+        'Terjadi kendala saat menyimpan data: $e',
+        title: 'Gagal Menyimpan',
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      actionsPadding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(widget.icon, color: const Color(0xFF2563EB)),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.existing == null ? widget.action : 'Edit ${widget.title}',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Tersimpan aman di database instansi Kreavana',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 580,
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Judul / Nama Agenda / Judul Dokumen',
+                    hintText: 'Masukkan judul resmi...',
+                    prefixIcon: Icon(Icons.title_rounded, size: 20),
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) =>
+                      value == null || value.trim().isEmpty
+                          ? 'Judul wajib diisi'
+                          : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _descriptionController,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    labelText: 'Deskripsi / Ruang Lingkup',
+                    hintText: 'Jelaskan ringkasan kebutuhan, spesifikasi, atau catatan...',
+                    prefixIcon: Icon(Icons.notes_rounded, size: 20),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                for (final field in widget.fields) ...[
+                  TextFormField(
+                    controller: _controllers[field.key],
+                    keyboardType: field.kind == _FieldKind.number
+                        ? TextInputType.number
+                        : (field.kind == _FieldKind.url ? TextInputType.url : TextInputType.text),
+                    decoration: InputDecoration(
+                      labelText: field.label,
+                      hintText: field.hint,
+                      prefixText: field.prefix,
+                      prefixIcon: Icon(
+                        field.kind == _FieldKind.number
+                            ? Icons.payments_outlined
+                            : (field.kind == _FieldKind.date
+                                ? Icons.calendar_today_outlined
+                                : (field.kind == _FieldKind.url ? Icons.link_rounded : Icons.label_outline)),
+                        size: 20,
+                      ),
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                DropdownButtonFormField<String>(
+                  initialValue: _status,
+                  decoration: const InputDecoration(
+                    labelText: 'Status Verifikasi / Publikasi',
+                    prefixIcon: Icon(Icons.flag_outlined, size: 20),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: widget.statuses
+                      .map(
+                        (value) => DropdownMenuItem(
+                          value: value,
+                          child: Text(widget.statusLabel(value)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _status = value);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Batal'),
+        ),
+        FilledButton.icon(
+          icon: _isSaving
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : const Icon(Icons.save_rounded, size: 18),
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFF2563EB),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          onPressed: _isSaving ? null : _submit,
+          label: Text(_isSaving ? 'Menyimpan...' : 'Simpan ke Backend'),
+        ),
+      ],
+    );
+  }
+}
+

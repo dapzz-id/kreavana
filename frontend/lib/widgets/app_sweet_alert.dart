@@ -27,8 +27,9 @@ class AppSweetAlert {
     final targetContext = context ?? navigatorKey.currentContext;
     if (targetContext == null) return;
 
-    final overlayState = Overlay.maybeOf(targetContext) ??
-        navigatorKey.currentState?.overlay;
+    // Prioritize root navigator overlay to avoid binding to closing dialog overlay scopes
+    final overlayState = navigatorKey.currentState?.overlay ??
+        (targetContext.mounted ? Overlay.maybeOf(targetContext) : null);
     if (overlayState == null) return;
 
     // Clear previous alerts if there are already 3 stacked
