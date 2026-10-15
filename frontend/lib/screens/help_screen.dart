@@ -2,16 +2,41 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../app/theme.dart';
 import '../app/app_animations.dart';
+import '../models/user_model.dart';
+import '../features/auth/services/auth_service.dart';
 import '../utils/app_errors.dart';
+import '../widgets/desktop_sidebar_layout.dart';
+import '../widgets/app_breadcrumbs.dart';
+import 'main_navigation.dart';
+import 'pengaturan_screen.dart';
 
 class HelpScreen extends StatefulWidget {
-  const HelpScreen({super.key});
+  final UserModel? user;
+  const HelpScreen({super.key, this.user});
 
   @override
   State<HelpScreen> createState() => _HelpScreenState();
 }
 
 class _HelpScreenState extends State<HelpScreen> {
+  UserModel? _user;
+
+  @override
+  void initState() {
+    super.initState();
+    _user = widget.user;
+    if (_user == null) {
+      _loadUser();
+    }
+  }
+
+  Future<void> _loadUser() async {
+    final user = await AuthService.getCurrentUser();
+    if (mounted && user != null) {
+      setState(() => _user = user);
+    }
+  }
+
   static const _faqs = [
     {
       'q': 'Bagaimana cara membuat akun di Kreavana?',
@@ -63,26 +88,85 @@ class _HelpScreenState extends State<HelpScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 900;
 
-    return Scaffold(
+    final content = Scaffold(
       backgroundColor: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
       appBar: AppBar(
-        toolbarHeight: 70,
+        automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
+        toolbarHeight: isDesktop ? 80 : 70,
+        titleSpacing: isDesktop ? 32 : 16,
+        elevation: 0,
         title: const Text(
           'Bantuan & Dukungan',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-        children: [
-          AnimatedEntrance(
-            child: Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppTheme.primaryPurple, AppTheme.deepPurple],
-                  begin: Alignment.topLeft,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: isDesktop ? 960 : double.infinity,
+          ),
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(
+              isDesktop ? 32 : 16,
+              16,
+              isDesktop ? 32 : 16,
+              40,
+            ),
+            children: [
+              // ── Breadcrumbs ──────────────────────────────────────────
+              AppBreadcrumbs(
+                items: [
+                  BreadcrumbItem(
+                    label: 'Beranda',
+                    icon: Icons.home_rounded,
+                    onTap: () {
+                      if (_user != null) {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => MainNavigation(
+                              initialUser: _user!,
+                              initialIndex: 0,
+                            ),
+                          ),
+                          (r) => false,
+                        );
+                      }
+                    },
+                  ),
+                  BreadcrumbItem(
+                    label: 'Pengaturan',
+                    icon: Icons.settings_rounded,
+                    onTap: () {
+                      if (Navigator.canPop(context)) {
+                        Navigator.pop(context);
+                      } else if (_user != null) {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PengaturanScreen(user: _user),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  const BreadcrumbItem(
+                    label: 'Bantuan & Dukungan',
+                    icon: Icons.help_outline_rounded,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              AnimatedEntrance(
+                child: Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppTheme.primaryPurple, AppTheme.deepPurple],
+                      begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(18),
@@ -250,9 +334,21 @@ class _HelpScreenState extends State<HelpScreen> {
               onTap: () => _launch('https://instagram.com/kreavana.id'),
             ),
           ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
+
+    if (isDesktop && _user != null) {
+      return DesktopSidebarLayout(
+        user: _user!,
+        activeRoute: 'pengaturan',
+        child: content,
+      );
+    }
+
+    return content;
   }
 
   Widget _contactCard({

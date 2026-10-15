@@ -259,7 +259,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const PaymentMethodsScreen(),
+                      builder: (_) => PaymentMethodsScreen(user: widget.user),
                     ),
                   );
                 },
@@ -274,7 +274,9 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                   if (!_requireAuth('mengelola alamat pengiriman')) return;
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const AddressesScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => AddressesScreen(user: widget.user),
+                    ),
                   );
                 },
               ),
@@ -601,7 +603,9 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                 isDark: isDark,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const HelpScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => HelpScreen(user: widget.user),
+                  ),
                 ),
               ),
               _buildNavTile(
@@ -613,7 +617,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const PrivacyPolicyScreen(),
+                    builder: (_) => PrivacyPolicyScreen(user: widget.user),
                   ),
                 ),
               ),

@@ -2,29 +2,48 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app/theme.dart';
 import '../app/app_animations.dart';
+import '../models/user_model.dart';
+import '../features/auth/services/auth_service.dart';
 import '../services/payment_method_service.dart';
 import '../utils/app_errors.dart';
 import '../widgets/app_empty_state.dart';
 import '../widgets/gradient_button.dart';
 import '../widgets/animated_input_field.dart';
+import '../widgets/desktop_sidebar_layout.dart';
+import '../widgets/app_breadcrumbs.dart';
+import 'main_navigation.dart';
+import 'pengaturan_screen.dart';
 
 import '../widgets/skeleton/skeleton_list.dart';
 
 class PaymentMethodsScreen extends StatefulWidget {
-  const PaymentMethodsScreen({super.key});
+  final UserModel? user;
+  const PaymentMethodsScreen({super.key, this.user});
 
   @override
   State<PaymentMethodsScreen> createState() => _PaymentMethodsScreenState();
 }
 
 class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
+  UserModel? _user;
   List<PaymentMethod> _methods = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _user = widget.user;
+    if (_user == null) {
+      _loadUser();
+    }
     _load();
+  }
+
+  Future<void> _loadUser() async {
+    final user = await AuthService.getCurrentUser();
+    if (mounted && user != null) {
+      setState(() => _user = user);
+    }
   }
 
   Future<void> _load() async {
@@ -118,12 +137,59 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     }
   }
 
+  Widget _buildBreadcrumbs() {
+    return AppBreadcrumbs(
+      items: [
+        BreadcrumbItem(
+          label: 'Beranda',
+          icon: Icons.home_rounded,
+          onTap: () {
+            if (_user != null) {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MainNavigation(
+                    initialUser: _user!,
+                    initialIndex: 0,
+                  ),
+                ),
+                (r) => false,
+              );
+            }
+          },
+        ),
+        BreadcrumbItem(
+          label: 'Pengaturan',
+          icon: Icons.settings_rounded,
+          onTap: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else if (_user != null) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => PengaturanScreen(user: _user),
+                ),
+              );
+            }
+          },
+        ),
+        const BreadcrumbItem(
+          label: 'Metode Pembayaran',
+          icon: Icons.payment_rounded,
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 900;
 
-    return Scaffold(
+    final content = Scaffold(
       backgroundColor: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'add_payment',
@@ -137,46 +203,88 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
         ),
       ),
       appBar: AppBar(
-        toolbarHeight: 70,
+        automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
+        toolbarHeight: isDesktop ? 80 : 70,
+        titleSpacing: isDesktop ? 32 : 16,
+        elevation: 0,
         title: const Text(
           'Metode Pembayaran',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: _isLoading
-          ? const SkeletonList()
-          : _methods.isEmpty
-          ? RefreshIndicator(
-              onRefresh: _load,
-              color: AppTheme.primaryPurple,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: const [
-                  SizedBox(height: 120),
-                  AppEmptyState(
-                    icon: Icons.account_balance_wallet_outlined,
-                    title: 'Belum Ada Metode Pembayaran',
-                    subtitle:
-                        'Tambahkan rekening bank atau e-wallet untuk transaksi di Kreavana.',
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: isDesktop ? 960 : double.infinity,
+          ),
+          child: _isLoading
+              ? const SkeletonList()
+              : _methods.isEmpty
+              ? RefreshIndicator(
+                  onRefresh: _load,
+                  color: AppTheme.primaryPurple,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(
+                      isDesktop ? 32 : 16,
+                      16,
+                      isDesktop ? 32 : 16,
+                      110,
+                    ),
+                    children: [
+                      _buildBreadcrumbs(),
+                      const SizedBox(height: 16),
+                      const SizedBox(height: 80),
+                      const AppEmptyState(
+                        icon: Icons.account_balance_wallet_outlined,
+                        title: 'Belum Ada Metode Pembayaran',
+                        subtitle:
+                            'Tambahkan rekening bank atau e-wallet untuk transaksi di Kreavana.',
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: _load,
-              color: AppTheme.primaryPurple,
-              child: ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-                itemCount: _methods.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (ctx, i) => AnimatedEntrance(
-                  delay: Duration(milliseconds: 80 + i * 70),
-                  child: _buildCard(_methods[i], isDark),
+                )
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  color: AppTheme.primaryPurple,
+                  child: ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(
+                      isDesktop ? 32 : 16,
+                      16,
+                      isDesktop ? 32 : 16,
+                      110,
+                    ),
+                    itemCount: _methods.length + 1,
+                    separatorBuilder: (_, i) =>
+                        i == 0
+                            ? const SizedBox(height: 16)
+                            : const SizedBox(height: 12),
+                    itemBuilder: (ctx, i) {
+                      if (i == 0) {
+                        return _buildBreadcrumbs();
+                      }
+                      final method = _methods[i - 1];
+                      return AnimatedEntrance(
+                        delay: Duration(milliseconds: 80 + (i - 1) * 70),
+                        child: _buildCard(method, isDark),
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ),
+        ),
+      ),
     );
+
+    if (isDesktop && _user != null) {
+      return DesktopSidebarLayout(
+        user: _user!,
+        activeRoute: 'pengaturan',
+        child: content,
+      );
+    }
+
+    return content;
   }
 
   Widget _buildCard(PaymentMethod method, bool isDark) {
