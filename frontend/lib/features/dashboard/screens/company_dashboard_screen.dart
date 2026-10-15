@@ -1107,7 +1107,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
       {
         'name': 'Tim Kreavana',
         'desc': 'Operasional, Marketing, IT, Partnership, dll',
-        'color': const Color(0xFF7C3AED),
+        'color': const Color(0xFF2563EB),
         'icon': Icons.hub_rounded,
         'got': [
           'Pencapaian target & pertumbuhan platform',
@@ -1354,7 +1354,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
         'title': 'Mendukung pertumbuhan bisnis',
         'desc': 'Hasil proyek berkualitas yang mempercepat akselerasi dan ROI',
         'icon': Icons.trending_up_rounded,
-        'color': const Color(0xFF8B5CF6),
+        'color': _brandBlue,
       },
     ];
 
@@ -1402,7 +1402,9 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
             builder: (context, constraints) {
               final width = constraints.maxWidth;
               final crossAxisCount = width > 850 ? 4 : (width > 480 ? 2 : 1);
-              final childAspectRatio = width > 850 ? 1.05 : (width > 480 ? 1.25 : 2.6);
+              final itemWidth = (width - (crossAxisCount - 1) * 12) / crossAxisCount;
+              final targetHeight = width > 850 ? 124.0 : (width > 480 ? 116.0 : 96.0);
+              final childAspectRatio = (itemWidth / targetHeight).clamp(0.8, 3.8);
 
               return GridView.builder(
                 shrinkWrap: true,
@@ -1427,6 +1429,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         CircleAvatar(
                           radius: 14,
@@ -1447,6 +1450,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                             style: TextStyle(
                               fontSize: 11,
                               color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                              height: 1.3,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
