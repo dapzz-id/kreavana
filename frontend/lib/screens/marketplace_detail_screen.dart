@@ -244,33 +244,52 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
           ? _buildLoadingState(isDark)
           : _item == null
           ? _buildEmptyState(isDark)
-          : CustomScrollView(
-              controller: _scrollCtrl,
-              slivers: [
-                _buildSliverAppBar(isDark, heroHeight, parallaxOffset),
-                SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTitleSection(isDark),
-                      _buildCreatorSection(isDark),
-                      _buildStatsSection(isDark),
-                      _buildDescriptionSection(isDark),
-                      _buildReviewSection(isDark),
-                      if (canReview) _buildWriteReviewSection(isDark),
-                      const SizedBox(height: 120),
+          : Stack(
+              children: [
+                Positioned.fill(
+                  child: CustomScrollView(
+                    controller: _scrollCtrl,
+                    slivers: [
+                      _buildSliverAppBar(isDark, heroHeight, parallaxOffset),
+                      SliverToBoxAdapter(
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: isDesktop ? 1000 : double.infinity,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildTitleSection(isDark),
+                                _buildCreatorSection(isDark),
+                                _buildStatsSection(isDark),
+                                _buildDescriptionSection(isDark),
+                                _buildReviewSection(isDark),
+                                if (canReview) _buildWriteReviewSection(isDark),
+                                const SizedBox(height: 120),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: _buildBottomBar(isDark),
+                ),
               ],
             ),
-      bottomSheet: _item == null ? null : _buildBottomBar(isDark),
     );
 
     if (isDesktop && widget.user != null) {
       return DesktopSidebarLayout(
         user: widget.user!,
-        activeRoute: 'portofolio',
+        activeRoute: 'marketplace',
         child: content,
       );
     }
@@ -1078,158 +1097,180 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
 
   Widget _buildBottomBar(bool isDark) {
     final isOwn = _currentUserId != null && _item?.userId == _currentUserId;
-    return AnimatedBuilder(
-      animation: _bottomBarCtrl,
-      builder: (context, child) {
-        final slide = Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
-            .animate(
-              CurvedAnimation(parent: _bottomBarCtrl, curve: AppMotion.easeOut),
-            );
-        return SlideTransition(
-          position: slide,
-          child: FadeTransition(
-            opacity: _bottomBarCtrl,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? AppTheme.cardDark.withValues(alpha: 0.95)
-                    : Colors.white.withValues(alpha: 0.95),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
-                    blurRadius: 24,
-                    offset: const Offset(0, -8),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                top: false,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
+    final isDesktop = MediaQuery.of(context).size.width > 900;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardBg : Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+            width: 1.2,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      padding: EdgeInsets.symmetric(
+        horizontal: isDesktop ? 32 : 20,
+        vertical: 14,
+      ),
+      child: SafeArea(
+        top: false,
+        child: Center(
+          heightFactor: 1.0,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isDesktop ? 1000 : double.infinity,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
                         children: [
                           Text(
-                            'Harga',
+                            'Harga Resmi',
                             style: TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.textMuted,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isDark
+                                  ? AppTheme.textMuted
+                                  : Colors.grey.shade600,
                             ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _item!.formattedPrice,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              color: AppTheme.primaryPurple,
-                              letterSpacing: -0.3,
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFF10B981,
+                              ).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'Aman & Terlindungi',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF10B981),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    Pressable(
-                      onTap: isOwn
-                          ? null
-                          : () {
-                              if (_item!.type == 'paid' &&
-                                  !_item!.hasPurchased) {
-                                _purchaseItem();
-                              } else {
-                                AppSnackbar.info(
-                                  context,
-                                  'Fitur download belum tersedia.',
-                                );
-                              }
-                            },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: isOwn
-                              ? null
-                              : const LinearGradient(
-                                  colors: [
-                                    AppTheme.primaryPurple,
-                                    AppTheme.lightPurple,
-                                  ],
-                                ),
-                          color: isOwn
-                              ? (isDark
-                                    ? AppTheme.inputDark
-                                    : AppTheme.inputLight)
-                              : null,
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: isOwn
-                              ? null
-                              : [
-                                  BoxShadow(
-                                    color: AppTheme.primaryPurple.withValues(
-                                      alpha: 0.35,
-                                    ),
-                                    blurRadius: 14,
-                                    offset: const Offset(0, 6),
-                                  ),
-                                ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (_isSubmitting)
-                              const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            else ...[
-                              Icon(
-                                isOwn
-                                    ? Icons.person_rounded
-                                    : (_item!.type == 'paid' &&
-                                              !_item!.hasPurchased
-                                          ? Icons.shopping_cart_checkout_rounded
-                                          : Icons.download_rounded),
-                                size: 20,
-                                color: isOwn
-                                    ? AppTheme.textMuted
-                                    : Colors.white,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                isOwn
-                                    ? 'Karya Anda'
-                                    : (_item!.type == 'paid' &&
-                                              !_item!.hasPurchased
-                                          ? 'Beli Sekarang'
-                                          : 'Download'),
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: isOwn
-                                      ? AppTheme.textMuted
-                                      : Colors.white,
-                                ),
-                              ),
-                            ],
-                          ],
+                      const SizedBox(height: 2),
+                      Text(
+                        _item!.formattedPrice,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: AppTheme.primaryPurple,
+                          letterSpacing: -0.4,
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+                Pressable(
+                  onTap: isOwn
+                      ? null
+                      : () {
+                          if (_item!.type == 'paid' && !_item!.hasPurchased) {
+                            _purchaseItem();
+                          } else {
+                            AppSnackbar.info(
+                              context,
+                              'Fitur download belum tersedia.',
+                            );
+                          }
+                        },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isDesktop ? 36 : 24,
+                      vertical: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: isOwn
+                          ? null
+                          : const LinearGradient(
+                              colors: [
+                                AppTheme.primaryPurple,
+                                AppTheme.lightPurple,
+                              ],
+                            ),
+                      color: isOwn
+                          ? (isDark ? AppTheme.inputDark : AppTheme.inputLight)
+                          : null,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: isOwn
+                          ? null
+                          : [
+                              BoxShadow(
+                                color: AppTheme.primaryPurple.withValues(
+                                  alpha: 0.35,
+                                ),
+                                blurRadius: 14,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_isSubmitting)
+                          const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        else ...[
+                          Icon(
+                            isOwn
+                                ? Icons.person_rounded
+                                : (_item!.type == 'paid' && !_item!.hasPurchased
+                                      ? Icons.shopping_cart_checkout_rounded
+                                      : Icons.download_rounded),
+                            size: 20,
+                            color: isOwn ? AppTheme.textMuted : Colors.white,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            isOwn
+                                ? 'Karya Anda'
+                                : (_item!.type == 'paid' && !_item!.hasPurchased
+                                      ? 'Beli Sekarang'
+                                      : 'Download'),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: isOwn ? AppTheme.textMuted : Colors.white,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 

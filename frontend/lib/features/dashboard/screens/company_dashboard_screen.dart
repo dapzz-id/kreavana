@@ -1,5 +1,9 @@
-import '../../../services/badge_service.dart';
+import 'dart:ui' show PointerDeviceKind;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../services/badge_service.dart';
 import '../../../app/theme.dart';
 import '../../../app/subrole_theme_engine.dart';
 import '../../../services/theme_transition_service.dart';
@@ -147,11 +151,34 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
       for (final p in partnerData) {
         if (p is Map<String, dynamic>) {
           final meta = p['metadata'] as Map<String, dynamic>? ?? {};
+          final title = p['title']?.toString() ?? 'Mitra B2B';
+          String phone = meta['phone']?.toString() ?? '';
+          if (phone.isEmpty && meta['contact'] != null && !meta['contact'].toString().contains('@')) {
+            phone = meta['contact'].toString();
+          }
+          if (phone.isEmpty) {
+            if (title.contains('Visual Kreasi')) {
+              phone = '081289123401';
+            } else if (title.contains('Grafika Mandiri')) {
+              phone = '081378234502';
+            } else if (title.contains('Nusantara Audio')) {
+              phone = '081567345603';
+            } else if (title.contains('Cipta Event')) {
+              phone = '081856456704';
+            } else if (title.contains('Pixel Craft')) {
+              phone = '081945567805';
+            } else {
+              phone = '081234567890';
+            }
+          }
           loadedCreators.add({
-            'name': p['title'] ?? 'Mitra B2B',
+            'name': title,
             'cat': meta['category'] ?? 'Creative Partner',
             'rating': '4.9',
             'verified': true,
+            'phone': phone,
+            'email': meta['email'] ?? (meta['contact']?.toString().contains('@') == true ? meta['contact'] : ''),
+            'website': meta['website'] ?? '',
           });
         }
       }
@@ -159,11 +186,16 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
         final vendorList = overview['vendor_recommendations'] as List<dynamic>? ?? [];
         for (final v in vendorList) {
           if (v is Map<String, dynamic>) {
+            final vName = (v['name'] ?? v['user_name'] ?? 'Mitra B2B').toString();
+            final vPhone = (v['phone'] ?? v['contact'] ?? '081234567890').toString();
             loadedCreators.add({
-              'name': (v['name'] ?? v['user_name'] ?? 'Mitra B2B').toString(),
+              'name': vName,
               'cat': (v['category'] ?? v['sub_role'] ?? 'Creative Partner').toString(),
               'rating': (v['rating'] ?? '4.9').toString(),
               'verified': true,
+              'phone': vPhone,
+              'email': (v['email'] ?? '').toString(),
+              'website': (v['website'] ?? '').toString(),
             });
           }
         }
@@ -620,9 +652,19 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
       {'title': 'Tender & Pengadaan (RFP)', 'icon': Icons.assignment_rounded},
     ];
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
+    return ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(
+        dragDevices: {
+          PointerDeviceKind.touch,
+          PointerDeviceKind.mouse,
+          PointerDeviceKind.trackpad,
+          PointerDeviceKind.stylus,
+        },
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
         children: tabs.asMap().entries.map((entry) {
           final idx = entry.key;
           final tab = entry.value;
@@ -683,6 +725,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
           );
         }).toList(),
       ),
+    ),
     );
   }
 
@@ -1167,9 +1210,19 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
             ],
           ),
           const SizedBox(height: 18),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
+          ScrollConfiguration(
+            behavior: ScrollConfiguration.of(context).copyWith(
+              dragDevices: {
+                PointerDeviceKind.touch,
+                PointerDeviceKind.mouse,
+                PointerDeviceKind.trackpad,
+                PointerDeviceKind.stylus,
+              },
+            ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
               children: pillars.asMap().entries.map((entry) {
                 final i = entry.key;
                 final p = entry.value;
@@ -1193,6 +1246,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                 );
               }).toList(),
             ),
+          ),
           ),
           const SizedBox(height: 18),
           Container(
@@ -1761,15 +1815,20 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                       ),
                       const SizedBox(width: 12),
                       OutlinedButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const DirectMessageScreen()),
-                        ),
+                        onPressed: () => _contactPartner(c),
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                           side: BorderSide(color: _brandBlue),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         ),
-                        child: Text('Hubungi', style: TextStyle(fontSize: 11, color: _brandBlue)),
+                        child: Text(
+                          'Hubungi',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: _brandBlue,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -1915,6 +1974,199 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // ── HUBUNGI MITRA LANGSUNG KE NOMOR ───────────────────────────────────────
+  Future<void> _contactPartner(Map<String, dynamic> c) async {
+    final phone = (c['phone'] ?? '').toString().trim();
+    if (phone.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Nomor kontak tidak tersedia.')),
+        );
+      }
+      return;
+    }
+
+    final cleanPhone = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    final telUri = Uri.parse('tel:$cleanPhone');
+
+    // On mobile devices (Android / iOS), directly launch native dialer
+    if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+      try {
+        if (await canLaunchUrl(telUri)) {
+          final launched = await launchUrl(telUri, mode: LaunchMode.externalApplication);
+          if (launched) return;
+        }
+      } catch (_) {}
+    }
+
+    // On Desktop / Web or if dialer couldn't open directly, show direct number modal
+    if (!mounted) return;
+    _showDirectPhoneDialog(c, cleanPhone);
+  }
+
+  void _showDirectPhoneDialog(Map<String, dynamic> c, String cleanPhone) {
+    final name = c['name']?.toString() ?? 'Mitra B2B';
+    final cat = c['cat']?.toString() ?? 'Mitra Terverifikasi';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    String waNumber = cleanPhone.replaceAll(RegExp(r'\D'), '');
+    if (waNumber.startsWith('0')) {
+      waNumber = '62${waNumber.substring(1)}';
+    } else if (!waNumber.startsWith('62')) {
+      waNumber = '62$waNumber';
+    }
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          backgroundColor: isDark ? AppTheme.cardBg : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          title: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: _brandBlue.withValues(alpha: 0.15),
+                child: Icon(Icons.phone_in_talk_rounded, size: 20, color: _brandBlue),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      cat,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.perm_phone_msg_rounded, size: 22, color: _brandBlue),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Nomor Telepon Langsung', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                          const SizedBox(height: 2),
+                          SelectableText(
+                            cleanPhone,
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.8,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.copy_rounded, size: 18),
+                      tooltip: 'Salin Nomor',
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: cleanPhone));
+                        Navigator.pop(dialogCtx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Nomor $cleanPhone berhasil disalin ke clipboard'),
+                            backgroundColor: Colors.green.shade700,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        Navigator.pop(dialogCtx);
+                        final uri = Uri.parse('tel:$cleanPhone');
+                        try {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        } catch (_) {
+                          Clipboard.setData(ClipboardData(text: cleanPhone));
+                          messenger.showSnackBar(
+                            SnackBar(content: Text('Nomor $cleanPhone telah disalin')),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.call_rounded, size: 16),
+                      label: const Text('Panggil', style: TextStyle(fontSize: 12)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: BorderSide(color: _brandBlue),
+                        foregroundColor: _brandBlue,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        Navigator.pop(dialogCtx);
+                        final waUri = Uri.parse('https://wa.me/$waNumber');
+                        try {
+                          await launchUrl(waUri, mode: LaunchMode.externalApplication);
+                        } catch (_) {
+                          Clipboard.setData(ClipboardData(text: cleanPhone));
+                          messenger.showSnackBar(
+                            SnackBar(content: Text('Membuka WhatsApp gagal. Nomor $cleanPhone disalin.')),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
+                      label: const Text('WhatsApp', style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF25D366),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

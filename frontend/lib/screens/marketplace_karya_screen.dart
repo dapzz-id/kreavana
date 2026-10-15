@@ -42,12 +42,10 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
     super.initState();
     _loadAll();
     _scrollCtrl.addListener(_onScroll);
-    _searchCtrl.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
-    _searchCtrl.removeListener(_onSearchChanged);
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
     _debounce?.cancel();
@@ -56,7 +54,7 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
 
   void _onSearchChanged() {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
+    _debounce = Timer(const Duration(milliseconds: 400), () {
       if (mounted) _onSearch();
     });
   }
@@ -73,15 +71,19 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
   Future<void> _loadAll() async {
     setState(() => _isLoading = true);
     try {
+      final selectedCategory = _selectedCategory.toLowerCase() == 'semua'
+          ? null
+          : _selectedCategory;
+
       final results = await Future.wait([
-        MarketplaceService.getFeatured(),
-        MarketplaceService.getCategories(),
+        MarketplaceService.getFeatured().catchError((_) => <String, dynamic>{'status': false}),
+        MarketplaceService.getCategories().catchError((_) => <String, dynamic>{'status': false}),
         MarketplaceService.getCategory(
-          _selectedCategory,
+          selectedCategory,
           _searchCtrl.text,
           _sortBy,
           1,
-        ),
+        ).catchError((_) => <String, dynamic>{'status': false}),
       ]);
 
       if (mounted) {
@@ -89,33 +91,78 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
         final catRes = results[1];
         final itemsRes = results[2];
 
+        List<MarketplaceItem> featuredList = [];
+        if (featuredRes['status'] == true && featuredRes['data'] != null) {
+          final data = featuredRes['data'];
+          final List<dynamic> rawFeatured = (data is List
+              ? data
+              : (data is Map ? (data['data'] ?? []) : []));
+          for (final raw in rawFeatured) {
+            if (raw is Map) {
+              try {
+                featuredList.add(MarketplaceItem.fromJson(Map<String, dynamic>.from(raw)));
+              } catch (_) {}
+            }
+          }
+        }
+
+        List<String>? newCategories;
+        if (catRes['status'] == true && catRes['data'] != null) {
+          final raw = catRes['data'];
+          final List<dynamic> catList = raw is List
+              ? raw
+              : (raw is Map ? (raw['data'] ?? []) : []);
+          final fetched = <String>['Semua'];
+          for (final c in catList) {
+            final name = (c is Map
+                    ? (c['category'] ?? c['name'] ?? c['title'] ?? c['slug'])
+                    : c)
+                ?.toString()
+                .trim();
+            if (name != null && name.isNotEmpty && !fetched.contains(name)) {
+              fetched.add(name);
+            }
+          }
+          if (fetched.length > 1) {
+            newCategories = fetched;
+          }
+        }
+
+        List<MarketplaceItem> newItems = [];
+        bool hasMore = true;
+        if (itemsRes['status'] == true && itemsRes['data'] != null) {
+          final data = itemsRes['data'];
+          final List<dynamic> itemList = data is Map
+              ? (data['data'] ?? [])
+              : (data is List ? data : []);
+          for (final raw in itemList) {
+            if (raw is Map) {
+              try {
+                newItems.add(MarketplaceItem.fromJson(Map<String, dynamic>.from(raw)));
+              } catch (_) {}
+            }
+          }
+          if (data is Map && data['last_page'] != null) {
+            hasMore = _currentPage < (data['last_page'] as int);
+          } else {
+            hasMore = newItems.isNotEmpty;
+          }
+        }
+
         setState(() {
-          if (featuredRes['status'] == true && featuredRes['data'] != null) {
-            final data = featuredRes['data'];
-            _featured = (data is List ? data : data['data'] ?? [])
-                .map((e) => MarketplaceItem.fromJson(e))
-                .toList();
-          }
-          if (catRes['status'] == true && catRes['data'] != null) {
-            final raw = catRes['data'];
-            final List<dynamic> catList = raw is List ? raw : (raw['data'] ?? []);
-            final fetched = <String>['Semua'];
-            for (final c in catList) {
-              final name = (c is Map ? (c['name'] ?? c['title'] ?? c['slug']) : c)?.toString();
-              if (name != null && name.isNotEmpty) fetched.add(name);
-            }
-            if (fetched.length > 1) {
-              _allCategories = fetched;
-              if (!_allCategories.contains(_selectedCategory)) {
-                _selectedCategory = 'Semua';
-              }
+          _featured = featuredList;
+          _items = newItems;
+          _hasMore = hasMore;
+          if (newCategories != null) {
+            _allCategories = newCategories;
+            if (!_allCategories.contains(_selectedCategory)) {
+              _selectedCategory = 'Semua';
             }
           }
-          _parseItems(itemsRes);
           _isLoading = false;
         });
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -136,8 +183,15 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
         _sortBy,
         1,
       );
-      if (mounted) _parseItems(result);
-    } catch (_) {}
+      if (mounted) _parseItems(result, append: false);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _items = [];
+          _isLoadingMore = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadMore() async {
@@ -145,41 +199,54 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
     setState(() => _isLoadingMore = true);
     _currentPage++;
     try {
+      final selectedCategory = _selectedCategory.toLowerCase() == 'semua'
+          ? null
+          : _selectedCategory;
       final result = await MarketplaceService.getCategory(
-        _selectedCategory,
+        selectedCategory,
         _searchCtrl.text,
         _sortBy,
         _currentPage,
       );
       if (mounted) {
-        _parseItems(result);
-        setState(() => _isLoadingMore = false);
+        _parseItems(result, append: true);
       }
     } catch (e) {
       if (mounted) setState(() => _isLoadingMore = false);
     }
   }
 
-  void _parseItems(Map<String, dynamic> result) {
+  void _parseItems(Map<String, dynamic> result, {bool append = false}) {
     if (result['status'] == true && result['data'] != null) {
       final data = result['data'];
       final List<dynamic> itemList = data is Map
           ? (data['data'] ?? [])
           : (data is List ? data : []);
-      final newItems = itemList
-          .map((e) => MarketplaceItem.fromJson(e))
-          .toList();
+      final List<MarketplaceItem> newItems = [];
+      for (final raw in itemList) {
+        if (raw is Map) {
+          try {
+            newItems.add(MarketplaceItem.fromJson(Map<String, dynamic>.from(raw)));
+          } catch (_) {}
+        }
+      }
       setState(() {
-        if (_currentPage == 1) {
+        if (!append) {
           _items = newItems;
         } else {
           _items.addAll(newItems);
         }
         if (data is Map && data['last_page'] != null) {
-          _hasMore = _currentPage < data['last_page'];
+          _hasMore = _currentPage < (data['last_page'] as int);
         } else {
           _hasMore = newItems.isNotEmpty;
         }
+        _isLoadingMore = false;
+      });
+    } else {
+      setState(() {
+        if (!append) _items = [];
+        _isLoadingMore = false;
       });
     }
   }
@@ -348,14 +415,16 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                       ),
                     ),
                     SliverPadding(
-                      padding: const EdgeInsets.only(top: 14),
+                      padding: const EdgeInsets.only(top: 10),
                       sliver: SliverToBoxAdapter(
                         child: SizedBox(
-                          height: 240,
+                          height: 275,
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
+                            clipBehavior: Clip.none,
                             padding: EdgeInsets.symmetric(
                               horizontal: isWide ? 32 : 16,
+                              vertical: 8,
                             ),
                             itemCount: _featured.length,
                             separatorBuilder: (_, _) =>
@@ -612,7 +681,10 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
               child: TextField(
                 controller: _searchCtrl,
                 onSubmitted: (_) => _onSearch(),
-                onChanged: (_) => setState(() {}),
+                onChanged: (_) {
+                  setState(() {});
+                  _onSearchChanged();
+                },
                 style: TextStyle(
                   color: isDark ? AppTheme.textWhite : AppTheme.textDark,
                   fontSize: 14,
@@ -892,15 +964,40 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                             ),
                           ),
                         ),
-                        Center(
-                          child: Icon(
-                            _categoryIcon(item.category),
-                            size: 42,
-                            color: AppTheme.primaryPurple.withValues(
-                              alpha: isDark ? 0.6 : 0.5,
+                        if (item.media != null &&
+                            item.media!.isNotEmpty &&
+                            item.media!.first.fileType != 'video')
+                          ClipRRect(
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(22),
+                              topRight: Radius.circular(22),
+                            ),
+                            child: Image.network(
+                              item.media!.first.filePath,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              errorBuilder: (context, error, stackTrace) => Center(
+                                child: Icon(
+                                  _categoryIcon(item.category),
+                                  size: 42,
+                                  color: AppTheme.primaryPurple.withValues(
+                                    alpha: isDark ? 0.6 : 0.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          Center(
+                            child: Icon(
+                              _categoryIcon(item.category),
+                              size: 42,
+                              color: AppTheme.primaryPurple.withValues(
+                                alpha: isDark ? 0.6 : 0.5,
+                              ),
                             ),
                           ),
-                        ),
                       ],
                     ),
                   ),

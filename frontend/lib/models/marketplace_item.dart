@@ -47,40 +47,52 @@ class MarketplaceItem {
     this.media,
   });
 
+  static bool _parseBool(dynamic val, [bool fallback = false]) {
+    if (val == null) return fallback;
+    if (val is bool) return val;
+    if (val is num) return val == 1;
+    final s = val.toString().toLowerCase().trim();
+    if (s == '1' || s == 'true') return true;
+    if (s == '0' || s == 'false') return false;
+    return fallback;
+  }
+
   factory MarketplaceItem.fromJson(Map<String, dynamic> json) {
     return MarketplaceItem(
       id: json['id']?.toString() ?? '',
       userId: (json['user_id'] ?? '').toString(),
-      title: json['title'] ?? '',
-      description: json['description'],
-      category: json['category'] ?? 'Lainnya',
-      type: json['type'] ?? 'free',
+      title: json['title']?.toString() ?? '',
+      description: json['description']?.toString(),
+      category: json['category']?.toString() ?? 'Lainnya',
+      type: json['type']?.toString() ?? 'free',
       price: (json['price'] != null)
           ? double.tryParse(json['price'].toString()) ?? 0
           : 0,
-      rating: double.tryParse(json['rating'].toString()) ?? 0,
-      reviewCount: json['review_count'] ?? 0,
-      orderCount: json['order_count'] ?? 0,
-      imageUrl: json['image_url'],
-      isFeatured: json['is_featured'] ?? false,
-      isActive: json['is_active'] ?? true,
-      status: json['status'] ?? 'published',
-      isFollowing: json['is_following'] ?? false,
-      hasPurchased: json['has_purchased'] ?? false,
-      hasReviewed: json['has_reviewed'] == true,
-      canReview: json['can_review'] == true,
-      createdAt: json['created_at'],
-      creator: json['user'] != null
-          ? MarketplaceCreator.fromJson(json['user'])
+      rating: double.tryParse(json['rating']?.toString() ?? '') ?? 0,
+      reviewCount: int.tryParse(json['review_count']?.toString() ?? '') ?? 0,
+      orderCount: int.tryParse(json['order_count']?.toString() ?? '') ?? 0,
+      imageUrl: json['image_url']?.toString(),
+      isFeatured: _parseBool(json['is_featured'], false),
+      isActive: _parseBool(json['is_active'], true),
+      status: json['status']?.toString() ?? 'published',
+      isFollowing: _parseBool(json['is_following'], false),
+      hasPurchased: _parseBool(json['has_purchased'], false),
+      hasReviewed: _parseBool(json['has_reviewed'], false),
+      canReview: _parseBool(json['can_review'], false),
+      createdAt: json['created_at']?.toString(),
+      creator: json['user'] is Map
+          ? MarketplaceCreator.fromJson(Map<String, dynamic>.from(json['user']))
           : null,
-      reviews: json['reviews'] != null
+      reviews: json['reviews'] is List
           ? (json['reviews'] as List)
-                .map((r) => MarketplaceReview.fromJson(r))
+                .whereType<Map>()
+                .map((r) => MarketplaceReview.fromJson(Map<String, dynamic>.from(r)))
                 .toList()
           : null,
-      media: json['media'] != null
+      media: json['media'] is List
           ? (json['media'] as List)
-                .map((e) => MarketplaceMedia.fromJson(e))
+                .whereType<Map>()
+                .map((e) => MarketplaceMedia.fromJson(Map<String, dynamic>.from(e)))
                 .toList()
           : null,
     );

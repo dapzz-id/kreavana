@@ -2511,6 +2511,9 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   Widget _getCachedScreen(int index) {
+    if (!_loadedScreenIndices.contains(index)) {
+      return const SizedBox.shrink();
+    }
     return _screenCache.putIfAbsent(index, () => _buildScreenAt(index));
   }
 

@@ -231,6 +231,7 @@ class ProfileCompleteness {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      showDragHandle: false,
       backgroundColor: Colors.transparent,
       builder: (context) {
         return Center(
@@ -510,31 +511,34 @@ class ProfileCompleteness {
                                     backgroundColor: accentColor,
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 8,
+                                      horizontal: 16,
+                                      vertical: 10,
                                     ),
                                     elevation: 0,
-                                    minimumSize: Size.zero,
-                                    tapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
+                                    minimumSize: const Size(100, 38),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
                                   child: const Row(
                                     mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
                                     children: [
                                       Text(
                                         'Lengkapi',
                                         style: TextStyle(
-                                          fontSize: 11.5,
-                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                          height: 1.1,
+                                          color: Colors.white,
                                         ),
                                       ),
-                                      SizedBox(width: 4),
+                                      SizedBox(width: 5),
                                       Icon(
                                         Icons.arrow_forward_rounded,
-                                        size: 13,
+                                        size: 14,
+                                        color: Colors.white,
                                       ),
                                     ],
                                   ),
