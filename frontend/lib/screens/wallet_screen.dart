@@ -3,6 +3,7 @@ import '../models/user_model.dart';
 import '../models/wallet_transaction_model.dart';
 import '../services/wallet_service.dart';
 import '../app/theme.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 import 'topup_screen.dart';
 import 'transfer_screen.dart';
 import 'withdraw_screen.dart';
@@ -31,6 +32,11 @@ class _WalletScreenState extends State<WalletScreen> {
   bool _hasPin = true;
   List<WalletTransactionModel> _transactions = [];
   late UserModel _currentUser;
+
+  bool get _isCompany {
+    final sub = (_currentUser.subRole ?? '').toLowerCase();
+    return ['company', 'corporate', 'perusahaan', 'bisnis', 'b2b'].contains(sub);
+  }
 
   @override
   void initState() {
@@ -76,7 +82,7 @@ class _WalletScreenState extends State<WalletScreen> {
     final content = Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
+        automaticallyImplyLeading: Navigator.canPop(context),
         toolbarHeight: 80,
         titleSpacing: isDesktop ? 32 : 16,
         title: const Text(
@@ -144,12 +150,20 @@ class _WalletScreenState extends State<WalletScreen> {
                         gradient: LinearGradient(
                           colors: isDark
                               ? [
-                                  const Color(0xFF6366F1),
-                                  const Color(0xFF4F46E5),
+                                  _isCompany
+                                      ? const Color(0xFF1E40AF)
+                                      : const Color(0xFF6366F1),
+                                  _isCompany
+                                      ? const Color(0xFF1E3A8A)
+                                      : const Color(0xFF4F46E5),
                                 ]
                               : [
-                                  const Color(0xFF4F46E5),
-                                  const Color(0xFF3730A3),
+                                  _isCompany
+                                      ? const Color(0xFF2563EB)
+                                      : const Color(0xFF4F46E5),
+                                  _isCompany
+                                      ? const Color(0xFF1D4ED8)
+                                      : const Color(0xFF3730A3),
                                 ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -157,9 +171,10 @@ class _WalletScreenState extends State<WalletScreen> {
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(
-                              0xFF4F46E5,
-                            ).withValues(alpha: 0.3),
+                            color: (_isCompany
+                                    ? const Color(0xFF2563EB)
+                                    : const Color(0xFF4F46E5))
+                                .withValues(alpha: 0.3),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
@@ -223,7 +238,9 @@ class _WalletScreenState extends State<WalletScreen> {
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.white,
-                                    foregroundColor: const Color(0xFF4F46E5),
+                                    foregroundColor: _isCompany
+                                        ? const Color(0xFF2563EB)
+                                        : const Color(0xFF4F46E5),
                                     elevation: 0,
                                     padding: const EdgeInsets.symmetric(
                                       vertical: 12,
@@ -541,6 +558,15 @@ class _WalletScreenState extends State<WalletScreen> {
         ),
       ),
     );
+
+    if (isDesktop) {
+      return DesktopSidebarLayout(
+        user: _currentUser,
+        activeRoute: 'pembayaran',
+        onUserUpdated: widget.onUserUpdated,
+        child: content,
+      );
+    }
 
     return content;
   }

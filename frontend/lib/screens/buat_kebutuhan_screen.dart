@@ -12,6 +12,7 @@ import '../widgets/animated_input_field.dart';
 import '../widgets/gradient_button.dart';
 import 'proyek_saya_screen.dart';
 import '../models/user_model.dart';
+import '../services/user_store.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import '../widgets/app_breadcrumbs.dart';
 import '../widgets/app_sweet_alert.dart';
@@ -745,7 +746,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
             constraints: const BoxConstraints(maxWidth: 860),
             child: Row(
               children: [
-                if (!isDesktop && Navigator.canPop(context))
+                if (Navigator.canPop(context))
                   InkWell(
                     borderRadius: BorderRadius.circular(10),
                     onTap: () => Navigator.pop(context),
@@ -765,7 +766,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                       ),
                     ),
                   ),
-                if (!isDesktop && Navigator.canPop(context)) const SizedBox(width: 16),
+                if (Navigator.canPop(context)) const SizedBox(width: 16),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -1103,9 +1104,10 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
       ),
     );
 
-    if (isDesktop && widget.user != null) {
+    final effectiveUser = widget.user ?? currentUserNotifier.value;
+    if (isDesktop && effectiveUser != null) {
       return DesktopSidebarLayout(
-        user: widget.user!,
+        user: effectiveUser,
         activeRoute: 'proyek_saya',
         child: content,
       );

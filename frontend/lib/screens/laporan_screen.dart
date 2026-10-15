@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
+import '../services/user_store.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 
 import '../widgets/ai_report_summary_widget.dart';
@@ -21,7 +22,7 @@ class LaporanScreen extends StatelessWidget {
     final content = Scaffold(
       appBar: AppBar(
         toolbarHeight: 75,
-        automaticallyImplyLeading: MediaQuery.of(context).size.width <= 900,
+        automaticallyImplyLeading: Navigator.canPop(context),
         title: const Text(
           'Laporan',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -144,9 +145,10 @@ class LaporanScreen extends StatelessWidget {
       ),
     );
 
-    if (user != null) {
+    final effectiveUser = user ?? currentUserNotifier.value;
+    if (effectiveUser != null) {
       return DesktopSidebarLayout(
-        user: user!,
+        user: effectiveUser,
         activeRoute: 'laporan',
         onUserUpdated: onUserUpdated,
         child: content,

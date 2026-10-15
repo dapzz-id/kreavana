@@ -8,6 +8,7 @@ import '../screens/explore_screen.dart';
 import '../screens/proyek_saya_screen.dart';
 import '../screens/wallet_screen.dart';
 import '../screens/laporan_screen.dart';
+import '../screens/institution_workspace_screen.dart';
 import '../screens/profile_screen.dart';
 import 'package:go_router/go_router.dart';
 import '../services/app_router.dart';
@@ -398,7 +399,7 @@ class SubRoleRightSidebar extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const BuatKebutuhanScreen(),
+                        builder: (_) => BuatKebutuhanScreen(user: user),
                       ),
                     );
                   } else if (label == 'Cari Kreator' ||
@@ -422,7 +423,10 @@ class SubRoleRightSidebar extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => ProyekSayaScreen(user: user),
+                        builder: (_) => ProyekSayaScreen(
+                          user: user,
+                          onUserUpdated: onUserUpdated,
+                        ),
                       ),
                     );
                   } else if (label == 'Atur Jadwal') {
@@ -459,15 +463,41 @@ class SubRoleRightSidebar extends StatelessWidget {
                       );
                       return;
                     }
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => LaporanScreen(
-                          user: user,
-                          onUserUpdated: onUserUpdated ?? (_) {},
+                    final sub = user.subRole?.toLowerCase() ?? '';
+                    final isCompanyOrSchool = [
+                      'company',
+                      'corporate',
+                      'business',
+                      'perusahaan',
+                      'bisnis',
+                      'b2b',
+                      'institution',
+                      'institusi',
+                      'school',
+                      'sekolah',
+                    ].contains(sub);
+                    if (isCompanyOrSchool) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => InstitutionWorkspaceScreen(
+                            user: user,
+                            resourceType: 'reports',
+                            onUserUpdated: onUserUpdated,
+                          ),
                         ),
-                      ),
-                    );
+                      );
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => LaporanScreen(
+                            user: user,
+                            onUserUpdated: onUserUpdated ?? (_) {},
+                          ),
+                        ),
+                      );
+                    }
                   }
                 },
                 borderRadius: BorderRadius.circular(12),

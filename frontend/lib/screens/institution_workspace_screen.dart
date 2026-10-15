@@ -529,18 +529,28 @@ class _InstitutionWorkspaceScreenState
                               field.key: controllers[field.key]!.text.trim(),
                         },
                       };
-                      setDialogState(() => _isSaving = true);
-                      final response = existing == null
-                          ? await ApiService.post('institution/resources', payload)
-                          : await ApiService.put('institution/resources/${existing['id']}', payload);
-                      if (!dialogContext.mounted) return;
-                      setDialogState(() => _isSaving = false);
-                      if (response['status'] == true) {
-                        Navigator.pop(dialogContext, true);
-                      } else {
+                      try {
+                        setDialogState(() => _isSaving = true);
+                        final response = existing == null
+                            ? await ApiService.post('institution/resources', payload)
+                            : await ApiService.put('institution/resources/${existing['id']}', payload);
+                        if (!dialogContext.mounted || !mounted) return;
+                        setDialogState(() => _isSaving = false);
+                        if (response['status'] == true) {
+                          Navigator.pop(dialogContext, true);
+                        } else {
+                          AppSweetAlert.error(
+                            context,
+                            response['message']?.toString() ?? 'Data gagal disimpan ke backend.',
+                            title: 'Gagal Menyimpan',
+                          );
+                        }
+                      } catch (e) {
+                        if (!dialogContext.mounted || !mounted) return;
+                        setDialogState(() => _isSaving = false);
                         AppSweetAlert.error(
-                          dialogContext,
-                          response['message']?.toString() ?? 'Data gagal disimpan ke backend.',
+                          context,
+                          'Terjadi kendala saat menyimpan data: $e',
                           title: 'Gagal Menyimpan',
                         );
                       }

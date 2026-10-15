@@ -29,6 +29,11 @@ class InstitutionResourceController extends Controller
         'in_progress',
         'completed',
         'closed',
+        'active',
+        'inactive',
+        'pending',
+        'approved',
+        'rejected',
     ];
 
     public function index(Request $request)

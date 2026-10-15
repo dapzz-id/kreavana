@@ -10,6 +10,8 @@ import '../models/job_contract.dart';
 import '../models/opportunity_model.dart';
 import 'direct_message_screen.dart';
 import '../services/chat_service.dart';
+import '../services/user_store.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 import 'buat_kebutuhan_screen.dart';
 import 'detail_kebutuhan_screen.dart';
 import '../widgets/app_breadcrumbs.dart';
@@ -599,11 +601,11 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     final menungguCount = _allItems.where((i) => i.statusCategory == 'Menunggu').length;
     final selesaiCount = _allItems.where((i) => i.statusCategory == 'Selesai').length;
 
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFF7F8FC),
       body: RefreshIndicator(
         onRefresh: _fetchRealtimeProjects,
-        color: AppTheme.primaryPurple,
+        color: accentColor,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Align(
@@ -697,7 +699,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
           ? FloatingActionButton.extended(
               heroTag: 'proyek_saya_fab_mobile',
               onPressed: _openBuatKebutuhan,
-              backgroundColor: AppTheme.primaryPurple,
+              backgroundColor: accentColor,
               icon: const Icon(Icons.add_rounded, color: Colors.white),
               label: const Text(
                 'Buat Kebutuhan',
@@ -706,6 +708,18 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             )
           : null,
     );
+
+    final effectiveUser = widget.user ?? currentUserNotifier.value;
+    if (isDesktop && effectiveUser != null) {
+      return DesktopSidebarLayout(
+        user: effectiveUser,
+        activeRoute: 'proyek_saya',
+        onUserUpdated: widget.onUserUpdated,
+        child: scaffold,
+      );
+    }
+
+    return scaffold;
   }
 
   // ── Header ─────────────────────────────────────────────────────────────────
@@ -713,7 +727,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        if (!isDesktop && Navigator.canPop(context))
+        if (Navigator.canPop(context))
           Padding(
             padding: const EdgeInsets.only(right: 14),
             child: InkWell(

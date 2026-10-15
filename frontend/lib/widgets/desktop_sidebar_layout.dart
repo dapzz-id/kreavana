@@ -19,6 +19,7 @@ import '../screens/pengumuman_publik_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/tim_hak_akses_screen.dart';
 import '../screens/institution_workspace_screen.dart';
+import '../screens/buat_kebutuhan_screen.dart';
 import '../features/dashboard/screens/community_dashboard_screen.dart';
 import 'creator_sidebar_menus.dart';
 import 'kreavana_ai_floating_widget.dart';
@@ -566,6 +567,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
           onUserUpdated: widget.onUserUpdated,
         );
         break;
+      case 'buat_kebutuhan':
+        destination = BuatKebutuhanScreen(user: widget.user);
+        break;
     }
     if (destination != null) {
       _pushNoAnimation(destination);
@@ -795,7 +799,11 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 900;
 
-    if (!isDesktop) {
+    final hasAncestorSidebar =
+        context.findAncestorWidgetOfExactType<DesktopSidebarLayout>() != null ||
+        (isDesktop && context.findAncestorWidgetOfExactType<MainNavigation>() != null);
+
+    if (!isDesktop || hasAncestorSidebar) {
       return widget.child;
     }
 

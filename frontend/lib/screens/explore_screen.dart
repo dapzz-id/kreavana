@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../widgets/creator_sidebar_menus.dart';
 import '../app/theme.dart';
+import '../app/subrole_theme_engine.dart';
 import '../models/user_model.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 import '../models/opportunity_model.dart';
 import '../services/opportunity_service.dart';
 import '../widgets/feature_card.dart';
@@ -178,10 +180,14 @@ class _ExploreScreenState extends State<ExploreScreen>
     final isDark = theme.brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 900;
+    final accentColor = SubRoleThemeEngine.getAccentColor(
+      widget.user.role,
+      widget.user.subRole,
+    );
 
-    return Scaffold(
+    final scaffold = Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
+        automaticallyImplyLeading: Navigator.canPop(context),
         toolbarHeight: 64,
         titleSpacing: isDesktop ? 32 : 16,
         elevation: 0,
@@ -205,9 +211,9 @@ class _ExploreScreenState extends State<ExploreScreen>
             child: TabBar(
               controller: _tabController,
               isScrollable: false,
-              indicatorColor: AppTheme.primaryPurple,
+              indicatorColor: accentColor,
               indicatorWeight: 3,
-              labelColor: AppTheme.primaryPurple,
+              labelColor: accentColor,
               unselectedLabelColor:
                   isDark ? Colors.white60 : Colors.grey.shade600,
               indicatorSize: TabBarIndicatorSize.tab,
@@ -462,5 +468,15 @@ class _ExploreScreenState extends State<ExploreScreen>
     ],
   ),
 );
+
+    if (isDesktop) {
+      return DesktopSidebarLayout(
+        user: widget.user,
+        activeRoute: 'explore',
+        child: scaffold,
+      );
+    }
+
+    return scaffold;
   }
 }
