@@ -44,14 +44,14 @@ jobs:
         run: flutter pub get
 
       # ============================================================
-      # 4. BUILD FLUTTER WEB - DEVELOPMENT
+      # 4. BUILD FLUTTER WEB - STAGING
       # ============================================================
-      - name: Build Flutter Web DEV
+      - name: Build Flutter Web Staging
         working-directory: frontend
         run: |
           flutter build web \
             --release \
-            --dart-define=ENV=development \
+            --dart-define=ENV=staging \
             --no-wasm-dry-run
 
       # ============================================================
