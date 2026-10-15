@@ -52,7 +52,7 @@ void main() async {
   // Aktivasi Firebase App Check
   await FirebaseAppCheck.instance.activate(
     providerWeb: ReCaptchaV3Provider(dotenv.env['RECAPTCHA_SITE_KEY'] ?? ''),
-    providerAndroid: env == 'development'
+    providerAndroid: (env == 'development' || env == 'staging')
         ? AndroidDebugProvider()
         : AndroidPlayIntegrityProvider(),
     providerApple: AppleAppAttestProvider(),
