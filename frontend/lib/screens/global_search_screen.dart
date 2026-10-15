@@ -678,19 +678,36 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         trailing: ElevatedButton.icon(
           onPressed: () async {
             if (userId.isNotEmpty) {
-              final chatRes = await ChatService.startPersonalChat(userId);
-              final chatData = chatRes['data'];
-              final chatId = chatData != null ? chatData['id'] : null;
-              if (mounted) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => DirectMessageScreen(
-                      currentUser: widget.user,
-                      chatId: chatId,
+              try {
+                final chatRes = await ChatService.startPersonalChat(userId);
+                final chatData = chatRes['data'];
+                final chatId = chatData != null ? chatData['id']?.toString() : null;
+                final chatMap = chatData != null ? Map<String, dynamic>.from(chatData) : null;
+                if (mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DirectMessageScreen(
+                        currentUser: widget.user,
+                        chatId: chatId,
+                        initialChat: chatMap,
+                        targetUserId: userId,
+                      ),
                     ),
-                  ),
-                );
+                  );
+                }
+              } catch (_) {
+                if (mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DirectMessageScreen(
+                        currentUser: widget.user,
+                        targetUserId: userId,
+                      ),
+                    ),
+                  );
+                }
               }
             }
           },

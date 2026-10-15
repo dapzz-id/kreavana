@@ -516,7 +516,7 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => const DirectMessageScreen(),
+          builder: (_) => DirectMessageScreen(currentUser: widget.user),
         ),
       );
       return;
@@ -571,8 +571,10 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
             context,
             MaterialPageRoute(
               builder: (_) => DirectMessageScreen(
+                currentUser: widget.user,
                 initialChat: chatData,
-                chatId: chatData['id'],
+                chatId: chatData['id']?.toString(),
+                targetUserId: userId,
               ),
             ),
           );
@@ -584,6 +586,7 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
                 body: ChatDetailSection(
                   chat: chatData,
                   isMobile: true,
+                  currentUser: widget.user,
                 ),
               ),
             ),
@@ -593,7 +596,10 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => DirectMessageScreen(targetUserId: userId),
+            builder: (_) => DirectMessageScreen(
+              currentUser: widget.user,
+              targetUserId: userId,
+            ),
           ),
         );
       }
@@ -603,7 +609,10 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => DirectMessageScreen(targetUserId: userId),
+            builder: (_) => DirectMessageScreen(
+              currentUser: widget.user,
+              targetUserId: userId,
+            ),
           ),
         );
       }

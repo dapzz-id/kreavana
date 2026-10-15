@@ -545,7 +545,22 @@ class _MainNavigationState extends State<MainNavigation> {
   Widget _buildUpgradePromoCard(bool isDark, {bool isCollapsed = false}) {
     if (isCollapsed) return const SizedBox.shrink();
     final isCreator = _currentUser.role == 'creator';
-    final accentColor = SubRoleThemeEngine.getAccentColorForUser(_currentUser);
+    final isCorporate = _currentUser.role == 'corporate' ||
+        _currentUser.role == 'company' ||
+        _isCompany;
+    final promoTitle = isCorporate
+        ? 'Upgrade Akun Corporate'
+        : (isCreator ? 'Upgrade Akun Kreator' : 'Upgrade Plan & Paket');
+    final promoDesc = isCorporate
+        ? 'Tingkatkan peluang & fitur premium untuk corporate.'
+        : (isCreator
+            ? 'Tingkatkan peluang & fitur premium untuk kreator.'
+            : 'Tingkatkan peluang & fitur premium akun Anda.');
+    final accentColor = SubRoleThemeEngine.getAccentColor(
+      _currentUser.role,
+      _currentUser.subRole,
+    );
+
     return Column(
       children: [
         const SizedBox(height: 18),
@@ -558,18 +573,18 @@ class _MainNavigationState extends State<MainNavigation> {
                 _currentUser.role,
                 _currentUser.subRole,
               ),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
               children: [
                 const Icon(
-                  Icons.workspace_premium_outlined,
+                  Icons.workspace_premium_rounded,
                   color: Colors.white,
                   size: 28,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  isCreator ? 'Upgrade Akun Kreator' : 'Upgrade Plan & Paket',
+                  promoTitle,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -578,12 +593,10 @@ class _MainNavigationState extends State<MainNavigation> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  isCreator
-                      ? 'Tingkatkan peluang & fitur premium untuk kreator.'
-                      : 'Nikmati kuota lebih tinggi, fitur AI, dan prioritas proyek.',
+                  promoDesc,
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: Colors.white.withValues(alpha: 0.85),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -599,12 +612,13 @@ class _MainNavigationState extends State<MainNavigation> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
+                      elevation: 0,
                     ),
                     child: const Text(
                       'Upgrade Sekarang',
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
@@ -1662,6 +1676,8 @@ class _MainNavigationState extends State<MainNavigation> {
           isCollapsed: isCollapsed,
           isMobileDrawer: isMobileDrawer,
         ),
+        if (!isMobileDrawer)
+          _buildUpgradePromoCard(isDark, isCollapsed: isCollapsed),
       ] else if (_isCreatorUser && _hasSpecificCreatorSubRole) ...[
         ..._buildCreatorSidebarItems(
           theme: theme,

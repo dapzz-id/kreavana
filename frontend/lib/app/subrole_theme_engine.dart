@@ -376,7 +376,11 @@ class SubRoleThemeEngine {
       }
     }
 
-    if (cleanSub == 'corporate' ||
+    if (cleanRole == 'corporate' ||
+        cleanRole == 'company' ||
+        cleanRole == 'perusahaan' ||
+        cleanRole == 'bisnis' ||
+        cleanSub == 'corporate' ||
         cleanSub == 'company' ||
         cleanSub == 'perusahaan' ||
         cleanSub == 'bisnis' ||
@@ -387,6 +391,10 @@ class SubRoleThemeEngine {
 
     if (clientConfigs.containsKey(cleanSub)) {
       return clientConfigs[cleanSub]!;
+    }
+
+    if (clientConfigs.containsKey(cleanRole)) {
+      return clientConfigs[cleanRole]!;
     }
 
     return SubRoleThemeConfig(

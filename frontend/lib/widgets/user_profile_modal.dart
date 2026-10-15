@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
+import '../services/chat_service.dart';
 import '../services/verification_service.dart';
 import '../screens/direct_message_screen.dart';
 import 'verification_badge.dart';
@@ -92,17 +93,36 @@ class _UserProfileModalState extends State<UserProfileModal>
     }
   }
 
-  void _openChat() {
-    Navigator.pop(context);
+  void _openChat() async {
+    final rootNav = Navigator.of(context, rootNavigator: true);
+    try {
+      final res = await ChatService.startPersonalChat(widget.userId);
+      final chatData = res['data'];
+      final chatId = chatData != null ? chatData['id']?.toString() : null;
+      final chatMap = chatData != null ? Map<String, dynamic>.from(chatData) : null;
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => DirectMessageScreen(
-          currentUser: widget.currentUser,
+      rootNav.pop();
+      rootNav.push(
+        MaterialPageRoute(
+          builder: (_) => DirectMessageScreen(
+            currentUser: widget.currentUser,
+            targetUserId: widget.userId,
+            chatId: chatId,
+            initialChat: chatMap,
+          ),
         ),
-      ),
-    );
+      );
+    } catch (_) {
+      rootNav.pop();
+      rootNav.push(
+        MaterialPageRoute(
+          builder: (_) => DirectMessageScreen(
+            currentUser: widget.currentUser,
+            targetUserId: widget.userId,
+          ),
+        ),
+      );
+    }
   }
 
   @override

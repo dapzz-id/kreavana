@@ -79,6 +79,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
     if (widget.initialChat != null) {
       selectedChat = widget.initialChat;
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        chatListKey.currentState?.loadChats();
         if (mounted && MediaQuery.of(context).size.width <= 800) {
           Navigator.push(
             context,
@@ -87,7 +88,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                 body: ChatDetailSection(
                   chat: widget.initialChat!,
                   isMobile: true,
-                  currentUser: widget.currentUser,
+                  currentUser: _resolvedUser ?? widget.currentUser,
                   onMessageSent: () {
                     chatListKey.currentState?.loadChats();
                   },
@@ -102,6 +103,8 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
       });
     } else if (widget.targetUserId != null) {
       _initTargetUserChat();
+    } else if (widget.chatId != null) {
+      _initChatId();
     }
   }
 
@@ -132,7 +135,45 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                 body: ChatDetailSection(
                   chat: chat,
                   isMobile: true,
-                  currentUser: widget.currentUser,
+                  currentUser: _resolvedUser ?? widget.currentUser,
+                  onMessageSent: () {
+                    chatListKey.currentState?.loadChats();
+                  },
+                  onChatLeft: () {
+                    chatListKey.currentState?.loadChats();
+                  },
+                ),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _initChatId() async {
+    try {
+      final chats = await ChatService.fetchChats();
+      if (!mounted) return;
+      final targetId = widget.chatId.toString();
+      final found = chats.cast<Map<String, dynamic>>().firstWhere(
+        (c) => c['id']?.toString() == targetId,
+        orElse: () => <String, dynamic>{},
+      );
+      if (found.isNotEmpty) {
+        setState(() {
+          selectedChat = found;
+        });
+        chatListKey.currentState?.loadChats();
+        if (MediaQuery.of(context).size.width <= 800) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => Scaffold(
+                body: ChatDetailSection(
+                  chat: found,
+                  isMobile: true,
+                  currentUser: _resolvedUser ?? widget.currentUser,
                   onMessageSent: () {
                     chatListKey.currentState?.loadChats();
                   },

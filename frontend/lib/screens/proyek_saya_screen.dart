@@ -517,7 +517,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               builder: (_) => DirectMessageScreen(
                 currentUser: widget.user,
                 initialChat: chatData,
-                chatId: chatData['id'],
+                chatId: chatData['id']?.toString(),
                 targetUserId: cleanId,
               ),
             ),

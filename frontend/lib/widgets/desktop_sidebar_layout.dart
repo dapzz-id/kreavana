@@ -720,6 +720,22 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
 
   Widget _buildUpgradePromoCard(bool isDark) {
     final isCreator = widget.user.role == 'creator';
+    final isCorporate = widget.user.role == 'corporate' ||
+        widget.user.role == 'company' ||
+        _isCompany;
+    final promoTitle = isCorporate
+        ? 'Upgrade Akun Corporate'
+        : (isCreator ? 'Upgrade Akun Kreator' : 'Upgrade Plan & Paket');
+    final promoDesc = isCorporate
+        ? 'Tingkatkan peluang & fitur premium untuk corporate.'
+        : (isCreator
+            ? 'Tingkatkan peluang & fitur premium untuk kreator.'
+            : 'Tingkatkan peluang & fitur premium akun Anda.');
+    final accentColor = SubRoleThemeEngine.getAccentColor(
+      widget.user.role,
+      widget.user.subRole,
+    );
+
     return Column(
       children: [
         const SizedBox(height: 18),
@@ -732,18 +748,18 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                 widget.user.role,
                 widget.user.subRole,
               ),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
               children: [
                 const Icon(
-                  Icons.workspace_premium_outlined,
+                  Icons.workspace_premium_rounded,
                   color: Colors.white,
                   size: 28,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  isCreator ? 'Upgrade Akun Kreator' : 'Upgrade Plan & Paket',
+                  promoTitle,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -752,12 +768,10 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  isCreator
-                      ? 'Tingkatkan peluang & fitur premium untuk kreator.'
-                      : 'Nikmati kuota lebih tinggi, fitur AI, dan prioritas proyek.',
+                  promoDesc,
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: Colors.white.withValues(alpha: 0.85),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -768,17 +782,18 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                     onPressed: () => UpgradePlanModal.show(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
-                      foregroundColor: _isCompany ? const Color(0xFF2563EB) : AppTheme.primaryPurple,
+                      foregroundColor: accentColor,
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
+                      elevation: 0,
                     ),
                     child: const Text(
                       'Upgrade Sekarang',
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
@@ -1374,6 +1389,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
+                          if (!collapsed) _buildUpgradePromoCard(isDark),
                         ] else ...[
                           if (hasLayanan) ...[
                             if (!collapsed) ...[

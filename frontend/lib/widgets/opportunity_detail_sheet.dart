@@ -127,31 +127,52 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
       return;
     }
 
+    final rootNav = Navigator.of(context, rootNavigator: true);
+
     try {
       final result = await ChatService.startPersonalChat(userId);
-      if (!context.mounted) return;
-
       final chatData = result['data'];
       if (chatData == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Gagal membuka chat.'),
-            backgroundColor: Colors.red.shade700,
-          ),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Gagal membuka chat.'),
+              backgroundColor: Colors.red.shade700,
+            ),
+          );
+        }
         return;
       }
 
-      final chatId = chatData['id'] as String;
-      Navigator.push(
-        context,
+      final chatId = chatData['id']?.toString() ?? '';
+      final chatMap = Map<String, dynamic>.from(chatData);
+
+      // Close modal / bottom sheet first so it doesn't stay behind or block DirectMessageScreen
+      rootNav.pop();
+
+      // Navigate to DirectMessageScreen directly focused on this conversation
+      rootNav.push(
         MaterialPageRoute(
           builder: (_) => DirectMessageScreen(
             chatId: chatId,
+            initialChat: chatMap,
+            targetUserId: userId,
           ),
         ),
       );
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error opening chat: $e');
+      try {
+        rootNav.pop();
+        rootNav.push(
+          MaterialPageRoute(
+            builder: (_) => DirectMessageScreen(
+              targetUserId: userId,
+            ),
+          ),
+        );
+      } catch (_) {}
+    }
   }
 
   void _showLoginPrompt(BuildContext context, String actionDesc) {

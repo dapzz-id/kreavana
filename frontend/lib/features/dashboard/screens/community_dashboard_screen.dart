@@ -4478,7 +4478,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
               builder: (_) => DirectMessageScreen(
                 currentUser: widget.user,
                 initialChat: chatData,
-                chatId: chatData['id'],
+                chatId: chatData['id']?.toString(),
                 targetUserId: cleanId,
               ),
             ),

@@ -375,24 +375,32 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
       if (!mounted) return;
       final chatData = result['data'];
       if (chatData != null && chatData['id'] != null) {
+        final chatMap = Map<String, dynamic>.from(chatData);
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => DirectMessageScreen(chatId: chatData['id'].toString()),
+            builder: (_) => DirectMessageScreen(
+              chatId: chatData['id']?.toString(),
+              initialChat: chatMap,
+              targetUserId: userId,
+            ),
           ),
         );
       } else {
-        AppSnackbar.info(context, 'Membuka chat...');
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const DirectMessageScreen()),
+          MaterialPageRoute(
+            builder: (_) => DirectMessageScreen(targetUserId: userId),
+          ),
         );
       }
     } catch (_) {
       if (mounted) {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const DirectMessageScreen()),
+          MaterialPageRoute(
+            builder: (_) => DirectMessageScreen(targetUserId: userId),
+          ),
         );
       }
     }
