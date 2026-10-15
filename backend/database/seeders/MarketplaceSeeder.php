@@ -18,10 +18,7 @@ class MarketplaceSeeder extends Seeder
         }
         if ($creators->isEmpty()) return;
 
-        // Truncate or clean previous marketplace dummy items to avoid duplicates
-        \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-        MarketplaceItem::truncate();
-        \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        // Use updateOrCreate for items to be idempotent and cross-database compatible (PostgreSQL & MySQL)
 
         $now = Carbon::now();
 
@@ -226,22 +223,24 @@ class MarketplaceSeeder extends Seeder
 
         foreach ($items as $i => $d) {
             $creator = $creators[$i % $creators->count()];
-            MarketplaceItem::create([
-                'user_id' => $creator->id,
-                'title' => $d['title'],
-                'description' => $d['description'],
-                'category' => $d['category'],
-                'type' => 'paid',
-                'price' => $d['price'],
-                'rating' => $d['rating'],
-                'review_count' => $d['reviews'],
-                'order_count' => $d['orders'],
-                'is_featured' => $d['is_featured'],
-                'is_active' => true,
-                'status' => 'published',
-                'created_at' => $d['created_at'],
-                'updated_at' => $d['created_at'],
-            ]);
+            MarketplaceItem::updateOrCreate(
+                ['title' => $d['title']],
+                [
+                    'user_id' => $creator->id,
+                    'description' => $d['description'],
+                    'category' => $d['category'],
+                    'type' => 'paid',
+                    'price' => $d['price'],
+                    'rating' => $d['rating'],
+                    'review_count' => $d['reviews'],
+                    'order_count' => $d['orders'],
+                    'is_featured' => $d['is_featured'],
+                    'is_active' => true,
+                    'status' => 'published',
+                    'created_at' => $d['created_at'],
+                    'updated_at' => $d['created_at'],
+                ]
+            );
         }
     }
 }
