@@ -6,6 +6,7 @@ use Illuminate\Database\Seeder;
 use App\Models\User;
 use App\Models\JobContract;
 use App\Models\InstitutionResource;
+use App\Models\Notification;
 use App\Enums\RoleType;
 use App\Enums\ContractStatus;
 use App\Enums\WorkStatus;
@@ -473,6 +474,67 @@ class CorporateDummySeeder extends Seeder
                     'status' => $resData['status'],
                     'metadata' => $resData['metadata'],
                     'published_at' => $resData['published_at'],
+                ]
+            );
+        }
+
+        // 3. DUMMY NOTIFIKASI PERUSAHAAN (Untuk Pusat Notifikasi)
+        $notifs = [
+            [
+                'title' => 'Pembaruan Milestone Proyek Video Profil 4K',
+                'message' => 'Vendor PT Visual Kreasi Nusantara telah mengunggah preview draft revisi 2 untuk review persetujuan korporat.',
+                'type' => 'project',
+                'is_read' => false,
+                'created_at' => Carbon::now()->subMinutes(25),
+            ],
+            [
+                'title' => 'Pembayaran Escrow Kontrak Berhasil Diamankan',
+                'message' => 'Dana escrow kontrak Rebranding Visual Identity 2026 senilai Rp 45.000.000 berhasil didepositkan dengan aman.',
+                'type' => 'payment',
+                'is_read' => false,
+                'created_at' => Carbon::now()->subHours(2),
+            ],
+            [
+                'title' => 'Penawaran Tender Baru Masuk (RFP-2026-001)',
+                'message' => 'Agensi Cipta Event Solusindo Enterprise telah mengajukan proposal teknis untuk pengadaan sistem broadcast RUPS.',
+                'type' => 'opportunity',
+                'is_read' => false,
+                'created_at' => Carbon::now()->subHours(5),
+            ],
+            [
+                'title' => 'Pesan Baru dari PT Visual Kreasi Nusantara',
+                'message' => 'Halo tim Procurement, berkas raw footage resolusi 4K dan log timecode sudah kami lampirkan di shared drive.',
+                'type' => 'message',
+                'is_read' => true,
+                'created_at' => Carbon::now()->subDays(1),
+            ],
+            [
+                'title' => 'Kepatuhan Faktur Pajak PPh 23 Siap Diunduh',
+                'message' => 'Bukti potong pemotongan PPh 23 (2%) untuk seluruh invoice mitra kuartal berjalan telah selesai diverifikasi.',
+                'type' => 'payment',
+                'is_read' => true,
+                'created_at' => Carbon::now()->subDays(2),
+            ],
+            [
+                'title' => 'Otorisasi Dokumen SPK Booth Pameran Disetujui',
+                'message' => 'Dokumen Surat Perintah Kerja (SPK) untuk delegasi pameran Hannover Messe telah ditandatangani secara digital.',
+                'type' => 'system',
+                'is_read' => true,
+                'created_at' => Carbon::now()->subDays(3),
+            ],
+        ];
+
+        foreach ($notifs as $nData) {
+            Notification::updateOrCreate(
+                [
+                    'user_id' => $corp->id,
+                    'title' => $nData['title'],
+                ],
+                [
+                    'message' => $nData['message'],
+                    'type' => $nData['type'],
+                    'is_read' => $nData['is_read'],
+                    'created_at' => $nData['created_at'],
                 ]
             );
         }

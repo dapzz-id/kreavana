@@ -185,7 +185,9 @@ class _MainNavigationState extends State<MainNavigation> {
     final defaultAccent = SubRoleThemeEngine.getAccentColorForUser(
       _currentUser,
     );
-    final activeColor = isAi ? const Color(0xFF8B5CF6) : defaultAccent;
+    final activeColor = isAi
+        ? (_isCompany ? defaultAccent : const Color(0xFF8B5CF6))
+        : defaultAccent;
 
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -264,10 +266,10 @@ class _MainNavigationState extends State<MainNavigation> {
                     ),
                   ),
                   if (isAi)
-                    const Text(
+                    Text(
                       'AI',
                       style: TextStyle(
-                        color: Color(0xFF8B5CF6),
+                        color: _isCompany ? defaultAccent : const Color(0xFF8B5CF6),
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
                       ),
@@ -337,7 +339,7 @@ class _MainNavigationState extends State<MainNavigation> {
                     width: 3.5,
                     height: 16,
                     decoration: BoxDecoration(
-                      gradient: AppTheme.primaryGradient,
+                      color: activeColor,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -2412,7 +2414,10 @@ class _MainNavigationState extends State<MainNavigation> {
         1 => const AdminVerificationScreen(),
         2 => AdminResolutionScreen(user: _currentUser),
         3 => AdminSystemSettingsScreen(user: _currentUser),
-        4 => NotificationsScreen(userId: _currentUser.id ?? ''),
+        4 => NotificationsScreen(
+          userId: _currentUser.id ?? '',
+          user: _currentUser,
+        ),
         5 => ProfileScreen(
           user: _currentUser,
           onUserUpdated: _onUserUpdated,
@@ -2474,7 +2479,10 @@ class _MainNavigationState extends State<MainNavigation> {
         onUserUpdated: _onUserUpdated,
         onLogout: _onLogout,
       ),
-      10 => NotificationsScreen(userId: _currentUser.id ?? ''),
+      10 => NotificationsScreen(
+        userId: _currentUser.id ?? '',
+        user: _currentUser,
+      ),
       11 => (!SystemSettingsService.isDirectMessageEnabled && !_currentUser.isAdmin)
           ? FeatureDisabledView(
               featureName: 'Pesan Langsung (Direct Message)',

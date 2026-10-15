@@ -117,7 +117,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
           'label': 'Menunggu Evaluasi',
           'value': pendingExpenses.toString(),
           'sub': 'Review berkas & approval',
-          'color': const Color(0xFF8B5CF6),
+          'color': const Color(0xFF2563EB),
           'icon': Icons.hourglass_top_outlined,
         },
       ];
@@ -411,7 +411,10 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
           context,
           MaterialPageRoute(
             builder: (_) => isNotification
-                ? NotificationsScreen(userId: '')
+                ? NotificationsScreen(
+                    userId: widget.user.id ?? '',
+                    user: widget.user,
+                  )
                 : const DirectMessageScreen(),
           ),
         );

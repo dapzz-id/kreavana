@@ -69,10 +69,31 @@ class SubRoleThemeEngine {
       primaryColor: Color(0xFF2563EB), // Sapphire Blue
       description: 'Pengadaan proyek media & branding skala enterprise',
     ),
+    'corporate': SubRoleThemeConfig(
+      slug: 'corporate',
+      label: 'Perusahaan Korporat',
+      icon: Icons.corporate_fare_rounded,
+      primaryColor: Color(0xFF2563EB), // Sapphire Blue
+      description: 'Pengadaan proyek media & branding skala enterprise',
+    ),
     'perusahaan': SubRoleThemeConfig(
       slug: 'perusahaan',
       label: 'Perusahaan Korporat',
       icon: Icons.business_center_rounded,
+      primaryColor: Color(0xFF2563EB),
+      description: 'Pengadaan proyek media & branding skala enterprise',
+    ),
+    'bisnis': SubRoleThemeConfig(
+      slug: 'bisnis',
+      label: 'Perusahaan Korporat',
+      icon: Icons.business_center_rounded,
+      primaryColor: Color(0xFF2563EB),
+      description: 'Pengadaan proyek media & branding skala enterprise',
+    ),
+    'b2b': SubRoleThemeConfig(
+      slug: 'b2b',
+      label: 'Perusahaan Korporat',
+      icon: Icons.business_rounded,
       primaryColor: Color(0xFF2563EB),
       description: 'Pengadaan proyek media & branding skala enterprise',
     ),
@@ -353,6 +374,15 @@ class SubRoleThemeEngine {
       if (creatorConfigs.containsKey(cleanSub)) {
         return creatorConfigs[cleanSub]!;
       }
+    }
+
+    if (cleanSub == 'corporate' ||
+        cleanSub == 'company' ||
+        cleanSub == 'perusahaan' ||
+        cleanSub == 'bisnis' ||
+        cleanSub == 'b2b' ||
+        cleanSub == 'business') {
+      return clientConfigs['corporate'] ?? clientConfigs['company']!;
     }
 
     if (clientConfigs.containsKey(cleanSub)) {

@@ -658,7 +658,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                     width: 3.5,
                     height: 16,
                     decoration: BoxDecoration(
-                      gradient: AppTheme.primaryGradient,
+                      color: effectiveActiveColor,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -764,7 +764,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                     onPressed: () => UpgradePlanModal.show(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
-                      foregroundColor: AppTheme.primaryPurple,
+                      foregroundColor: _isCompany ? const Color(0xFF2563EB) : AppTheme.primaryPurple,
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -853,9 +853,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                                 width: 30,
                                 height: 30,
                                 fit: BoxFit.contain,
-                                errorBuilder: (_, _, _) => const Icon(
+                                errorBuilder: (_, _, _) => Icon(
                                   Icons.auto_awesome,
-                                  color: AppTheme.primaryPurple,
+                                  color: _isCompany ? const Color(0xFF2563EB) : AppTheme.primaryPurple,
                                   size: 20,
                                 ),
                               ),
@@ -888,9 +888,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                                   width: 36,
                                   height: 36,
                                   fit: BoxFit.contain,
-                                  errorBuilder: (_, _, _) => const Icon(
+                                  errorBuilder: (_, _, _) => Icon(
                                     Icons.auto_awesome,
-                                    color: AppTheme.primaryPurple,
+                                    color: _isCompany ? const Color(0xFF2563EB) : AppTheme.primaryPurple,
                                     size: 24,
                                   ),
                                 ),
@@ -973,7 +973,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('kreavana_ai') || _isRouteActive('ai'),
                             isDark: isDark,
                             isCollapsed: collapsed,
-                            activeColor: const Color(0xFF8B5CF6),
+                            activeColor: _isCompany ? const Color(0xFF2563EB) : const Color(0xFF8B5CF6),
                           ),
                         if ((_isCreatorUser || _isCompany) && !_isGovernment && !_isSchool)
                           _buildNavRow(
@@ -1586,7 +1586,10 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         layoutScaffold,
         if ((SystemSettingsService.isAiEnabled || widget.user.isAdmin) &&
             !widget.activeRoute.startsWith('eo_'))
-          const KreavanaAiFloatingWidget(hasPageFab: false),
+          KreavanaAiFloatingWidget(
+            hasPageFab: false,
+            accentColor: _isCompany ? const Color(0xFF2563EB) : null,
+          ),
       ],
     );
   }

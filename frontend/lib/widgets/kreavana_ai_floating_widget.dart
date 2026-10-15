@@ -18,7 +18,12 @@ import '../services/user_store.dart';
 /// Supports both Light and Dark themes, draggable across Mobile & Desktop viewports.
 class KreavanaAiFloatingWidget extends StatefulWidget {
   final bool hasPageFab;
-  const KreavanaAiFloatingWidget({super.key, this.hasPageFab = false});
+  final Color? accentColor;
+  const KreavanaAiFloatingWidget({
+    super.key,
+    this.hasPageFab = false,
+    this.accentColor,
+  });
 
   @override
   State<KreavanaAiFloatingWidget> createState() =>
@@ -129,47 +134,60 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
               _toggleWidget();
             }
           },
-          child: Material(
-            color: Colors.transparent,
-            elevation: _isDragging ? 12 : 6,
-            shadowColor: AppTheme.primaryPurple.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(24),
-            child: AnimatedScale(
-              scale: _isDragging ? 1.04 : 1.0,
-              duration: const Duration(milliseconds: 120),
-              child: Container(
-                width: _buttonWidth,
-                height: _buttonHeight,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.35),
-                    width: 1.2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryPurple.withValues(
-                        alpha: _isDragging ? 0.6 : 0.35,
+          child: Builder(
+            builder: (context) {
+              final loggedUser = currentUserNotifier.value;
+              final isCorporate = widget.accentColor != null ||
+                  (loggedUser != null &&
+                      ['corporate', 'company', 'business', 'perusahaan', 'bisnis']
+                          .contains(loggedUser.subRole?.toLowerCase()));
+              final effectiveColor = widget.accentColor ??
+                  (isCorporate ? const Color(0xFF2563EB) : AppTheme.primaryPurple);
+              final gradientColors = isCorporate
+                  ? const [Color(0xFF2563EB), Color(0xFF1D4ED8)]
+                  : const [Color(0xFF8B5CF6), Color(0xFF6D28D9)];
+
+              return Material(
+                color: Colors.transparent,
+                elevation: _isDragging ? 12 : 6,
+                shadowColor: effectiveColor.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(24),
+                child: AnimatedScale(
+                  scale: _isDragging ? 1.04 : 1.0,
+                  duration: const Duration(milliseconds: 120),
+                  child: Container(
+                    width: _buttonWidth,
+                    height: _buttonHeight,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: gradientColors,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      blurRadius: _isDragging ? 16 : 10,
-                      offset: Offset(0, _isDragging ? 6 : 4),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.35),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: effectiveColor.withValues(
+                            alpha: _isDragging ? 0.6 : 0.35,
+                          ),
+                          blurRadius: _isDragging ? 16 : 10,
+                          offset: Offset(0, _isDragging ? 6 : 4),
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -205,10 +223,12 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
                 ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
-    );
+    ),
+  ),
+);
   }
 }
 
