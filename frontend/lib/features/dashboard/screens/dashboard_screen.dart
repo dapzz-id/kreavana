@@ -1318,9 +1318,11 @@ class _DashboardScreenState extends State<DashboardScreen>
           ];
 
     if (w > 700) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: columns,
+      return IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: columns,
+        ),
       );
     }
     return Column(
@@ -3807,29 +3809,39 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-        ),
-        if (onViewAll != null)
-          TextButton(
-            onPressed: onViewAll,
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-            ),
+    return SizedBox(
+      height: 32,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
             child: Text(
-              viewAllLabel,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.primaryPurple,
-              ),
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
           ),
-      ],
+          if (onViewAll != null)
+            TextButton(
+              onPressed: onViewAll,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: const Size(0, 32),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                viewAllLabel,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primaryPurple,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -3899,195 +3911,205 @@ class _DashboardCardEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const accent = AppTheme.primaryPurple;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 22),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // ── Cool Illustrated Graphic with Kreavana Logo & Themed Emblem ──
-            SizedBox(
-              width: 86,
-              height: 86,
-              child: Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                  // Ambient colored glow
-                  Container(
-                    width: 70,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: accent.withValues(alpha: isDark ? 0.35 : 0.20),
-                          blurRadius: 26,
-                          spreadRadius: 2,
-                        ),
-                        BoxShadow(
-                          color: AppTheme.accentPink.withValues(alpha: isDark ? 0.25 : 0.15),
-                          blurRadius: 20,
-                          offset: const Offset(6, -4),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Outer concentric glass ring
-                  Container(
-                    width: 78,
-                    height: 78,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: accent.withValues(alpha: isDark ? 0.28 : 0.20),
-                        width: 1.2,
-                      ),
-                      gradient: RadialGradient(
-                        colors: [
-                          accent.withValues(alpha: isDark ? 0.15 : 0.08),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Main glassmorphic circle with Kreavana Brand Logo
-                  Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isDark ? const Color(0xFF1E1B38) : Colors.white,
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: isDark ? 0.22 : 0.8),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(11),
-                    child: Image.asset(
-                      'assets/brandlogo.png',
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                  // Floating category icon badge in the corner
-                  Positioned(
-                    right: 2,
-                    bottom: 2,
-                    child: Container(
-                      width: 28,
-                      height: 28,
+    return SizedBox(
+      height: 270,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // ── Cool Illustrated Graphic with Kreavana Logo & Themed Emblem ──
+              SizedBox(
+                width: 86,
+                height: 86,
+                child: Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Ambient colored glow
+                    Container(
+                      width: 70,
+                      height: 70,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [accent, AppTheme.accentPink],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
                         shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isDark ? const Color(0xFF1E1B38) : Colors.white,
-                          width: 2,
-                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: accent.withValues(alpha: 0.45),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
+                            color: accent.withValues(alpha: isDark ? 0.35 : 0.20),
+                            blurRadius: 26,
+                            spreadRadius: 2,
+                          ),
+                          BoxShadow(
+                            color: AppTheme.accentPink.withValues(alpha: isDark ? 0.25 : 0.15),
+                            blurRadius: 20,
+                            offset: const Offset(6, -4),
                           ),
                         ],
                       ),
-                      child: Center(
-                        child: Icon(
-                          icon,
-                          size: 14,
-                          color: Colors.white,
+                    ),
+                    // Outer concentric glass ring
+                    Container(
+                      width: 78,
+                      height: 78,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: accent.withValues(alpha: isDark ? 0.28 : 0.20),
+                          width: 1.2,
+                        ),
+                        gradient: RadialGradient(
+                          colors: [
+                            accent.withValues(alpha: isDark ? 0.15 : 0.08),
+                            Colors.transparent,
+                          ],
                         ),
                       ),
                     ),
-                  ),
-                  // Floating mini sparkle on top-left
-                  Positioned(
-                    left: 4,
-                    top: 4,
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
+                    // Main glassmorphic circle with Kreavana Brand Logo
+                    Container(
+                      width: 58,
+                      height: 58,
                       decoration: BoxDecoration(
-                        color: AppTheme.accentPink.withValues(alpha: 0.25),
                         shape: BoxShape.circle,
+                        color: isDark ? const Color(0xFF1E1B38) : Colors.white,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: isDark ? 0.22 : 0.8),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      child: const Icon(
-                        Icons.auto_awesome,
-                        size: 11,
-                        color: AppTheme.accentPink,
+                      padding: const EdgeInsets.all(11),
+                      child: Image.asset(
+                        'assets/brandlogo.png',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    // Floating category icon badge in the corner
+                    Positioned(
+                      right: 2,
+                      bottom: 2,
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [accent, AppTheme.accentPink],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF1E1B38) : Colors.white,
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: accent.withValues(alpha: 0.45),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Icon(
+                            icon,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Floating mini sparkle on top-left
+                    Positioned(
+                      left: 4,
+                      top: 4,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentPink.withValues(alpha: 0.25),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.auto_awesome,
+                          size: 11,
+                          color: AppTheme.accentPink,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // ── Category Tag Pill ──
+              if (badgeLabel != null) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: isDark ? 0.16 : 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: accent.withValues(alpha: isDark ? 0.30 : 0.20),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Text(
+                    badgeLabel!,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.6,
+                      color: isDark ? AppTheme.accentPink : AppTheme.primaryPurple,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+              ],
+
+              // ── Title ──
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : AppTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+
+              // ── Subtitle (Fixed height for 100% horizontal alignment) ──
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 240),
+                child: SizedBox(
+                  height: 34,
+                  child: Center(
+                    child: Text(
+                      subtitle,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        height: 1.40,
+                        color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // ── Category Tag Pill ──
-            if (badgeLabel != null) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: isDark ? 0.16 : 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: accent.withValues(alpha: isDark ? 0.30 : 0.20),
-                    width: 0.8,
-                  ),
-                ),
-                child: Text(
-                  badgeLabel!,
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.6,
-                    color: isDark ? AppTheme.accentPink : AppTheme.primaryPurple,
-                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-            ],
 
-            // ── Title ──
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : AppTheme.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-
-            // ── Subtitle ──
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 240),
-              child: Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 11,
-                  height: 1.45,
-                  color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
-                ),
-              ),
-            ),
-
-            // ── Action CTA Button (Makes it feel interactive and not sepi) ──
-            if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 14),
+              // ── Action CTA Button (Makes it feel interactive and not sepi) ──
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(height: 10),
               Material(
                 color: Colors.transparent,
                 child: InkWell(
@@ -4134,7 +4156,8 @@ class _DashboardCardEmptyState extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }
 
