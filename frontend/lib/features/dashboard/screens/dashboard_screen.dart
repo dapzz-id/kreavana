@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../services/app_router.dart';
@@ -363,17 +364,22 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ── Hero Banner ──────────────────────────────────────────────────────────────
   Widget _buildHeroBanner(bool isDark) {
-    final greeting = _isCreator
-        ? 'Halo, Kreator!'
-        : 'Halo, ${widget.user.name.split(' ').first}!';
+    final greeting = widget.user.isGuest
+        ? 'Halo, Tamu!'
+        : (_isCreator
+            ? 'Halo, Kreator!'
+            : 'Halo, ${widget.user.name.split(' ').first}!');
     final subtitle = _isCreator
         ? 'Temukan campaign, kelola jadwal, bangun media kit, dan tingkatkan reputasimu.'
         : 'Buat kebutuhan, temukan kreator terbaik, dan pantau proyek dalam satu tempat.';
     final primaryLabel = _isCreator ? 'Lengkapi Profil' : 'Buat Kebutuhan';
     final secondaryLabel = _isCreator ? 'Cari Campaign' : 'Cari Kreator';
 
-    const bgImageUrl =
-        'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80';
+    const heroBgImages = [
+      'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80',
+      'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=1600&q=80',
+      'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=1600&q=80',
+    ];
 
     return Container(
       width: double.infinity,
@@ -397,289 +403,216 @@ class _DashboardScreenState extends State<DashboardScreen>
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          // ── Layer 1: Kreavana Creative Workspace Image ──
-          Positioned.fill(
-            child: Image.network(
-              bgImageUrl,
-              fit: BoxFit.cover,
-              alignment: Alignment.centerRight,
-              loadingBuilder: (context, child, progress) {
-                if (progress == null) return child;
-                return Container(
-                  color: const Color(0xFF07060D),
-                  child: const Center(
-                    child: SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppTheme.primaryPurple,
+      child: _HeroBannerBackgroundCarousel(
+        images: heroBgImages,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Role badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.pinkPurpleGradient,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primaryPurple.withValues(alpha: 0.35),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        widget.user.isGuest
+                            ? '✦ MODE TAMU'
+                            : (_isCreator ? '✦ KREATOR' : '✦ KLIEN'),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 1,
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
-              errorBuilder: (_, _, _) => Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF07060D), Color(0xFF1E1B38)],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // ── Layer 2: Seamless Horizontal Dark Gradient (Black Left, Photo Right) ──
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    const Color(0xFF07060E),                          // 0.00: Deep rich solid black
-                    const Color(0xFF07060E),                          // 0.35: Solid black behind text
-                    const Color(0xFF07060E).withValues(alpha: 0.95),  // 0.50: Smooth transition start
-                    const Color(0xFF07060E).withValues(alpha: 0.76),  // 0.65: Gradual fade
-                    const Color(0xFF07060E).withValues(alpha: 0.32),  // 0.82: Photo shines through
-                    Colors.black.withValues(alpha: 0.10),             // 1.00: Right edge photo clearly visible
-                  ],
-                  stops: const [0.0, 0.35, 0.50, 0.65, 0.82, 1.0],
-                ),
-              ),
-            ),
-          ),
-
-          // ── Layer 3: Kreavana Ambient Purple/Pink Brand Glow ──
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppTheme.primaryPurple.withValues(alpha: 0.24),
-                    Colors.transparent,
-                    AppTheme.accentPink.withValues(alpha: 0.10),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // ── Layer 4: Foreground Content ──
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Role badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          greeting,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            height: 1.2,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black87,
+                                offset: Offset(0, 2),
+                                blurRadius: 6,
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 6),
+                        AnimatedBuilder(
+                          animation: _handWaveAnimation,
+                          builder: (context, child) {
+                            return Transform.rotate(
+                              angle: _handWaveAnimation.value,
+                              alignment: Alignment.bottomCenter,
+                              child: child,
+                            );
+                          },
+                          child: const Text('👋', style: TextStyle(fontSize: 24)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFFE2E8F0),
+                        height: 1.5,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black54,
+                            offset: Offset(0, 1),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 8,
+                      children: [
+                        _HeroButton(
+                          label: primaryLabel,
+                          icon: _isCreator
+                              ? Icons.settings_suggest_outlined
+                              : Icons.add_circle_outline,
+                          onTap: () => _navigateTo(primaryLabel),
+                          gradient: AppTheme.primaryGradient,
+                        ),
+                        _HeroButton(
+                          label: secondaryLabel,
+                          icon: Icons.search_rounded,
+                          onTap: () => _navigateTo(secondaryLabel),
+                          outlined: true,
+                          isDark: true,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Decorative illustration with frosted glass effect
+              SizedBox(
+                width: 100,
+                height: 120,
+                child: Stack(
+                  children: [
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      child: Container(
+                        width: 80,
+                        height: 56,
                         decoration: BoxDecoration(
-                          gradient: AppTheme.pinkPurpleGradient,
-                          borderRadius: BorderRadius.circular(20),
+                          color: Colors.white.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.25),
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.primaryPurple.withValues(alpha: 0.35),
+                              color: Colors.black.withValues(alpha: 0.25),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          _isCreator
+                              ? Icons.camera_alt_outlined
+                              : Icons.laptop_mac_outlined,
+                          color: Colors.white.withValues(alpha: 0.85),
+                          size: 28,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Container(
+                        width: 56,
+                        height: 70,
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentPink.withValues(alpha: 0.22),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.30),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.accentPink.withValues(alpha: 0.25),
+                              blurRadius: 12,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.person_outline,
+                          color: Colors.white.withValues(alpha: 0.90),
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 4,
+                      left: 4,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.25),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
                           ],
                         ),
-                        child: Text(
-                          widget.user.isGuest
-                              ? '✦ MODE TAMU'
-                              : (_isCreator ? '✦ KREATOR' : '✦ KLIEN'),
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: 1,
-                          ),
+                        child: const Icon(
+                          Icons.play_arrow_rounded,
+                          color: AppTheme.primaryPurple,
+                          size: 14,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            greeting,
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              height: 1.2,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black87,
-                                  offset: Offset(0, 2),
-                                  blurRadius: 6,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          AnimatedBuilder(
-                            animation: _handWaveAnimation,
-                            builder: (context, child) {
-                              return Transform.rotate(
-                                angle: _handWaveAnimation.value,
-                                alignment: Alignment.bottomCenter,
-                                child: child,
-                              );
-                            },
-                            child: const Text('👋', style: TextStyle(fontSize: 24)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        subtitle,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFFE2E8F0),
-                          height: 1.5,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black54,
-                              offset: Offset(0, 1),
-                              blurRadius: 4,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 8,
-                        children: [
-                          _HeroButton(
-                            label: primaryLabel,
-                            icon: _isCreator
-                                ? Icons.settings_suggest_outlined
-                                : Icons.add_circle_outline,
-                            onTap: () => _navigateTo(primaryLabel),
-                            gradient: AppTheme.primaryGradient,
-                          ),
-                          _HeroButton(
-                            label: secondaryLabel,
-                            icon: Icons.search_rounded,
-                            onTap: () => _navigateTo(secondaryLabel),
-                            outlined: true,
-                            isDark: true,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                // Decorative illustration with frosted glass effect
-                SizedBox(
-                  width: 100,
-                  height: 120,
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        child: Container(
-                          width: 80,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.25),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.25),
-                                blurRadius: 10,
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            _isCreator
-                                ? Icons.camera_alt_outlined
-                                : Icons.laptop_mac_outlined,
-                            color: Colors.white.withValues(alpha: 0.85),
-                            size: 28,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: Container(
-                          width: 56,
-                          height: 70,
-                          decoration: BoxDecoration(
-                            color: AppTheme.accentPink.withValues(alpha: 0.22),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.30),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.accentPink.withValues(alpha: 0.25),
-                                blurRadius: 12,
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            Icons.person_outline,
-                            color: Colors.white.withValues(alpha: 0.90),
-                            size: 32,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 4,
-                        left: 4,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.25),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.play_arrow_rounded,
-                            color: AppTheme.primaryPurple,
-                            size: 14,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
+
 
   // ── Animated Metric Cards ────────────────────────────────────────────────────
   Widget _buildMetricCards(bool isDark) {
@@ -3434,6 +3367,194 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
         ),
       ),
+    );
+  }
+}
+
+class _HeroBannerBackgroundCarousel extends StatefulWidget {
+  final List<String> images;
+  final Widget child;
+
+  static const Duration switchDuration = Duration(seconds: 5);
+  static const Duration fadeDuration = Duration(milliseconds: 1200);
+
+  const _HeroBannerBackgroundCarousel({
+    required this.images,
+    required this.child,
+  });
+
+  @override
+  State<_HeroBannerBackgroundCarousel> createState() =>
+      _HeroBannerBackgroundCarouselState();
+}
+
+class _HeroBannerBackgroundCarouselState
+    extends State<_HeroBannerBackgroundCarousel> {
+  int _currentIndex = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    if (widget.images.length > 1) {
+      _timer = Timer.periodic(_HeroBannerBackgroundCarousel.switchDuration, (timer) {
+        if (!mounted) return;
+        setState(() {
+          _currentIndex = (_currentIndex + 1) % widget.images.length;
+        });
+      });
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    for (final url in widget.images) {
+      precacheImage(NetworkImage(url), context);
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUrl = widget.images[_currentIndex];
+
+    return Stack(
+      children: [
+        // ── Layer 1: Smooth Cross-fade Image Background ──
+        Positioned.fill(
+          child: AnimatedSwitcher(
+            duration: _HeroBannerBackgroundCarousel.fadeDuration,
+            switchInCurve: Curves.easeInOutCubic,
+            switchOutCurve: Curves.easeInOutCubic,
+            transitionBuilder: (child, animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: child,
+              );
+            },
+            layoutBuilder: (currentChild, previousChildren) {
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  ...previousChildren,
+                  ?currentChild,
+                ],
+              );
+            },
+            child: Image.network(
+              currentUrl,
+              key: ValueKey<String>(currentUrl),
+              fit: BoxFit.cover,
+              alignment: Alignment.centerRight,
+              loadingBuilder: (context, child, progress) {
+                if (progress == null) return child;
+                return Container(color: const Color(0xFF07060D));
+              },
+              errorBuilder: (_, _, _) => Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF07060D), Color(0xFF1E1B38)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // ── Layer 2: Seamless Horizontal Dark Gradient (Black Left, Photo Right) ──
+        Positioned.fill(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  const Color(0xFF07060E),
+                  const Color(0xFF07060E),
+                  const Color(0xFF07060E).withValues(alpha: 0.95),
+                  const Color(0xFF07060E).withValues(alpha: 0.76),
+                  const Color(0xFF07060E).withValues(alpha: 0.32),
+                  Colors.black.withValues(alpha: 0.10),
+                ],
+                stops: const [0.0, 0.35, 0.50, 0.65, 0.82, 1.0],
+              ),
+            ),
+          ),
+        ),
+
+        // ── Layer 3: Kreavana Ambient Purple/Pink Brand Glow ──
+        Positioned.fill(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppTheme.primaryPurple.withValues(alpha: 0.24),
+                  Colors.transparent,
+                  AppTheme.accentPink.withValues(alpha: 0.10),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // ── Layer 4: Foreground Content ──
+        widget.child,
+
+        // ── Layer 5: Subtle Slide Indicator Dots ──
+        if (widget.images.length > 1)
+          Positioned(
+            bottom: 14,
+            right: 20,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(widget.images.length, (idx) {
+                final isActive = idx == _currentIndex;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _currentIndex = idx);
+                    _startTimer();
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeOutCubic,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: isActive ? 20 : 6,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: isActive
+                          ? [
+                              BoxShadow(
+                                color: Colors.white.withValues(alpha: 0.5),
+                                blurRadius: 6,
+                              ),
+                            ]
+                          : null,
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+      ],
     );
   }
 }
