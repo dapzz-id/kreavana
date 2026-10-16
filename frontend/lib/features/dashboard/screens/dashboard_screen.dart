@@ -372,174 +372,305 @@ class _DashboardScreenState extends State<DashboardScreen>
     final primaryLabel = _isCreator ? 'Lengkapi Profil' : 'Buat Kebutuhan';
     final secondaryLabel = _isCreator ? 'Cari Campaign' : 'Cari Kreator';
 
+    const bgImageUrl =
+        'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80';
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDark
-              ? [const Color(0xFF1E1B38), const Color(0xFF13111F)]
-              : [const Color(0xFFEDE9FE), Colors.white],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
         borderRadius: BorderRadius.circular(AppTheme.radiusLG),
         border: Border.all(
-          color: isDark ? AppTheme.inputBorder : AppTheme.dividerLight,
+          color: Colors.white.withValues(alpha: isDark ? 0.12 : 0.22),
+          width: 1.2,
         ),
-        boxShadow: isDark ? AppTheme.cardShadowDark : AppTheme.cardShadowLight,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.20),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: AppTheme.primaryPurple.withValues(alpha: isDark ? 0.20 : 0.12),
+            blurRadius: 36,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Role badge
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.pinkPurpleGradient,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    widget.user.isGuest
-                        ? '✦ MODE TAMU'
-                        : (_isCreator ? '✦ KREATOR' : '✦ KLIEN'),
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      greeting,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : AppTheme.textDark,
-                        height: 1.2,
+          // ── Layer 1: Kreavana Creative Workspace Image ──
+          Positioned.fill(
+            child: Image.network(
+              bgImageUrl,
+              fit: BoxFit.cover,
+              alignment: Alignment.centerRight,
+              loadingBuilder: (context, child, progress) {
+                if (progress == null) return child;
+                return Container(
+                  color: const Color(0xFF07060D),
+                  child: const Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppTheme.primaryPurple,
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    AnimatedBuilder(
-                      animation: _handWaveAnimation,
-                      builder: (context, child) {
-                        return Transform.rotate(
-                          angle: _handWaveAnimation.value,
-                          alignment: Alignment.bottomCenter,
-                          child: child,
-                        );
-                      },
-                      child: Text('👋', style: const TextStyle(fontSize: 24)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark
-                        ? AppTheme.textMuted
-                        : AppTheme.textMutedLight,
-                    height: 1.5,
+                  ),
+                );
+              },
+              errorBuilder: (_, _, _) => Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF07060D), Color(0xFF1E1B38)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
                   ),
                 ),
-                const SizedBox(height: 20),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 8,
-                  children: [
-                    _HeroButton(
-                      label: primaryLabel,
-                      icon: _isCreator
-                          ? Icons.settings_suggest_outlined
-                          : Icons.add_circle_outline,
-                      onTap: () => _navigateTo(primaryLabel),
-                      gradient: AppTheme.primaryGradient,
-                    ),
-                    _HeroButton(
-                      label: secondaryLabel,
-                      icon: Icons.search_rounded,
-                      onTap: () => _navigateTo(secondaryLabel),
-                      outlined: true,
-                      isDark: isDark,
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
-          const SizedBox(width: 16),
-          // Decorative illustration
-          SizedBox(
-            width: 100,
-            height: 120,
-            child: Stack(
+
+          // ── Layer 2: Seamless Horizontal Dark Gradient (Black Left, Photo Right) ──
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    const Color(0xFF07060E),                          // 0.00: Deep rich solid black
+                    const Color(0xFF07060E),                          // 0.35: Solid black behind text
+                    const Color(0xFF07060E).withValues(alpha: 0.95),  // 0.50: Smooth transition start
+                    const Color(0xFF07060E).withValues(alpha: 0.76),  // 0.65: Gradual fade
+                    const Color(0xFF07060E).withValues(alpha: 0.32),  // 0.82: Photo shines through
+                    Colors.black.withValues(alpha: 0.10),             // 1.00: Right edge photo clearly visible
+                  ],
+                  stops: const [0.0, 0.35, 0.50, 0.65, 0.82, 1.0],
+                ),
+              ),
+            ),
+          ),
+
+          // ── Layer 3: Kreavana Ambient Purple/Pink Brand Glow ──
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppTheme.primaryPurple.withValues(alpha: 0.24),
+                    Colors.transparent,
+                    AppTheme.accentPink.withValues(alpha: 0.10),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // ── Layer 4: Foreground Content ──
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  child: Container(
-                    width: 80,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryPurple.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      _isCreator
-                          ? Icons.camera_alt_outlined
-                          : Icons.laptop_mac_outlined,
-                      color: AppTheme.primaryPurple.withValues(alpha: 0.5),
-                      size: 28,
-                    ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Role badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.pinkPurpleGradient,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primaryPurple.withValues(alpha: 0.35),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          widget.user.isGuest
+                              ? '✦ MODE TAMU'
+                              : (_isCreator ? '✦ KREATOR' : '✦ KLIEN'),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            greeting,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              height: 1.2,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black87,
+                                  offset: Offset(0, 2),
+                                  blurRadius: 6,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          AnimatedBuilder(
+                            animation: _handWaveAnimation,
+                            builder: (context, child) {
+                              return Transform.rotate(
+                                angle: _handWaveAnimation.value,
+                                alignment: Alignment.bottomCenter,
+                                child: child,
+                              );
+                            },
+                            child: const Text('👋', style: TextStyle(fontSize: 24)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFFE2E8F0),
+                          height: 1.5,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black54,
+                              offset: Offset(0, 1),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 8,
+                        children: [
+                          _HeroButton(
+                            label: primaryLabel,
+                            icon: _isCreator
+                                ? Icons.settings_suggest_outlined
+                                : Icons.add_circle_outline,
+                            onTap: () => _navigateTo(primaryLabel),
+                            gradient: AppTheme.primaryGradient,
+                          ),
+                          _HeroButton(
+                            label: secondaryLabel,
+                            icon: Icons.search_rounded,
+                            onTap: () => _navigateTo(secondaryLabel),
+                            outlined: true,
+                            isDark: true,
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: Container(
-                    width: 56,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      color: AppTheme.accentPink.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.person_outline,
-                      color: AppTheme.accentPink.withValues(alpha: 0.4),
-                      size: 32,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 4,
-                  left: 4,
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: AppTheme.cardShadowLight,
-                    ),
-                    child: Icon(
-                      Icons.play_arrow_rounded,
-                      color: AppTheme.primaryPurple,
-                      size: 14,
-                    ),
+                const SizedBox(width: 16),
+                // Decorative illustration with frosted glass effect
+                SizedBox(
+                  width: 100,
+                  height: 120,
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        child: Container(
+                          width: 80,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.25),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.25),
+                                blurRadius: 10,
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            _isCreator
+                                ? Icons.camera_alt_outlined
+                                : Icons.laptop_mac_outlined,
+                            color: Colors.white.withValues(alpha: 0.85),
+                            size: 28,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          width: 56,
+                          height: 70,
+                          decoration: BoxDecoration(
+                            color: AppTheme.accentPink.withValues(alpha: 0.22),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.30),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.accentPink.withValues(alpha: 0.25),
+                                blurRadius: 12,
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.person_outline,
+                            color: Colors.white.withValues(alpha: 0.90),
+                            size: 32,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 4,
+                        left: 4,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.25),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.play_arrow_rounded,
+                            color: AppTheme.primaryPurple,
+                            size: 14,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -3285,8 +3416,9 @@ class _HeroButton extends StatelessWidget {
         ),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          backgroundColor: isDark ? Colors.white.withValues(alpha: 0.12) : null,
           side: BorderSide(
-            color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
+            color: isDark ? Colors.white.withValues(alpha: 0.35) : AppTheme.inputBorderLight,
           ),
           foregroundColor: isDark ? Colors.white : AppTheme.textDark,
           shape: RoundedRectangleBorder(
