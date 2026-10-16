@@ -9,6 +9,8 @@ import '../widgets/app_empty_state.dart';
 import 'marketplace_detail_screen.dart';
 import 'jual_karya_screen.dart';
 import '../widgets/skeleton/skeleton_base.dart';
+import '../widgets/desktop_sidebar_layout.dart';
+import '../services/user_store.dart';
 
 class MarketplaceKaryaScreen extends StatefulWidget {
   final UserModel? user;
@@ -25,9 +27,18 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
   final _searchCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
 
+  static const List<String> _defaultCategories = [
+    'Semua',
+    'Desain',
+    'Fotografi',
+    'Videografi',
+    'Branding',
+    'Konten',
+  ];
+
   List<MarketplaceItem> _items = [];
   List<MarketplaceItem> _featured = [];
-  List<String> _allCategories = ['Semua'];
+  late List<String> _allCategories = List.from(_defaultCategories);
   String _selectedCategory = 'Semua';
   String _sortBy = 'latest';
   bool _isLoading = true;
@@ -70,100 +81,100 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
 
   Future<void> _loadAll() async {
     setState(() => _isLoading = true);
+
+    // 1. First priority: Load marketplace items immediately
     try {
       final selectedCategory = _selectedCategory.toLowerCase() == 'semua'
           ? null
           : _selectedCategory;
-
-      final results = await Future.wait([
-        MarketplaceService.getFeatured().catchError((_) => <String, dynamic>{'status': false}),
-        MarketplaceService.getCategories().catchError((_) => <String, dynamic>{'status': false}),
-        MarketplaceService.getCategory(
-          selectedCategory,
-          _searchCtrl.text,
-          _sortBy,
-          1,
-        ).catchError((_) => <String, dynamic>{'status': false}),
-      ]);
-
+      final itemsRes = await MarketplaceService.getCategory(
+        selectedCategory,
+        _searchCtrl.text,
+        _sortBy,
+        1,
+      );
       if (mounted) {
-        final featuredRes = results[0];
-        final catRes = results[1];
-        final itemsRes = results[2];
+        _parseItems(itemsRes, append: false);
+      }
+    } catch (e) {
+      debugPrint('Error loading marketplace items: $e');
+    }
 
-        List<MarketplaceItem> featuredList = [];
-        if (featuredRes['status'] == true && featuredRes['data'] != null) {
-          final data = featuredRes['data'];
-          final List<dynamic> rawFeatured = (data is List
-              ? data
-              : (data is Map ? (data['data'] ?? []) : []));
-          for (final raw in rawFeatured) {
-            if (raw is Map) {
-              try {
-                featuredList.add(MarketplaceItem.fromJson(Map<String, dynamic>.from(raw)));
-              } catch (_) {}
-            }
+    // 2. Load featured recommendations
+    try {
+      final featuredRes = await MarketplaceService.getFeatured();
+      if (mounted && featuredRes['status'] == true && featuredRes['data'] != null) {
+        final data = featuredRes['data'];
+        final List<dynamic> rawFeatured = (data is List
+            ? data
+            : (data is Map ? (data['data'] ?? []) : []));
+        final List<MarketplaceItem> featuredList = [];
+        for (final raw in rawFeatured) {
+          if (raw is Map) {
+            try {
+              featuredList.add(MarketplaceItem.fromJson(Map<String, dynamic>.from(raw)));
+            } catch (_) {}
           }
         }
+        if (mounted && featuredList.isNotEmpty) {
+          setState(() {
+            _featured = featuredList;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading featured items: $e');
+    }
 
-        List<String>? newCategories;
-        if (catRes['status'] == true && catRes['data'] != null) {
-          final raw = catRes['data'];
-          final List<dynamic> catList = raw is List
-              ? raw
-              : (raw is Map ? (raw['data'] ?? []) : []);
-          final fetched = <String>['Semua'];
-          for (final c in catList) {
-            final name = (c is Map
-                    ? (c['category'] ?? c['name'] ?? c['title'] ?? c['slug'])
-                    : c)
-                ?.toString()
-                .trim();
-            if (name != null && name.isNotEmpty && !fetched.contains(name)) {
-              fetched.add(name);
-            }
-          }
-          if (fetched.length > 1) {
-            newCategories = fetched;
+    // Fallback: If featured is still empty but we have items, pick featured/top items from _items
+    if (mounted && _featured.isEmpty && _items.isNotEmpty) {
+      final fallbackFeatured = _items.where((it) => it.isFeatured).take(6).toList();
+      setState(() {
+        _featured = fallbackFeatured.isNotEmpty
+            ? fallbackFeatured
+            : _items.take(4).toList();
+      });
+    }
+
+    // 3. Load dynamic categories and merge with default categories
+    try {
+      final catRes = await MarketplaceService.getCategories();
+      if (mounted && catRes['status'] == true && catRes['data'] != null) {
+        final raw = catRes['data'];
+        final List<dynamic> catList = raw is List
+            ? raw
+            : (raw is Map ? (raw['data'] ?? []) : []);
+        final fetched = <String>['Semua'];
+        for (final c in catList) {
+          final name = (c is Map
+                  ? (c['category'] ?? c['name'] ?? c['title'] ?? c['slug'])
+                  : c)
+              ?.toString()
+              .trim();
+          if (name != null && name.isNotEmpty && !fetched.contains(name)) {
+            fetched.add(name);
           }
         }
-
-        List<MarketplaceItem> newItems = [];
-        bool hasMore = true;
-        if (itemsRes['status'] == true && itemsRes['data'] != null) {
-          final data = itemsRes['data'];
-          final List<dynamic> itemList = data is Map
-              ? (data['data'] ?? [])
-              : (data is List ? data : []);
-          for (final raw in itemList) {
-            if (raw is Map) {
-              try {
-                newItems.add(MarketplaceItem.fromJson(Map<String, dynamic>.from(raw)));
-              } catch (_) {}
-            }
-          }
-          if (data is Map && data['last_page'] != null) {
-            hasMore = _currentPage < (data['last_page'] as int);
-          } else {
-            hasMore = newItems.isNotEmpty;
+        for (final def in _defaultCategories) {
+          if (!fetched.contains(def)) {
+            fetched.add(def);
           }
         }
-
-        setState(() {
-          _featured = featuredList;
-          _items = newItems;
-          _hasMore = hasMore;
-          if (newCategories != null) {
-            _allCategories = newCategories;
+        if (mounted && fetched.length > 1) {
+          setState(() {
+            _allCategories = fetched;
             if (!_allCategories.contains(_selectedCategory)) {
               _selectedCategory = 'Semua';
             }
-          }
-          _isLoading = false;
-        });
+          });
+        }
       }
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+    } catch (e) {
+      debugPrint('Error loading categories: $e');
+    }
+
+    if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -171,7 +182,7 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
     setState(() {
       _currentPage = 1;
       _hasMore = true;
-      _items = [];
+      _isLoading = true;
     });
     try {
       final selectedCategory = _selectedCategory.toLowerCase() == 'semua'
@@ -188,6 +199,7 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
       if (mounted) {
         setState(() {
           _items = [];
+          _isLoading = false;
           _isLoadingMore = false;
         });
       }
@@ -195,7 +207,7 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
   }
 
   Future<void> _loadMore() async {
-    if (!_hasMore) return;
+    if (!_hasMore || _isLoadingMore) return;
     setState(() => _isLoadingMore = true);
     _currentPage++;
     try {
@@ -212,7 +224,10 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
         _parseItems(result, append: true);
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoadingMore = false);
+      if (mounted) {
+        if (_currentPage > 1) _currentPage--;
+        setState(() => _isLoadingMore = false);
+      }
     }
   }
 
@@ -230,23 +245,35 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
           } catch (_) {}
         }
       }
+
+      int lastPage = 1;
+      if (data is Map && data['last_page'] != null) {
+        lastPage = int.tryParse(data['last_page'].toString()) ?? 1;
+      }
+
       setState(() {
         if (!append) {
           _items = newItems;
         } else {
           _items.addAll(newItems);
         }
-        if (data is Map && data['last_page'] != null) {
-          _hasMore = _currentPage < (data['last_page'] as int);
-        } else {
-          _hasMore = newItems.isNotEmpty;
-        }
+        _hasMore = _currentPage < lastPage;
         _isLoadingMore = false;
+        _isLoading = false;
+
+        // Populate featured if currently empty
+        if (_featured.isEmpty && _items.isNotEmpty) {
+          final fallbackFeatured = _items.where((it) => it.isFeatured).take(6).toList();
+          _featured = fallbackFeatured.isNotEmpty
+              ? fallbackFeatured
+              : _items.take(4).toList();
+        }
       });
     } else {
       setState(() {
         if (!append) _items = [];
         _isLoadingMore = false;
+        _isLoading = false;
       });
     }
   }
@@ -270,6 +297,7 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
       MaterialPageRoute(
         builder: (_) => MarketplaceDetailScreen(
           itemId: item.id,
+          initialItem: item,
           user: widget.user,
         ),
       ),
@@ -294,7 +322,7 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
     final isDark = theme.brightness == Brightness.dark;
     final isWide = MediaQuery.of(context).size.width > 900;
 
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
       floatingActionButton: Padding(
         padding: EdgeInsets.only(
@@ -513,7 +541,10 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                             title: 'Belum Ada Karya',
                             subtitle: _searchCtrl.text.isNotEmpty
                                 ? 'Tidak ada karya yang cocok dengan pencarian "${_searchCtrl.text}".'
-                                : 'Karya kreator akan muncul di sini.',
+                                : 'Karya kreator akan muncul di sini. Coba muat ulang jika data belum tampil.',
+                            actionLabel: 'Muat Ulang',
+                            actionIcon: Icons.refresh_rounded,
+                            onAction: _loadAll,
                           ),
                         ),
                       ),
@@ -584,6 +615,18 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
               ),
             ),
     );
+
+    final effectiveUser = widget.user ?? currentUserNotifier.value;
+    if (isWide && effectiveUser != null) {
+      return DesktopSidebarLayout(
+        user: effectiveUser,
+        activeRoute: 'marketplace',
+        onUserUpdated: widget.onUserUpdated,
+        child: scaffold,
+      );
+    }
+
+    return scaffold;
   }
 
   Widget _buildSkeletonLoading(bool isDark, bool isWide) {
@@ -922,21 +965,65 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                     ),
                     child: Stack(
                       children: [
-                        Positioned(
-                          right: 12,
-                          top: 12,
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryPurple.withValues(
-                                alpha: isDark ? 0.2 : 0.15,
+                        ClipRRect(
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(22),
+                            topRight: Radius.circular(22),
+                          ),
+                          child: SizedBox.expand(
+                            child: Image.network(
+                              item.displayImageUrl,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return Container(
+                                  color: isDark
+                                      ? const Color(0xFF241C38)
+                                      : const Color(0xFFEDE9FE),
+                                  child: const Center(
+                                    child: SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppTheme.primaryPurple,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Center(
+                                child: Icon(
+                                  _categoryIcon(item.category),
+                                  size: 42,
+                                  color: AppTheme.primaryPurple.withValues(
+                                    alpha: isDark ? 0.6 : 0.5,
+                                  ),
+                                ),
                               ),
-                              shape: BoxShape.circle,
                             ),
-                            child: const Icon(
-                              Icons.favorite_border,
-                              size: 16,
-                              color: AppTheme.primaryPurple,
+                          ),
+                        ),
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: 55,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(22),
+                                topRight: Radius.circular(22),
+                              ),
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.black.withValues(alpha: 0.5),
+                                  Colors.transparent,
+                                ],
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                              ),
                             ),
                           ),
                         ),
@@ -949,55 +1036,41 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryPurple.withValues(
-                                alpha: 0.15,
-                              ),
+                              color: Colors.black.withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
+                              ),
                             ),
                             child: Text(
                               item.category,
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: AppTheme.primaryPurple,
+                                color: Colors.white,
                               ),
                             ),
                           ),
                         ),
-                        if (item.media != null &&
-                            item.media!.isNotEmpty &&
-                            item.media!.first.fileType != 'video')
-                          ClipRRect(
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(22),
-                              topRight: Radius.circular(22),
-                            ),
-                            child: Image.network(
-                              item.media!.first.filePath,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                              errorBuilder: (context, error, stackTrace) => Center(
-                                child: Icon(
-                                  _categoryIcon(item.category),
-                                  size: 42,
-                                  color: AppTheme.primaryPurple.withValues(
-                                    alpha: isDark ? 0.6 : 0.5,
-                                  ),
-                                ),
+                        Positioned(
+                          right: 12,
+                          top: 12,
+                          child: Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.45),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
                               ),
                             ),
-                          )
-                        else
-                          Center(
-                            child: Icon(
-                              _categoryIcon(item.category),
-                              size: 42,
-                              color: AppTheme.primaryPurple.withValues(
-                                alpha: isDark ? 0.6 : 0.5,
-                              ),
+                            child: const Icon(
+                              Icons.favorite_border,
+                              size: 15,
+                              color: Colors.white,
                             ),
                           ),
+                        ),
                       ],
                     ),
                   ),
@@ -1108,24 +1181,87 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                     ),
                     child: Stack(
                       children: [
+                        ClipRRect(
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(18),
+                            topRight: Radius.circular(18),
+                          ),
+                          child: SizedBox.expand(
+                            child: Image.network(
+                              item.displayImageUrl,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return Container(
+                                  color: isDark
+                                      ? const Color(0xFF241C38)
+                                      : const Color(0xFFEDE9FE),
+                                  child: const Center(
+                                    child: SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppTheme.primaryPurple,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Center(
+                                child: Icon(
+                                  _categoryIcon(item.category),
+                                  size: 32,
+                                  color: AppTheme.primaryPurple.withValues(
+                                    alpha: isDark ? 0.6 : 0.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: 50,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(18),
+                                topRight: Radius.circular(18),
+                              ),
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.black.withValues(alpha: 0.5),
+                                  Colors.transparent,
+                                ],
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                              ),
+                            ),
+                          ),
+                        ),
                         Positioned(
                           left: 10,
                           top: 10,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
-                              vertical: 4,
+                              vertical: 3.5,
                             ),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryPurple.withValues(
-                                alpha: isDark ? 0.2 : 0.15,
-                              ),
+                              color: Colors.black.withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
+                              ),
                             ),
                             child: Text(
                               item.category,
                               style: const TextStyle(
-                                color: AppTheme.primaryPurple,
+                                color: Colors.white,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -1136,26 +1272,18 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
                           right: 10,
                           top: 10,
                           child: Container(
-                            padding: const EdgeInsets.all(6),
+                            padding: const EdgeInsets.all(5),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryPurple.withValues(
-                                alpha: isDark ? 0.2 : 0.15,
-                              ),
+                              color: Colors.black.withValues(alpha: 0.45),
                               shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
+                              ),
                             ),
                             child: const Icon(
                               Icons.favorite_border,
                               size: 12,
-                              color: AppTheme.primaryPurple,
-                            ),
-                          ),
-                        ),
-                        Center(
-                          child: Icon(
-                            _categoryIcon(item.category),
-                            size: 32,
-                            color: AppTheme.primaryPurple.withValues(
-                              alpha: isDark ? 0.6 : 0.5,
+                              color: Colors.white,
                             ),
                           ),
                         ),

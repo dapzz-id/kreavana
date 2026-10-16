@@ -1,18 +1,18 @@
-import '../../../services/badge_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../../services/api_service.dart';
 import '../../../services/job_contract_service.dart';
 import '../../../services/theme_transition_service.dart';
-import '../../../screens/global_search_screen.dart';
 import '../../../models/user_model.dart';
 import '../../../screens/buat_kebutuhan_screen.dart';
 import '../../../screens/explore_screen.dart';
-import '../../../screens/notifications_screen.dart';
-import '../../../screens/direct_message_screen.dart';
 import '../../../screens/institution_workspace_screen.dart';
 import '../../../screens/tim_hak_akses_screen.dart';
+import '../../../screens/profile_screen.dart';
+import '../../auth/services/auth_service.dart';
+import '../../auth/screens/login_screen.dart';
+import '../../../widgets/app_bar_badge.dart';
 import '../../../widgets/waving_hand_emoji.dart';
 
 class SchoolDashboardScreen extends StatefulWidget {
@@ -202,116 +202,104 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
       title: Row(
         children: [
           Expanded(
-            child: GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => GlobalSearchScreen(user: widget.user),
-                ),
+            child: InteractiveDashboardSearchBar(
+              user: widget.user,
+              isDark: isDark,
+              accentColor: _schoolBlue,
+              placeholder:
+                  'Cari program, mitra industri, atau portofolio siswa...',
+            ),
+          ),
+          const SizedBox(width: 16),
+          AppBarBadgeWidget(
+            icon: Icons.notifications_none_outlined,
+            isDark: isDark,
+            accentColor: _schoolBlue,
+          ),
+          const SizedBox(width: 6),
+          AppBarBadgeWidget(
+            icon: Icons.chat_bubble_outline,
+            isDark: isDark,
+            accentColor: _schoolBlue,
+          ),
+          const SizedBox(width: 12),
+          Tooltip(
+            message: isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap',
+            waitDuration: const Duration(milliseconds: 300),
+            child: IconButton(
+              key: _themeBtnKey,
+              mouseCursor: SystemMouseCursors.click,
+              hoverColor: _schoolBlue.withValues(alpha: isDark ? 0.2 : 0.1),
+              icon: Icon(
+                isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                size: 20,
               ),
-              child: Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF1A1830)
-                      : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+              onPressed: () {
+                final box =
+                    _themeBtnKey.currentContext?.findRenderObject() as RenderBox?;
+                final origin = box != null
+                    ? box.localToGlobal(box.size.center(Offset.zero))
+                    : const Offset(0, 0);
+                ThemeTransitionService.animateToggle(
+                  origin: origin,
+                  toDark: !isDark,
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+          Tooltip(
+            message: 'Profil Sekolah (${widget.user.name})',
+            waitDuration: const Duration(milliseconds: 300),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              mouseCursor: SystemMouseCursors.click,
+              hoverColor: _schoolBlue.withValues(alpha: isDark ? 0.15 : 0.08),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ProfileScreen(
+                      user: widget.user,
+                      onUserUpdated: widget.onUserUpdated,
+                      onLogout: _handleLogout,
+                    ),
                   ),
-                ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 child: Row(
                   children: [
-                    const SizedBox(width: 14),
-                    Icon(
-                      Icons.search,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
-                      size: 20,
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: _schoolBlue.withValues(alpha: 0.1),
+                      child: const Icon(Icons.school, color: _schoolBlue, size: 20),
                     ),
                     const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Cari program, mitra industri, atau portofolio siswa...',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: isDark
-                              ? AppTheme.textMuted
-                              : Colors.grey.shade500,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.user.name,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                        Text(
+                          'Sekolah / Lembaga Pendidikan',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 20),
-          ListenableBuilder(
-            listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(
-              Icons.notifications_none_outlined,
-              BadgeService().unreadNotificationsText,
-              isDark,
-            ),
-          ),
-          const SizedBox(width: 4),
-          ListenableBuilder(
-            listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(
-              Icons.chat_bubble_outline,
-              BadgeService().unreadMessagesText,
-              isDark,
-            ),
-          ),
-          const SizedBox(width: 12),
-          IconButton(
-            key: _themeBtnKey,
-            icon: Icon(
-              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-              size: 20,
-            ),
-            onPressed: () {
-              final box =
-                  _themeBtnKey.currentContext?.findRenderObject() as RenderBox?;
-              final origin = box != null
-                  ? box.localToGlobal(box.size.center(Offset.zero))
-                  : const Offset(0, 0);
-              ThemeTransitionService.animateToggle(
-                origin: origin,
-                toDark: !isDark,
-              );
-            },
-          ),
-          const SizedBox(width: 8),
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: _schoolBlue.withValues(alpha: 0.1),
-                child: const Icon(Icons.school, color: _schoolBlue, size: 20),
-              ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.user.name,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'Sekolah / Lembaga Pendidikan',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ),
         ],
       ),
@@ -1235,64 +1223,13 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
     );
   }
 
-  Widget _buildAppBarBadge(IconData icon, String count, bool isDark) {
-    final isNotification = icon == Icons.notifications_none_outlined;
-    return ListenableBuilder(
-      listenable: BadgeService(),
-      builder: (context, _) {
-        final badgeCount = isNotification
-            ? BadgeService().unreadNotificationsText
-            : BadgeService().unreadMessagesText;
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => isNotification
-                    ? NotificationsScreen(userId: '')
-                    : const DirectMessageScreen(),
-              ),
-            );
-          },
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  icon,
-                  size: 20,
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
-                if (badgeCount.isNotEmpty && badgeCount != '0')
-                  Positioned(
-                    right: -4,
-                    top: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.redAccent,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        badgeCount,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+  void _handleLogout() async {
+    await AuthService.logout();
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    }
   }
 }

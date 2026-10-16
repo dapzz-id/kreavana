@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\MarketplaceItem;
+use App\Models\MarketplaceItemMedia;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
@@ -19,7 +20,6 @@ class MarketplaceSeeder extends Seeder
         if ($creators->isEmpty()) return;
 
         // Use updateOrCreate for items to be idempotent and cross-database compatible (PostgreSQL & MySQL)
-
         $now = Carbon::now();
 
         $items = [
@@ -32,6 +32,7 @@ class MarketplaceSeeder extends Seeder
                 'rating' => 5.0,
                 'orders' => 189,
                 'reviews' => 120,
+                'image_url' => 'https://images.unsplash.com/photo-1533750516457-a7f992034fec?auto=format&fit=crop&w=1200&q=80',
                 'is_featured' => true,
                 'created_at' => $now->copy()->subMinutes(10), // Paling Baru!
             ],
@@ -43,6 +44,7 @@ class MarketplaceSeeder extends Seeder
                 'rating' => 4.85,
                 'orders' => 92,
                 'reviews' => 56,
+                'image_url' => 'https://images.unsplash.com/photo-1574717024453-354056aef981?auto=format&fit=crop&w=1200&q=80',
                 'is_featured' => false,
                 'created_at' => $now->copy()->subDays(1),
             ],
@@ -54,6 +56,7 @@ class MarketplaceSeeder extends Seeder
                 'rating' => 4.90,
                 'orders' => 18,
                 'reviews' => 15,
+                'image_url' => 'https://images.unsplash.com/photo-1518133910546-b6c2fb7d79e3?auto=format&fit=crop&w=1200&q=80',
                 'is_featured' => true,
                 'created_at' => $now->copy()->subDays(7),
             ],
@@ -65,6 +68,7 @@ class MarketplaceSeeder extends Seeder
                 'rating' => 4.60,
                 'orders' => 65,
                 'reviews' => 38,
+                'image_url' => 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=1200&q=80',
                 'is_featured' => false,
                 'created_at' => $now->copy()->subDays(4),
             ],
@@ -78,6 +82,7 @@ class MarketplaceSeeder extends Seeder
                 'rating' => 4.85,
                 'orders' => 58,
                 'reviews' => 36,
+                'image_url' => 'https://images.unsplash.com/photo-1600132806370-bf17e65e942f?auto=format&fit=crop&w=1200&q=80',
                 'is_featured' => true,
                 'created_at' => $now->copy()->subMinutes(25), // Sangat Baru!
             ],
@@ -89,6 +94,7 @@ class MarketplaceSeeder extends Seeder
                 'rating' => 4.80,
                 'orders' => 124, // Populer
                 'reviews' => 77,
+                'image_url' => 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=1200&q=80',
                 'is_featured' => false,
                 'created_at' => $now->copy()->subDays(5),
             ],
@@ -100,6 +106,7 @@ class MarketplaceSeeder extends Seeder
                 'rating' => 4.70,
                 'orders' => 8,
                 'reviews' => 7,
+                'image_url' => 'https://images.unsplash.com/photo-1586717791821-3f44a563fa4c?auto=format&fit=crop&w=1200&q=80',
                 'is_featured' => false,
                 'created_at' => $now->copy()->subWeeks(3),
             ],
@@ -113,6 +120,7 @@ class MarketplaceSeeder extends Seeder
                 'rating' => 4.92,
                 'orders' => 112,
                 'reviews' => 70,
+                'image_url' => 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?auto=format&fit=crop&w=1200&q=80',
                 'is_featured' => true,
                 'created_at' => $now->copy()->subMinutes(45), // Sangat Baru!
             ],
@@ -124,6 +132,7 @@ class MarketplaceSeeder extends Seeder
                 'rating' => 4.88,
                 'orders' => 156, // Sangat Populer!
                 'reviews' => 94,
+                'image_url' => 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=1200&q=80',
                 'is_featured' => true,
                 'created_at' => $now->copy()->subDays(2),
             ],
@@ -135,6 +144,7 @@ class MarketplaceSeeder extends Seeder
                 'rating' => 4.65,
                 'orders' => 85,
                 'reviews' => 51,
+                'image_url' => 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=1200&q=80',
                 'is_featured' => false,
                 'created_at' => $now->copy()->subDays(6),
             ],
@@ -146,6 +156,7 @@ class MarketplaceSeeder extends Seeder
                 'rating' => 4.80,
                 'orders' => 12,
                 'reviews' => 10,
+                'image_url' => 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?auto=format&fit=crop&w=1200&q=80',
                 'is_featured' => false,
                 'created_at' => $now->copy()->subWeeks(2),
             ],
@@ -159,6 +170,7 @@ class MarketplaceSeeder extends Seeder
                 'rating' => 4.95,
                 'orders' => 145, // Populer & Rating Tinggi!
                 'reviews' => 88,
+                'image_url' => 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80',
                 'is_featured' => true,
                 'created_at' => $now->copy()->subHours(2), // Baru!
             ],
@@ -170,6 +182,7 @@ class MarketplaceSeeder extends Seeder
                 'rating' => 4.90,
                 'orders' => 34,
                 'reviews' => 22,
+                'image_url' => 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1200&q=80',
                 'is_featured' => false,
                 'created_at' => $now->copy()->subHours(6),
             ],
@@ -181,6 +194,7 @@ class MarketplaceSeeder extends Seeder
                 'rating' => 4.70,
                 'orders' => 78,
                 'reviews' => 45,
+                'image_url' => 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80',
                 'is_featured' => false,
                 'created_at' => $now->copy()->subDays(3),
             ],
@@ -194,6 +208,7 @@ class MarketplaceSeeder extends Seeder
                 'rating' => 4.98, // Rating Hampir Sempurna!
                 'orders' => 167, // Sangat Populer!
                 'reviews' => 105,
+                'image_url' => 'https://images.unsplash.com/photo-1506784365847-bbad939e9335?auto=format&fit=crop&w=1200&q=80',
                 'is_featured' => true,
                 'created_at' => $now->copy()->subHours(4),
             ],
@@ -205,6 +220,7 @@ class MarketplaceSeeder extends Seeder
                 'rating' => 4.75,
                 'orders' => 73,
                 'reviews' => 42,
+                'image_url' => 'https://images.unsplash.com/photo-1616469829941-c7200edec809?auto=format&fit=crop&w=1200&q=80',
                 'is_featured' => false,
                 'created_at' => $now->copy()->subDays(2),
             ],
@@ -216,6 +232,7 @@ class MarketplaceSeeder extends Seeder
                 'rating' => 4.90,
                 'orders' => 25,
                 'reviews' => 20,
+                'image_url' => 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80',
                 'is_featured' => false,
                 'created_at' => $now->copy()->subDays(10),
             ],
@@ -223,7 +240,7 @@ class MarketplaceSeeder extends Seeder
 
         foreach ($items as $i => $d) {
             $creator = $creators[$i % $creators->count()];
-            MarketplaceItem::updateOrCreate(
+            $item = MarketplaceItem::updateOrCreate(
                 ['title' => $d['title']],
                 [
                     'user_id' => $creator->id,
@@ -234,11 +251,23 @@ class MarketplaceSeeder extends Seeder
                     'rating' => $d['rating'],
                     'review_count' => $d['reviews'],
                     'order_count' => $d['orders'],
+                    'image_url' => $d['image_url'],
                     'is_featured' => $d['is_featured'],
                     'is_active' => true,
                     'status' => 'published',
                     'created_at' => $d['created_at'],
                     'updated_at' => $d['created_at'],
+                ]
+            );
+
+            // Also create or update MarketplaceItemMedia
+            MarketplaceItemMedia::updateOrCreate(
+                [
+                    'marketplace_item_id' => $item->id,
+                    'file_path' => $d['image_url'],
+                ],
+                [
+                    'file_type' => 'image',
                 ]
             );
         }

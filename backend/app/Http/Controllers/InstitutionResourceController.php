@@ -17,6 +17,7 @@ class InstitutionResourceController extends Controller
         'monitoring',
         'documents',
         'announcements',
+        'facilities',
         'showcases',
         'members',
         'team',
@@ -45,12 +46,20 @@ class InstitutionResourceController extends Controller
         $user = $request->user();
         if ($user) {
             $subRole = $user->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user->sub_role;
-            $isCorporate = in_array($subRole, [
+            $subRoleLower = strtolower((string) ($subRole ?? ''));
+
+            $isCorporate = in_array($subRoleLower, [
                 'corporate', 'company', 'business', 'perusahaan', 'bisnis'
+            ], true);
+
+            $isGovernment = in_array($subRoleLower, [
+                'government', 'pemerintah', 'instansi', 'dinas', 'bumn', 'kementerian'
             ], true);
 
             if ($isCorporate && InstitutionResource::where('user_id', $user->id)->count() === 0) {
                 \Database\Seeders\CorporateDummySeeder::seedForUser($user);
+            } elseif ($isGovernment && InstitutionResource::where('user_id', $user->id)->count() === 0) {
+                \Database\Seeders\GovernmentDummySeeder::seedForUser($user);
             }
         }
 

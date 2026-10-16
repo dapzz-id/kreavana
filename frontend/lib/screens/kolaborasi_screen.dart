@@ -8,6 +8,8 @@ import 'direct_message_screen.dart';
 import '../widgets/skeleton/skeleton_list.dart';
 import '../widgets/app_breadcrumbs.dart';
 import '../widgets/feature_disabled_view.dart';
+import '../widgets/desktop_sidebar_layout.dart';
+import '../services/user_store.dart';
 import 'main_navigation.dart';
 
 class KolaborasiScreen extends StatefulWidget {
@@ -26,12 +28,14 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
-  bool get _isCreator =>
-      widget.user != null &&
-      !widget.user!.isClient &&
-      (widget.user!.role == 'creator' ||
-          widget.user!.isCreator ||
-          widget.user!.isAdmin);
+  UserModel? get _effectiveUser => widget.user ?? currentUserNotifier.value;
+
+  bool get _isCreator {
+    final u = _effectiveUser;
+    return u != null &&
+        !u.isClient &&
+        (u.role == 'creator' || u.isCreator || u.isAdmin);
+  }
 
   List<Map<String, dynamic>> _collabs = [];
 
@@ -121,8 +125,9 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final role = widget.user?.role ?? 'user';
-    final subRole = widget.user?.subRole ?? 'general';
+    final effectiveUser = _effectiveUser;
+    final role = effectiveUser?.role ?? 'user';
+    final subRole = effectiveUser?.subRole ?? 'general';
     final accentColor = SubRoleThemeEngine.getAccentColor(role, subRole);
 
     final filtered = _collabs.where((c) {
@@ -146,8 +151,8 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
 
     final isDesktop = MediaQuery.of(context).size.width > 900;
 
-    if (widget.user == null || widget.user!.isClient || !_isCreator) {
-      return Scaffold(
+    if (effectiveUser == null || effectiveUser.isClient || !_isCreator) {
+      final disabledScaffold = Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
           toolbarHeight: 80,
@@ -168,7 +173,7 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (_) => MainNavigation(
-                    initialUser: widget.user ?? UserModel.guest(),
+                    initialUser: effectiveUser ?? UserModel.guest(),
                     initialIndex: 0,
                   ),
                 ),
@@ -178,9 +183,18 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
           },
         ),
       );
+      if (isDesktop && effectiveUser != null) {
+        return DesktopSidebarLayout(
+          user: effectiveUser,
+          activeRoute: 'kolaborasi',
+          onUserUpdated: widget.onUserUpdated,
+          child: disabledScaffold,
+        );
+      }
+      return disabledScaffold;
     }
 
-    return Scaffold(
+    final scaffold = Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
         toolbarHeight: 80,
@@ -368,6 +382,16 @@ class _KolaborasiScreenState extends State<KolaborasiScreen> {
             )
           : null,
     );
+
+    if (isDesktop) {
+      return DesktopSidebarLayout(
+        user: effectiveUser,
+        activeRoute: 'kolaborasi',
+        onUserUpdated: widget.onUserUpdated,
+        child: scaffold,
+      );
+    }
+    return scaffold;
   }
 
   // ── Perfectly Centered Empty State ─────────────────────────────────────────

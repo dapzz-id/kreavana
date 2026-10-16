@@ -10,6 +10,8 @@ import '../models/opportunity_model.dart';
 import '../widgets/skeleton/skeleton_list.dart';
 import '../widgets/app_breadcrumbs.dart';
 import '../widgets/app_sweet_alert.dart';
+import '../widgets/desktop_sidebar_layout.dart';
+import '../services/user_store.dart';
 import 'main_navigation.dart';
 
 class AgendaScreen extends StatefulWidget {
@@ -184,7 +186,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
 
     final isDesktop = MediaQuery.of(context).size.width > 900;
 
-    return Scaffold(
+    final scaffold = Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
         toolbarHeight: 80,
@@ -333,6 +335,18 @@ class _AgendaScreenState extends State<AgendaScreen> {
               ),
             ),
     );
+
+    final effectiveUser = widget.user ?? currentUserNotifier.value;
+    if (isDesktop && effectiveUser != null) {
+      return DesktopSidebarLayout(
+        user: effectiveUser,
+        activeRoute: 'agenda',
+        onUserUpdated: widget.onUserUpdated,
+        child: scaffold,
+      );
+    }
+
+    return scaffold;
   }
 
   Widget _buildAgendaHeader(Color accentColor, bool isDark) {

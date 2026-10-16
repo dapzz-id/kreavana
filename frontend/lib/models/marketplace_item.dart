@@ -126,6 +126,111 @@ class MarketplaceItem {
       return '';
     }
   }
+
+  List<String> get allImageUrls {
+    final urls = <String>[];
+    if (imageUrl != null && imageUrl!.trim().isNotEmpty) {
+      urls.add(imageUrl!.trim());
+    }
+    if (media != null && media!.isNotEmpty) {
+      for (final m in media!) {
+        if (m.fileType != 'video' && m.filePath.trim().isNotEmpty) {
+          if (!urls.contains(m.filePath.trim())) {
+            urls.add(m.filePath.trim());
+          }
+        }
+      }
+    }
+    if (urls.isEmpty) {
+      urls.add(displayImageUrl);
+    }
+    return urls;
+  }
+
+  String get displayImageUrl {
+    if (imageUrl != null && imageUrl!.trim().isNotEmpty) {
+      return imageUrl!.trim();
+    }
+    if (media != null && media!.isNotEmpty) {
+      final firstImg = media!.firstWhere(
+        (m) => m.fileType != 'video' && m.filePath.trim().isNotEmpty,
+        orElse: () => media!.first,
+      );
+      if (firstImg.filePath.trim().isNotEmpty) {
+        return firstImg.filePath.trim();
+      }
+    }
+
+    final t = title.toLowerCase();
+    final c = category.toLowerCase();
+
+    if (t.contains('lut') || t.contains('color grade') || t.contains('s-log')) {
+      return 'https://images.unsplash.com/photo-1533750516457-a7f992034fec?auto=format&fit=crop&w=1200&q=80';
+    }
+    if (t.contains('after effects') || t.contains('opening') || t.contains('intro')) {
+      return 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=1200&q=80';
+    }
+    if (t.contains('profil perusahaan') || t.contains('liputan') || t.contains('multicam')) {
+      return 'https://images.unsplash.com/photo-1518133910546-b6c2fb7d79e3?auto=format&fit=crop&w=1200&q=80';
+    }
+    if (t.contains('sound fx') || t.contains('audio') || t.contains('transitions')) {
+      return 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=1200&q=80';
+    }
+    if (t.contains('brand identity') || t.contains('logo package') || t.contains('guidelines')) {
+      return 'https://images.unsplash.com/photo-1600132806370-bf17e65e942f?auto=format&fit=crop&w=1200&q=80';
+    }
+    if (t.contains('proposal bisnis') || t.contains('sponsorship') || t.contains('mou')) {
+      return 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=1200&q=80';
+    }
+    if (t.contains('design system') || t.contains('mobile app') || t.contains('figma') || t.contains('ui kit')) {
+      return 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=1200&q=80';
+    }
+    if (t.contains('feed') || t.contains('instagram') || t.contains('umkm')) {
+      return 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=1200&q=80';
+    }
+    if (t.contains('3d icon') || t.contains('blender')) {
+      return 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80';
+    }
+    if (t.contains('maskot') || t.contains('ilustrasi') || t.contains('vektor')) {
+      return 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=1200&q=80';
+    }
+    if (t.contains('lightroom') || t.contains('wedding') || t.contains('warm')) {
+      return 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80';
+    }
+    if (t.contains('wisuda') || t.contains('portrait') || t.contains('studio')) {
+      return 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1200&q=80';
+    }
+    if (t.contains('street') || t.contains('urban') || t.contains('cyberpunk')) {
+      return 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=1200&q=80';
+    }
+    if (t.contains('katalog') || t.contains('commercial') || t.contains('e-commerce')) {
+      return 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=1200&q=80';
+    }
+    if (t.contains('kalender konten') || t.contains('copywriting')) {
+      return 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=1200&q=80';
+    }
+    if (t.contains('tiktok') || t.contains('hook') || t.contains('reels')) {
+      return 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=1200&q=80';
+    }
+    if (t.contains('notion') || t.contains('workspace') || t.contains('planner')) {
+      return 'https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?auto=format&fit=crop&w=1200&q=80';
+    }
+
+    switch (c) {
+      case 'videografi':
+        return 'https://images.unsplash.com/photo-1533750516457-a7f992034fec?auto=format&fit=crop&w=1200&q=80';
+      case 'fotografi':
+        return 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80';
+      case 'desain':
+        return 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=1200&q=80';
+      case 'branding':
+        return 'https://images.unsplash.com/photo-1600132806370-bf17e65e942f?auto=format&fit=crop&w=1200&q=80';
+      case 'konten':
+        return 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=1200&q=80';
+      default:
+        return 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=1200&q=80';
+    }
+  }
 }
 
 class MarketplaceCreator {

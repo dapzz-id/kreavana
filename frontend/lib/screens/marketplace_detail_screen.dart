@@ -12,13 +12,20 @@ import '../utils/app_errors.dart';
 import '../widgets/wallet_pin_dialog.dart';
 import '../widgets/auth_guard_dialog.dart';
 import '../models/user_model.dart';
+import '../services/user_store.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import 'package:go_router/go_router.dart';
 
 class MarketplaceDetailScreen extends StatefulWidget {
   final String itemId;
+  final MarketplaceItem? initialItem;
   final UserModel? user;
-  const MarketplaceDetailScreen({super.key, required this.itemId, this.user});
+  const MarketplaceDetailScreen({
+    super.key,
+    required this.itemId,
+    this.initialItem,
+    this.user,
+  });
 
   @override
   State<MarketplaceDetailScreen> createState() =>
@@ -59,6 +66,14 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
+
+    if (widget.initialItem != null) {
+      _item = widget.initialItem;
+      _isLoading = false;
+      _isFollowing = widget.initialItem!.isFollowing;
+      _bottomBarCtrl.value = 1.0;
+    }
+
     _loadItem();
   }
 
@@ -77,7 +92,9 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
   }
 
   Future<void> _loadItem() async {
-    setState(() => _isLoading = true);
+    if (widget.initialItem == null) {
+      setState(() => _isLoading = true);
+    }
     try {
       final currentUser = await AuthService.getCurrentUser();
       final result = await MarketplaceService.getItem(widget.itemId);
@@ -283,9 +300,11 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
             ),
     );
 
-    if (isDesktop && widget.user != null) {
+    final effectiveUser =
+        widget.user ?? currentUserNotifier.value ?? UserModel.guest();
+    if (isDesktop) {
       return DesktopSidebarLayout(
-        user: widget.user!,
+        user: effectiveUser,
         activeRoute: 'marketplace',
         child: content,
       );
@@ -429,57 +448,169 @@ class _MarketplaceDetailScreenState extends State<MarketplaceDetailScreen>
                 );
               },
             ),
-            if (_item?.media != null && _item!.media!.isNotEmpty)
-              PageView.builder(
-                itemCount: _item!.media!.length,
-                itemBuilder: (context, index) {
-                  final media = _item!.media![index];
-                  if (media.fileType == 'video') {
-                    return const Center(
-                      child: Icon(
-                        Icons.videocam,
-                        size: 64,
-                        color: Colors.white54,
+            Builder(
+              builder: (context) {
+                final imageUrls = _item?.allImageUrls ?? [];
+                if (imageUrls.isEmpty && (_item?.displayImageUrl.isNotEmpty ?? false)) {
+                  imageUrls.add(_item!.displayImageUrl);
+                }
+
+                if (imageUrls.isNotEmpty) {
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      PageView.builder(
+                        itemCount: imageUrls.length,
+                        itemBuilder: (context, index) {
+                          final img = imageUrls[index];
+                          return Image.network(
+                            img,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            loadingBuilder: (context, child, progress) {
+                              if (progress == null) return child;
+                              return Container(
+                                color: isDark
+                                    ? const Color(0xFF1E1B2E)
+                                    : const Color(0xFFEDE9FE),
+                                child: const Center(
+                                  child: SizedBox(
+                                    width: 36,
+                                    height: 36,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: AppTheme.primaryPurple,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                              color: isDark
+                                  ? const Color(0xFF241C38)
+                                  : const Color(0xFFEDE9FE),
+                              child: Center(
+                                child: Icon(
+                                  _categoryIcon(_item?.category ?? ''),
+                                  size: 54,
+                                  color: AppTheme.primaryPurple.withValues(
+                                    alpha: isDark ? 0.6 : 0.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  }
-                  return Image.network(
-                    media.filePath,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: 95,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.black.withValues(alpha: 0.65),
+                                Colors.transparent,
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: 75,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.transparent,
+                                (isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight).withValues(alpha: 0.85),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (imageUrls.length > 1)
+                        Positioned(
+                          bottom: 16,
+                          right: 16,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.65),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.25),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.photo_library_outlined,
+                                  size: 13,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  '${imageUrls.length} Foto',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
                   );
-                },
-              )
-            else
-              Center(
-                child: AnimatedEntrance(
-                  duration: const Duration(milliseconds: 600),
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppTheme.primaryPurple.withValues(
-                        alpha: isDark ? 0.2 : 0.15,
+                }
+
+                return Center(
+                  child: AnimatedEntrance(
+                    duration: const Duration(milliseconds: 600),
+                    child: Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppTheme.primaryPurple.withValues(
+                          alpha: isDark ? 0.2 : 0.15,
+                        ),
+                        border: Border.all(
+                          color: AppTheme.primaryPurple.withValues(alpha: 0.3),
+                          width: 2,
+                        ),
                       ),
-                      border: Border.all(
-                        color: AppTheme.primaryPurple.withValues(alpha: 0.3),
-                        width: 2,
+                      child: Icon(
+                        _categoryIcon(_item?.category ?? ''),
+                        size: 44,
+                        color: AppTheme.primaryPurple.withValues(alpha: 0.9),
                       ),
-                    ),
-                    child: Icon(
-                      _categoryIcon(_item?.category ?? ''),
-                      size: 44,
-                      color: AppTheme.primaryPurple.withValues(alpha: 0.9),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
+            ),
             if (_item?.isFeatured == true)
               Positioned(
-                top: 16,
-                left: 16,
+                top: 14,
+                left: 64,
                 child: AnimatedEntrance(
                   delay: const Duration(milliseconds: 200),
                   child: Container(

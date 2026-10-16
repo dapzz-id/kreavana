@@ -419,18 +419,32 @@ class DashboardService extends BaseService implements DashboardServiceInterface
                     ['stat_label' => 'Rating', 'stat_value' => '4.7', 'stat_icon' => 'star'],
                 ]
             ],
-            'pemerintah' => [
+            'government' => [
                 'user' => [
-                    ['stat_label' => 'Kegiatan Aktif', 'stat_value' => '12', 'stat_icon' => 'event'],
-                    ['stat_label' => 'Relawan', 'stat_value' => '320', 'stat_icon' => 'volunteer_activism'],
-                    ['stat_label' => 'Vendor Lokal', 'stat_value' => '85', 'stat_icon' => 'store'],
-                    ['stat_label' => 'Laporan', 'stat_value' => '18', 'stat_icon' => 'assessment'],
+                    ['stat_label' => 'Tender LPSE Aktif', 'stat_value' => '5 Paket', 'stat_icon' => 'gavel'],
+                    ['stat_label' => 'Pagu Anggaran', 'stat_value' => 'Rp 2.45 M', 'stat_icon' => 'account_balance_wallet'],
+                    ['stat_label' => 'Realisasi DIPA', 'stat_value' => '74.2%', 'stat_icon' => 'trending_up'],
+                    ['stat_label' => 'Capaian Monev', 'stat_value' => '98.4%', 'stat_icon' => 'fact_check'],
                 ],
                 'creator' => [
-                    ['stat_label' => 'Program Aktif', 'stat_value' => '6', 'stat_icon' => 'gavel'],
-                    ['stat_label' => 'Dokumentasi', 'stat_value' => '15', 'stat_icon' => 'photo_camera'],
-                    ['stat_label' => 'Selesai', 'stat_value' => '30', 'stat_icon' => 'done_all'],
-                    ['stat_label' => 'Rating', 'stat_value' => '4.5', 'stat_icon' => 'star'],
+                    ['stat_label' => 'Program DIPA', 'stat_value' => '8 Proyek', 'stat_icon' => 'account_balance'],
+                    ['stat_label' => 'Dokumen BAST', 'stat_value' => '14 Berkas', 'stat_icon' => 'description'],
+                    ['stat_label' => 'Mitra Kreator', 'stat_value' => '24 Rekanan', 'stat_icon' => 'groups'],
+                    ['stat_label' => 'Indeks Akuntabilitas', 'stat_value' => '4.9/5', 'stat_icon' => 'verified'],
+                ]
+            ],
+            'pemerintah' => [
+                'user' => [
+                    ['stat_label' => 'Tender LPSE Aktif', 'stat_value' => '5 Paket', 'stat_icon' => 'gavel'],
+                    ['stat_label' => 'Pagu Anggaran', 'stat_value' => 'Rp 2.45 M', 'stat_icon' => 'account_balance_wallet'],
+                    ['stat_label' => 'Realisasi DIPA', 'stat_value' => '74.2%', 'stat_icon' => 'trending_up'],
+                    ['stat_label' => 'Capaian Monev', 'stat_value' => '98.4%', 'stat_icon' => 'fact_check'],
+                ],
+                'creator' => [
+                    ['stat_label' => 'Program DIPA', 'stat_value' => '8 Proyek', 'stat_icon' => 'account_balance'],
+                    ['stat_label' => 'Dokumen BAST', 'stat_value' => '14 Berkas', 'stat_icon' => 'description'],
+                    ['stat_label' => 'Mitra Kreator', 'stat_value' => '24 Rekanan', 'stat_icon' => 'groups'],
+                    ['stat_label' => 'Indeks Akuntabilitas', 'stat_value' => '4.9/5', 'stat_icon' => 'verified'],
                 ]
             ],
             'komunitas' => [
@@ -463,6 +477,11 @@ class DashboardService extends BaseService implements DashboardServiceInterface
             ]
         ];
 
-        return $fallback[$subRoleSlug][$roleType] ?? $fallback['kreator']['user'];
+        $slug = strtolower(str_replace(['-', ' '], '_', $subRoleSlug));
+        if (in_array($slug, ['pemerintah', 'instansi', 'dinas', 'bumn', 'kementerian'], true)) {
+            $slug = 'government';
+        }
+
+        return $fallback[$slug][$roleType] ?? $fallback[$subRoleSlug][$roleType] ?? $fallback['kreator']['user'];
     }
 }

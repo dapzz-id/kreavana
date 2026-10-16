@@ -21,6 +21,9 @@ import '../screens/tim_hak_akses_screen.dart';
 import '../screens/institution_workspace_screen.dart';
 import '../screens/buat_kebutuhan_screen.dart';
 import '../features/dashboard/screens/community_dashboard_screen.dart';
+import 'package:go_router/go_router.dart';
+import '../services/app_router.dart';
+import 'auth_guard_dialog.dart';
 import 'creator_sidebar_menus.dart';
 import 'kreavana_ai_floating_widget.dart';
 import 'app_sweet_alert.dart';
@@ -355,7 +358,25 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     return false;
   }
 
+  static const Map<int, String> _protectedIndexActionMap = {
+    1: 'melihat rekomendasi peluang kerja',
+    2: 'mengakses proyek',
+    5: 'mengakses ruang kolaborasi',
+    6: 'melihat ulasan dan reputasi',
+    7: 'mengakses dompet dan pembayaran',
+    11: 'mengirim pesan langsung',
+    12: 'mencari pekerjaan kreatif',
+    13: 'mengatur kapasitas & jadwal kerja',
+  };
+
   void _goToMain(int index) {
+    if (widget.user.isGuest && _protectedIndexActionMap.containsKey(index)) {
+      AuthGuardDialog.show(
+        context,
+        actionName: _protectedIndexActionMap[index]!,
+      );
+      return;
+    }
     if (_sidebarScrollController.hasClients) {
       _savedSidebarScrollOffset = _sidebarScrollController.offset;
     }
@@ -370,6 +391,13 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   }
 
   void _pushService(String serviceKey) {
+    if (widget.user.isGuest) {
+      AuthGuardDialog.show(
+        context,
+        actionName: 'mengakses layanan kreator',
+      );
+      return;
+    }
     if (serviceKey.startsWith('komunitas_')) {
       _pushNoAnimation(
         CommunityDashboardScreen(
@@ -390,6 +418,34 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   }
 
   void _pushLink(String route) {
+    if (widget.user.isGuest) {
+      const guestBlockedRoutes = {
+        'kolaborasi': 'mengakses ruang kolaborasi',
+        'reputasi': 'melihat ulasan dan reputasi',
+        'pembayaran': 'mengakses dompet dan pembayaran',
+        'pesan': 'mengirim pesan langsung',
+        'chat': 'mengirim pesan langsung',
+        'direct_message': 'mengirim pesan langsung',
+        'proyek_saya': 'mengakses proyek',
+        'agenda': 'mengakses agenda',
+        'explore': 'melihat rekomendasi peluang kerja',
+        'kapasitas_jadwal': 'mengatur kapasitas & jadwal kerja',
+        'tender_kolaborasi': 'mengakses tender dan vendor',
+        'mitra_komunitas': 'mengakses mitra komunitas',
+        'karya_siswa': 'mengakses portofolio siswa',
+        'laporan': 'mengakses laporan',
+        'monitoring_evaluasi': 'mengakses monitoring evaluasi',
+        'dokumen_instansi': 'mengakses dokumen instansi',
+      };
+      if (guestBlockedRoutes.containsKey(route)) {
+        AuthGuardDialog.show(
+          context,
+          actionName: guestBlockedRoutes[route]!,
+        );
+        return;
+      }
+    }
+
     if (!widget.user.isAdmin) {
       if (route == 'marketplace' && !SystemSettingsService.isMarketplaceEnabled) {
         AppSweetAlert.warning(
@@ -481,7 +537,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
       case 'tender_kolaborasi':
       case 'tenders':
       case 'pengadaan_vendor':
-        destination = (_isSchool || _isCompany)
+        destination = (_isSchool || _isCompany || _isGovernment)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'tenders',
@@ -491,7 +547,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'mitra_komunitas':
       case 'partners':
-        destination = (_isSchool || _isCompany)
+        destination = (_isSchool || _isCompany || _isGovernment)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'partners',
@@ -501,7 +557,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'laporan':
       case 'reports':
-        destination = (_isSchool || _isCompany)
+        destination = (_isSchool || _isCompany || _isGovernment)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'reports',
@@ -511,7 +567,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'realisasi_anggaran':
       case 'budgets':
-        destination = (_isSchool || _isCompany)
+        destination = (_isSchool || _isCompany || _isGovernment)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'budgets',
@@ -521,7 +577,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'monitoring_evaluasi':
       case 'monitoring':
-        destination = (_isSchool || _isCompany)
+        destination = (_isSchool || _isCompany || _isGovernment)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'monitoring',
@@ -531,7 +587,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'dokumen_instansi':
       case 'documents':
-        destination = (_isSchool || _isCompany)
+        destination = (_isSchool || _isCompany || _isGovernment)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'documents',
@@ -541,7 +597,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'pengumuman_publik':
       case 'announcements':
-        destination = (_isSchool || _isCompany)
+        destination = (_isSchool || _isCompany || _isGovernment)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'announcements',
@@ -719,18 +775,32 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   }
 
   Widget _buildUpgradePromoCard(bool isDark) {
-    final isCreator = widget.user.role == 'creator';
+    final isGov = _isGovernment;
+    final isSchool = _isSchool;
     final isCorporate = widget.user.role == 'corporate' ||
         widget.user.role == 'company' ||
         _isCompany;
-    final promoTitle = isCorporate
-        ? 'Upgrade Akun Corporate'
-        : (isCreator ? 'Upgrade Akun Kreator' : 'Upgrade Plan & Paket');
-    final promoDesc = isCorporate
-        ? 'Tingkatkan peluang & fitur premium untuk corporate.'
-        : (isCreator
-            ? 'Tingkatkan peluang & fitur premium untuk kreator.'
-            : 'Tingkatkan peluang & fitur premium akun Anda.');
+    final isCreator = widget.user.role == 'creator' || _isCreatorUser;
+
+    final String promoTitle;
+    final String promoDesc;
+    if (isGov) {
+      promoTitle = 'Upgrade Akun Pemerintah';
+      promoDesc = 'Tingkatkan peluang & fitur premium untuk instansi pemerintah.';
+    } else if (isSchool) {
+      promoTitle = 'Upgrade Akun Institusi';
+      promoDesc = 'Tingkatkan peluang & fitur premium untuk institusi sekolah.';
+    } else if (isCorporate) {
+      promoTitle = 'Upgrade Akun Corporate';
+      promoDesc = 'Tingkatkan peluang & fitur premium untuk corporate.';
+    } else if (isCreator) {
+      promoTitle = 'Upgrade Akun Kreator';
+      promoDesc = 'Tingkatkan peluang & fitur premium untuk kreator.';
+    } else {
+      promoTitle = 'Upgrade Akun';
+      promoDesc = 'Tingkatkan peluang & fitur premium akun Anda.';
+    }
+
     final accentColor = SubRoleThemeEngine.getAccentColor(
       widget.user.role,
       widget.user.subRole,
@@ -779,7 +849,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => UpgradePlanModal.show(context),
+                    onPressed: () => UpgradePlanModal.show(context, user: widget.user),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: accentColor,
@@ -804,6 +874,330 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         ),
         const SizedBox(height: 12),
       ],
+    );
+  }
+
+  Widget _buildBottomUserCard(bool isDark, bool collapsed) {
+    if (widget.user.isGuest) {
+      if (collapsed) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          alignment: Alignment.center,
+          child: Tooltip(
+            message: 'Masuk / Daftar Akun',
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => context.go(AppRoutes.login),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.login_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      return Container(
+        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1C2B) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : const Color(0xFFE2E8F0),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.account_circle_outlined,
+                    size: 16,
+                    color: Color(0xFF6366F1),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Akses Akun',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF0F172A),
+                        ),
+                      ),
+                      Text(
+                        'Masuk atau daftar baru',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: isDark
+                              ? Colors.white60
+                              : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => context.go(AppRoutes.login),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(
+                                0xFF6366F1,
+                              ).withValues(alpha: 0.3),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        alignment: Alignment.center,
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.login_rounded,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                            SizedBox(width: 5),
+                            Text(
+                              'Masuk',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => context.go(AppRoutes.register),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 7.5),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.06)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.12)
+                                : const Color(0xFFCBD5E1),
+                            width: 1,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.person_add_alt_1_rounded,
+                              size: 14,
+                              color: isDark
+                                  ? Colors.white70
+                                  : const Color(0xFF334155),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              'Daftar',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF334155),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: EdgeInsets.all(collapsed ? 10 : 16),
+      child: collapsed
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Tooltip(
+                  message:
+                      '${widget.user.name} (@${widget.user.username})',
+                  child: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: isDark
+                        ? const Color(0xFF2D2A3E)
+                        : Colors.grey.shade200,
+                    backgroundImage:
+                        widget.user.avatarUrl != null &&
+                                widget.user.avatarUrl!.isNotEmpty
+                            ? NetworkImage(
+                                ApiService.resolveAssetUrl(
+                                  widget.user.avatarUrl!,
+                                ),
+                              )
+                            : const AssetImage('assets/brandlogo.png')
+                                as ImageProvider,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Tooltip(
+                  message: 'Keluar',
+                  child: InkWell(
+                    onTap: _showLogoutDialog,
+                    borderRadius: BorderRadius.circular(8),
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(
+                        Icons.logout_rounded,
+                        color: Colors.redAccent,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: isDark
+                      ? const Color(0xFF2D2A3E)
+                      : Colors.grey.shade200,
+                  backgroundImage:
+                      widget.user.avatarUrl != null &&
+                              widget.user.avatarUrl!.isNotEmpty
+                          ? NetworkImage(
+                              ApiService.resolveAssetUrl(
+                                widget.user.avatarUrl!,
+                              ),
+                            )
+                          : const AssetImage('assets/brandlogo.png')
+                                as ImageProvider,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.user.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        '@${widget.user.username}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.logout_rounded,
+                    color: Colors.redAccent,
+                    size: 20,
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: _showLogoutDialog,
+                ),
+              ],
+            ),
     );
   }
 
@@ -835,9 +1229,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         CreatorSidebarMenus.showKolaborasiInLainnya(
           widget.user.subRole,
         );
-    final showUpgradePromo = CreatorSidebarMenus.showPaymentFeature(
-      widget.user.subRole,
-    );
 
     final layoutScaffold = Scaffold(
       body: Row(
@@ -1174,6 +1565,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
+                          if (!collapsed) _buildUpgradePromoCard(isDark),
                         ] else if (_isGovernment) ...[
                           if (!collapsed) ...[
                             const SizedBox(height: 18),
@@ -1303,6 +1695,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
+                          if (!collapsed) _buildUpgradePromoCard(isDark),
                         ] else if (_isCompany) ...[
                           if (!collapsed) ...[
                             const SizedBox(height: 18),
@@ -1474,7 +1867,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
-                          if (!collapsed && showUpgradePromo) _buildUpgradePromoCard(isDark),
+                          if (!collapsed) _buildUpgradePromoCard(isDark),
                         ],
                       ],
                     ),
@@ -1490,110 +1883,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                         ? const Color(0xFF2D2A3E)
                         : Colors.grey.shade200,
                   ),
-                  Container(
-                    padding: EdgeInsets.all(collapsed ? 10 : 16),
-                    child: collapsed
-                        ? Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Tooltip(
-                                message:
-                                    '${widget.user.name} (@${widget.user.username})',
-                                child: CircleAvatar(
-                                  radius: 16,
-                                  backgroundColor: isDark
-                                      ? const Color(0xFF2D2A3E)
-                                      : Colors.grey.shade200,
-                                  backgroundImage:
-                                      widget.user.avatarUrl != null &&
-                                          widget.user.avatarUrl!.isNotEmpty
-                                      ? NetworkImage(
-                                          ApiService.resolveAssetUrl(
-                                            widget.user.avatarUrl!,
-                                          ),
-                                        )
-                                      : const AssetImage('assets/brandlogo.png')
-                                            as ImageProvider,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Tooltip(
-                                message: 'Keluar',
-                                child: InkWell(
-                                  onTap: _showLogoutDialog,
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(4),
-                                    child: Icon(
-                                      Icons.logout_rounded,
-                                      color: Colors.redAccent,
-                                      size: 18,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        : Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 18,
-                                backgroundColor: isDark
-                                    ? const Color(0xFF2D2A3E)
-                                    : Colors.grey.shade200,
-                                backgroundImage:
-                                    widget.user.avatarUrl != null &&
-                                        widget.user.avatarUrl!.isNotEmpty
-                                    ? NetworkImage(
-                                        ApiService.resolveAssetUrl(
-                                          widget.user.avatarUrl!,
-                                        ),
-                                      )
-                                    : const AssetImage('assets/brandlogo.png')
-                                          as ImageProvider,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      widget.user.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    Text(
-                                      '@${widget.user.username}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: isDark
-                                            ? Colors.grey.shade400
-                                            : Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.logout_rounded,
-                                  color: Colors.redAccent,
-                                  size: 20,
-                                ),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                onPressed: _showLogoutDialog,
-                              ),
-                            ],
-                          ),
-                  ),
+                  _buildBottomUserCard(isDark, collapsed),
                 ],
               ),
             ),

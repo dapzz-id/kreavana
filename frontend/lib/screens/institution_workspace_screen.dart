@@ -5,6 +5,7 @@ import '../models/user_model.dart';
 import '../services/api_service.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import '../widgets/app_sweet_alert.dart';
+import '../widgets/official_document_viewer_dialog.dart';
 
 enum _FieldKind { text, number, date, url }
 
@@ -55,9 +56,22 @@ class _InstitutionWorkspaceScreenState
     return ['corporate', 'company', 'business', 'perusahaan', 'bisnis'].contains(sub);
   }
 
+  bool get _isGovernment {
+    final sub = widget.user.subRole?.toLowerCase() ?? '';
+    return [
+      'government',
+      'pemerintah',
+      'instansi',
+      'dinas',
+      'bumn',
+      'kementerian',
+    ].contains(sub);
+  }
+
   static const Map<String, String> _titles = {
     'tenders': 'Tender & Kolaborasi',
     'partners': 'Mitra & Komunitas',
+    'facilities': 'Fasilitas & Venue Daerah',
     'reports': 'Laporan Kegiatan',
     'budgets': 'Realisasi Anggaran',
     'monitoring': 'Monitoring & Evaluasi',
@@ -69,6 +83,7 @@ class _InstitutionWorkspaceScreenState
   static const Map<String, String> _actions = {
     'tenders': 'Buat Tender',
     'partners': 'Tambah Mitra',
+    'facilities': 'Tambah Fasilitas',
     'reports': 'Buat Laporan',
     'budgets': 'Tambah Anggaran',
     'monitoring': 'Tambah Program',
@@ -80,6 +95,7 @@ class _InstitutionWorkspaceScreenState
   static const Map<String, IconData> _icons = {
     'tenders': Icons.handshake_outlined,
     'partners': Icons.groups_outlined,
+    'facilities': Icons.storefront_outlined,
     'reports': Icons.summarize_outlined,
     'budgets': Icons.account_balance_wallet_outlined,
     'monitoring': Icons.monitor_heart_outlined,
@@ -108,10 +124,23 @@ class _InstitutionWorkspaceScreenState
       _WorkspaceField('contact', 'Kontak Person / Email', hint: 'Email atau nomor telepon resmi'),
       _WorkspaceField('website', 'Website / Portofolio', kind: _FieldKind.url, hint: 'https://...'),
     ],
+    'facilities': [
+      _WorkspaceField('category', 'Kategori Fasilitas & Venue', hint: 'Gedung Pertunjukan, Studio Multimedia, Amphiteater, Galeri'),
+      _WorkspaceField('capacity', 'Kapasitas Ruang / Fasilitas', hint: '850 Kursi Penonton / 40 Workstation Editing'),
+      _WorkspaceField('location', 'Lokasi & Alamat Aset Daerah', hint: 'Jl. Pemuda No. 12, Kompleks Budaya'),
+      _WorkspaceField('facilities', 'Sarana Pendukung', hint: 'Tata Suara Line Array, Lighting Panggung DMX, WiFi'),
+      _WorkspaceField('terms', 'Ketentuan Peminjaman Kreator', hint: 'Pengajuan H-14, bebas retribusi kegiatan non-komersial'),
+      _WorkspaceField('manager', 'Unit Pengelola Aset', hint: 'UPT Pengelolaan Sarana Kebudayaan'),
+    ],
     'reports': [
       _WorkspaceField('period', 'Periode Audit / Laporan', hint: 'Contoh: Triwulan I 2026 / TA 2026'),
-      _WorkspaceField('category', 'Kategori Audit', hint: 'Audit Mutu Vendor, Kepatuhan Pajak, Efisiensi Anggaran'),
-      _WorkspaceField('result', 'Hasil Utama & Temuan Audit', hint: 'Ringkasan evaluasi, temuan kepatuhan, dan persentase capaian'),
+      _WorkspaceField('category', 'Kategori Program / Audit', hint: 'Evaluasi Dampak Festival, Rebranding UMKM, Audit Mutu'),
+      _WorkspaceField('beneficiaries', 'Penerima Manfaat / Warga', hint: 'Contoh: 14.500 Pengunjung & 92 Sanggar Seni'),
+      _WorkspaceField('economic_impact', 'Dampak Ekonomi / Omset', hint: 'Contoh: Rp 1,45 Miliar Perputaran Omset'),
+      _WorkspaceField('satisfaction_rate', 'Indeks Kepuasan Publik', hint: 'Contoh: 98.4% Indeks Kepuasan Masyarakat'),
+      _WorkspaceField('testimonial_author', 'Nama Tokoh / Mitra Testimoni', hint: 'Contoh: Ki Suryo Sasongko (Ketua Sanggar Swara Mahardika)'),
+      _WorkspaceField('testimonial_quote', 'Kutipan Testimoni Mitra', hint: 'Contoh: Kolaborasi lewat Kreavana memotong jalur birokrasi...'),
+      _WorkspaceField('result', 'Hasil Utama & Temuan Evaluasi', hint: 'Ringkasan capaian program dan dampak ke ekosistem'),
     ],
     'budgets': [
       _WorkspaceField('period', 'Tahun Anggaran / Periode', hint: 'Contoh: 2026 / Semester I'),
@@ -192,6 +221,7 @@ class _InstitutionWorkspaceScreenState
   static const Map<String, List<String>> _statuses = {
     'tenders': ['open', 'in_progress', 'completed', 'closed'],
     'partners': ['active', 'inactive'],
+    'facilities': ['open', 'active', 'closed'],
     'reports': ['published', 'draft'],
     'budgets': ['in_progress', 'completed'],
     'monitoring': ['in_progress', 'completed', 'closed'],
@@ -201,6 +231,26 @@ class _InstitutionWorkspaceScreenState
   };
 
   String get _title {
+    if (_isGovernment) {
+      switch (widget.resourceType) {
+        case 'tenders':
+          return 'Pengadaan LPSE & Tender Terbuka';
+        case 'partners':
+          return 'Rekanan Kreator & Sanggar Daerah';
+        case 'facilities':
+          return 'Fasilitas & Venue Kreatif Daerah';
+        case 'documents':
+          return 'Dokumen Resmi, SK & BAST';
+        case 'budgets':
+          return 'Alokasi Pagu & DIPA APBD';
+        case 'reports':
+          return 'Laporan Dampak Publik & Kisah Sukses';
+        case 'monitoring':
+          return 'Monitoring & Evaluasi (Monev)';
+        case 'announcements':
+          return 'Siaran Pers & Pengumuman Publik';
+      }
+    }
     if (_isCorporate) {
       switch (widget.resourceType) {
         case 'tenders':
@@ -219,12 +269,34 @@ class _InstitutionWorkspaceScreenState
   }
 
   String get _action {
+    if (_isGovernment) {
+      switch (widget.resourceType) {
+        case 'tenders':
+          return 'Buat Tender LPSE';
+        case 'partners':
+          return 'Daftarkan Rekanan';
+        case 'documents':
+          return 'Unggah Berkas SK/BAST';
+        case 'budgets':
+          return 'Entri Anggaran APBD';
+        case 'facilities':
+          return 'Daftarkan Sarana / Venue';
+        case 'reports':
+          return 'Terbitkan Laporan Dampak';
+        case 'monitoring':
+          return 'Tambah Agenda Monev';
+        case 'announcements':
+          return 'Publikasi Siaran Pers';
+      }
+    }
     if (_isCorporate) {
       switch (widget.resourceType) {
         case 'tenders':
           return 'Buat Tender RFP';
         case 'partners':
           return 'Tambah Mitra Vendor';
+        case 'facilities':
+          return 'Tambah Fasilitas';
         case 'documents':
           return 'Unggah PO / MoU';
         case 'budgets':
@@ -237,6 +309,26 @@ class _InstitutionWorkspaceScreenState
   }
 
   String get _subtitle {
+    if (_isGovernment) {
+      switch (widget.resourceType) {
+        case 'tenders':
+          return 'Portal transparansi pengadaan barang & jasa kreatif pemerintah berbasis LPSE dan sistem seleksi terverifikasi.';
+        case 'partners':
+          return 'Direktori rekanan komunitas, sanggar seni budaya, dan talenta kreatif daerah terdaftar di dinas.';
+        case 'facilities':
+          return 'Katalog sarana, gedung pertunjukan, studio, dan aset daerah yang dapat diakses oleh kreator dan komunitas.';
+        case 'documents':
+          return 'Arsip resmi Surat Perintah Kerja (SPK), Berita Acara Serah Terima (BAST), SK Pejabat Pembuat Komitmen, dan MoU.';
+        case 'budgets':
+          return 'Transparansi realisasi anggaran DIPA/APBD sektor ekonomi kreatif dan belanja konten publik.';
+        case 'reports':
+          return 'Publikasi hasil program, evaluasi dampak ekonomi, capaian penerima manfaat, dan kisah keberhasilan mitra daerah.';
+        case 'monitoring':
+          return 'Pengawasan indikator output dan outcome program sosialisasi dan pemberdayaan kreatif masyarakat.';
+        case 'announcements':
+          return 'Pusat publikasi warta kedinasan, siaran pers, dan maklumat layanan resmi instansi.';
+      }
+    }
     if (_isCorporate) {
       switch (widget.resourceType) {
         case 'tenders':
@@ -434,28 +526,48 @@ class _InstitutionWorkspaceScreenState
     }
   }
 
-  Future<void> _launchUrl(String? urlStr) async {
+  void _openOfficialDocument(Map<String, dynamic> record) {
+    OfficialDocumentViewerDialog.show(
+      context,
+      document: record,
+      isGovernment: _isGovernment,
+    );
+  }
+
+  Future<void> _launchUrl(String? urlStr, {Map<String, dynamic>? record}) async {
     if (urlStr == null || urlStr.trim().isEmpty) return;
+    final trimmed = urlStr.trim();
+
+    // Intercept internal/mock docs or docs.kreavana.id to show authentic official viewer
+    if (trimmed.contains('docs.kreavana.id') || trimmed.endsWith('.pdf')) {
+      if (mounted) {
+        _openOfficialDocument(record ?? {
+          'title': 'Dokumen Resmi',
+          'description': 'Dokumen elektronik resmi terverifikasi instansi.',
+          'metadata': {'url': trimmed, 'doc_number': '027/SPK-KREAVANA/DISPAREKRAF/2026'},
+        });
+      }
+      return;
+    }
+
     try {
-      final uri = Uri.parse(urlStr.trim());
+      final uri = Uri.parse(trimmed);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
         if (mounted) {
-          AppSweetAlert.info(
-            context,
-            'Tautan: $urlStr',
-            title: 'Tautan Dokumen',
-          );
+          _openOfficialDocument(record ?? {
+            'title': 'Dokumen Resmi',
+            'metadata': {'url': trimmed},
+          });
         }
       }
     } catch (_) {
       if (mounted) {
-        AppSweetAlert.info(
-          context,
-          'Tautan: $urlStr',
-          title: 'Tautan Dokumen',
-        );
+        _openOfficialDocument(record ?? {
+          'title': 'Dokumen Resmi',
+          'metadata': {'url': trimmed},
+        });
       }
     }
   }
@@ -505,14 +617,16 @@ class _InstitutionWorkspaceScreenState
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(color: Colors.white24),
                               ),
-                              child: const Row(
+                              child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.verified_user_rounded, color: Colors.amberAccent, size: 14),
-                                  SizedBox(width: 6),
+                                  const Icon(Icons.verified_user_rounded, color: Colors.amberAccent, size: 14),
+                                  const SizedBox(width: 6),
                                   Text(
-                                    'Enterprise B2B Governance',
-                                    style: TextStyle(
+                                    _isGovernment
+                                        ? 'Tata Kelola Kedinasan & LPSE'
+                                        : 'Enterprise B2B Governance',
+                                    style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
@@ -1220,12 +1334,11 @@ class _InstitutionWorkspaceScreenState
                   ],
                 ),
               ),
-              if ((meta['url'] ?? '').isNotEmpty)
-                TextButton.icon(
-                  onPressed: () => _launchUrl(meta['url']),
-                  icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                  label: const Text('Buka Dokumen Resmi'),
-                ),
+              TextButton.icon(
+                onPressed: () => _openOfficialDocument(record),
+                icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                label: const Text('Buka Dokumen Resmi'),
+              ),
             ],
           ),
         ],
@@ -1489,7 +1602,7 @@ class _InstitutionWorkspaceScreenState
   }
 
   Widget _buildRecordCard(Map<String, dynamic> record, bool isDark) {
-    if (_isCorporate) {
+    if (_isCorporate || _isGovernment) {
       switch (widget.resourceType) {
         case 'tenders':
           return _buildTenderCard(record, isDark);

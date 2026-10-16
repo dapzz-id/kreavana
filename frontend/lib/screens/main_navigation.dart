@@ -544,18 +544,32 @@ class _MainNavigationState extends State<MainNavigation> {
 
   Widget _buildUpgradePromoCard(bool isDark, {bool isCollapsed = false}) {
     if (isCollapsed) return const SizedBox.shrink();
-    final isCreator = _currentUser.role == 'creator';
+    final isGov = _isGovernment;
+    final isSchool = _isSchool;
     final isCorporate = _currentUser.role == 'corporate' ||
         _currentUser.role == 'company' ||
         _isCompany;
-    final promoTitle = isCorporate
-        ? 'Upgrade Akun Corporate'
-        : (isCreator ? 'Upgrade Akun Kreator' : 'Upgrade Plan & Paket');
-    final promoDesc = isCorporate
-        ? 'Tingkatkan peluang & fitur premium untuk corporate.'
-        : (isCreator
-            ? 'Tingkatkan peluang & fitur premium untuk kreator.'
-            : 'Tingkatkan peluang & fitur premium akun Anda.');
+    final isCreator = _currentUser.role == 'creator' || _isCreatorUser;
+
+    final String promoTitle;
+    final String promoDesc;
+    if (isGov) {
+      promoTitle = 'Upgrade Akun Pemerintah';
+      promoDesc = 'Tingkatkan peluang & fitur premium untuk instansi pemerintah.';
+    } else if (isSchool) {
+      promoTitle = 'Upgrade Akun Institusi';
+      promoDesc = 'Tingkatkan peluang & fitur premium untuk institusi sekolah.';
+    } else if (isCorporate) {
+      promoTitle = 'Upgrade Akun Corporate';
+      promoDesc = 'Tingkatkan peluang & fitur premium untuk corporate.';
+    } else if (isCreator) {
+      promoTitle = 'Upgrade Akun Kreator';
+      promoDesc = 'Tingkatkan peluang & fitur premium untuk kreator.';
+    } else {
+      promoTitle = 'Upgrade Akun';
+      promoDesc = 'Tingkatkan peluang & fitur premium akun Anda.';
+    }
+
     final accentColor = SubRoleThemeEngine.getAccentColor(
       _currentUser.role,
       _currentUser.subRole,
@@ -604,7 +618,7 @@ class _MainNavigationState extends State<MainNavigation> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => UpgradePlanModal.show(context),
+                    onPressed: () => UpgradePlanModal.show(context, user: _currentUser),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: accentColor,
@@ -715,7 +729,7 @@ class _MainNavigationState extends State<MainNavigation> {
         isCollapsed: isCollapsed,
         isMobileDrawer: isMobileDrawer,
       ),
-      if (!isMobileDrawer && CreatorSidebarMenus.showPaymentFeature(_currentUser.subRole))
+      if (!isMobileDrawer)
         _buildUpgradePromoCard(isDark, isCollapsed: isCollapsed),
     ];
   }
@@ -892,7 +906,7 @@ class _MainNavigationState extends State<MainNavigation> {
         isCollapsed: isCollapsed,
         isMobileDrawer: isMobileDrawer,
       ),
-      if (!isMobileDrawer && CreatorSidebarMenus.showPaymentFeature(_currentUser.subRole))
+      if (!isMobileDrawer)
         _buildUpgradePromoCard(isDark, isCollapsed: isCollapsed),
     ];
   }
@@ -1303,6 +1317,8 @@ class _MainNavigationState extends State<MainNavigation> {
           isSelected: _activeGovRoute == 'tim_hak_akses',
           isMobileDrawer: isMobileDrawer,
         ),
+        if (!isMobileDrawer)
+          _buildUpgradePromoCard(isDark, isCollapsed: isCollapsed),
       ] else if (_isGovernment) ...[
         _buildSidebarLink(
           icon: Icons.campaign_outlined,
@@ -1541,6 +1557,8 @@ class _MainNavigationState extends State<MainNavigation> {
           isSelected: _activeGovRoute == 'tim_hak_akses',
           isMobileDrawer: isMobileDrawer,
         ),
+        if (!isMobileDrawer)
+          _buildUpgradePromoCard(isDark, isCollapsed: isCollapsed),
       ] else if (_isCompany) ...[
         _buildSidebarLink(
           icon: Icons.assignment_outlined,

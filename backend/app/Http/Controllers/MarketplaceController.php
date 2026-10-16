@@ -22,7 +22,7 @@ class MarketplaceController extends Controller
     public function index(Request $request)
     {
         $query = MarketplaceItem::active()
-            ->with('user:id,name,username,avatar_url')
+            ->with(['user:id,name,username,avatar_url', 'media'])
             ->category($request->category)
             ->search($request->search);
 
@@ -47,7 +47,7 @@ class MarketplaceController extends Controller
     {
         $items = MarketplaceItem::active()
             ->featured()
-            ->with('user:id,name,username,avatar_url')
+            ->with(['user:id,name,username,avatar_url', 'media'])
             ->orderByDesc('rating')
             ->limit(6)
             ->get();
