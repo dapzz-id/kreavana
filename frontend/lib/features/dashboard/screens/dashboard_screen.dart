@@ -22,7 +22,6 @@ import '../../../screens/laporan_screen.dart';
 import '../../../screens/peluang_proyek_screen.dart';
 import '../../../services/badge_service.dart';
 import '../../../widgets/ai_recommendation_card.dart';
-import '../../../widgets/app_empty_state.dart';
 import '../../../widgets/opportunity_detail_sheet.dart';
 import '../../../models/opportunity_model.dart';
 import '../../../services/profile_completeness_service.dart';
@@ -235,13 +234,48 @@ class _DashboardScreenState extends State<DashboardScreen>
       case 'Semua Proyek':
       case 'Semua Kebutuhan & Proyek':
         if (widget.user.isGuest) {
-          AuthGuardDialog.show(context, actionName: 'melihat daftar proyek Anda');
+          AuthGuardDialog.show(context, actionName: 'melihat daftar kebutuhan & proyek');
           return;
         }
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => ProyekSayaScreen(user: widget.user),
+            builder: (_) => ProyekSayaScreen(
+              user: widget.user,
+              onUserUpdated: widget.onUserUpdated,
+            ),
+          ),
+        );
+        break;
+      case 'Lihat Semua Proposal':
+      case 'Proposal Masuk':
+        if (widget.user.isGuest) {
+          AuthGuardDialog.show(context, actionName: 'melihat daftar proposal masuk');
+          return;
+        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProyekSayaScreen(
+              user: widget.user,
+              onUserUpdated: widget.onUserUpdated,
+            ),
+          ),
+        );
+        break;
+      case 'Lihat Semua Proyek Berjalan':
+      case 'Proyek Berjalan':
+        if (widget.user.isGuest) {
+          AuthGuardDialog.show(context, actionName: 'melihat proyek berjalan');
+          return;
+        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProyekSayaScreen(
+              user: widget.user,
+              onUserUpdated: widget.onUserUpdated,
+            ),
           ),
         );
         break;
@@ -259,6 +293,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         break;
       case 'Lihat Semua Karya':
       case 'Buka Semua Aset':
+        if (widget.user.isGuest) {
+          AuthGuardDialog.show(context, actionName: 'melihat portofolio & karya');
+          return;
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -266,6 +304,30 @@ class _DashboardScreenState extends State<DashboardScreen>
               user: widget.user,
               onUserUpdated: widget.onUserUpdated,
             ),
+          ),
+        );
+        break;
+      case 'Lihat Semua Rekomendasi':
+        if (widget.user.isGuest) {
+          AuthGuardDialog.show(context, actionName: 'melihat semua rekomendasi');
+          return;
+        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ExploreScreen(user: widget.user),
+          ),
+        );
+        break;
+      case 'Lihat Semua Top Kreator':
+        if (widget.user.isGuest) {
+          AuthGuardDialog.show(context, actionName: 'melihat semua top kreator');
+          return;
+        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ExploreScreen(user: widget.user),
           ),
         );
         break;
@@ -764,7 +826,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       children: [
         _SectionHeader(
           title: _isCreator ? 'Rekomendasi Untuk Anda' : 'Kreator Rekomendasi',
-          onViewAll: () => _navigateTo(_isCreator ? 'Cari Campaign' : 'Cari Kreator'),
+          onViewAll: () => _navigateTo('Lihat Semua Rekomendasi'),
         ),
         const SizedBox(height: 12),
         AiRecommendationCard(
@@ -1286,13 +1348,16 @@ class _DashboardScreenState extends State<DashboardScreen>
       onViewAll: () => _navigateTo('Lihat Semua Proyek'),
       isDark: isDark,
       child: _projectNeeds.isEmpty
-          ? AppEmptyState(
-              icon: Icons.folder_open_outlined,
-              title: _isCreator ? 'Belum ada proyek' : 'Belum ada kebutuhan',
+          ? _DashboardCardEmptyState(
+              icon: Icons.folder_open_rounded,
+              badgeLabel: _isCreator ? '✦ PROYEK AKTIF' : '✦ KEBUTUHAN PROYEK',
+              title: _isCreator ? 'Belum Ada Proyek' : 'Belum Ada Kebutuhan',
               subtitle: _isCreator
-                  ? 'Aktivitas proyek Anda akan muncul di sini'
+                  ? 'Aktivitas proyek dan order klien akan tampil di sini'
                   : 'Kebutuhan proyek Anda akan muncul di sini',
-              iconSize: 48,
+              actionLabel: _isCreator ? 'Cari Peluang' : 'Buat Kebutuhan',
+              onAction: () => _navigateTo(_isCreator ? 'Cari Peluang' : 'Buat Kebutuhan'),
+              isDark: isDark,
             )
           : Column(
               children: _projectNeeds
@@ -1383,11 +1448,14 @@ class _DashboardScreenState extends State<DashboardScreen>
       viewAllLabel: 'Kalender',
       isDark: isDark,
       child: _agenda.isEmpty
-          ? AppEmptyState(
-              icon: Icons.calendar_today_outlined,
-              title: 'Belum ada agenda',
+          ? _DashboardCardEmptyState(
+              icon: Icons.calendar_today_rounded,
+              badgeLabel: '✦ JADWAL & AGENDA',
+              title: 'Belum Ada Agenda',
               subtitle: 'Jadwal Anda masih kosong',
-              iconSize: 48,
+              actionLabel: 'Atur Jadwal',
+              onAction: () => _navigateTo('Atur Jadwal'),
+              isDark: isDark,
             )
           : Column(
               children: _agenda
@@ -1428,7 +1496,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               children: [
                 Text(
                   item['date']?.toString() ?? '',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: AppTheme.primaryPurple,
@@ -1436,7 +1504,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
                 Text(
                   item['month']?.toString() ?? '',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 8,
                     color: AppTheme.primaryPurple,
                     fontWeight: FontWeight.w500,
@@ -1498,9 +1566,14 @@ class _DashboardScreenState extends State<DashboardScreen>
       onViewAll: () => _navigateTo('Lihat Semua Karya'),
       isDark: isDark,
       child: assets.isEmpty
-          ? const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Center(child: Text('Belum ada karya atau aset proyek.')),
+          ? _DashboardCardEmptyState(
+              icon: Icons.collections_bookmark_rounded,
+              badgeLabel: '✦ PORTOFOLIO KREATOR',
+              title: 'Belum Ada Karya',
+              subtitle: 'Belum ada karya atau aset proyek.',
+              actionLabel: 'Tambah Karya',
+              onAction: () => _navigateTo('Tambah Karya'),
+              isDark: isDark,
             )
           : GridView.builder(
               shrinkWrap: true,
@@ -1570,22 +1643,17 @@ class _DashboardScreenState extends State<DashboardScreen>
     return _SectionCard(
       title: 'Proposal Masuk',
       viewAllLabel: 'Lihat Semua',
-      onViewAll: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ProyekSayaScreen(
-            user: widget.user,
-            onUserUpdated: widget.onUserUpdated,
-          ),
-        ),
-      ),
+      onViewAll: () => _navigateTo('Lihat Semua Proposal'),
       isDark: isDark,
       child: _incomingProposals.isEmpty
-          ? AppEmptyState(
-              icon: Icons.mark_email_unread_outlined,
-              title: 'Belum ada proposal',
+          ? _DashboardCardEmptyState(
+              icon: Icons.mark_email_unread_rounded,
+              badgeLabel: '✦ PENAWARAN KREATOR',
+              title: 'Belum Ada Proposal',
               subtitle: 'Penawaran dari kreator akan muncul di sini',
-              iconSize: 48,
+              actionLabel: 'Cari Kreator',
+              onAction: () => _navigateTo('Cari Kreator'),
+              isDark: isDark,
             )
           : Column(
               children: _incomingProposals
@@ -1695,22 +1763,17 @@ class _DashboardScreenState extends State<DashboardScreen>
     return _SectionCard(
       title: 'Proyek Berjalan',
       viewAllLabel: 'Lihat Semua',
-      onViewAll: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ProyekSayaScreen(
-            user: widget.user,
-            onUserUpdated: widget.onUserUpdated,
-          ),
-        ),
-      ),
+      onViewAll: () => _navigateTo('Lihat Semua Proyek Berjalan'),
       isDark: isDark,
       child: _runningContracts.isEmpty
-          ? AppEmptyState(
-              icon: Icons.handshake_outlined,
-              title: 'Belum ada proyek aktif',
+          ? _DashboardCardEmptyState(
+              icon: Icons.handshake_rounded,
+              badgeLabel: '✦ KONTRAK AKTIF',
+              title: 'Belum Ada Proyek Aktif',
               subtitle: 'Proyek berjalan bersama kreator akan tampil di sini',
-              iconSize: 48,
+              actionLabel: 'Cari Kreator',
+              onAction: () => _navigateTo('Cari Kreator'),
+              isDark: isDark,
             )
           : Column(
               children: _runningContracts
@@ -1720,7 +1783,6 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
     );
   }
-
   Widget _buildRunningContractItem(Map<String, dynamic> c, bool isDark) {
     final title = c['title']?.toString() ?? 'Proyek Kontrak';
     final creatorName = c['creator_name']?.toString() ?? 'Kreator';
@@ -2652,7 +2714,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ],
               ),
               InkWell(
-                onTap: () => _navigateTo('Cari Kreator'),
+                onTap: () => _navigateTo('Lihat Semua Top Kreator'),
                 borderRadius: BorderRadius.circular(6),
                 child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -3810,6 +3872,267 @@ class _SectionCard extends StatelessWidget {
           const SizedBox(height: 10),
           child,
         ],
+      ),
+    );
+  }
+}
+
+class _DashboardCardEmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String? badgeLabel;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  final bool isDark;
+
+  const _DashboardCardEmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.badgeLabel,
+    this.actionLabel,
+    this.onAction,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = AppTheme.primaryPurple;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 22),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // ── Cool Illustrated Graphic with Kreavana Logo & Themed Emblem ──
+            SizedBox(
+              width: 86,
+              height: 86,
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  // Ambient colored glow
+                  Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: accent.withValues(alpha: isDark ? 0.35 : 0.20),
+                          blurRadius: 26,
+                          spreadRadius: 2,
+                        ),
+                        BoxShadow(
+                          color: AppTheme.accentPink.withValues(alpha: isDark ? 0.25 : 0.15),
+                          blurRadius: 20,
+                          offset: const Offset(6, -4),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Outer concentric glass ring
+                  Container(
+                    width: 78,
+                    height: 78,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: accent.withValues(alpha: isDark ? 0.28 : 0.20),
+                        width: 1.2,
+                      ),
+                      gradient: RadialGradient(
+                        colors: [
+                          accent.withValues(alpha: isDark ? 0.15 : 0.08),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Main glassmorphic circle with Kreavana Brand Logo
+                  Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isDark ? const Color(0xFF1E1B38) : Colors.white,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: isDark ? 0.22 : 0.8),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(11),
+                    child: Image.asset(
+                      'assets/brandlogo.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  // Floating category icon badge in the corner
+                  Positioned(
+                    right: 2,
+                    bottom: 2,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [accent, AppTheme.accentPink],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF1E1B38) : Colors.white,
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: accent.withValues(alpha: 0.45),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Icon(
+                          icon,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Floating mini sparkle on top-left
+                  Positioned(
+                    left: 4,
+                    top: 4,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentPink.withValues(alpha: 0.25),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.auto_awesome,
+                        size: 11,
+                        color: AppTheme.accentPink,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // ── Category Tag Pill ──
+            if (badgeLabel != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: isDark ? 0.16 : 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: accent.withValues(alpha: isDark ? 0.30 : 0.20),
+                    width: 0.8,
+                  ),
+                ),
+                child: Text(
+                  badgeLabel!,
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                    color: isDark ? AppTheme.accentPink : AppTheme.primaryPurple,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+
+            // ── Title ──
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+
+            // ── Subtitle ──
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 240),
+              child: Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  height: 1.45,
+                  color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                ),
+              ),
+            ),
+
+            // ── Action CTA Button (Makes it feel interactive and not sepi) ──
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 14),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onAction,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          accent.withValues(alpha: isDark ? 0.24 : 0.12),
+                          AppTheme.accentPink.withValues(alpha: isDark ? 0.18 : 0.08),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: accent.withValues(alpha: isDark ? 0.45 : 0.28),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.add_circle_outline_rounded,
+                          size: 13,
+                          color: isDark ? Colors.white : AppTheme.primaryPurple,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          actionLabel!,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : AppTheme.primaryPurple,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
