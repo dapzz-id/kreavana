@@ -112,13 +112,22 @@ class JobContractSeeder extends Seeder
                 'scheduled_end_date' => Carbon::now()->subDays(3)->format('Y-m-d'),
                 'deadline' => Carbon::now()->subDays(2)->format('Y-m-d'),
             ],
+            'general' => [
+                'title' => 'Produksi Konten Kreatif Terpadu & Promosi Digital',
+                'contract_status' => ContractStatus::Active,
+                'work_status' => WorkStatus::InProgress,
+                'scheduled_start_date' => Carbon::now()->subDays(1)->format('Y-m-d'),
+                'scheduled_end_date' => Carbon::now()->addDays(5)->format('Y-m-d'),
+                'deadline' => Carbon::now()->addDays(7)->format('Y-m-d'),
+            ],
         ];
 
         foreach ($creators as $creator) {
             $subRole = $creator->sub_role instanceof \BackedEnum ? $creator->sub_role->value : $creator->sub_role;
-            if (!$subRole || !isset($contractMappings[$subRole])) continue;
+            $roleKey = $subRole ?? 'general';
+            if (!isset($contractMappings[$roleKey])) continue;
 
-            $mapping = $contractMappings[$subRole];
+            $mapping = $contractMappings[$roleKey];
             $service = CreatorService::where('creator_id', $creator->id)->first();
             $price = $service ? (float)$service->price : 2500000.00;
             $isCompletedOrActive = in_array($mapping['contract_status'], [ContractStatus::Active, ContractStatus::Completed]);
@@ -144,6 +153,53 @@ class JobContractSeeder extends Seeder
                     'client_approved' => in_array($mapping['contract_status'], [ContractStatus::Approved, ContractStatus::Active, ContractStatus::Completed]),
                 ]
             );
+
+            // If general creator, also seed a scheduled contract for Agenda / Kalender
+            if ($roleKey === 'general') {
+                JobContract::updateOrCreate(
+                    [
+                        'client_id' => $client->id,
+                        'creator_id' => $creator->id,
+                        'title' => 'Sesi Konsultasi Media & Branding Brand',
+                    ],
+                    [
+                        'creator_service_id' => $service?->id,
+                        'description' => 'Konsultasi konsep identitas visual dan agenda penjadwalan konten kreatif.',
+                        'terms' => 'Pembayaran via Escrow Kreavana.',
+                        'agreed_price' => 1800000.00,
+                        'escrow_amount' => 1800000.00,
+                        'contract_status' => ContractStatus::Approved,
+                        'work_status' => WorkStatus::Scheduled,
+                        'scheduled_start_date' => Carbon::now()->addDays(3)->format('Y-m-d'),
+                        'scheduled_end_date' => Carbon::now()->addDays(4)->format('Y-m-d'),
+                        'deadline' => Carbon::now()->addDays(5)->format('Y-m-d'),
+                        'creator_approved' => true,
+                        'client_approved' => true,
+                    ]
+                );
+
+                JobContract::updateOrCreate(
+                    [
+                        'client_id' => $client->id,
+                        'creator_id' => $creator->id,
+                        'title' => 'Kampanye Brand Activation & Visual UMKM',
+                    ],
+                    [
+                        'creator_service_id' => $service?->id,
+                        'description' => 'Kampanye terintegrasi aktivasi brand dan display aset multimedia.',
+                        'terms' => 'Pembayaran via Escrow Kreavana, selesai tepat waktu.',
+                        'agreed_price' => 3200000.00,
+                        'escrow_amount' => 3200000.00,
+                        'contract_status' => ContractStatus::Completed,
+                        'work_status' => WorkStatus::Completed,
+                        'scheduled_start_date' => Carbon::now()->subDays(12)->format('Y-m-d'),
+                        'scheduled_end_date' => Carbon::now()->subDays(3)->format('Y-m-d'),
+                        'deadline' => Carbon::now()->subDays(2)->format('Y-m-d'),
+                        'creator_approved' => true,
+                        'client_approved' => true,
+                    ]
+                );
+            }
 
             // Base history: Created
             JobStatusHistory::firstOrCreate([

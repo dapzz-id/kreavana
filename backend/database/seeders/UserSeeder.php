@@ -63,6 +63,24 @@ class UserSeeder extends Seeder
             ]
         );
 
+        // 2.8 Creator Biasa / Umum (Tanpa Sub-Role)
+        User::updateOrCreate(
+            ['email' => 'creator@kreavana.id'],
+            [
+                'name' => 'Kreavana Demo Creator',
+                'username' => 'creator_demo',
+                'password' => Hash::make('password123'),
+                'role' => RoleType::Creator,
+                'sub_role' => null,
+                'is_creator_approved' => 1,
+                'is_verified' => 1,
+                'verification_type' => 'creator',
+                'max_work_capacity' => 3,
+                'balance' => 500000.00,
+                'email_verified_at' => now(),
+            ]
+        );
+
         // 3. 11 Creators
         $creators = [
             [

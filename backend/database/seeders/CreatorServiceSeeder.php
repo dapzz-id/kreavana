@@ -47,13 +47,18 @@ class CreatorServiceSeeder extends Seeder
                 ['title' => 'Video Iklan Sinematik', 'category' => 'Videografi', 'price' => 3000000.00, 'duration' => '7 hari', 'thumbnail_url' => 'https://images.unsplash.com/photo-1518133910546-b6c2fb7d79e3?auto=format&fit=crop&w=1200&q=80'],
                 ['title' => 'Video Company Profile', 'category' => 'Videografi', 'price' => 7000000.00, 'duration' => '14 hari', 'thumbnail_url' => 'https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&w=1200&q=80'],
             ],
+            'general' => [
+                ['title' => 'Jasa Kreatif & Konten Visual Terpadu', 'category' => 'Kreatif', 'price' => 2500000.00, 'duration' => '3 hari', 'thumbnail_url' => 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&w=1200&q=80'],
+                ['title' => 'Konsultasi Branding & Desain Komersial', 'category' => 'Branding', 'price' => 4500000.00, 'duration' => '7 hari', 'thumbnail_url' => 'https://images.unsplash.com/photo-1518133910546-b6c2fb7d79e3?auto=format&fit=crop&w=1200&q=80'],
+            ],
         ];
 
         foreach ($creators as $creator) {
             $subRole = $creator->sub_role instanceof \BackedEnum ? $creator->sub_role->value : $creator->sub_role;
-            if (!$subRole || !isset($serviceData[$subRole])) continue;
+            $roleKey = $subRole ?? 'general';
+            if (!isset($serviceData[$roleKey])) continue;
 
-            $items = $serviceData[$subRole];
+            $items = $serviceData[$roleKey];
             foreach ($items as $item) {
                 CreatorService::updateOrCreate(
                     [
