@@ -442,21 +442,11 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppTheme.primaryPurple, AppTheme.deepPurple],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.auto_awesome_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+                Image.asset(
+                  'assets/brandlogo.png',
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -675,10 +665,11 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Icon(
-                              Icons.auto_awesome_rounded,
-                              size: 16,
-                              color: Colors.white,
+                          : Image.asset(
+                              'assets/brandlogo.png',
+                              width: 16,
+                              height: 16,
+                              fit: BoxFit.contain,
                             ),
                       label: Text(
                         _isLoading

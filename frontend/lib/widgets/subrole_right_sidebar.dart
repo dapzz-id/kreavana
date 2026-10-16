@@ -1210,17 +1210,11 @@ class SubRoleRightSidebar extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: accentColor,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.auto_awesome,
-                  color: Colors.white,
-                  size: 16,
-                ),
+              Image.asset(
+                'assets/brandlogo.png',
+                width: 32,
+                height: 32,
+                fit: BoxFit.contain,
               ),
               const SizedBox(width: 10),
               Text(

@@ -1206,24 +1206,28 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     PlatformFile? thumbnail,
     Uint8List? thumbnailBytes,
   ) async {
-    if (thumbnail == null || thumbnailBytes == null) {
-      return 'Pilih foto thumbnail terlebih dahulu.';
-    }
     final price =
         double.tryParse(item.value?.replaceAll(RegExp(r'[^0-9]'), '') ?? '') ??
         0;
-    final formData = FormData.fromMap({
+    final map = <String, dynamic>{
       'title': item.title,
       'description': item.subtitle,
       'category': 'creator_package',
       'package_type': widget.serviceKey,
       'price': price,
       'duration_info': '',
-      'thumbnail': MultipartFile.fromBytes(
+    };
+    if (thumbnail != null && thumbnailBytes != null) {
+      map['thumbnail'] = MultipartFile.fromBytes(
         thumbnailBytes,
         filename: thumbnail.name,
-      ),
-    });
+      );
+    } else if (item.thumbnailUrl != null && item.thumbnailUrl!.isNotEmpty) {
+      map['thumbnail_url'] = item.thumbnailUrl;
+    } else {
+      return 'Pilih foto thumbnail atau sertakan link foto terlebih dahulu.';
+    }
+    final formData = FormData.fromMap(map);
     final response = await ApiService.postFormData(
       'creator-services',
       formData,
@@ -4437,11 +4441,41 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                                       ),
                                     ),
                                   ),
-                                  child: Icon(
-                                    item.icon,
-                                    size: 30,
-                                    color: Colors.white,
-                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: item.thumbnailUrl != null &&
+                                          item.thumbnailUrl!.isNotEmpty
+                                      ? (item.thumbnailUrl!.startsWith('data:')
+                                          ? Image.memory(
+                                              base64Decode(
+                                                item.thumbnailUrl!
+                                                    .split(',')
+                                                    .last,
+                                              ),
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (_, _, _) => Icon(
+                                                    item.icon,
+                                                    size: 30,
+                                                    color: Colors.white,
+                                                  ),
+                                            )
+                                          : Image.network(
+                                              ApiService.resolveAssetUrl(
+                                                item.thumbnailUrl!,
+                                              ),
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (_, _, _) => Icon(
+                                                    item.icon,
+                                                    size: 30,
+                                                    color: Colors.white,
+                                                  ),
+                                            ))
+                                      : Icon(
+                                          item.icon,
+                                          size: 30,
+                                          color: Colors.white,
+                                        ),
                                 ),
                               ),
                             ],
@@ -5428,9 +5462,45 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                           ),
                         ],
                       ),
-                      child: Center(
-                        child: Icon(item.icon, color: Colors.white, size: 26),
-                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: item.thumbnailUrl != null &&
+                              item.thumbnailUrl!.isNotEmpty
+                          ? (item.thumbnailUrl!.startsWith('data:')
+                              ? Image.memory(
+                                  base64Decode(
+                                    item.thumbnailUrl!.split(',').last,
+                                  ),
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  errorBuilder:
+                                      (_, _, _) => Center(
+                                        child: Icon(
+                                          item.icon,
+                                          color: Colors.white,
+                                          size: 26,
+                                        ),
+                                      ),
+                                )
+                              : Image.network(
+                                  ApiService.resolveAssetUrl(
+                                    item.thumbnailUrl!,
+                                  ),
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  errorBuilder:
+                                      (_, _, _) => Center(
+                                        child: Icon(
+                                          item.icon,
+                                          color: Colors.white,
+                                          size: 26,
+                                        ),
+                                      ),
+                                ))
+                          : Center(
+                              child: Icon(item.icon, color: Colors.white, size: 26),
+                            ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -6179,6 +6249,16 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
       );
       return;
     }
+    String? effectiveThumbUrl;
+    if (_formThumbnailBytes != null) {
+      final mime = _formThumbnailFile?.extension == 'png'
+          ? 'image/png'
+          : 'image/jpeg';
+      effectiveThumbUrl =
+          'data:$mime;base64,${base64Encode(_formThumbnailBytes!)}';
+    } else if (_formImageUrl.trim().isNotEmpty) {
+      effectiveThumbUrl = _formImageUrl.trim();
+    }
     final newItem = CreatorServiceItem(
       title: _formName.trim(),
       subtitle: _formDesc.trim().isEmpty
@@ -6192,6 +6272,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
           ? _formPrice
           : (widget.data.key == 'eo_timeline' ? '0%' : '-'),
       active: true,
+      thumbnailUrl: effectiveThumbUrl,
     );
     widget.onAddItem?.call(newItem);
     Navigator.pop(context);
@@ -6280,6 +6361,9 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
             onSave: (v) => setState(() => _formPrice = v),
           );
           break;
+        case 4:
+          _openMediaChoiceSheet();
+          break;
       }
     } else {
       _handleFormTap(i);
@@ -6297,6 +6381,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
   IconData? _formIcon;
   PlatformFile? _formThumbnailFile;
   Uint8List? _formThumbnailBytes;
+  String _formImageUrl = '';
   DateTime? _formDate;
 
   final List<
@@ -6907,7 +6992,13 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
       setState(() {
         _formThumbnailFile = file;
         _formThumbnailBytes = bytes;
+        _formImageUrl = '';
       });
+      AppSnackbar.success(
+        context,
+        'Foto "${file.name}" berhasil dipilih ✓',
+        title: 'Foto Terpilih',
+      );
     } catch (_) {
       if (!mounted) return;
       AppSnackbar.error(
@@ -6916,6 +7007,212 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
         title: 'Gagal membaca foto',
       );
     }
+  }
+
+  Future<void> _openImageUrlDialog() async {
+    final ctrl = TextEditingController(text: _formImageUrl);
+    final url = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        final dark = Theme.of(ctx).brightness == Brightness.dark;
+        return AlertDialog(
+          backgroundColor: dark ? AppTheme.cardDark2 : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.link_rounded, color: AppTheme.primaryPurple),
+              SizedBox(width: 8),
+              Text(
+                'Masukkan URL Gambar',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: TextField(
+            controller: ctrl,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: 'https://images.unsplash.com/... atau link gambar',
+              hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+              filled: true,
+              fillColor: dark ? AppTheme.cardBg : Colors.grey.shade100,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryPurple,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Gunakan'),
+            ),
+          ],
+        );
+      },
+    );
+    if (url != null && url.isNotEmpty) {
+      setState(() {
+        _formImageUrl = url;
+        _formThumbnailFile = null;
+        _formThumbnailBytes = null;
+      });
+      if (mounted) {
+        AppSnackbar.success(
+          context,
+          'Link gambar berhasil disimpan ✓',
+          title: 'URL Gambar',
+        );
+      }
+    }
+  }
+
+  Future<void> _openMediaChoiceSheet() async {
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final dark = Theme.of(ctx).brightness == Brightness.dark;
+        return Container(
+          decoration: BoxDecoration(
+            color: dark ? AppTheme.cardBg : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Pilih Gambar / Thumbnail Layanan',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Tambahkan foto dari perangkat, gunakan URL gambar, atau pilih icon.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: dark ? Colors.white60 : Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 18),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryPurple.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.photo_library_outlined,
+                    color: AppTheme.primaryPurple,
+                  ),
+                ),
+                title: const Text(
+                  'Pilih Foto dari Galeri / File',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                ),
+                subtitle: const Text(
+                  'Format JPG, PNG, WEBP (Maksimal 5MB)',
+                  style: TextStyle(fontSize: 11),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _openThumbnailPicker();
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.link_rounded, color: Colors.blue),
+                ),
+                title: const Text(
+                  'Masukkan Link URL Foto',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                ),
+                subtitle: const Text(
+                  'Contoh: tautan foto Unsplash atau hosting gambar',
+                  style: TextStyle(fontSize: 11),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _openImageUrlDialog();
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.palette_outlined, color: Colors.orange),
+                ),
+                title: const Text(
+                  'Gunakan Icon Kreatif',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                ),
+                subtitle: const Text(
+                  'Pilih salah satu icon bawaan sistem',
+                  style: TextStyle(fontSize: 11),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _openIconPicker((v) => setState(() => _formIcon = v));
+                },
+              ),
+              if (_formThumbnailBytes != null || _formImageUrl.isNotEmpty)
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                  ),
+                  title: const Text(
+                    'Hapus Foto Terpilih',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13.5,
+                      color: Colors.red,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() {
+                      _formThumbnailBytes = null;
+                      _formThumbnailFile = null;
+                      _formImageUrl = '';
+                    });
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _openDatePicker(ValueChanged<DateTime> onSave) async {
@@ -7033,11 +7330,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
         );
         break;
       case 4:
-        if (_reviewableCreatorPackageKeys.contains(widget.data.key)) {
-          _openThumbnailPicker();
-        } else {
-          _openIconPicker((v) => setState(() => _formIcon = v));
-        }
+        _openMediaChoiceSheet();
         break;
       case 5:
         _openDatePicker((v) => setState(() => _formDate = v));
@@ -7591,31 +7884,90 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                         ],
                                 ),
                                 clipBehavior: Clip.antiAlias,
-                                child: !isNew && item?.thumbnailUrl != null
-                                    ? Image.network(
-                                        ApiService.resolveAssetUrl(
-                                          item!.thumbnailUrl,
-                                        ),
-                                        width: 44,
-                                        height: 44,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, _, _) => Icon(
-                                          item.icon,
-                                          color: _isEo
-                                              ? AppTheme.primaryPurple
-                                              : Colors.white,
-                                          size: 20,
-                                        ),
-                                      )
-                                    : Icon(
-                                        isNew
-                                            ? Icons.add_rounded
-                                            : (item?.icon ?? widget.data.icon),
-                                        color: _isEo
-                                            ? AppTheme.primaryPurple
-                                            : Colors.white,
-                                        size: 20,
-                                      ),
+                                child: isNew
+                                    ? (_formThumbnailBytes != null
+                                        ? Image.memory(
+                                            _formThumbnailBytes!,
+                                            width: 44,
+                                            height: 44,
+                                            fit: BoxFit.cover,
+                                          )
+                                        : (_formImageUrl.isNotEmpty
+                                            ? Image.network(
+                                                _formImageUrl,
+                                                width: 44,
+                                                height: 44,
+                                                fit: BoxFit.cover,
+                                                errorBuilder:
+                                                    (_, _, _) => Icon(
+                                                      _formIcon ??
+                                                          Icons.add_rounded,
+                                                      color:
+                                                          _isEo
+                                                              ? AppTheme
+                                                                  .primaryPurple
+                                                              : Colors.white,
+                                                      size: 20,
+                                                    ),
+                                              )
+                                            : Icon(
+                                                _formIcon ?? Icons.add_rounded,
+                                                color:
+                                                    _isEo
+                                                        ? AppTheme.primaryPurple
+                                                        : Colors.white,
+                                                size: 20,
+                                              )))
+                                    : (item?.thumbnailUrl != null
+                                        ? (item!.thumbnailUrl!.startsWith(
+                                              'data:',
+                                            )
+                                            ? Image.memory(
+                                                base64Decode(
+                                                  item!.thumbnailUrl!
+                                                      .split(',')
+                                                      .last,
+                                                ),
+                                                width: 44,
+                                                height: 44,
+                                                fit: BoxFit.cover,
+                                                errorBuilder:
+                                                    (_, _, _) => Icon(
+                                                      item.icon,
+                                                      color:
+                                                          _isEo
+                                                              ? AppTheme
+                                                                  .primaryPurple
+                                                              : Colors.white,
+                                                      size: 20,
+                                                    ),
+                                              )
+                                            : Image.network(
+                                                ApiService.resolveAssetUrl(
+                                                  item!.thumbnailUrl,
+                                                ),
+                                                width: 44,
+                                                height: 44,
+                                                fit: BoxFit.cover,
+                                                errorBuilder:
+                                                    (_, _, _) => Icon(
+                                                      item.icon,
+                                                      color:
+                                                          _isEo
+                                                              ? AppTheme
+                                                                  .primaryPurple
+                                                              : Colors.white,
+                                                      size: 20,
+                                                    ),
+                                              ))
+                                        : Icon(
+                                            item?.icon ?? widget.data.icon,
+                                            color:
+                                                _isEo
+                                                    ? AppTheme.primaryPurple
+                                                    : Colors.white,
+                                            size: 20,
+                                          )),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -8643,8 +8995,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                               );
                                               return;
                                             }
-                                            if (isCreatorPackage &&
-                                                _formThumbnailFile == null) {
+                                            if (isCreatorPackage && _formThumbnailFile == null && _formImageUrl.trim().isEmpty) {
                                               AppSnackbar.warning(
                                                 context,
                                                 'Pilih foto thumbnail sebelum mengirim pengajuan.',
@@ -8748,27 +9099,26 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                                 ),
                                                                 clipBehavior: Clip
                                                                     .antiAlias,
-                                                                child:
-                                                                    _formThumbnailBytes !=
-                                                                            null &&
-                                                                        _reviewableCreatorPackageKeys.contains(
-                                                                          widget
-                                                                              .data
-                                                                              .key,
-                                                                        )
-                                                                    ? Image.memory(
-                                                                        _formThumbnailBytes!,
-                                                                        fit: BoxFit
-                                                                            .cover,
-                                                                      )
-                                                                    : Icon(
-                                                                        _formIcon ??
-                                                                            Icons.edit_outlined,
-                                                                        size:
-                                                                            15,
-                                                                        color: Colors
-                                                                            .white,
-                                                                      ),
+                                                                child: (_formThumbnailBytes != null || _formImageUrl.trim().isNotEmpty)
+    ? (_formThumbnailBytes != null
+        ? Image.memory(
+            _formThumbnailBytes!,
+            fit: BoxFit.cover,
+          )
+        : Image.network(
+            _formImageUrl.trim(),
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Icon(
+              _formIcon ?? Icons.image_rounded,
+              size: 15,
+              color: Colors.white,
+            ),
+          ))
+    : Icon(
+        _formIcon ?? Icons.edit_outlined,
+        size: 15,
+        color: Colors.white,
+      ),
                                                               ),
                                                               const SizedBox(
                                                                 width: 8,
@@ -8979,18 +9329,31 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                       final finalIcon =
                                                           _formIcon ??
                                                           Icons.edit_outlined;
-                                                      final finalGrad =
-                                                          widget.data.gradient;
-                                                      final newItem =
-                                                          CreatorServiceItem(
-                                                            title: finalName,
-                                                            subtitle: finalDesc,
-                                                            icon: finalIcon,
-                                                            tag: finalTag,
-                                                            value: finalValue,
-                                                            active: true,
-                                                            gradient: finalGrad,
-                                                          );
+                                                      final finalGrad = widget.data.gradient;
+                                                       final effectiveThumbUrl =
+                                                           _formImageUrl
+                                                                   .trim()
+                                                                   .isNotEmpty
+                                                               ? _formImageUrl
+                                                                     .trim()
+                                                               : (_formThumbnailBytes !=
+                                                                       null
+                                                                   ? 'data:image/png;base64,${base64Encode(_formThumbnailBytes!)}'
+                                                                   : null);
+                                                       final newItem =
+                                                           CreatorServiceItem(
+                                                             title: finalName,
+                                                             subtitle:
+                                                                 finalDesc,
+                                                             icon: finalIcon,
+                                                             tag: finalTag,
+                                                             value: finalValue,
+                                                             active: true,
+                                                             gradient:
+                                                                 finalGrad,
+                                                             thumbnailUrl:
+                                                                 effectiveThumbUrl,
+                                                           );
                                                       if (widget
                                                               .onSubmitCreatorPackage !=
                                                           null) {
@@ -9533,6 +9896,18 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                       : _formPrice,
                   _formPrice.isNotEmpty ? _formPrice : '',
                 ),
+                (
+                  'Foto / Dokumen Pendukung',
+                  Icons.image_outlined,
+                  _formThumbnailFile != null
+                      ? 'File: ${_formThumbnailFile!.name}'
+                      : (_formImageUrl.trim().isNotEmpty
+                          ? 'URL: ${_formImageUrl.trim()}'
+                          : 'Klik untuk upload gambar atau foto'),
+                  (_formThumbnailFile != null || _formImageUrl.trim().isNotEmpty)
+                      ? 'Foto Siap ✓'
+                      : 'Opsional',
+                ),
               ]
             : widget.data.key.startsWith('komunitas_')
                 ? <(String, IconData, String, String)>[
@@ -9597,21 +9972,22 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                       _formPrice.isNotEmpty ? fmtPrice(_formPrice) : '',
                     ),
                     (
-                      _reviewableCreatorPackageKeys.contains(widget.data.key)
-                          ? 'Foto Thumbnail'
-                          : 'Thumbnail / Icon',
+                      'Foto / Thumbnail Layanan',
                       Icons.image_outlined,
-                      _reviewableCreatorPackageKeys.contains(widget.data.key)
-                          ? (_formThumbnailFile?.name ??
-                              'Pilih foto thumbnail paket')
-                          : (_formIcon == null
-                              ? 'Klik untuk memilih icon thumbnail'
-                              : 'Icon terpilih'),
-                      _reviewableCreatorPackageKeys.contains(widget.data.key)
-                          ? (_formThumbnailFile != null
-                              ? 'Foto dipilih'
-                              : 'Wajib')
-                          : (_formIcon != null ? 'Terpilih' : ''),
+                      _formThumbnailFile != null
+                          ? 'File: ${_formThumbnailFile!.name}'
+                          : (_formImageUrl.trim().isNotEmpty
+                              ? 'URL: ${_formImageUrl.trim().length > 30 ? "${_formImageUrl.trim().substring(0, 30)}..." : _formImageUrl.trim()}'
+                              : (_formIcon != null
+                                  ? 'Icon terpilih'
+                                  : 'Klik untuk upload gambar atau pilih icon')),
+                      (_formThumbnailFile != null || _formImageUrl.trim().isNotEmpty)
+                          ? 'Foto Siap ✓'
+                          : (_formIcon != null
+                              ? 'Icon Siap'
+                              : (_reviewableCreatorPackageKeys.contains(widget.data.key)
+                                  ? 'Wajib'
+                                  : 'Opsional')),
                     ),
                     (
                       'Tanggal dibuat',

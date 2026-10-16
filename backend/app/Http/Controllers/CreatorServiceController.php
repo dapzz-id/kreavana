@@ -64,6 +64,10 @@ class CreatorServiceController extends Controller
             return $this->errorResponse('Jenis paket wajib dipilih.', 422);
         }
 
+        if ($isCreatorPackage && !$request->hasFile('thumbnail') && !$request->filled('thumbnail_url')) {
+            return $this->errorResponse('Foto thumbnail wajib dilampirkan untuk paket layanan.', 422);
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:200',
             'description' => 'nullable|string',
@@ -71,7 +75,8 @@ class CreatorServiceController extends Controller
             'price' => 'required|numeric|min:0',
             'duration_info' => 'nullable|string|max:100',
             'package_type' => 'nullable|string|max:100',
-            'thumbnail' => ($isCreatorPackage ? 'required' : 'nullable') . '|image|mimes:jpeg,jpg,png,webp|max:5120',
+            'thumbnail' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:5120',
+            'thumbnail_url' => 'nullable|string',
         ]);
 
         if ($request->hasFile('thumbnail')) {
@@ -81,8 +86,10 @@ class CreatorServiceController extends Controller
                 'creator_service_thumbnails',
                 'public',
             );
-                $validated['thumbnail_url'] = url('/api/creator-service-thumbnails/' . $storageFile->stored_name);
+            $validated['thumbnail_url'] = url('/api/creator-service-thumbnails/' . $storageFile->stored_name);
             unset($validated['thumbnail']);
+        } elseif ($request->filled('thumbnail_url')) {
+            $validated['thumbnail_url'] = $request->input('thumbnail_url');
         }
 
         $validated['creator_id'] = $user->id;
@@ -176,6 +183,7 @@ class CreatorServiceController extends Controller
             'price' => 'sometimes|required|numeric|min:0',
             'duration_info' => 'nullable|string|max:100',
             'thumbnail' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:5120',
+            'thumbnail_url' => 'nullable|string',
             ...($isCreatorPackage ? [] : ['status' => 'sometimes|required|in:active,inactive']),
         ]);
 
@@ -188,6 +196,8 @@ class CreatorServiceController extends Controller
             );
             $validated['thumbnail_url'] = url('/api/creator-service-thumbnails/' . $storageFile->stored_name);
             unset($validated['thumbnail']);
+        } elseif ($request->filled('thumbnail_url')) {
+            $validated['thumbnail_url'] = $request->input('thumbnail_url');
         }
 
         if ($isCreatorPackage) {

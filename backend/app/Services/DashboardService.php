@@ -330,6 +330,10 @@ class DashboardService extends BaseService implements DashboardServiceInterface
 
             $subRoleVal = is_string($user->sub_role) ? $user->sub_role : $user->sub_role?->value;
             $category = $subRoleVal ? ucwords(str_replace('_', ' ', $subRoleVal)) : 'Creator';
+            $firstService = $services->first();
+            $coverUrl = $firstService?->thumbnail_url
+                ?? (!empty($portfolioImages) ? $portfolioImages[0] : null)
+                ?? $user->avatar_url;
 
             return [
                 'id' => $user->id,
@@ -338,6 +342,8 @@ class DashboardService extends BaseService implements DashboardServiceInterface
                 'rating' => number_format((float) ($user->rating ?? 5.0), 1),
                 'review_count' => (int) ($user->positive_marketplace_reviews_count ?? 0) + (int) ($user->positive_contract_reviews_count ?? 0),
                 'avatar_url' => $user->avatar_url,
+                'cover_url' => $coverUrl,
+                'thumbnail_url' => $firstService?->thumbnail_url,
                 'location' => $city,
                 'starting_price' => 'Rp ' . number_format($minPrice, 0, ',', '.'),
                 'portfolio_images' => $portfolioImages,

@@ -1042,6 +1042,44 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  String _getCategoryCoverFallback(String cat) {
+    final lower = cat.toLowerCase();
+    if (lower.contains('wedding')) {
+      return 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80';
+    } else if (lower.contains('edit')) {
+      return 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=800&q=80';
+    } else if (lower.contains('photo') || lower.contains('foto')) {
+      return 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&w=800&q=80';
+    } else if (lower.contains('video') || lower.contains('cinema')) {
+      return 'https://images.unsplash.com/photo-1518133910546-b6c2fb7d79e3?auto=format&fit=crop&w=800&q=80';
+    } else if (lower.contains('event') || lower.contains('eo')) {
+      return 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=800&q=80';
+    } else if (lower.contains('music') || lower.contains('singer') || lower.contains('musik')) {
+      return 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80';
+    } else if (lower.contains('mc')) {
+      return 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&w=800&q=80';
+    } else if (lower.contains('makeup') || lower.contains('mua') || lower.contains('beauty')) {
+      return 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=800&q=80';
+    }
+    return 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=800&q=80';
+  }
+
+  String _getCategoryAvatarFallback(String cat) {
+    final lower = cat.toLowerCase();
+    if (lower.contains('wedding')) {
+      return 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80';
+    } else if (lower.contains('edit')) {
+      return 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80';
+    } else if (lower.contains('photo') || lower.contains('foto')) {
+      return 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80';
+    } else if (lower.contains('video') || lower.contains('cinema')) {
+      return 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80';
+    } else if (lower.contains('event') || lower.contains('eo')) {
+      return 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80';
+    }
+    return 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80';
+  }
+
   Widget _buildCreatorCard(Map<String, dynamic> vendor, bool isDark) {
     final gradientColors =
         vendor['gradient_colors'] as List<Color>? ??
@@ -1055,7 +1093,20 @@ class _DashboardScreenState extends State<DashboardScreen>
             .join(' ');
     final vendorId = vendor['id']?.toString() ?? '';
     final vendorName = vendor['name']?.toString() ?? '';
-    final avatarUrl = vendor['avatar_url']?.toString();
+    final rawAvatarUrl = vendor['avatar_url']?.toString();
+    final rawCoverUrl = vendor['cover_url']?.toString() ??
+        vendor['thumbnail_url']?.toString() ??
+        ((vendor['portfolio_images'] is List && (vendor['portfolio_images'] as List).isNotEmpty)
+            ? (vendor['portfolio_images'] as List).first.toString()
+            : null);
+
+    final displayCoverUrl = (rawCoverUrl != null && rawCoverUrl.isNotEmpty)
+        ? rawCoverUrl
+        : _getCategoryCoverFallback(category);
+
+    final displayAvatarUrl = (rawAvatarUrl != null && rawAvatarUrl.isNotEmpty)
+        ? rawAvatarUrl
+        : _getCategoryAvatarFallback(category);
 
     void openProfile() async {
       if (vendorId.isEmpty) return;
@@ -1068,7 +1119,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           context,
           userId: vendorId,
           initialName: vendorName,
-          initialAvatarUrl: avatarUrl,
+          initialAvatarUrl: displayAvatarUrl,
           initialRole: 'creator',
           currentUser: widget.user,
         );
@@ -1092,57 +1143,73 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              height: 90,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: gradientColors,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(AppTheme.radiusMD),
-                ),
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppTheme.radiusMD),
               ),
-              child: Stack(
-                children: [
-                  Center(
-                    child: avatarUrl != null && avatarUrl.isNotEmpty
-                        ? CircleAvatar(
-                            radius: 28,
-                            backgroundImage: NetworkImage(
-                              ApiService.resolveAssetUrl(avatarUrl),
-                            ),
-                          )
-                        : Icon(
-                            Icons.person_outline,
-                            color: Colors.white.withValues(alpha: 0.4),
-                            size: 40,
+              child: SizedBox(
+                height: 90,
+                width: double.infinity,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.network(
+                      ApiService.resolveAssetUrl(displayCoverUrl),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: gradientColors,
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                  ),
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        category,
-                        style: const TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black87,
                         ),
                       ),
                     ),
-                  ),
-                ],
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.black.withValues(alpha: 0.28),
+                            Colors.transparent,
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3.5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.95),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.15),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          category,
+                          style: const TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.black87,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             Expanded(
@@ -2421,17 +2488,11 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  gradient: AppTheme.primaryGradient,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.auto_awesome,
-                  color: Colors.white,
-                  size: 14,
-                ),
+              Image.asset(
+                'assets/brandlogo.png',
+                width: 32,
+                height: 32,
+                fit: BoxFit.contain,
               ),
               const SizedBox(width: 8),
               const Text(
@@ -2793,17 +2854,11 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  gradient: AppTheme.primaryGradient,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.auto_awesome,
-                  color: Colors.white,
-                  size: 16,
-                ),
+              Image.asset(
+                'assets/brandlogo.png',
+                width: 32,
+                height: 32,
+                fit: BoxFit.contain,
               ),
               const SizedBox(width: 8),
               const Expanded(
