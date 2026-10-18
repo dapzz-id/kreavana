@@ -88,19 +88,24 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
 
   bool get _isSchool {
     final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
-    return (widget.user.role == 'user' || widget.user.role == 'creator') &&
-        (sub == 'institution' ||
-            sub == 'institusi' ||
-            sub == 'school' ||
+    return !widget.user.isAdmin &&
+        (sub == 'school' ||
             sub == 'education' ||
             sub == 'campus' ||
             sub == 'sekolah' ||
-            sub == 'kampus');
+            sub == 'kampus' ||
+            sub == 'institution' ||
+            sub == 'institusi' ||
+            sub == 'lembaga' ||
+            sub == 'yayasan' ||
+            widget.user.username == 'institution_demo' ||
+            widget.user.email.startsWith('institution@'));
   }
 
   bool get _isCompany {
     final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
     return !widget.user.isAdmin &&
+        !_isSchool &&
         (sub == 'company' ||
             sub == 'corporate' ||
             sub == 'business' ||
@@ -108,6 +113,17 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
             sub == 'bisnis' ||
             widget.user.username == 'corporate_demo' ||
             widget.user.email.startsWith('corporate@'));
+  }
+
+  bool get _isInstitution {
+    final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
+    return !widget.user.isAdmin &&
+        (sub == 'institution' ||
+            sub == 'institusi' ||
+            sub == 'lembaga' ||
+            sub == 'yayasan' ||
+            widget.user.username == 'institution_demo' ||
+            widget.user.email.startsWith('institution@'));
   }
 
   void _pushNoAnimation(Widget destination) {
@@ -481,7 +497,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
       case 'tender_kolaborasi':
       case 'tenders':
       case 'pengadaan_vendor':
-        destination = (_isSchool || _isCompany)
+        destination = (_isSchool || _isCompany || _isInstitution)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'tenders',
@@ -491,7 +507,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'mitra_komunitas':
       case 'partners':
-        destination = (_isSchool || _isCompany)
+        destination = (_isSchool || _isCompany || _isInstitution)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'partners',
@@ -501,7 +517,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'laporan':
       case 'reports':
-        destination = (_isSchool || _isCompany)
+        destination = (_isSchool || _isCompany || _isInstitution)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'reports',
@@ -511,7 +527,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'realisasi_anggaran':
       case 'budgets':
-        destination = (_isSchool || _isCompany)
+        destination = (_isSchool || _isCompany || _isInstitution)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'budgets',
@@ -521,7 +537,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'monitoring_evaluasi':
       case 'monitoring':
-        destination = (_isSchool || _isCompany)
+        destination = (_isSchool || _isCompany || _isInstitution)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'monitoring',
@@ -531,7 +547,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'dokumen_instansi':
       case 'documents':
-        destination = (_isSchool || _isCompany)
+        destination = (_isSchool || _isCompany || _isInstitution)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'documents',
@@ -541,7 +557,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'pengumuman_publik':
       case 'announcements':
-        destination = (_isSchool || _isCompany)
+        destination = (_isSchool || _isCompany || _isInstitution)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'announcements',
@@ -564,6 +580,22 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         destination = InstitutionWorkspaceScreen(
           user: widget.user,
           resourceType: 'showcases',
+          onUserUpdated: widget.onUserUpdated,
+        );
+        break;
+      case 'program_studi':
+      case 'study_programs':
+        destination = InstitutionWorkspaceScreen(
+          user: widget.user,
+          resourceType: 'study_programs',
+          onUserUpdated: widget.onUserUpdated,
+        );
+        break;
+      case 'penelusuran_talenta':
+      case 'talents':
+        destination = InstitutionWorkspaceScreen(
+          user: widget.user,
+          resourceType: 'talents',
           onUserUpdated: widget.onUserUpdated,
         );
         break;
@@ -723,14 +755,19 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     final isCorporate = widget.user.role == 'corporate' ||
         widget.user.role == 'company' ||
         _isCompany;
+    final isInstitution = _isInstitution;
     final promoTitle = isCorporate
         ? 'Upgrade Akun Corporate'
-        : (isCreator ? 'Upgrade Akun Kreator' : 'Upgrade Plan & Paket');
+        : (isInstitution
+            ? 'Upgrade Akun Institusi'
+            : (isCreator ? 'Upgrade Akun Kreator' : 'Upgrade Plan & Paket'));
     final promoDesc = isCorporate
         ? 'Tingkatkan peluang & fitur premium untuk corporate.'
-        : (isCreator
-            ? 'Tingkatkan peluang & fitur premium untuk kreator.'
-            : 'Tingkatkan peluang & fitur premium akun Anda.');
+        : (isInstitution
+            ? 'Tingkatkan kapasitas pengadaan & kemitraan institusi.'
+            : (isCreator
+                ? 'Tingkatkan peluang & fitur premium untuk kreator.'
+                : 'Tingkatkan peluang & fitur premium akun Anda.'));
     final accentColor = SubRoleThemeEngine.getAccentColor(
       widget.user.role,
       widget.user.subRole,
@@ -878,7 +915,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                                 fit: BoxFit.contain,
                                 errorBuilder: (_, _, _) => Icon(
                                   Icons.auto_awesome,
-                                  color: _isCompany ? const Color(0xFF2563EB) : AppTheme.primaryPurple,
+                                  color: (_isCompany || _isInstitution) ? const Color(0xFF2563EB) : AppTheme.primaryPurple,
                                   size: 20,
                                 ),
                               ),
@@ -913,7 +950,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                                   fit: BoxFit.contain,
                                   errorBuilder: (_, _, _) => Icon(
                                     Icons.auto_awesome,
-                                    color: _isCompany ? const Color(0xFF2563EB) : AppTheme.primaryPurple,
+                                    color: (_isCompany || _isInstitution) ? const Color(0xFF2563EB) : AppTheme.primaryPurple,
                                     size: 24,
                                   ),
                                 ),
@@ -996,9 +1033,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('kreavana_ai') || _isRouteActive('ai'),
                             isDark: isDark,
                             isCollapsed: collapsed,
-                            activeColor: _isCompany ? const Color(0xFF2563EB) : const Color(0xFF8B5CF6),
+                            activeColor: (_isCompany || _isInstitution) ? const Color(0xFF2563EB) : const Color(0xFF8B5CF6),
                           ),
-                        if ((_isCreatorUser || _isCompany) && !_isGovernment && !_isSchool)
+                        if ((_isCreatorUser || _isCompany || _isInstitution) && !_isGovernment && !_isSchool)
                           _buildNavRow(
                             icon: Icons.explore_outlined,
                             label: 'Rekomendasi Peluang',
@@ -1025,7 +1062,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
-                        if (!_hasSpecificCreatorSubRole && !_isCompany) ...[
+                        if (!_hasSpecificCreatorSubRole && !_isCompany && !_isInstitution) ...[
                           if (SystemSettingsService.isMarketplaceEnabled || widget.user.isAdmin)
                             _buildNavRow(
                               icon: Icons.storefront_outlined,
@@ -1048,7 +1085,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                         if (_isSchool) ...[
                           if (!collapsed) ...[
                             const SizedBox(height: 18),
-                            _buildSectionHeader('PENGELOLAAN SEKOLAH', isDark),
+                            _buildSectionHeader(_isInstitution ? 'PENGELOLAAN INSTITUSI' : 'PENGELOLAAN SEKOLAH', isDark),
                           ] else ...[
                             const SizedBox(height: 8),
                           ],
@@ -1059,6 +1096,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('proyek_saya'),
                             isDark: isDark,
                             isCollapsed: collapsed,
+                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           _buildNavRow(
                             icon: Icons.event_outlined,
@@ -1067,6 +1105,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('agenda'),
                             isDark: isDark,
                             isCollapsed: collapsed,
+                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           _buildNavRow(
                             icon: Icons.handshake_outlined,
@@ -1075,6 +1114,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('tender_kolaborasi'),
                             isDark: isDark,
                             isCollapsed: collapsed,
+                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           _buildNavRow(
                             icon: Icons.people_outlined,
@@ -1083,22 +1123,43 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('explore'),
                             isDark: isDark,
                             isCollapsed: collapsed,
+                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           _buildNavRow(
                             icon: Icons.diversity_3_outlined,
-                            label: 'Mitra Industri & Sanggar',
+                            label: _isInstitution ? 'Mitra Industri & IDUKA' : 'Mitra Industri & Sanggar',
                             onTap: () => _pushLink('mitra_komunitas'),
                             isSelected: _isRouteActive('mitra_komunitas'),
                             isDark: isDark,
                             isCollapsed: collapsed,
+                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           _buildNavRow(
                             icon: Icons.palette_outlined,
-                            label: 'Karya & Portofolio Siswa',
+                            label: _isInstitution ? 'Karya & Showcase Siswa' : 'Karya & Portofolio Siswa',
                             onTap: () => _pushLink('karya_siswa'),
                             isSelected: _isRouteActive('karya_siswa'),
                             isDark: isDark,
                             isCollapsed: collapsed,
+                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
+                          ),
+                          _buildNavRow(
+                            icon: Icons.school_outlined,
+                            label: 'Program Studi & Keunggulan',
+                            onTap: () => _pushLink('program_studi'),
+                            isSelected: _isRouteActive('program_studi'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
+                          ),
+                          _buildNavRow(
+                            icon: Icons.badge_outlined,
+                            label: 'Penelusuran Talenta',
+                            onTap: () => _pushLink('penelusuran_talenta'),
+                            isSelected: _isRouteActive('penelusuran_talenta'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           if (!collapsed) ...[
                             const SizedBox(height: 18),
@@ -1113,6 +1174,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('laporan'),
                             isDark: isDark,
                             isCollapsed: collapsed,
+                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           _buildNavRow(
                             icon: Icons.monitor_outlined,
@@ -1121,6 +1183,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('monitoring_evaluasi'),
                             isDark: isDark,
                             isCollapsed: collapsed,
+                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           if (!collapsed) ...[
                             const SizedBox(height: 18),
@@ -1135,14 +1198,16 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('dokumen_instansi'),
                             isDark: isDark,
                             isCollapsed: collapsed,
+                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           _buildNavRow(
                             icon: Icons.campaign_outlined,
-                            label: 'Pengumuman Sekolah',
+                            label: _isInstitution ? 'Pengumuman Lembaga' : 'Pengumuman Sekolah',
                             onTap: () => _pushLink('pengumuman_publik'),
                             isSelected: _isRouteActive('pengumuman_publik'),
                             isDark: isDark,
                             isCollapsed: collapsed,
+                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           if (!collapsed) ...[
                             const SizedBox(height: 18),
@@ -1152,11 +1217,12 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                           ],
                           _buildNavRow(
                             icon: Icons.account_balance_outlined,
-                            label: 'Profil Sekolah',
+                            label: _isInstitution ? 'Profil Institusi' : 'Profil Sekolah',
                             onTap: () => _pushLink('profil_instansi'),
                             isSelected: _isRouteActive('profil_instansi'),
                             isDark: isDark,
                             isCollapsed: collapsed,
+                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           _buildNavRow(
                             icon: Icons.settings_outlined,
@@ -1165,6 +1231,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('pengaturan_akun'),
                             isDark: isDark,
                             isCollapsed: collapsed,
+                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           _buildNavRow(
                             icon: Icons.admin_panel_settings_outlined,
@@ -1173,6 +1240,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('tim_hak_akses'),
                             isDark: isDark,
                             isCollapsed: collapsed,
+                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                         ] else if (_isGovernment) ...[
                           if (!collapsed) ...[
@@ -1612,7 +1680,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
             !widget.activeRoute.startsWith('eo_'))
           KreavanaAiFloatingWidget(
             hasPageFab: false,
-            accentColor: _isCompany ? const Color(0xFF2563EB) : null,
+            accentColor: (_isCompany || _isInstitution) ? const Color(0xFF2563EB) : null,
           ),
       ],
     );

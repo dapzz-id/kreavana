@@ -139,8 +139,19 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
               final loggedUser = currentUserNotifier.value;
               final isCorporate = widget.accentColor != null ||
                   (loggedUser != null &&
-                      ['corporate', 'company', 'business', 'perusahaan', 'bisnis']
-                          .contains(loggedUser.subRole?.toLowerCase()));
+                      ([
+                        'corporate',
+                        'company',
+                        'business',
+                        'perusahaan',
+                        'bisnis',
+                        'institution',
+                        'institusi',
+                        'lembaga',
+                        'yayasan',
+                      ].contains(loggedUser.subRole?.toLowerCase()) ||
+                      loggedUser.username == 'institution_demo' ||
+                      loggedUser.email.startsWith('institution@')));
               final effectiveColor = widget.accentColor ??
                   (isCorporate ? const Color(0xFF2563EB) : AppTheme.primaryPurple);
               final gradientColors = isCorporate

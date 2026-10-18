@@ -29,6 +29,16 @@ class SubRoleRightSidebar extends StatelessWidget {
     required this.isDark,
   });
 
+  bool get _isInstitution {
+    final sub = (user.subRole ?? '').toLowerCase();
+    return sub == 'institution' ||
+        sub == 'institusi' ||
+        sub == 'lembaga' ||
+        sub == 'yayasan' ||
+        user.username == 'institution_demo' ||
+        user.email.startsWith('institution@');
+  }
+
   @override
   Widget build(BuildContext context) {
     final accentColor = SubRoleThemeEngine.getAccentColor(
@@ -327,23 +337,32 @@ class SubRoleRightSidebar extends StatelessWidget {
   Widget _buildQuickActionsCard(BuildContext context, Color accentColor) {
     final isCreator = user.role == 'creator' || user.isCreator;
 
-    final actions = isCreator
+    final actions = _isInstitution
         ? [
-            {'icon': Icons.add_circle_outline, 'label': 'Cari Peluang'},
-            {'icon': Icons.search, 'label': 'Kirim Proposal'},
-            {'icon': Icons.compare_arrows, 'label': 'Tambah Karya'},
-            {'icon': Icons.check_circle_outline, 'label': 'Atur Jadwal'},
-            {'icon': Icons.payment, 'label': 'Tarik Dana'},
-            {'icon': Icons.analytics_outlined, 'label': 'Komunitas'},
+            {'icon': Icons.add_circle_outline, 'label': 'Buka Program'},
+            {'icon': Icons.person_search_rounded, 'label': 'Cari Mahasiswa'},
+            {'icon': Icons.school_rounded, 'label': 'Kelola Prodi'},
+            {'icon': Icons.photo_library_outlined, 'label': 'Showcase Karya'},
+            {'icon': Icons.assessment_outlined, 'label': 'Laporan Magang'},
+            {'icon': Icons.handshake_outlined, 'label': 'Mitra IDUKA'},
           ]
-        : [
-            {'icon': Icons.add_circle_outline, 'label': 'Buat Kebutuhan'},
-            {'icon': Icons.search, 'label': 'Cari Kreator'},
-            {'icon': Icons.compare_arrows, 'label': 'Bandingkan'},
-            {'icon': Icons.check_circle_outline, 'label': 'Setujui Proyek'},
-            {'icon': Icons.payment, 'label': 'Bayar DP'},
-            {'icon': Icons.analytics_outlined, 'label': 'Laporan'},
-          ];
+        : (isCreator
+            ? [
+                {'icon': Icons.add_circle_outline, 'label': 'Cari Peluang'},
+                {'icon': Icons.search, 'label': 'Kirim Proposal'},
+                {'icon': Icons.compare_arrows, 'label': 'Tambah Karya'},
+                {'icon': Icons.check_circle_outline, 'label': 'Atur Jadwal'},
+                {'icon': Icons.payment, 'label': 'Tarik Dana'},
+                {'icon': Icons.analytics_outlined, 'label': 'Komunitas'},
+              ]
+            : [
+                {'icon': Icons.add_circle_outline, 'label': 'Buat Kebutuhan'},
+                {'icon': Icons.search, 'label': 'Cari Kreator'},
+                {'icon': Icons.compare_arrows, 'label': 'Bandingkan'},
+                {'icon': Icons.check_circle_outline, 'label': 'Setujui Proyek'},
+                {'icon': Icons.payment, 'label': 'Bayar DP'},
+                {'icon': Icons.analytics_outlined, 'label': 'Laporan'},
+              ]);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -388,7 +407,7 @@ class SubRoleRightSidebar extends StatelessWidget {
               return InkWell(
                 onTap: () {
                   final label = action['label'] as String;
-                  if (label == 'Buat Kebutuhan') {
+                  if (label == 'Buat Kebutuhan' || label == 'Buka Program') {
                     if (user.isGuest) {
                       AuthGuardDialog.show(
                         context,
@@ -403,11 +422,56 @@ class SubRoleRightSidebar extends StatelessWidget {
                       ),
                     );
                   } else if (label == 'Cari Kreator' ||
-                      label == 'Cari Peluang') {
+                      label == 'Cari Peluang' ||
+                      label == 'Cari Mahasiswa') {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => ExploreScreen(user: user),
+                      ),
+                    );
+                  } else if (label == 'Kelola Prodi') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => InstitutionWorkspaceScreen(
+                          user: user,
+                          resourceType: 'study_programs',
+                          onUserUpdated: onUserUpdated,
+                        ),
+                      ),
+                    );
+                  } else if (label == 'Showcase Karya') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => InstitutionWorkspaceScreen(
+                          user: user,
+                          resourceType: 'showcases',
+                          onUserUpdated: onUserUpdated,
+                        ),
+                      ),
+                    );
+                  } else if (label == 'Laporan Magang') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => InstitutionWorkspaceScreen(
+                          user: user,
+                          resourceType: 'reports',
+                          onUserUpdated: onUserUpdated,
+                        ),
+                      ),
+                    );
+                  } else if (label == 'Mitra IDUKA') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => InstitutionWorkspaceScreen(
+                          user: user,
+                          resourceType: 'partners',
+                          onUserUpdated: onUserUpdated,
+                        ),
                       ),
                     );
                   } else if (label == 'Bandingkan' ||
@@ -546,17 +610,23 @@ class SubRoleRightSidebar extends StatelessWidget {
   }
 
   Widget _buildAiTipsCard(BuildContext context, Color accentColor) {
-    final tips = user.role == 'creator' || user.isCreator
+    final tips = _isInstitution
         ? [
-            'Buat brief lebih detail agar proposal lebih tepat',
-            'Simpan kreator favorit untuk proyek berikutnya',
-            'Gunakan agenda untuk memantau deadline',
+            'Lengkapi data akreditasi prodi untuk menarik mitra IDUKA',
+            'Unggah showcase karya terbaik mahasiswa untuk portofolio kampus',
+            'Perbarui kuota magang industri dan pagu riset secara berkala',
           ]
-        : [
-            'Buat brief lebih detail agar proposal lebih tepat',
-            'Simpan kreator favorit untuk proyek berikutnya',
-            'Gunakan agenda untuk memantau deadline',
-          ];
+        : (user.role == 'creator' || user.isCreator
+            ? [
+                'Buat brief lebih detail agar proposal lebih tepat',
+                'Simpan kreator favorit untuk proyek berikutnya',
+                'Gunakan agenda untuk memantau deadline',
+              ]
+            : [
+                'Buat brief lebih detail agar proposal lebih tepat',
+                'Simpan kreator favorit untuk proyek berikutnya',
+                'Gunakan agenda untuk memantau deadline',
+              ]);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -662,10 +732,10 @@ class SubRoleRightSidebar extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Proteksi Transaksi & Escrow',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  _isInstitution ? 'Legalitas MoU & Penjaminan IDUKA' : 'Proteksi Transaksi & Escrow',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -680,18 +750,20 @@ class SubRoleRightSidebar extends StatelessWidget {
                 color: const Color(0xFF10B981).withValues(alpha: 0.3),
               ),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.shield_rounded,
                   color: Color(0xFF10B981),
                   size: 16,
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Dana Anda 100% aman dalam escrow bersama Kreavana.',
-                    style: TextStyle(
+                    _isInstitution
+                        ? 'Kemitraan MoU, SPK digital, dan hak cipta terjamin 100% legal.'
+                        : 'Dana Anda 100% aman dalam escrow bersama Kreavana.',
+                    style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF059669),
@@ -703,15 +775,21 @@ class SubRoleRightSidebar extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _buildTrustItem(
-            'Pembayaran hanya cair setelah hasil karya disetujui',
+            _isInstitution
+                ? 'MoU dan SPK digital terverifikasi berkekuatan hukum'
+                : 'Pembayaran hanya cair setelah hasil karya disetujui',
           ),
           const SizedBox(height: 8),
           _buildTrustItem(
-            'Garansi revisi terjamin sesuai brief proyek',
+            _isInstitution
+                ? 'Sistem absensi dan monitoring magang terintegrasi'
+                : 'Garansi revisi terjamin sesuai brief proyek',
           ),
           const SizedBox(height: 8),
           _buildTrustItem(
-            'Hak cipta karya 100% milik klien setelah lunas',
+            _isInstitution
+                ? 'Pencairan dana hibah dan insentif terproteksi transparan'
+                : 'Hak cipta karya 100% milik klien setelah lunas',
           ),
         ],
       ),
@@ -764,15 +842,17 @@ class SubRoleRightSidebar extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Text(
-                'Pusat Bantuan & Panduan',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              Text(
+                _isInstitution ? 'Pusat Bantuan Kampus & IDUKA' : 'Pusat Bantuan & Panduan',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
               ),
             ],
           ),
           const SizedBox(height: 10),
           Text(
-            'Butuh panduan membuat brief atau mencari talent yang pas untuk proyek Anda?',
+            _isInstitution
+                ? 'Butuh pendampingan verifikasi kemitraan industri, akreditasi prodi, atau tata kelola MoU kampus?'
+                : 'Butuh panduan membuat brief atau mencari talent yang pas untuk proyek Anda?',
             style: TextStyle(
               fontSize: 11,
               height: 1.4,

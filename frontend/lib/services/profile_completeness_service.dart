@@ -46,15 +46,19 @@ class ProfileCompleteness {
       'perusahaan',
       'bisnis',
       'b2b',
-    ].contains(sub);
+      'institution',
+      'institusi',
+      'lembaga',
+      'yayasan',
+    ].contains(sub) ||
+    user.username == 'institution_demo' ||
+    user.email.startsWith('institution@');
     final isGovernment = [
       'government',
       'pemerintah',
       'instansi',
     ].contains(sub);
     final isSchool = [
-      'institution',
-      'institusi',
       'school',
       'education',
       'sekolah',

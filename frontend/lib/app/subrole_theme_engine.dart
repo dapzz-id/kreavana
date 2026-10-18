@@ -115,14 +115,35 @@ class SubRoleThemeEngine {
       slug: 'institution',
       label: 'Lembaga / Yayasan',
       icon: Icons.assured_workload_rounded,
-      primaryColor: Color(0xFF0F766E), // Slate Teal
+      primaryColor: Color(0xFF2563EB), // Sapphire Blue (Konsisten dengan Corporate)
+      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+    ),
+    'institusi': SubRoleThemeConfig(
+      slug: 'institusi',
+      label: 'Lembaga / Yayasan',
+      icon: Icons.assured_workload_rounded,
+      primaryColor: Color(0xFF2563EB),
+      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+    ),
+    'lembaga': SubRoleThemeConfig(
+      slug: 'lembaga',
+      label: 'Lembaga / Yayasan',
+      icon: Icons.assured_workload_rounded,
+      primaryColor: Color(0xFF2563EB),
+      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+    ),
+    'yayasan': SubRoleThemeConfig(
+      slug: 'yayasan',
+      label: 'Lembaga / Yayasan',
+      icon: Icons.assured_workload_rounded,
+      primaryColor: Color(0xFF2563EB),
       description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
     ),
     'instansi': SubRoleThemeConfig(
       slug: 'instansi',
       label: 'Lembaga / Yayasan',
       icon: Icons.domain_rounded,
-      primaryColor: Color(0xFF0F766E),
+      primaryColor: Color(0xFF2563EB),
       description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
     ),
     'community': SubRoleThemeConfig(
@@ -211,7 +232,28 @@ class SubRoleThemeEngine {
       slug: 'institution',
       label: 'Lembaga / Yayasan',
       icon: Icons.assured_workload_rounded,
-      primaryColor: Color(0xFF0F766E), // Slate Teal
+      primaryColor: Color(0xFF2563EB), // Sapphire Blue (Konsisten dengan Corporate)
+      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+    ),
+    'institusi': SubRoleThemeConfig(
+      slug: 'institusi',
+      label: 'Lembaga / Yayasan',
+      icon: Icons.assured_workload_rounded,
+      primaryColor: Color(0xFF2563EB),
+      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+    ),
+    'lembaga': SubRoleThemeConfig(
+      slug: 'lembaga',
+      label: 'Lembaga / Yayasan',
+      icon: Icons.assured_workload_rounded,
+      primaryColor: Color(0xFF2563EB),
+      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+    ),
+    'yayasan': SubRoleThemeConfig(
+      slug: 'yayasan',
+      label: 'Lembaga / Yayasan',
+      icon: Icons.assured_workload_rounded,
+      primaryColor: Color(0xFF2563EB),
       description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
     ),
     'government': SubRoleThemeConfig(

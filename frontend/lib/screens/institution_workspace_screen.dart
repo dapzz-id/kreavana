@@ -57,13 +57,15 @@ class _InstitutionWorkspaceScreenState
 
   static const Map<String, String> _titles = {
     'tenders': 'Tender & Kolaborasi',
-    'partners': 'Mitra & Komunitas',
+    'partners': 'Direktori Mitra & Industri',
     'reports': 'Laporan Kegiatan',
     'budgets': 'Realisasi Anggaran',
     'monitoring': 'Monitoring & Evaluasi',
     'documents': 'Dokumen Instansi',
     'announcements': 'Pengumuman Publik',
     'showcases': 'Karya & Portofolio Siswa',
+    'study_programs': 'Program Studi & Keunggulan',
+    'talents': 'Penelusuran Talenta Mahasiswa',
   };
 
   static const Map<String, String> _actions = {
@@ -75,17 +77,21 @@ class _InstitutionWorkspaceScreenState
     'documents': 'Tambah Dokumen',
     'announcements': 'Buat Pengumuman',
     'showcases': 'Tambah Karya Siswa',
+    'study_programs': 'Tambah Program Studi',
+    'talents': 'Daftarkan Talenta',
   };
 
   static const Map<String, IconData> _icons = {
     'tenders': Icons.handshake_outlined,
-    'partners': Icons.groups_outlined,
+    'partners': Icons.corporate_fare_outlined,
     'reports': Icons.summarize_outlined,
     'budgets': Icons.account_balance_wallet_outlined,
     'monitoring': Icons.monitor_heart_outlined,
     'documents': Icons.folder_outlined,
     'announcements': Icons.campaign_outlined,
     'showcases': Icons.palette_outlined,
+    'study_programs': Icons.school_outlined,
+    'talents': Icons.badge_outlined,
   };
 
   static const Map<String, List<_WorkspaceField>> _fields = {
@@ -100,12 +106,16 @@ class _InstitutionWorkspaceScreenState
       _WorkspaceField('deadline', 'Batas Pengajuan', kind: _FieldKind.date),
     ],
     'partners': [
+      _WorkspaceField('partner_type', 'Jenis Entitas Kemitraan', hint: 'Industri & IDUKA / Vendor / Komunitas / Sponsor'),
       _WorkspaceField(
         'category',
         'Kategori Spesialisasi',
-        hint: 'Production House, Agensi Desain, Percetakan, Event Organizer',
+        hint: 'Production House, Agensi Desain, Studio Animasi, Software House',
       ),
-      _WorkspaceField('contact', 'Kontak Person / Email', hint: 'Email atau nomor telepon resmi'),
+      _WorkspaceField('mou_number', 'Nomor Dokumen MoU / PKS', hint: 'Contoh: 042/MOU-IDUKA/KRV/2026'),
+      _WorkspaceField('mou_duration', 'Masa Berlaku MoU', hint: 'Contoh: 15 Jan 2026 - 15 Jan 2029'),
+      _WorkspaceField('scope', 'Ruang Lingkup Kerjasama', hint: 'Penyaluran Magang PKL, Kelas Industri, Rekrutmen'),
+      _WorkspaceField('contact', 'Kontak Person / Email PIC', hint: 'Email atau nomor telepon resmi'),
       _WorkspaceField('website', 'Website / Portofolio', kind: _FieldKind.url, hint: 'https://...'),
     ],
     'reports': [
@@ -187,6 +197,22 @@ class _InstitutionWorkspaceScreenState
         hint: 'Contoh: 2026',
       ),
     ],
+    'study_programs': [
+      _WorkspaceField('level', 'Jenjang Pendidikan', hint: 'Contoh: SMK, D3, D4, Sarjana (S1), Pascasarjana'),
+      _WorkspaceField('accreditation', 'Akreditasi Prodi', hint: 'Unggul (A) / Baik Sekali (B)'),
+      _WorkspaceField('focus_areas', 'Fokus Riset & Keahlian Unggulan', hint: '3D Animation, Character Rigging, UI/UX, IoT'),
+      _WorkspaceField('total_students', 'Jumlah Mahasiswa / Siswa', kind: _FieldKind.number),
+      _WorkspaceField('head_of_program', 'Ketua Program Studi / Kaprodi', hint: 'Nama dan gelar Kaprodi'),
+      _WorkspaceField('contact', 'Email / Kontak Resmi Prodi', hint: 'kaprodi@kreavana.sch.id'),
+    ],
+    'talents': [
+      _WorkspaceField('study_program', 'Program Studi / Jurusan', hint: 'Contoh: Animasi 3D & Digital Media, DKV'),
+      _WorkspaceField('skills', 'Keahlian & Software', hint: 'Blender, Figma, Unreal Engine 5, DaVinci Resolve'),
+      _WorkspaceField('status_readiness', 'Kesiapan Kolaborasi', hint: 'Siap Magang PKL / Siap Kerja / Freelance'),
+      _WorkspaceField('gpa', 'Nilai / IPK', hint: 'Contoh: 3.92'),
+      _WorkspaceField('portfolio_link', 'Tautan Portofolio Karya', kind: _FieldKind.url, hint: 'https://artstation.com/... atau Behance'),
+      _WorkspaceField('contact', 'Kontak / Email Mahasiswa', hint: 'email@student.kreavana.sch.id'),
+    ],
   };
 
   static const Map<String, List<String>> _statuses = {
@@ -198,6 +224,8 @@ class _InstitutionWorkspaceScreenState
     'documents': ['published', 'draft'],
     'announcements': ['draft', 'published'],
     'showcases': ['published', 'draft'],
+    'study_programs': ['published', 'draft'],
+    'talents': ['published', 'draft'],
   };
 
   String get _title {
@@ -1772,6 +1800,10 @@ class _InstitutionWorkspaceScreenState
         return 'mitra_komunitas';
       case 'showcases':
         return 'karya_siswa';
+      case 'study_programs':
+        return 'program_studi';
+      case 'talents':
+        return 'penelusuran_talenta';
       case 'reports':
         return 'laporan';
       case 'monitoring':

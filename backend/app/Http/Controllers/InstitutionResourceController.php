@@ -20,6 +20,8 @@ class InstitutionResourceController extends Controller
         'showcases',
         'members',
         'team',
+        'study_programs',
+        'talents',
     ];
 
     private const STATUSES = [
@@ -48,7 +50,6 @@ class InstitutionResourceController extends Controller
             $isCorporate = in_array($subRole, [
                 'corporate', 'company', 'business', 'perusahaan', 'bisnis'
             ], true);
-
             if ($isCorporate && InstitutionResource::where('user_id', $user->id)->count() === 0) {
                 \Database\Seeders\CorporateDummySeeder::seedForUser($user);
             }

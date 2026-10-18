@@ -186,7 +186,7 @@ class _MainNavigationState extends State<MainNavigation> {
       _currentUser,
     );
     final activeColor = isAi
-        ? (_isCompany ? defaultAccent : const Color(0xFF8B5CF6))
+        ? ((_isCompany || _isInstitution) ? defaultAccent : const Color(0xFF8B5CF6))
         : defaultAccent;
 
     return Padding(
@@ -239,7 +239,7 @@ class _MainNavigationState extends State<MainNavigation> {
                 Icon(
                   isSelected ? activeIcon : icon,
                   color: isAi && isSelected
-                      ? const Color(0xFF8B5CF6)
+                      ? ((_isCompany || _isInstitution) ? defaultAccent : const Color(0xFF8B5CF6))
                       : (isSelected
                             ? activeColor
                             : (isDark
@@ -269,7 +269,7 @@ class _MainNavigationState extends State<MainNavigation> {
                     Text(
                       'AI',
                       style: TextStyle(
-                        color: _isCompany ? defaultAccent : const Color(0xFF8B5CF6),
+                        color: (_isCompany || _isInstitution) ? defaultAccent : const Color(0xFF8B5CF6),
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
                       ),
@@ -388,6 +388,7 @@ class _MainNavigationState extends State<MainNavigation> {
   bool get _isCompany {
     final sub = CreatorSidebarMenus.normalizeSubRole(_currentUser.subRole);
     return !_currentUser.isAdmin &&
+        !_isSchool &&
         (sub == 'company' ||
             sub == 'corporate' ||
             sub == 'business' ||
@@ -395,6 +396,17 @@ class _MainNavigationState extends State<MainNavigation> {
             sub == 'bisnis' ||
             _currentUser.username == 'corporate_demo' ||
             _currentUser.email.startsWith('corporate@'));
+  }
+
+  bool get _isInstitution {
+    final sub = CreatorSidebarMenus.normalizeSubRole(_currentUser.subRole);
+    return !_currentUser.isAdmin &&
+        (sub == 'institution' ||
+            sub == 'institusi' ||
+            sub == 'lembaga' ||
+            sub == 'yayasan' ||
+            _currentUser.username == 'institution_demo' ||
+            _currentUser.email.startsWith('institution@'));
   }
 
   /// Index → URL mapping (kebalikan dari _routeIndexMap di app_router.dart)
@@ -548,14 +560,19 @@ class _MainNavigationState extends State<MainNavigation> {
     final isCorporate = _currentUser.role == 'corporate' ||
         _currentUser.role == 'company' ||
         _isCompany;
+    final isInstitution = _isInstitution;
     final promoTitle = isCorporate
         ? 'Upgrade Akun Corporate'
-        : (isCreator ? 'Upgrade Akun Kreator' : 'Upgrade Plan & Paket');
+        : (isInstitution
+            ? 'Upgrade Akun Institusi'
+            : (isCreator ? 'Upgrade Akun Kreator' : 'Upgrade Plan & Paket'));
     final promoDesc = isCorporate
         ? 'Tingkatkan peluang & fitur premium untuk corporate.'
-        : (isCreator
-            ? 'Tingkatkan peluang & fitur premium untuk kreator.'
-            : 'Tingkatkan peluang & fitur premium akun Anda.');
+        : (isInstitution
+            ? 'Tingkatkan kapasitas pengadaan & kemitraan institusi.'
+            : (isCreator
+                ? 'Tingkatkan peluang & fitur premium untuk kreator.'
+                : 'Tingkatkan peluang & fitur premium akun Anda.'));
     final accentColor = SubRoleThemeEngine.getAccentColor(
       _currentUser.role,
       _currentUser.subRole,
@@ -991,7 +1008,7 @@ class _MainNavigationState extends State<MainNavigation> {
           isMobileDrawer: isMobileDrawer,
           isAi: true,
         ),
-      if ((_isCreatorUser || _isCompany) && !_isGovernment && !_isSchool)
+      if ((_isCreatorUser || _isCompany || _isInstitution) && !_isGovernment && !_isSchool)
         _buildSidebarItem(
           icon: Icons.explore_outlined,
           activeIcon: Icons.explore,
@@ -1024,7 +1041,7 @@ class _MainNavigationState extends State<MainNavigation> {
           isCollapsed: isCollapsed,
           isMobileDrawer: isMobileDrawer,
         ),
-      if (!_hasSpecificCreatorSubRole && !_isCompany) ...[
+      if (!_hasSpecificCreatorSubRole && !_isCompany && !_isInstitution) ...[
         if (SystemSettingsService.isMarketplaceEnabled || _currentUser.isAdmin)
           _buildSidebarItem(
             icon: Icons.storefront_outlined,
@@ -1050,7 +1067,7 @@ class _MainNavigationState extends State<MainNavigation> {
       ],
       if (!isCollapsed && _isSchool) ...[
         const SizedBox(height: 18),
-        _buildSidebarSectionHeader('PENGELOLAAN SEKOLAH', isDark),
+        _buildSidebarSectionHeader(_isInstitution ? 'PENGELOLAAN INSTITUSI' : 'PENGELOLAAN SEKOLAH', isDark),
       ] else if (!isCollapsed && _isGovernment) ...[
         const SizedBox(height: 18),
         _buildSidebarSectionHeader('PENGELOLAAN', isDark),
@@ -1113,7 +1130,7 @@ class _MainNavigationState extends State<MainNavigation> {
         ),
         _buildSidebarLink(
           icon: Icons.diversity_3_outlined,
-          label: 'Mitra Industri & Sanggar',
+          label: _isInstitution ? 'Mitra Industri & IDUKA' : 'Mitra Industri & Sanggar',
           onTap: () {
             setState(() => _activeGovRoute = 'mitra_komunitas');
             _pushGovScreen(
@@ -1131,7 +1148,7 @@ class _MainNavigationState extends State<MainNavigation> {
         ),
         _buildSidebarLink(
           icon: Icons.palette_outlined,
-          label: 'Karya & Portofolio Siswa',
+          label: _isInstitution ? 'Karya & Showcase Siswa' : 'Karya & Portofolio Siswa',
           onTap: () {
             setState(() => _activeGovRoute = 'karya_siswa');
             _pushGovScreen(
@@ -1145,6 +1162,42 @@ class _MainNavigationState extends State<MainNavigation> {
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'karya_siswa',
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarLink(
+          icon: Icons.school_outlined,
+          label: 'Program Studi & Keunggulan',
+          onTap: () {
+            setState(() => _activeGovRoute = 'program_studi');
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'study_programs',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'program_studi',
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarLink(
+          icon: Icons.badge_outlined,
+          label: 'Penelusuran Talenta',
+          onTap: () {
+            setState(() => _activeGovRoute = 'penelusuran_talenta');
+            _pushGovScreen(
+              InstitutionWorkspaceScreen(
+                user: _currentUser,
+                resourceType: 'talents',
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'penelusuran_talenta',
           isMobileDrawer: isMobileDrawer,
         ),
         if (!isCollapsed) ...[
@@ -1233,7 +1286,7 @@ class _MainNavigationState extends State<MainNavigation> {
         ),
         _buildSidebarLink(
           icon: Icons.campaign_outlined,
-          label: 'Pengumuman Sekolah',
+          label: _isInstitution ? 'Pengumuman Lembaga' : 'Pengumuman Sekolah',
           onTap: () {
             setState(() => _activeGovRoute = 'pengumuman_publik');
             _pushGovScreen(
@@ -1266,7 +1319,7 @@ class _MainNavigationState extends State<MainNavigation> {
         ],
         _buildSidebarLink(
           icon: Icons.account_balance_outlined,
-          label: 'Profil Sekolah',
+          label: _isInstitution ? 'Profil Institusi' : 'Profil Sekolah',
           onTap: () {
             setState(() => _activeGovRoute = 'profil_instansi');
             _pushGovScreen(
@@ -2194,6 +2247,10 @@ class _MainNavigationState extends State<MainNavigation> {
       case 'corporate':
       case 'perusahaan':
       case 'bisnis':
+      case 'institution':
+      case 'institusi':
+      case 'lembaga':
+      case 'yayasan':
         return CompanyDashboardScreen(
           user: _currentUser,
           onUserUpdated: _onUserUpdated,
@@ -2218,8 +2275,6 @@ class _MainNavigationState extends State<MainNavigation> {
       case 'campus':
       case 'sekolah':
       case 'kampus':
-      case 'institution':
-      case 'institusi':
         return SchoolDashboardScreen(
           user: _currentUser,
           onUserUpdated: _onUserUpdated,
@@ -2285,9 +2340,16 @@ class _MainNavigationState extends State<MainNavigation> {
       case 'campus':
       case 'sekolah':
       case 'kampus':
+        return SchoolDashboardScreen(
+          user: _currentUser,
+          onUserUpdated: _onUserUpdated,
+        );
+
       case 'institution':
       case 'institusi':
-        return SchoolDashboardScreen(
+      case 'lembaga':
+      case 'yayasan':
+        return CompanyDashboardScreen(
           user: _currentUser,
           onUserUpdated: _onUserUpdated,
         );
@@ -2409,14 +2471,18 @@ class _MainNavigationState extends State<MainNavigation> {
 
   bool get _isSchool {
     final sub = CreatorSidebarMenus.normalizeSubRole(_currentUser.subRole);
-    return (_currentUser.role == 'user' || _currentUser.role == 'creator') &&
-        (sub == 'institution' ||
-            sub == 'institusi' ||
-            sub == 'school' ||
+    return !_currentUser.isAdmin &&
+        (sub == 'school' ||
             sub == 'education' ||
             sub == 'campus' ||
             sub == 'sekolah' ||
-            sub == 'kampus');
+            sub == 'kampus' ||
+            sub == 'institution' ||
+            sub == 'institusi' ||
+            sub == 'lembaga' ||
+            sub == 'yayasan' ||
+            _currentUser.username == 'institution_demo' ||
+            _currentUser.email.startsWith('institution@'));
   }
 
   Widget _buildScreenAt(int index) {
@@ -2600,10 +2666,12 @@ class _MainNavigationState extends State<MainNavigation> {
                                   width: 30,
                                   height: 30,
                                   fit: BoxFit.contain,
-                                  errorBuilder: (_, _, _) => const Center(
+                                  errorBuilder: (_, _, _) => Center(
                                     child: Icon(
                                       Icons.auto_awesome,
-                                      color: AppTheme.primaryPurple,
+                                      color: (_isCompany || _isInstitution)
+                                          ? const Color(0xFF2563EB)
+                                          : AppTheme.primaryPurple,
                                       size: 20,
                                     ),
                                   ),
@@ -2639,10 +2707,12 @@ class _MainNavigationState extends State<MainNavigation> {
                                     width: 36,
                                     height: 36,
                                     fit: BoxFit.contain,
-                                    errorBuilder: (_, _, _) => const Center(
+                                    errorBuilder: (_, _, _) => Center(
                                       child: Icon(
                                         Icons.auto_awesome,
-                                        color: AppTheme.primaryPurple,
+                                        color: (_isCompany || _isInstitution)
+                                            ? const Color(0xFF2563EB)
+                                            : AppTheme.primaryPurple,
                                         size: 24,
                                       ),
                                     ),

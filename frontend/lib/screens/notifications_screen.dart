@@ -874,8 +874,19 @@ class _NotificationsScreenState extends State<NotificationsScreen>
 
     final effectiveUser = widget.user ?? currentUserNotifier.value;
     final isCorporate = effectiveUser != null &&
-        ['corporate', 'company', 'business', 'perusahaan', 'bisnis']
-            .contains(effectiveUser.subRole?.toLowerCase());
+        ([
+          'corporate',
+          'company',
+          'business',
+          'perusahaan',
+          'bisnis',
+          'institution',
+          'institusi',
+          'lembaga',
+          'yayasan',
+        ].contains(effectiveUser.subRole?.toLowerCase()) ||
+        effectiveUser.username == 'institution_demo' ||
+        effectiveUser.email.startsWith('institution@'));
     final corporateColor = isCorporate
         ? const Color(0xFF2563EB)
         : SubRoleThemeEngine.getAccentColor(
