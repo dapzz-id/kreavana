@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app/theme.dart';
+import '../app/app_animations.dart';
 import '../app/subrole_theme_engine.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
@@ -347,27 +348,37 @@ class SubRoleRightSidebar extends StatelessWidget {
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: () => ProfileCompleteness.showChecklistModal(
+                      child: HoverLiftButton(
+                        glowColor: accentColor,
+                        scale: 1.025,
+                        translateY: -2.0,
+                        onTap: () => ProfileCompleteness.showChecklistModal(
                           context,
                           user,
                           onRefresh: () => onUserUpdated?.call(user),
                         ),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          side: BorderSide(
-                            color: accentColor.withValues(alpha: 0.4),
+                        child: OutlinedButton(
+                          onPressed: () => ProfileCompleteness.showChecklistModal(
+                            context,
+                            user,
+                            onRefresh: () => onUserUpdated?.call(user),
                           ),
-                          foregroundColor: accentColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            side: BorderSide(
+                              color: accentColor.withValues(alpha: 0.4),
+                            ),
+                            foregroundColor: accentColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
-                        ),
-                        child: const Text(
-                          'Lengkapi Profil',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                          child: const Text(
+                            'Lengkapi Profil',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
@@ -882,45 +893,10 @@ class SubRoleRightSidebar extends StatelessWidget {
             itemCount: actions.length,
             itemBuilder: (context, index) {
               final action = actions[index];
-              return InkWell(
-                onTap: action.onTap,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: isDark ? 0.12 : 0.06),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: accentColor.withValues(
-                        alpha: isDark ? 0.25 : 0.15,
-                      ),
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        action.icon,
-                        color: accentColor,
-                        size: 22,
-                      ),
-                      const SizedBox(height: 8),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: Text(
-                          action.label,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : AppTheme.textDark,
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              return _SidebarQuickActionHoverCard(
+                action: action,
+                accentColor: accentColor,
+                isDark: isDark,
               );
             },
           ),
@@ -1507,3 +1483,115 @@ class _SidebarQuickAction {
     required this.onTap,
   });
 }
+
+class _SidebarQuickActionHoverCard extends StatefulWidget {
+  final _SidebarQuickAction action;
+  final Color accentColor;
+  final bool isDark;
+
+  const _SidebarQuickActionHoverCard({
+    required this.action,
+    required this.accentColor,
+    required this.isDark,
+  });
+
+  @override
+  State<_SidebarQuickActionHoverCard> createState() =>
+      _SidebarQuickActionHoverCardState();
+}
+
+class _SidebarQuickActionHoverCardState
+    extends State<_SidebarQuickActionHoverCard> {
+  bool _isHovered = false;
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = widget.accentColor;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() {
+        _isHovered = false;
+        _isPressed = false;
+      }),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        onTap: widget.action.onTap,
+        child: AnimatedScale(
+          scale: _isPressed ? 0.95 : (_isHovered ? 1.04 : 1.0),
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            transform: Matrix4.translationValues(
+              0,
+              _isPressed ? 0.5 : (_isHovered ? -2.5 : 0.0),
+              0,
+            ),
+            decoration: BoxDecoration(
+              color: accent.withValues(
+                alpha: widget.isDark
+                    ? (_isHovered ? 0.24 : 0.12)
+                    : (_isHovered ? 0.14 : 0.06),
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: accent.withValues(
+                  alpha: widget.isDark
+                      ? (_isHovered ? 0.65 : 0.25)
+                      : (_isHovered ? 0.45 : 0.15),
+                ),
+                width: _isHovered ? 1.4 : 1.0,
+              ),
+              boxShadow: _isHovered
+                  ? [
+                      BoxShadow(
+                        color: accent.withValues(alpha: widget.isDark ? 0.35 : 0.20),
+                        blurRadius: 12,
+                        spreadRadius: 1,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedScale(
+                  scale: _isHovered ? 1.12 : 1.0,
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  child: Icon(
+                    widget.action.icon,
+                    color: accent,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text(
+                    widget.action.label,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: _isHovered ? FontWeight.bold : FontWeight.w600,
+                      color: widget.isDark ? Colors.white : AppTheme.textDark,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+

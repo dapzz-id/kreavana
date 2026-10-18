@@ -96,6 +96,12 @@ class UserSeeder extends Seeder
                 'username' => 'government_demo',
             ],
             [
+                'sub_role' => CreatorSubRole::TALENT,
+                'name' => 'Kreavana Demo Talent',
+                'email' => 'talent@kreavana.id',
+                'username' => 'talent_demo',
+            ],
+            [
                 'sub_role' => CreatorSubRole::MC,
                 'name' => 'Kreavana Demo MC',
                 'email' => 'mc@kreavana.id',

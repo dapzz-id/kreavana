@@ -74,8 +74,8 @@ class DashboardService extends BaseService implements DashboardServiceInterface
                 'poster_url' => $opp->poster_url,
             ])->toArray(),
             'project_needs' => $isGuest ? [] : $this->getProjectNeeds($userId),
-            'incoming_proposals' => $isGuest ? [] : $this->getIncomingProposals($userId),
-            'running_contracts' => $isGuest ? [] : $this->getRunningContracts($userId),
+            'incoming_proposals' => $isGuest ? [] : $this->getIncomingProposals($userId, $roleType),
+            'running_contracts' => $isGuest ? [] : $this->getRunningContracts($userId, $roleType),
             'agenda' => $isGuest ? [] : $this->getAgenda($userId),
             'project_assets' => $isGuest ? [] : $this->getProjectAssets($userId),
         ];
@@ -99,6 +99,35 @@ class DashboardService extends BaseService implements DashboardServiceInterface
 
     protected function getOverviewSummary(string $userId, string $roleType): array
     {
+        $isCreator = $roleType === 'creator';
+        if ($isCreator) {
+            $totalProjects = \App\Models\JobContract::where('creator_id', $userId)->count();
+            $runningProjects = \App\Models\JobContract::where('creator_id', $userId)
+                ->whereNotIn('contract_status', [\App\Enums\ContractStatus::Completed, \App\Enums\ContractStatus::Cancelled])
+                ->count();
+            $proposalsCount = \App\Models\OpportunityApplication::where('creator_id', $userId)->count();
+            $activeNeeds = \App\Models\Opportunity::where('status', 'open')->count();
+            $completedEarnings = $this->walletTransactionRepo->sumAmountByUserAndStatus($userId, 'completed');
+            $pendingEarnings = \App\Models\JobContract::where('creator_id', $userId)
+                ->where('contract_status', \App\Enums\ContractStatus::Active)
+                ->sum('agreed_price');
+            $favorites = $this->followRepo->getFollowersCount($userId);
+
+            return [
+                'active_needs' => $activeNeeds,
+                'proposals_count' => $proposalsCount,
+                'running_projects' => $runningProjects,
+                'estimated_expenses' => 'Rp ' . number_format($completedEarnings, 0, ',', '.'),
+                'monthly_income' => 'Rp ' . number_format($completedEarnings, 0, ',', '.'),
+                'total_projects' => $totalProjects,
+                'active_projects' => $runningProjects,
+                'total_payments' => 'Rp ' . number_format($completedEarnings, 0, ',', '.'),
+                'pending_payments' => 'Rp ' . number_format($pendingEarnings, 0, ',', '.'),
+                'favorites' => $favorites,
+                'role_type' => $roleType,
+            ];
+        }
+
         $totalProjects = $this->opportunityRepo->countByUser($userId);
         $activeProjects = $this->opportunityRepo->countActiveByUser($userId);
         $completedPayments = $this->walletTransactionRepo->sumAmountByUserAndStatus($userId, 'completed');
@@ -146,16 +175,26 @@ class DashboardService extends BaseService implements DashboardServiceInterface
         })->toArray();
     }
 
-    protected function getIncomingProposals(string $userId): array
+    protected function getIncomingProposals(string $userId, string $roleType = 'client'): array
     {
-        $proposals = \App\Models\OpportunityApplication::query()
-            ->whereHas('opportunity', function ($q) use ($userId) {
-                $q->where('posted_by', $userId);
-            })
-            ->with(['creator', 'opportunity'])
-            ->orderByDesc('created_at')
-            ->limit(5)
-            ->get();
+        $isCreator = $roleType === 'creator';
+        if ($isCreator) {
+            $proposals = \App\Models\OpportunityApplication::query()
+                ->where('creator_id', $userId)
+                ->with(['creator', 'opportunity'])
+                ->orderByDesc('created_at')
+                ->limit(5)
+                ->get();
+        } else {
+            $proposals = \App\Models\OpportunityApplication::query()
+                ->whereHas('opportunity', function ($q) use ($userId) {
+                    $q->where('posted_by', $userId);
+                })
+                ->with(['creator', 'opportunity'])
+                ->orderByDesc('created_at')
+                ->limit(5)
+                ->get();
+        }
 
         return $proposals->map(function ($prop) {
             $creatorName = $prop->creator?->name ?? 'Kreator';
@@ -174,24 +213,33 @@ class DashboardService extends BaseService implements DashboardServiceInterface
         })->toArray();
     }
 
-    protected function getRunningContracts(string $userId): array
+    protected function getRunningContracts(string $userId, string $roleType = 'client'): array
     {
-        $contracts = \App\Models\JobContract::query()
-            ->where('client_id', $userId)
+        $isCreator = $roleType === 'creator';
+        $query = \App\Models\JobContract::query();
+        if ($isCreator) {
+            $query->where('creator_id', $userId)->with(['client', 'creator']);
+        } else {
+            $query->where('client_id', $userId)->with('creator');
+        }
+
+        $contracts = $query
             ->whereNotIn('contract_status', [\App\Enums\ContractStatus::Completed, \App\Enums\ContractStatus::Cancelled])
-            ->with('creator')
             ->orderByDesc('updated_at')
             ->limit(5)
             ->get();
 
-        return $contracts->map(function ($c) {
+        return $contracts->map(function ($c) use ($isCreator) {
             $workStatusStr = is_object($c->work_status) ? $c->work_status->value : (string)$c->work_status;
             $contractStatusStr = is_object($c->contract_status) ? $c->contract_status->value : (string)$c->contract_status;
+            $partnerName = $isCreator ? ($c->client?->name ?? 'Klien') : ($c->creator?->name ?? 'Kreator');
+            $partnerAvatar = $isCreator ? $c->client?->avatar_url : $c->creator?->avatar_url;
+
             return [
                 'id' => $c->id,
                 'title' => $c->title,
-                'creator_name' => $c->creator?->name ?? 'Kreator',
-                'creator_avatar' => $c->creator?->avatar_url,
+                'creator_name' => $partnerName,
+                'creator_avatar' => $partnerAvatar,
                 'agreed_price' => 'Rp ' . number_format($c->agreed_price ?? 0, 0, ',', '.'),
                 'escrow_amount' => 'Rp ' . number_format($c->escrow_amount ?? 0, 0, ',', '.'),
                 'work_status' => $workStatusStr,

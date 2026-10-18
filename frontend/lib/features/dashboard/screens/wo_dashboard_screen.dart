@@ -2,8 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:kreavana/screens/direct_message_screen.dart';
 import '../../../app/theme.dart';
-import '../../../services/theme_transition_service.dart';
-import '../../../screens/global_search_screen.dart';
+import '../../../app/app_animations.dart';
 import '../../../models/user_model.dart';
 import '../../../screens/buat_kebutuhan_screen.dart';
 import '../../../screens/notifications_screen.dart';
@@ -14,6 +13,7 @@ import '../../../services/job_contract_service.dart';
 import '../../../models/job_contract.dart';
 import '../../../services/api_service.dart';
 import '../services/dashboard_service.dart';
+import '../../../widgets/app_bar_badge.dart';
 
 class WoDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -229,115 +229,47 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
       title: Row(
         children: [
           Expanded(
-            child: GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => GlobalSearchScreen(user: widget.user),
-                ),
-              ),
-              child: Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF1A1830)
-                      : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 14),
-                    Icon(
-                      Icons.search,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Cari proyek pernikahan, vendor, atau paket...',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: isDark
-                              ? AppTheme.textMuted
-                              : Colors.grey.shade500,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            child: InteractiveDashboardSearchBar(
+              user: widget.user,
+              isDark: isDark,
+              accentColor: _woPink,
+              placeholder: 'Cari proyek pernikahan, vendor, atau paket...',
             ),
           ),
-          ListenableBuilder(
-            listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(
-              Icons.notifications_none_outlined,
-              BadgeService().unreadNotificationsText,
-              isDark,
-            ),
+          const SizedBox(width: 10),
+          AppBarBadgeWidget(
+            icon: Icons.notifications_none_outlined,
+            isDark: isDark,
+            accentColor: _woPink,
           ),
-          const SizedBox(width: 4),
-          ListenableBuilder(
-            listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(
-              Icons.chat_bubble_outline,
-              BadgeService().unreadMessagesText,
-              isDark,
-            ),
+          const SizedBox(width: 6),
+          AppBarBadgeWidget(
+            icon: Icons.chat_bubble_outline,
+            isDark: isDark,
+            accentColor: _woPink,
           ),
-          const SizedBox(width: 20),
-          IconButton(
-            key: _themeBtnKey,
-            icon: Icon(
-              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-              size: 20,
-            ),
-            onPressed: () {
-              final box =
-                  _themeBtnKey.currentContext?.findRenderObject() as RenderBox?;
-              final origin = box != null
-                  ? box.localToGlobal(box.size.center(Offset.zero))
-                  : const Offset(0, 0);
-              ThemeTransitionService.animateToggle(
-                origin: origin,
-                toDark: !isDark,
-              );
-            },
+          const SizedBox(width: 10),
+          AppBarThemeToggle(
+            isDark: isDark,
+            btnKey: _themeBtnKey,
+            accentColor: _woPink,
           ),
           const SizedBox(width: 8),
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: _woPink.withValues(alpha: 0.1),
-                child: const Icon(Icons.favorite, color: _woPink, size: 20),
+          AppBarProfileBadge(
+            user: widget.user,
+            isDark: isDark,
+            accentColor: _woPink,
+            customSubRole: 'Wedding Organizer',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ProfileScreen(
+                  user: widget.user,
+                  onUserUpdated: widget.onUserUpdated,
+                  onLogout: () {},
+                ),
               ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.user.name,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'Wedding Organizer',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
         ],
       ),
@@ -371,19 +303,23 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
           ),
         ),
         const SizedBox(width: 16),
-        ElevatedButton.icon(
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: widget.user)),
-          ),
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('Buat Paket / Event Baru'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _woPink,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+        HoverLiftButton(
+          borderRadius: BorderRadius.circular(12),
+          glowColor: _woPink,
+          child: ElevatedButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: widget.user)),
+            ),
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Buat Paket / Event Baru'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _woPink,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ),
@@ -1044,67 +980,6 @@ class _WoDashboardScreenState extends State<WoDashboardScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildAppBarBadge(IconData icon, String count, bool isDark) {
-    final isNotification = icon == Icons.notifications_none_outlined;
-    return ListenableBuilder(
-      listenable: BadgeService(),
-      builder: (context, _) {
-        final badgeCount = isNotification
-            ? BadgeService().unreadNotificationsText
-            : BadgeService().unreadMessagesText;
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => isNotification
-                    ? NotificationsScreen(userId: '')
-                    : const DirectMessageScreen(),
-              ),
-            );
-          },
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  icon,
-                  size: 20,
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
-                if (badgeCount.isNotEmpty && badgeCount != '0')
-                  Positioned(
-                    right: -4,
-                    top: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.redAccent,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        badgeCount,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }

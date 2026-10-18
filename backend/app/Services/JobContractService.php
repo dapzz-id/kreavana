@@ -99,7 +99,113 @@ class JobContractService extends BaseService
                 ]);
             }
 
+            // Notify partner
+            $targetUserId = ($data['my_role'] === 'client') ? $creatorId : $clientId;
+            \App\Models\Notification::create([
+                'user_id' => $targetUserId,
+                'title' => 'Kontrak Kerja Baru Diajukan',
+                'message' => $user->name . ' telah mengajukan kontrak kerja baru: "' . $contract->title . '".',
+                'type' => 'contract',
+                'data' => ['contract_id' => $contract->id],
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
+
             return $contract;
+        });
+    }
+
+    public function repeatOrder(User $user, string $contractId, array $data): JobContract
+    {
+        $previousContract = JobContract::findOrFail($contractId);
+
+        // Security: user must be the client of this previous contract (or admin)
+        if ($user->role !== \App\Enums\RoleType::Admin && $previousContract->client_id !== $user->id) {
+            throw new Exception('Hanya klien pemilik kontrak sebelumnya yang dapat melakukan repeat order.', 403);
+        }
+
+        $creator = User::findOrFail($previousContract->creator_id);
+
+        $title = !empty($data['title']) ? $data['title'] : 'Repeat Order - ' . $previousContract->title;
+        $description = !empty($data['description']) ? $data['description'] : $previousContract->description;
+        $terms = !empty($data['terms']) ? $data['terms'] : $previousContract->terms;
+        $agreedPrice = isset($data['agreed_price']) && (float) $data['agreed_price'] > 0
+            ? (float) $data['agreed_price']
+            : (float) $previousContract->agreed_price;
+
+        $startDate = !empty($data['scheduled_start_date'])
+            ? $data['scheduled_start_date']
+            : now()->addDays(2)->toDateString();
+
+        $endDate = !empty($data['scheduled_end_date'])
+            ? $data['scheduled_end_date']
+            : now()->addDays(7)->toDateString();
+
+        $deadline = !empty($data['deadline'])
+            ? $data['deadline']
+            : $endDate;
+
+        return DB::transaction(function () use ($user, $creator, $previousContract, $title, $description, $terms, $agreedPrice, $startDate, $endDate, $deadline, $data) {
+            $newContract = $this->contractRepo->create([
+                'client_id' => $user->id,
+                'creator_id' => $creator->id,
+                'opportunity_id' => $previousContract->opportunity_id,
+                'creator_service_id' => $previousContract->creator_service_id,
+                'title' => $title,
+                'description' => $description,
+                'terms' => $terms,
+                'agreed_price' => $agreedPrice,
+                'escrow_amount' => 0.00,
+                'contract_status' => 'draft',
+                'work_status' => 'scheduled',
+                'deadline' => $deadline,
+                'scheduled_start_date' => $startDate,
+                'scheduled_end_date' => $endDate,
+            ]);
+
+            \App\Models\JobStatusHistory::create([
+                'job_contract_id' => $newContract->id,
+                'actor_id' => $user->id,
+                'transition' => 'repeat_order',
+                'from_contract_status' => 'draft',
+                'to_contract_status' => 'draft',
+                'from_work_status' => 'scheduled',
+                'to_work_status' => 'scheduled',
+                'metadata' => [
+                    'source_contract_id' => $previousContract->id,
+                    'notes' => $data['notes'] ?? null,
+                ],
+                'created_at' => now(),
+            ]);
+
+            // Notify Creator
+            \App\Models\Notification::create([
+                'user_id' => $creator->id,
+                'title' => 'Repeat Order Diterima!',
+                'message' => 'Klien ' . $user->name . ' telah melakukan Repeat Order untuk proyek: "' . $title . '".',
+                'type' => 'contract',
+                'data' => [
+                    'contract_id' => $newContract->id,
+                    'source_contract_id' => $previousContract->id,
+                ],
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
+
+            // Notify Client
+            \App\Models\Notification::create([
+                'user_id' => $user->id,
+                'title' => 'Repeat Order Berhasil Dibuat',
+                'message' => 'Kontrak Repeat Order "' . $title . '" dengan kreator ' . $creator->name . ' berhasil diajukan.',
+                'type' => 'contract',
+                'data' => [
+                    'contract_id' => $newContract->id,
+                ],
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
+
+            return $newContract;
         });
     }
 

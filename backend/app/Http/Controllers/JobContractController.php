@@ -89,9 +89,47 @@ class JobContractController extends Controller
                 'created_at' => now(),
             ]);
 
+            // Notify partner about confirmed schedule
+            $partnerId = ($contract->client_id === $user->id) ? $contract->creator_id : $contract->client_id;
+            \App\Models\Notification::create([
+                'user_id' => $partnerId,
+                'title' => 'Jadwal Kontrak Dikonfirmasi',
+                'message' => $user->name . ' telah mengonfirmasi jadwal untuk kontrak: "' . $contract->title . '". Pekerjaan kini berstatus sedang berjalan.',
+                'type' => 'contract',
+                'data' => [
+                    'contract_id' => $contract->id,
+                    'work_status' => WorkStatus::InProgress->value,
+                ],
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
+
             return $this->successResponse('Jadwal berhasil dikonfirmasi', $contract->toArray());
         } catch (Exception $e) {
             return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function repeatOrder(Request $request, string $id)
+    {
+        try {
+            $user = $request->user();
+            $data = $request->validate([
+                'title' => 'nullable|string|max:255',
+                'description' => 'nullable|string',
+                'terms' => 'nullable|string',
+                'agreed_price' => 'nullable|numeric|min:0',
+                'scheduled_start_date' => 'nullable|date',
+                'scheduled_end_date' => 'nullable|date',
+                'deadline' => 'nullable|date',
+                'notes' => 'nullable|string',
+            ]);
+
+            $newContract = $this->contractService->repeatOrder($user, $id, $data);
+
+            return $this->successResponse('Repeat order berhasil dibuat', $newContract->toArray(), 201);
+        } catch (Exception $e) {
+            return $this->errorResponse($e->getMessage(), $e->getCode() ?: 400);
         }
     }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app/theme.dart';
+import '../app/subrole_theme_engine.dart';
 import '../services/ai_service.dart';
 import '../models/user_model.dart';
 import '../models/opportunity_model.dart';
@@ -34,6 +35,7 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
   static Offset? _savedPosition;
   Offset? _position;
   bool _isDragging = false;
+  bool _isHovered = false;
   bool _hasDragged = false;
   Offset? _dragStartPos;
 
@@ -137,62 +139,81 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
           child: Builder(
             builder: (context) {
               final loggedUser = currentUserNotifier.value;
-              final isCorporate = widget.accentColor != null ||
-                  (loggedUser != null &&
-                      ['corporate', 'company', 'business', 'perusahaan', 'bisnis']
-                          .contains(loggedUser.subRole?.toLowerCase()));
               final effectiveColor = widget.accentColor ??
-                  (isCorporate ? const Color(0xFF2563EB) : AppTheme.primaryPurple);
-              final gradientColors = isCorporate
-                  ? const [Color(0xFF2563EB), Color(0xFF1D4ED8)]
-                  : const [Color(0xFF8B5CF6), Color(0xFF6D28D9)];
+                  (loggedUser != null
+                      ? SubRoleThemeEngine.getAccentColor(
+                          loggedUser.role,
+                          loggedUser.subRole,
+                        )
+                      : AppTheme.primaryPurple);
+              final darker = HSLColor.fromColor(effectiveColor)
+                  .withLightness(
+                    (HSLColor.fromColor(effectiveColor).lightness * 0.82)
+                        .clamp(0.0, 1.0),
+                  )
+                  .toColor();
+              final gradientColors = [effectiveColor, darker];
 
-              return Material(
-                color: Colors.transparent,
-                elevation: _isDragging ? 12 : 6,
-                shadowColor: effectiveColor.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(24),
-                child: AnimatedScale(
-                  scale: _isDragging ? 1.04 : 1.0,
-                  duration: const Duration(milliseconds: 120),
-                  child: Container(
-                    width: _buttonWidth,
-                    height: _buttonHeight,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: gradientColors,
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+              return MouseRegion(
+                cursor: SystemMouseCursors.click,
+                onEnter: (_) => setState(() => _isHovered = true),
+                onExit: (_) => setState(() => _isHovered = false),
+                child: Material(
+                  color: Colors.transparent,
+                  elevation: _isDragging ? 14 : (_isHovered ? 10 : 6),
+                  shadowColor: effectiveColor.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(24),
+                  child: AnimatedScale(
+                    scale: _isDragging ? 1.05 : (_isHovered ? 1.04 : 1.0),
+                    duration: const Duration(milliseconds: 160),
+                    curve: Curves.easeOutCubic,
+                    child: Container(
+                      width: _buttonWidth,
+                      height: _buttonHeight,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
                       ),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.35),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: effectiveColor.withValues(
-                            alpha: _isDragging ? 0.6 : 0.35,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: gradientColors,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: Colors.white.withValues(
+                            alpha: _isHovered ? 0.60 : 0.35,
                           ),
-                          blurRadius: _isDragging ? 16 : 10,
-                          offset: Offset(0, _isDragging ? 6 : 4),
+                          width: 1.2,
                         ),
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
+                        boxShadow: [
+                          BoxShadow(
+                            color: effectiveColor.withValues(
+                              alpha: _isDragging
+                                  ? 0.65
+                                  : (_isHovered ? 0.55 : 0.35),
+                            ),
+                            blurRadius: _isDragging ? 18 : (_isHovered ? 16 : 10),
+                            offset: Offset(
+                              0,
+                              _isDragging ? 6 : (_isHovered ? 5 : 4),
+                            ),
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withValues(
+                              alpha: _isHovered ? 0.28 : 0.2,
+                            ),
+                            blurRadius: _isHovered ? 10 : 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
                       child: Image.asset(
                         'assets/brandlogo.png',
                         width: 22,
@@ -223,11 +244,12 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
                 ),
               ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     ),
   ),
+),
 );
   }
 }

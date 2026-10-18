@@ -279,6 +279,28 @@ class OpportunityModel {
   bool get isClosed => status.toLowerCase() == 'closed' || status.toLowerCase() == 'completed';
   bool get hasExternalRating => externalRating != null && externalRating! > 0;
 
+  bool get isEventRunning {
+    if (status.toLowerCase() != 'open') return true;
+    if (eventProgress > 0) return true;
+    final rawDate = eventStartDate ?? eventDate;
+    if (rawDate != null && rawDate.trim().isNotEmpty) {
+      try {
+        final parsed = DateTime.tryParse(rawDate.trim());
+        if (parsed != null) {
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          final eventDay = DateTime(parsed.year, parsed.month, parsed.day);
+          if (eventDay.isBefore(today)) {
+            return true;
+          }
+        }
+      } catch (_) {}
+    }
+    return false;
+  }
+
+  bool get canApply => status.toLowerCase() == 'open' && !isEventRunning;
+
   bool get isLargeTransaction {
     final b = (budgetRange ?? '').toLowerCase();
     if (b.contains('5.000.000 - 20.000.000')) return false;

@@ -4,23 +4,15 @@ import 'package:go_router/go_router.dart';
 import '../../../services/app_router.dart';
 import '../../../widgets/auth_guard_dialog.dart';
 import '../../../app/theme.dart';
-import '../../../widgets/role_toggle.dart';
-import '../../../services/theme_transition_service.dart';
+import '../../../screens/creator_service_screen.dart';
+import '../../../screens/institution_workspace_screen.dart';
+import 'community_dashboard_screen.dart';
 import '../../../services/api_service.dart';
-import '../../../screens/agenda_screen.dart';
-import '../../../screens/marketplace_karya_screen.dart';
-import '../../../screens/profile_screen.dart';
-import '../../../screens/global_search_screen.dart';
 import '../../../models/user_model.dart';
 import '../../../screens/buat_kebutuhan_screen.dart';
 import '../../../screens/proyek_saya_screen.dart';
-import '../../../screens/explore_screen.dart';
-import '../../../screens/notifications_screen.dart';
-import '../../../screens/direct_message_screen.dart';
-import '../../../screens/transfer_screen.dart';
 import '../../../screens/laporan_screen.dart';
-import '../../../screens/peluang_proyek_screen.dart';
-import '../../../services/badge_service.dart';
+import '../../../screens/grafik_screen.dart';
 import '../../../widgets/ai_recommendation_card.dart';
 import '../../../widgets/opportunity_detail_sheet.dart';
 import '../../../models/opportunity_model.dart';
@@ -29,6 +21,46 @@ import '../../../app/subrole_theme_engine.dart';
 import '../../../widgets/upgrade_plan_modal.dart';
 import '../../../widgets/user_profile_modal.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../services/job_contract_service.dart';
+import '../services/dashboard_service.dart';
+import '../../../models/job_contract.dart';
+import '../../../widgets/creator_sidebar_menus.dart';
+import '../../../widgets/app_bar_badge.dart';
+import '../../../screens/detail_kebutuhan_screen.dart';
+import '../../../screens/direct_message_screen.dart';
+import '../../../services/chat_service.dart';
+import '../../../app/app_animations.dart';
+class _RoleDashboardConfig {
+  final String badge;
+  final String greeting;
+  final String subtitle;
+  final String primaryButtonLabel;
+  final IconData primaryButtonIcon;
+  final String secondaryButtonLabel;
+  final IconData secondaryButtonIcon;
+  final String recommendationTitle;
+  final String recommendationNiche;
+  final String recommendationRole;
+  final List<Map<String, dynamic>> metrics;
+  final List<Map<String, dynamic>> quickActions;
+  final List<String> aiTips;
+
+  const _RoleDashboardConfig({
+    required this.badge,
+    required this.greeting,
+    required this.subtitle,
+    required this.primaryButtonLabel,
+    required this.primaryButtonIcon,
+    required this.secondaryButtonLabel,
+    required this.secondaryButtonIcon,
+    required this.recommendationTitle,
+    required this.recommendationNiche,
+    required this.recommendationRole,
+    required this.metrics,
+    required this.quickActions,
+    required this.aiTips,
+  });
+}
 
 class DashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -49,19 +81,46 @@ class _DashboardScreenState extends State<DashboardScreen>
   late String _currentRole;
   Map<String, dynamic> _overviewSummary = {};
   List<Map<String, dynamic>> _vendorRecommendations = [];
+  List<Map<String, dynamic>> _recommendedOpportunities = [];
   List<Map<String, dynamic>> _projectNeeds = [];
   List<Map<String, dynamic>> _incomingProposals = [];
   List<Map<String, dynamic>> _runningContracts = [];
   List<Map<String, dynamic>> _agenda = [];
   List<Map<String, dynamic>> _projectAssets = [];
   List<Map<String, dynamic>> _activityFeed = [];
+  List<JobContract> _contracts = [];
+  List<Map<String, String>> _stats = [];
 
   late AnimationController _statsAnimController;
   late List<Animation<double>> _statsAnims;
   late AnimationController _handWaveController;
   late Animation<double> _handWaveAnimation;
 
-  bool get _isCreator => _currentRole == 'creator';
+  bool get _isCreator =>
+      _currentRole == 'creator' ||
+      widget.user.role == 'creator' ||
+      widget.user.isCreator;
+
+  bool get _isTalentAndPerformer {
+    final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
+    return sub == 'talent' ||
+        sub == 'performer' ||
+        sub == 'talent_performer' ||
+        sub == 'model' ||
+        sub == 'talent_model' ||
+        sub == 'actor' ||
+        sub == 'aktor' ||
+        sub == 'mc' ||
+        sub == 'penyanyi' ||
+        sub == 'singer' ||
+        sub == 'musisi' ||
+        sub == 'musician' ||
+        sub == 'penari' ||
+        sub == 'dancer' ||
+        sub == 'voice_over' ||
+        sub == 'vo' ||
+        sub == 'voiceover';
+  }
 
   final GlobalKey _themeBtnKey = GlobalKey();
 
@@ -109,13 +168,25 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Future<void> _loadDashboardData() async {
     try {
+      final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
       final roleType = widget.user.role;
-      final res = await ApiService.get(
-        'client-dashboard/overview?role_type=$roleType',
-      );
+      final results = await Future.wait([
+        ApiService.get('client-dashboard/overview?role_type=$roleType').catchError((_) => <String, dynamic>{}),
+        JobContractService.getUserContracts().catchError((_) => <JobContract>[]),
+        if (sub.isNotEmpty)
+          DashboardService.getStats(subRole: sub, roleType: roleType).catchError((_) => <Map<String, String>>[])
+        else
+          Future.value(<Map<String, String>>[]),
+      ]);
 
       if (mounted) {
+        final res = results[0] as Map<String, dynamic>;
+        final contracts = results[1] as List<JobContract>;
+        final stats = results[2] as List<Map<String, String>>;
+
         setState(() {
+          _contracts = contracts;
+          _stats = stats;
           final data = res['data'] ?? {};
           if ((res['success'] == true || res['status'] == true) && res['data'] != null) {
             final summary = data['summary'] ?? {};
@@ -125,21 +196,24 @@ class _DashboardScreenState extends State<DashboardScreen>
               'running_projects':
                   summary['running_projects']?.toString() ?? '0',
               'estimated_expenses':
-                  summary['estimated_expenses']?.toString() ?? 'Rp0',
-              'monthly_income': summary['monthly_income']?.toString() ?? 'Rp0',
+                  summary['estimated_expenses']?.toString() ?? 'Rp 0',
+              'monthly_income': summary['monthly_income']?.toString() ?? 'Rp 0',
             };
           } else {
             _overviewSummary = {
               'active_needs': '0',
               'proposals_count': '0',
               'running_projects': '0',
-              'estimated_expenses': 'Rp0',
-              'monthly_income': 'Rp0',
+              'estimated_expenses': 'Rp 0',
+              'monthly_income': 'Rp 0',
             };
           }
 
           _vendorRecommendations = List<Map<String, dynamic>>.from(
             data['vendor_recommendations'] ?? [],
+          );
+          _recommendedOpportunities = List<Map<String, dynamic>>.from(
+            data['recommended_opportunities'] ?? [],
           );
           _projectNeeds = List<Map<String, dynamic>>.from(
             data['project_needs'] ?? [],
@@ -167,10 +241,11 @@ class _DashboardScreenState extends State<DashboardScreen>
             'active_needs': '0',
             'proposals_count': '0',
             'running_projects': '0',
-            'estimated_expenses': 'Rp0',
-            'monthly_income': 'Rp0',
+            'estimated_expenses': 'Rp 0',
+            'monthly_income': 'Rp 0',
           };
           _vendorRecommendations = [];
+          _recommendedOpportunities = [];
           _projectNeeds = [];
           _incomingProposals = [];
           _runningContracts = [];
@@ -191,190 +266,1787 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  IconData _getHeroIllustrationIcon() {
+    if (_isTalentAndPerformer) return Icons.theater_comedy_outlined;
+    final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
+    if (sub == 'event_organizer' || sub == 'eo') return Icons.festival_outlined;
+    if (sub == 'wedding_organizer' || sub == 'wo') return Icons.celebration_outlined;
+    if (sub == 'school' || sub == 'education' || sub == 'campus' || sub == 'sekolah' || sub == 'kampus') {
+      return Icons.school_outlined;
+    }
+    if (sub == 'government' || sub == 'pemerintah' || sub == 'instansi') {
+      return Icons.account_balance_outlined;
+    }
+    if (sub == 'company' || sub == 'business' || sub == 'corporate' || sub == 'perusahaan') {
+      return Icons.business_center_outlined;
+    }
+    if (_isCreator) return Icons.camera_alt_outlined;
+    return Icons.laptop_mac_outlined;
+  }
+
+  String _getSearchHint() {
+    if (_isTalentAndPerformer) {
+      return 'Cari casting, job panggung, kreator, atau vendor MUA...';
+    }
+    final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
+    if (sub == 'event_organizer' || sub == 'eo') {
+      return 'Cari event, vendor, atau talent...';
+    }
+    if (sub == 'wedding_organizer' || sub == 'wo') {
+      return 'Cari vendor wedding, paket, atau talent...';
+    }
+    if (sub == 'school' || sub == 'education' || sub == 'campus' || sub == 'sekolah' || sub == 'kampus') {
+      return 'Cari mitra industri, magang, atau karya...';
+    }
+    if (sub == 'government' || sub == 'pemerintah' || sub == 'instansi') {
+      return 'Cari program, talenta daerah, atau pengadaan...';
+    }
+    if (sub == 'company' || sub == 'business' || sub == 'corporate' || sub == 'perusahaan') {
+      return 'Cari vendor, agensi, atau proposal...';
+    }
+    if (_isCreator) {
+      return 'Cari peluang, campaign, komunitas...';
+    }
+    return 'Cari kreator, layanan, proyek...';
+  }
+
+  _RoleDashboardConfig _getRoleConfig() {
+    final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
+    final user = widget.user;
+    final name = user.name.trim().isNotEmpty ? user.name.trim() : 'Pengguna';
+    final firstName = name.split(' ').first;
+
+    final totalContracts = _contracts.length;
+    int inProgressCount = 0;
+    for (final c in _contracts) {
+      if (c.workStatus.toLowerCase() == 'in_progress') inProgressCount++;
+    }
+
+    String? findStatValue(String keyword) {
+      final match = _stats.firstWhere(
+        (s) => (s['label'] ?? '').toLowerCase().contains(keyword.toLowerCase()),
+        orElse: () => {},
+      );
+      return match['value'];
+    }
+
+    // 1. EVENT ORGANIZER (EO)
+    if (sub == 'event_organizer' || sub == 'eo') {
+      final totalEventVal = findStatValue('event') ?? (totalContracts > 0 ? '$totalContracts' : '15');
+      final eventBerjalanVal = inProgressCount > 0 ? '$inProgressCount' : '2';
+      final vendorMitraVal = _vendorRecommendations.isNotEmpty ? '${_vendorRecommendations.length}' : '8';
+      final anggaranVal = _overviewSummary['estimated_expenses']?.toString() ?? 'Rp 28,5 Jt';
+
+      return _RoleDashboardConfig(
+        badge: '✦ MODE EVENT ORGANIZER',
+        greeting: 'Halo, $name! 🎪',
+        subtitle: 'Pantau progres acara, koordinasi vendor, dan kelola anggaran event Anda dalam satu dasbor.',
+        primaryButtonLabel: '+ Buat Event Baru',
+        primaryButtonIcon: Icons.festival_outlined,
+        secondaryButtonLabel: 'Cari Vendor Mitra',
+        secondaryButtonIcon: Icons.search_rounded,
+        recommendationTitle: 'Vendor Mitra Rekomendasi',
+        recommendationNiche: 'Event & Vendor',
+        recommendationRole: 'client',
+        metrics: [
+          {
+            'label': 'Total Event',
+            'value': totalEventVal,
+            'icon': Icons.festival_outlined,
+            'color': const Color(0xFF6366F1),
+            'trend': '$totalContracts proyek terdaftar',
+            'breakdown': 'Total penyelenggaraan acara dan event aktif terdaftar di akun Anda.',
+            'action': 'Jadwal Event',
+          },
+          {
+            'label': 'Event Berjalan',
+            'value': eventBerjalanVal,
+            'icon': Icons.play_circle_outline_rounded,
+            'color': const Color(0xFF10B981),
+            'trend': 'Persiapan & on-going',
+            'breakdown': 'Event yang saat ini dalam tahap gladi resik, koordinasi teknis, atau eksekusi.',
+            'action': 'Timeline EO',
+          },
+          {
+            'label': 'Vendor Partner',
+            'value': vendorMitraVal,
+            'icon': Icons.handshake_outlined,
+            'color': const Color(0xFFF59E0B),
+            'trend': '$vendorMitraVal mitra terhubung',
+            'breakdown': 'Mitra vendor profesional (dokumentasi, F&B, sound, stage, talent/MC) yang terhubung.',
+            'action': 'Vendor Partner',
+          },
+          {
+            'label': 'Anggaran Dikelola',
+            'value': anggaranVal,
+            'icon': Icons.account_balance_wallet_outlined,
+            'color': const Color(0xFF3B82F6),
+            'trend': 'Realisasi anggaran aktif',
+            'breakdown': 'Total alokasi biaya dan anggaran produksi event yang sedang berjalan.',
+            'action': 'Grafik Performa',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.inventory_2_outlined, 'label': 'Paket Event'},
+          {'icon': Icons.calendar_month_outlined, 'label': 'Jadwal Event'},
+          {'icon': Icons.handshake_outlined, 'label': 'Vendor Partner'},
+          {'icon': Icons.timeline_outlined, 'label': 'Timeline EO'},
+          {'icon': Icons.payments_outlined, 'label': 'Tarik Saldo'},
+          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+        ],
+        aiTips: [
+          'Siapkan rundown teknis dan checklist perlengkapan H-7 sebelum hari-H acara',
+          'Gunakan pembayaran milestone escrow untuk menjamin kejelasan komitmen antar vendor',
+          'Sinkronisasi jadwal gladi resik secara real-time dengan seluruh talenta & MC',
+        ],
+      );
+    }
+
+    // 2. WEDDING ORGANIZER (WO)
+    if (sub == 'wedding_organizer' || sub == 'wo') {
+      final totalWeddingVal = findStatValue('wedding') ?? (totalContracts > 0 ? '$totalContracts' : '12');
+      final weddingBerjalanVal = inProgressCount > 0 ? '$inProgressCount' : '3';
+      final vendorVal = _vendorRecommendations.isNotEmpty ? '${_vendorRecommendations.length}' : '14';
+      final anggaranVal = _overviewSummary['estimated_expenses']?.toString() ?? 'Rp 45 Jt';
+
+      return _RoleDashboardConfig(
+        badge: '✦ MODE WEDDING ORGANIZER',
+        greeting: 'Halo, $name! 💍',
+        subtitle: 'Rencanakan pernikahan impian, koordinasi vendor wedding, dan kelola jadwal acara secara terpadu.',
+        primaryButtonLabel: '+ Buat Paket Wedding',
+        primaryButtonIcon: Icons.favorite_outline,
+        secondaryButtonLabel: 'Cari Vendor Wedding',
+        secondaryButtonIcon: Icons.search_rounded,
+        recommendationTitle: 'Vendor Wedding Rekomendasi',
+        recommendationNiche: 'Pernikahan & Wedding',
+        recommendationRole: 'client',
+        metrics: [
+          {
+            'label': 'Paket Wedding',
+            'value': totalWeddingVal,
+            'icon': Icons.favorite_border,
+            'color': const Color(0xFFEC4899),
+            'trend': 'Agenda pernikahan terdaftar',
+            'breakdown': 'Jumlah jadwal dan paket wedding yang dikelola dalam portofolio Anda.',
+            'action': 'Paket Pernikahan',
+          },
+          {
+            'label': 'Jadwal Event',
+            'value': weddingBerjalanVal,
+            'icon': Icons.calendar_month_outlined,
+            'color': const Color(0xFF10B981),
+            'trend': 'Persiapan & Hari-H',
+            'breakdown': 'Acara pernikahan yang sedang aktif dalam tahap persiapan atau pelaksanaan.',
+            'action': 'Jadwal Event',
+          },
+          {
+            'label': 'Vendor Partner',
+            'value': vendorVal,
+            'icon': Icons.handshake_outlined,
+            'color': const Color(0xFFF59E0B),
+            'trend': 'MUA, Foto, Dekor & F&B',
+            'breakdown': 'Jaringan vendor terpercaya yang siap dikolaborasikan untuk klien pengantin.',
+            'action': 'Vendor Partner',
+          },
+          {
+            'label': 'Timeline WO',
+            'value': anggaranVal,
+            'icon': Icons.timeline_outlined,
+            'color': const Color(0xFF8B5CF6),
+            'trend': 'Alokasi paket wedding aktif',
+            'breakdown': 'Perkiraan total nilai anggaran paket pernikahan yang sedang berlangsung.',
+            'action': 'Timeline WO',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.favorite_outline, 'label': 'Paket Pernikahan'},
+          {'icon': Icons.calendar_month_outlined, 'label': 'Jadwal Event'},
+          {'icon': Icons.handshake_outlined, 'label': 'Vendor Partner'},
+          {'icon': Icons.timeline_outlined, 'label': 'Timeline WO'},
+          {'icon': Icons.payments_outlined, 'label': 'Tarik Saldo'},
+          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+        ],
+        aiTips: [
+          'Pastikan moodboard pengantin terkonfirmasi oleh vendor dekorasi dan MUA',
+          'Lakukan briefing teknis dengan tim fotografer H-3 sebelum akad dan resepsi',
+          'Pantau pembayaran termin vendor melalui sistem dompet escrow terjamin',
+        ],
+      );
+    }
+
+    // 3. INSTITUSI PENDIDIKAN / SEKOLAH / KAMPUS
+    if (sub == 'school' ||
+        sub == 'education' ||
+        sub == 'campus' ||
+        sub == 'sekolah' ||
+        sub == 'kampus' ||
+        sub == 'institution' ||
+        sub == 'institusi') {
+      return _RoleDashboardConfig(
+        badge: '✦ MODE INSTITUSI PENDIDIKAN',
+        greeting: 'Halo, $name! 🎓',
+        subtitle: 'Jembatani talenta siswa dengan industri, kelola program magang, dan kurasi karya kreatif kampus.',
+        primaryButtonLabel: '+ Buka Magang',
+        primaryButtonIcon: Icons.school_outlined,
+        secondaryButtonLabel: 'Cari Mitra Industri',
+        secondaryButtonIcon: Icons.business_outlined,
+        recommendationTitle: 'Mitra Industri Rekomendasi',
+        recommendationNiche: 'Industri Kreatif',
+        recommendationRole: 'client',
+        metrics: [
+          {
+            'label': 'Siswa / Mahasiswa',
+            'value': '1.240',
+            'icon': Icons.school_outlined,
+            'color': const Color(0xFF6366F1),
+            'trend': 'Talenta kreatif terdaftar',
+            'breakdown': 'Total siswa dan mahasiswa aktif yang terdaftar dalam program kejuruan / kampus.',
+            'action': 'Semua Proyek',
+          },
+          {
+            'label': 'Program Magang',
+            'value': '18',
+            'icon': Icons.work_outline,
+            'color': const Color(0xFF10B981),
+            'trend': 'Kemitraan industri aktif',
+            'breakdown': 'Program magang kerja sama industri yang sedang berjalan untuk mahasiswa.',
+            'action': 'Proyek Berjalan',
+          },
+          {
+            'label': 'Mitra Industri',
+            'value': '32',
+            'icon': Icons.business_outlined,
+            'color': const Color(0xFF3B82F6),
+            'trend': 'Perusahaan mitra terhubung',
+            'breakdown': 'Perusahaan dan studio kreatif yang telah menandatangani MoU kemitraan.',
+            'action': 'Cari Mitra Industri',
+          },
+          {
+            'label': 'Karya Disetujui',
+            'value': '156',
+            'icon': Icons.verified_outlined,
+            'color': const Color(0xFFF59E0B),
+            'trend': 'Portofolio terverifikasi',
+            'breakdown': 'Karya cipta dan portofolio siswa yang telah lulus kurasi standar industri.',
+            'action': 'Review Karya',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.work_outline, 'label': 'Buka Magang'},
+          {'icon': Icons.business, 'label': 'Cari Mitra Industri'},
+          {'icon': Icons.collections_bookmark_outlined, 'label': 'Review Karya'},
+          {'icon': Icons.calendar_month_outlined, 'label': 'Atur Jadwal'},
+          {'icon': Icons.assessment_outlined, 'label': 'Laporan'},
+          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+        ],
+        aiTips: [
+          'Verifikasi berkas karya siswa sebelum dipublikasikan ke etalase publik Kreavana',
+          'Hubungkan siswa magang dengan mentor industri bersertifikat di platform',
+          'Gunakan kalender agenda untuk memantau tenggat ujian kompetensi karya',
+        ],
+      );
+    }
+
+    // 4. PEMERINTAH / INSTANSI
+    if (sub == 'government' || sub == 'pemerintah' || sub == 'instansi') {
+      return _RoleDashboardConfig(
+        badge: '✦ MODE INSTANSI PEMERINTAH',
+        greeting: 'Halo, $name! 🏛️',
+        subtitle: 'Kelola program pemberdayaan ekonomi kreatif daerah, publikasi agenda, dan serapan anggaran kegiatan.',
+        primaryButtonLabel: '+ Pengadaan Kreatif',
+        primaryButtonIcon: Icons.account_balance_outlined,
+        secondaryButtonLabel: 'Kurasi Talenta Daerah',
+        secondaryButtonIcon: Icons.groups_outlined,
+        recommendationTitle: 'Talenta Kreatif Binaan',
+        recommendationNiche: 'Ekonomi Kreatif',
+        recommendationRole: 'client',
+        metrics: [
+          {
+            'label': 'Program Daerah',
+            'value': '14',
+            'icon': Icons.account_balance_outlined,
+            'color': const Color(0xFF6366F1),
+            'trend': 'Inisiatif ekonomi kreatif',
+            'breakdown': 'Program pembinaan, pelatihan, dan inkubasi kreatif daerah yang sedang berjalan.',
+            'action': 'Semua Proyek',
+          },
+          {
+            'label': 'Talenta Binaan',
+            'value': '340',
+            'icon': Icons.groups_outlined,
+            'color': const Color(0xFF10B981),
+            'trend': 'Pelaku kreatif terdaftar',
+            'breakdown': 'Kreator dan pelaku UMKM lokal yang terdaftar dalam basis data binaan daerah.',
+            'action': 'Kurasi Talenta',
+          },
+          {
+            'label': 'Proyek Pengadaan',
+            'value': '8',
+            'icon': Icons.assignment_outlined,
+            'color': const Color(0xFF3B82F6),
+            'trend': 'Kegiatan pengadaan berjalan',
+            'breakdown': 'Paket pengadaan jasa kreatif dan media publikasi pemerintah yang aktif.',
+            'action': 'Proyek Berjalan',
+          },
+          {
+            'label': 'Serapan Anggaran',
+            'value': 'Rp 120 Jt',
+            'icon': Icons.account_balance_wallet_outlined,
+            'color': const Color(0xFFF59E0B),
+            'trend': 'Alokasi kegiatan aktif',
+            'breakdown': 'Realisasi penyerapan anggaran program kreatif daerah terverifikasi.',
+            'action': 'Grafik Performa',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.assignment_outlined, 'label': 'Pengadaan Kreatif'},
+          {'icon': Icons.search, 'label': 'Kurasi Talenta'},
+          {'icon': Icons.compare_arrows, 'label': 'Bandingkan'},
+          {'icon': Icons.calendar_month_outlined, 'label': 'Agenda Daerah'},
+          {'icon': Icons.assessment_outlined, 'label': 'Laporan'},
+          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+        ],
+        aiTips: [
+          'Buka transparansi syarat teknis agar kreator UMKM daerah dapat berpartisipasi',
+          'Pantau serapan anggaran secara bertahap menggunakan invoice escrow resmi',
+          'Rilis laporan berkala indeks pertumbuhan ekonomi kreatif kota/kabupaten',
+        ],
+      );
+    }
+
+    // 5. PERUSAHAAN / CORPORATE / BUSINESS
+    if (sub == 'company' ||
+        sub == 'business' ||
+        sub == 'corporate' ||
+        sub == 'perusahaan' ||
+        sub == 'bisnis' ||
+        user.role == 'company' ||
+        user.role == 'corporate') {
+      return _RoleDashboardConfig(
+        badge: '✦ MODE PERUSAHAAN & BRAND',
+        greeting: 'Halo, $name! 🏢',
+        subtitle: 'Kelola pengadaan jasa kreatif, kampanye brand korporat, dan kolaborasi profesional terverifikasi.',
+        primaryButtonLabel: '+ Buka Proyek Korporat',
+        primaryButtonIcon: Icons.business_center_outlined,
+        secondaryButtonLabel: 'Cari Vendor Mitra',
+        secondaryButtonIcon: Icons.search_rounded,
+        recommendationTitle: 'Vendor & Agensi Rekomendasi',
+        recommendationNiche: 'Brand & Komersial',
+        recommendationRole: 'client',
+        metrics: [
+          {
+            'label': 'Kampanye Aktif',
+            'value': _overviewSummary['active_needs']?.toString() ?? '6',
+            'icon': Icons.campaign_outlined,
+            'color': const Color(0xFF3B82F6),
+            'trend': 'Brief pengadaan berjalan',
+            'breakdown': 'Brief pengadaan kreatif dan promosi brand yang sedang dibuka ke publik.',
+            'action': 'Semua Proyek',
+          },
+          {
+            'label': 'Proposal Masuk',
+            'value': _overviewSummary['proposals_count']?.toString() ?? '18',
+            'icon': Icons.mail_outline,
+            'color': const Color(0xFF10B981),
+            'trend': 'Penawaran vendor/kreator',
+            'breakdown': 'Total proposal dan portofolio masuk dari agency atau kreator terverifikasi.',
+            'action': 'Proposal Masuk',
+          },
+          {
+            'label': 'Kontrak Berjalan',
+            'value': _overviewSummary['running_projects']?.toString() ?? '4',
+            'icon': Icons.folder_open,
+            'color': const Color(0xFF6366F1),
+            'trend': 'Produksi & eksekusi',
+            'breakdown': 'Proyek produksi kampanye yang sedang dalam tahap eksekusi lapangan.',
+            'action': 'Proyek Berjalan',
+          },
+          {
+            'label': 'Total Anggaran',
+            'value': _overviewSummary['estimated_expenses']?.toString() ?? 'Rp 85 Jt',
+            'icon': Icons.account_balance_wallet_outlined,
+            'color': const Color(0xFFF59E0B),
+            'trend': 'Komitmen dana proyek',
+            'breakdown': 'Alokasi komitmen dana korporat yang terlindungi di rekening escrow.',
+            'action': 'Grafik Performa',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.business_center_outlined, 'label': 'Buka Proyek Korporat'},
+          {'icon': Icons.search, 'label': 'Cari Vendor'},
+          {'icon': Icons.compare_arrows, 'label': 'Bandingkan'},
+          {'icon': Icons.folder_open, 'label': 'Kontrak Berjalan'},
+          {'icon': Icons.payment, 'label': 'Bayar DP'},
+          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+        ],
+        aiTips: [
+          'Sertakan NDA digital dalam brief pengadaan proyek sensitif korporasi',
+          'Bandingkan portofolio dan ulasan terverifikasi sebelum menyetujui kontrak',
+          'Gunakan milestone bertahap untuk menjaga kualitas deliverables setiap fase',
+        ],
+      );
+    }
+
+    // 6. UMKM & BISNIS LOKAL
+    if (sub == 'umkm') {
+      return _RoleDashboardConfig(
+        badge: '✦ MODE UMKM & BISNIS LOKAL',
+        greeting: 'Halo, $name! 🛍️',
+        subtitle: 'Temukan talenta kreatif terbaik untuk branding produk, konten promosi, dan ekspansi bisnis Anda.',
+        primaryButtonLabel: '+ Buat Kebutuhan',
+        primaryButtonIcon: Icons.storefront_outlined,
+        secondaryButtonLabel: 'Cari Kreator Promosi',
+        secondaryButtonIcon: Icons.search_rounded,
+        recommendationTitle: 'Kreator Promosi Rekomendasi',
+        recommendationNiche: 'Promosi Produk & UMKM',
+        recommendationRole: 'client',
+        metrics: [
+          {
+            'label': 'Kebutuhan Aktif',
+            'value': _overviewSummary['active_needs']?.toString() ?? '3',
+            'icon': Icons.description_outlined,
+            'color': const Color(0xFF3B82F6),
+            'trend': 'Brief promosi berjalan',
+            'breakdown': 'Brief kebutuhan konten dan foto katalog yang sedang mencari kreator.',
+            'action': 'Semua Proyek',
+          },
+          {
+            'label': 'Proposal Masuk',
+            'value': _overviewSummary['proposals_count']?.toString() ?? '12',
+            'icon': Icons.mail_outline,
+            'color': const Color(0xFF10B981),
+            'trend': 'Penawaran dari kreator',
+            'breakdown': 'Kreator yang mengajukan proposal dan tawaran kerja sama untuk UMKM Anda.',
+            'action': 'Proposal Masuk',
+          },
+          {
+            'label': 'Proyek Berjalan',
+            'value': _overviewSummary['running_projects']?.toString() ?? '2',
+            'icon': Icons.folder_open,
+            'color': const Color(0xFF14B8A6),
+            'trend': 'Desain & konten aktif',
+            'breakdown': 'Pengerjaan konten, foto produk, atau video reels yang sedang berjalan.',
+            'action': 'Proyek Berjalan',
+          },
+          {
+            'label': 'Est. Pengeluaran',
+            'value': _overviewSummary['estimated_expenses']?.toString() ?? 'Rp 2,5 Jt',
+            'icon': Icons.account_balance_wallet_outlined,
+            'color': const Color(0xFF7C3AED),
+            'trend': 'Alokasi biaya promosi',
+            'breakdown': 'Total biaya promosi dan pengadaan konten kreatif UMKM Anda.',
+            'action': 'Grafik Performa',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.add_circle_outline, 'label': 'Buat Kebutuhan'},
+          {'icon': Icons.search, 'label': 'Cari Kreator'},
+          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+          {'icon': Icons.compare_arrows, 'label': 'Bandingkan'},
+          {'icon': Icons.check_circle_outline, 'label': 'Setujui Proyek'},
+          {'icon': Icons.payment, 'label': 'Bayar DP'},
+        ],
+        aiTips: [
+          'Sertakan contoh foto produk dan target audiens agar konten relevan',
+          'Cari kreator lokal terdekat untuk memudahkan pengiriman sample produk',
+          'Simpan kreator favorit untuk kebutuhan konten promo bulanan Anda',
+        ],
+      );
+    }
+
+    // 7. CREATIVE AGENCY
+    if (sub == 'agency' || sub == 'brand_agency') {
+      return _RoleDashboardConfig(
+        badge: '✦ MODE CREATIVE AGENCY',
+        greeting: 'Halo, $name! 🚀',
+        subtitle: 'Kelola proyek kampanye kreatif klien, koordinasi talenta, dan pantau milestone produksi.',
+        primaryButtonLabel: '+ Buat Brief Kampanye',
+        primaryButtonIcon: Icons.campaign_outlined,
+        secondaryButtonLabel: 'Cari Talenta Kreatif',
+        secondaryButtonIcon: Icons.search_rounded,
+        recommendationTitle: 'Talenta Kreatif Rekomendasi',
+        recommendationNiche: 'Produksi Kreatif & Media',
+        recommendationRole: 'client',
+        metrics: [
+          {
+            'label': 'Kampanye Klien',
+            'value': _overviewSummary['active_needs']?.toString() ?? '8',
+            'icon': Icons.campaign_outlined,
+            'color': const Color(0xFF6366F1),
+            'trend': 'Produksi kampanye aktif',
+            'breakdown': 'Kampanye klien agency yang sedang dalam tahap rekrutmen talenta & produksi.',
+            'action': 'Semua Proyek',
+          },
+          {
+            'label': 'Proposal Masuk',
+            'value': _overviewSummary['proposals_count']?.toString() ?? '24',
+            'icon': Icons.mail_outline,
+            'color': const Color(0xFF10B981),
+            'trend': 'Kandidat talenta masuk',
+            'breakdown': 'Total lamaran kerja sama dari para kreator lepas untuk kampanye agency.',
+            'action': 'Proposal Masuk',
+          },
+          {
+            'label': 'Talenta Bekerja',
+            'value': _overviewSummary['running_projects']?.toString() ?? '5',
+            'icon': Icons.group_work_outlined,
+            'color': const Color(0xFF3B82F6),
+            'trend': 'Kontrak produksi berjalan',
+            'breakdown': 'Kreator yang sedang aktif menjalankan tugas produksi kampanye.',
+            'action': 'Proyek Berjalan',
+          },
+          {
+            'label': 'Total Billing',
+            'value': _overviewSummary['estimated_expenses']?.toString() ?? 'Rp 42 Jt',
+            'icon': Icons.account_balance_wallet_outlined,
+            'color': const Color(0xFFF59E0B),
+            'trend': 'Total anggaran produksi',
+            'breakdown': 'Total komitmen billing produksi kampanye yang dikelola melalui platform.',
+            'action': 'Grafik Performa',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.campaign_outlined, 'label': 'Buat Brief Kampanye'},
+          {'icon': Icons.search, 'label': 'Cari Kreator'},
+          {'icon': Icons.compare_arrows, 'label': 'Bandingkan'},
+          {'icon': Icons.calendar_month_outlined, 'label': 'Atur Jadwal'},
+          {'icon': Icons.payment, 'label': 'Bayar DP'},
+          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+        ],
+        aiTips: [
+          'Gunakan template timeline bertahap untuk sinkronisasi tim kreatif',
+          'Lakukan kurasi portofolio kreator sebelum merekomendasikan ke brand klien',
+          'Gunakan proteksi escrow untuk kepastian pencairan komitmen project fee',
+        ],
+      );
+    }
+
+    // 8. PARIWISATA & DESA WISATA
+    if (sub == 'tourism' || sub == 'desa_wisata' || sub == 'pariwisata') {
+      return _RoleDashboardConfig(
+        badge: '✦ MODE PARIWISATA & DESA WISATA',
+        greeting: 'Halo, $name! 🏖️',
+        subtitle: 'Promosikan destinasi wisata lokal, gandeng kreator konten, dan tingkatkan daya tarik pengunjung.',
+        primaryButtonLabel: '+ Buat Kampanye Wisata',
+        primaryButtonIcon: Icons.landscape_outlined,
+        secondaryButtonLabel: 'Cari Kreator Konten',
+        secondaryButtonIcon: Icons.search_rounded,
+        recommendationTitle: 'Kreator Konten Rekomendasi',
+        recommendationNiche: 'Wisata & Travel',
+        recommendationRole: 'client',
+        metrics: [
+          {
+            'label': 'Kampanye Wisata',
+            'value': _overviewSummary['active_needs']?.toString() ?? '4',
+            'icon': Icons.landscape_outlined,
+            'color': const Color(0xFF10B981),
+            'trend': 'Program promosi aktif',
+            'breakdown': 'Kampanye promosi destinasi wisata lokal yang sedang berjalan.',
+            'action': 'Semua Proyek',
+          },
+          {
+            'label': 'Proposal Masuk',
+            'value': _overviewSummary['proposals_count']?.toString() ?? '16',
+            'icon': Icons.mail_outline,
+            'color': const Color(0xFF3B82F6),
+            'trend': 'Kreator & videografer',
+            'breakdown': 'Penawaran dari travel vlogger, fotografer lanskap, dan kreator konten.',
+            'action': 'Proposal Masuk',
+          },
+          {
+            'label': 'Shooting Berjalan',
+            'value': _overviewSummary['running_projects']?.toString() ?? '3',
+            'icon': Icons.videocam_outlined,
+            'color': const Color(0xFF6366F1),
+            'trend': 'Produksi di lokasi wisata',
+            'breakdown': 'Tim kreator yang sedang melakukan pengambilan gambar di lokasi.',
+            'action': 'Proyek Berjalan',
+          },
+          {
+            'label': 'Alokasi Promosi',
+            'value': _overviewSummary['estimated_expenses']?.toString() ?? 'Rp 15 Jt',
+            'icon': Icons.account_balance_wallet_outlined,
+            'color': const Color(0xFFF59E0B),
+            'trend': 'Anggaran branding destinasi',
+            'breakdown': 'Total anggaran pengembangan konten visual destinasi wisata.',
+            'action': 'Grafik Performa',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.landscape_outlined, 'label': 'Buat Kampanye Wisata'},
+          {'icon': Icons.search, 'label': 'Cari Kreator'},
+          {'icon': Icons.compare_arrows, 'label': 'Bandingkan'},
+          {'icon': Icons.calendar_month_outlined, 'label': 'Atur Jadwal'},
+          {'icon': Icons.payment, 'label': 'Bayar DP'},
+          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+        ],
+        aiTips: [
+          'Pilih pilot drone dan videografer berpengalaman untuk visual landscape memukau',
+          'Buat paket bundling konten video cinematic dan foto spot Instagramable',
+          'Gunakan kalender promosi untuk menyambut musim liburan mendatang',
+        ],
+      );
+    }
+
+    // 9. KOMUNITAS
+    if (sub == 'community' || sub == 'komunitas') {
+      return _RoleDashboardConfig(
+        badge: '✦ MODE KOMUNITAS KREATIF',
+        greeting: 'Halo, $name! 👥',
+        subtitle: 'Satukan kreator lokal, selenggarakan workshop dan kolaborasi kreatif antar anggota.',
+        primaryButtonLabel: '+ Buat Agenda Komunitas',
+        primaryButtonIcon: Icons.groups_outlined,
+        secondaryButtonLabel: 'Eksplor Kolaborasi',
+        secondaryButtonIcon: Icons.handshake_outlined,
+        recommendationTitle: 'Kolaborator Rekomendasi',
+        recommendationNiche: 'Komunitas & Workshop',
+        recommendationRole: 'client',
+        metrics: [
+          {
+            'label': 'Anggota Komunitas',
+            'value': '480',
+            'icon': Icons.groups_outlined,
+            'color': const Color(0xFF6366F1),
+            'trend': 'Kreator aktif terdaftar',
+            'breakdown': 'Jumlah anggota komunitas kreatif yang terdaftar dan aktif berinteraksi.',
+            'action': 'Komunitas',
+          },
+          {
+            'label': 'Event Komunitas',
+            'value': '5',
+            'icon': Icons.celebration_outlined,
+            'color': const Color(0xFF10B981),
+            'trend': 'Workshop & gathering aktif',
+            'breakdown': 'Agenda kumpul rutin, showcase karya, dan workshop kreatif mendatang.',
+            'action': 'Atur Jadwal',
+          },
+          {
+            'label': 'Kolaborasi Berjalan',
+            'value': '12',
+            'icon': Icons.handshake_outlined,
+            'color': const Color(0xFF3B82F6),
+            'trend': 'Karya kolaboratif tim',
+            'breakdown': 'Proyek karya bersama antar anggota lintas disiplin ilmu kreatif.',
+            'action': 'Proyek Berjalan',
+          },
+          {
+            'label': 'Kas & Anggaran',
+            'value': _overviewSummary['estimated_expenses']?.toString() ?? 'Rp 6,5 Jt',
+            'icon': Icons.account_balance_wallet_outlined,
+            'color': const Color(0xFFF59E0B),
+            'trend': 'Dana kegiatan komunitas',
+            'breakdown': 'Total perputaran dana iuran dan kas kegiatan bersama komunitas.',
+            'action': 'Grafik Performa',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.celebration_outlined, 'label': 'Buat Agenda Komunitas'},
+          {'icon': Icons.search, 'label': 'Cari Kreator'},
+          {'icon': Icons.handshake_outlined, 'label': 'Komunitas'},
+          {'icon': Icons.calendar_month_outlined, 'label': 'Atur Jadwal'},
+          {'icon': Icons.assessment_outlined, 'label': 'Laporan'},
+          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+        ],
+        aiTips: [
+          'Ajak anggota saling memberi ulasan positif untuk meningkatkan kredibilitas',
+          'Buat ruang kolaborasi multi-disiplin seperti desainer bersama animator',
+          'Dokumentasikan setiap sesi workshop untuk menarik anggota baru',
+        ],
+      );
+    }
+
+    // 10. FOTOGRAFER
+    if (sub == 'fotografer' || sub == 'photographer') {
+      return _RoleDashboardConfig(
+        badge: '✦ FOTOGRAFER PROFESIONAL',
+        greeting: 'Halo, $name! 📸',
+        subtitle: 'Kelola jadwal pemotretan, tawarkan paket sesi foto, dan pamerkan portofolio visual terbaik Anda.',
+        primaryButtonLabel: 'Upload Foto',
+        primaryButtonIcon: Icons.add_photo_alternate_outlined,
+        secondaryButtonLabel: 'Atur Jadwal Sesi',
+        secondaryButtonIcon: Icons.calendar_month_outlined,
+        recommendationTitle: 'Peluang & Sesi Foto Rekomendasi',
+        recommendationNiche: 'Fotografi',
+        recommendationRole: 'creator',
+        metrics: [
+          {
+            'label': 'Sesi Foto Aktif',
+            'value': inProgressCount > 0 ? '$inProgressCount' : '4',
+            'icon': Icons.camera_alt_outlined,
+            'color': const Color(0xFF6366F1),
+            'trend': '↑ 2 sesi minggu ini',
+            'breakdown': 'Sesi pemotretan aktif dalam proses penjadwalan & editing.',
+            'action': 'Proyek Berjalan',
+          },
+          {
+            'label': 'Jadwal Pemotretan',
+            'value': _agenda.isNotEmpty ? '${_agenda.length}' : '6',
+            'icon': Icons.calendar_month_outlined,
+            'color': const Color(0xFF10B981),
+            'trend': 'Jadwal terkonfirmasi',
+            'breakdown': 'Sesi foto terdaftar di kalender kerja Anda.',
+            'action': 'Atur Jadwal',
+          },
+          {
+            'label': 'Portofolio Foto',
+            'value': '28 Foto',
+            'icon': Icons.collections_outlined,
+            'color': const Color(0xFFF59E0B),
+            'trend': 'Karya terpublikasi',
+            'breakdown': 'Foto dan album karya yang tampil di marketplace.',
+            'action': 'Tambah Karya',
+          },
+          {
+            'label': 'Pendapatan Foto',
+            'value': _overviewSummary['monthly_income']?.toString() ?? 'Rp 8,5 Jt',
+            'icon': Icons.account_balance_wallet_outlined,
+            'color': const Color(0xFF3B82F6),
+            'trend': '↑ 18% bulan ini',
+            'breakdown': 'Total honorarium dari sesi foto yang telah selesai.',
+            'action': 'Grafik Performa',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.add_photo_alternate_outlined, 'label': 'Upload Foto'},
+          {'icon': Icons.camera_alt_outlined, 'label': 'Paket Foto'},
+          {'icon': Icons.event_available_outlined, 'label': 'Booking Sesi'},
+          {'icon': Icons.search, 'label': 'Cari Klien'},
+          {'icon': Icons.payments_outlined, 'label': 'Tarik Saldo'},
+          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+        ],
+        aiTips: [
+          'Unggah foto beresolusi tinggi dengan watermark halus untuk portofolio',
+          'Pastikan rincian gear kamera dan lensa tertulis jelas di paket foto',
+          'Kirim teaser foto H+1 setelah pemotretan untuk memikat klien',
+        ],
+      );
+    }
+
+    // 11. VIDEOGRAFER
+    if (sub == 'videografer' || sub == 'videographer') {
+      return _RoleDashboardConfig(
+        badge: '✦ VIDEOGRAFER PROFESIONAL',
+        greeting: 'Halo, $name! 🎥',
+        subtitle: 'Kelola jadwal syuting produksi video, tawarkan paket cinematic, dan pamerkan showreel terbaik Anda.',
+        primaryButtonLabel: 'Upload Showreel',
+        primaryButtonIcon: Icons.video_library_outlined,
+        secondaryButtonLabel: 'Jadwal Syuting',
+        secondaryButtonIcon: Icons.calendar_month_outlined,
+        recommendationTitle: 'Peluang Produksi Video Rekomendasi',
+        recommendationNiche: 'Videografi',
+        recommendationRole: 'creator',
+        metrics: [
+          {
+            'label': 'Proyek Video',
+            'value': inProgressCount > 0 ? '$inProgressCount' : '3',
+            'icon': Icons.videocam_outlined,
+            'color': const Color(0xFF8B5CF6),
+            'trend': 'Produksi aktif',
+            'breakdown': 'Proyek video syuting dan pascaproduksi berjalan.',
+            'action': 'Proyek Berjalan',
+          },
+          {
+            'label': 'Jadwal Syuting',
+            'value': _agenda.isNotEmpty ? '${_agenda.length}' : '5',
+            'icon': Icons.calendar_month_outlined,
+            'color': const Color(0xFF10B981),
+            'trend': 'Lokasi terkonfirmasi',
+            'breakdown': 'Jadwal pengambilan gambar aktif di kalender.',
+            'action': 'Atur Jadwal',
+          },
+          {
+            'label': 'Showreel Karya',
+            'value': '16 Video',
+            'icon': Icons.movie_filter_outlined,
+            'color': const Color(0xFFF59E0B),
+            'trend': 'Koleksi portofolio',
+            'breakdown': 'Karya visual cinematic yang diunggah ke profil.',
+            'action': 'Tambah Karya',
+          },
+          {
+            'label': 'Pendapatan Video',
+            'value': _overviewSummary['monthly_income']?.toString() ?? 'Rp 14,2 Jt',
+            'icon': Icons.account_balance_wallet_outlined,
+            'color': const Color(0xFF3B82F6),
+            'trend': '↑ 22% bulan ini',
+            'breakdown': 'Pendapatan dari kontrak video yang telah rampung.',
+            'action': 'Grafik Performa',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.video_library_outlined, 'label': 'Upload Showreel'},
+          {'icon': Icons.videocam_outlined, 'label': 'Paket Video'},
+          {'icon': Icons.calendar_month_outlined, 'label': 'Jadwal Syuting'},
+          {'icon': Icons.search, 'label': 'Cari Klien'},
+          {'icon': Icons.payments_outlined, 'label': 'Tarik Saldo'},
+          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+        ],
+        aiTips: [
+          'Sertakan teaser video 15 detik di portofolio untuk respons lebih cepat',
+          'Cantumkan daftar resolusi perekaman (4K/60fps) dan color profile kamera',
+          'Gunakan storage Kreavana untuk pengiriman draft preview ke klien',
+        ],
+      );
+    }
+
+    // 12. EDITOR
+    if (sub == 'editor' || sub == 'video_editor') {
+      return _RoleDashboardConfig(
+        badge: '✦ VIDEO & AUDIO EDITOR',
+        greeting: 'Halo, $name! ✂️',
+        subtitle: 'Pantau antrean editing video, kelola revisi klien, dan serahkan deliverable tepat waktu.',
+        primaryButtonLabel: 'Antrean Editing',
+        primaryButtonIcon: Icons.pending_actions_outlined,
+        secondaryButtonLabel: 'Upload Draft',
+        secondaryButtonIcon: Icons.upload_file_outlined,
+        recommendationTitle: 'Peluang Editing & Post-Pro Rekomendasi',
+        recommendationNiche: 'Video Editing',
+        recommendationRole: 'creator',
+        metrics: [
+          {
+            'label': 'Antrean Edit',
+            'value': '5 Proyek',
+            'icon': Icons.pending_actions_outlined,
+            'color': const Color(0xFF6366F1),
+            'trend': 'On progress',
+            'breakdown': 'File mentah yang sedang dalam tahap cutting & grading.',
+            'action': 'Antrean Editing',
+          },
+          {
+            'label': 'Tenggat Waktu',
+            'value': '2 Hari',
+            'icon': Icons.timer_outlined,
+            'color': const Color(0xFFEF4444),
+            'trend': 'Deliverable terdekat',
+            'breakdown': 'Sisa batas waktu untuk penyerahan draft review.',
+            'action': 'Atur Jadwal',
+          },
+          {
+            'label': 'Revisi Selesai',
+            'value': '18 Cut',
+            'icon': Icons.done_all_rounded,
+            'color': const Color(0xFF10B981),
+            'trend': 'Revisi klien approved',
+            'breakdown': 'Hasil revisi video yang telah disetujui klien.',
+            'action': 'Proyek Berjalan',
+          },
+          {
+            'label': 'Pendapatan Editing',
+            'value': _overviewSummary['monthly_income']?.toString() ?? 'Rp 7,8 Jt',
+            'icon': Icons.account_balance_wallet_outlined,
+            'color': const Color(0xFF3B82F6),
+            'trend': '↑ 15% bulan ini',
+            'breakdown': 'Hasil dari proyek editing dan color grading.',
+            'action': 'Grafik Performa',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.pending_actions_outlined, 'label': 'Antrean Editing'},
+          {'icon': Icons.upload_file_outlined, 'label': 'Upload Draft'},
+          {'icon': Icons.cut_outlined, 'label': 'Paket Edit'},
+          {'icon': Icons.search, 'label': 'Cari Klien'},
+          {'icon': Icons.payments_outlined, 'label': 'Tarik Dana'},
+          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+        ],
+        aiTips: [
+          'Export draft dengan resolusi 720p ringan untuk mempercepat review klien',
+          'Terapkan batas maksimal 2x revisi minor dalam deskripsi paket edit',
+          'Gunakan penamaan file rapi (v1, v2_final) saat mengirimkan deliverable',
+        ],
+      );
+    }
+
+    // 13. DESAINER GRAFIS & BRANDING
+    if (sub == 'desainer' ||
+        sub == 'designer' ||
+        sub == 'graphic_designer' ||
+        sub == 'ui_ux') {
+      return _RoleDashboardConfig(
+        badge: '✦ DESAINER GRAFIS & BRANDING',
+        greeting: 'Halo, $name! 🎨',
+        subtitle: 'Kelola pesanan desain visual, identitas brand, dan pamerkan portofolio grafis Anda.',
+        primaryButtonLabel: 'Upload Karya',
+        primaryButtonIcon: Icons.palette_outlined,
+        secondaryButtonLabel: 'Proyek Desain',
+        secondaryButtonIcon: Icons.design_services_outlined,
+        recommendationTitle: 'Peluang Desain & Branding Rekomendasi',
+        recommendationNiche: 'Desain Grafis',
+        recommendationRole: 'creator',
+        metrics: [
+          {
+            'label': 'Desain Aktif',
+            'value': inProgressCount > 0 ? '$inProgressCount' : '4',
+            'icon': Icons.brush_outlined,
+            'color': const Color(0xFFEC4899),
+            'trend': 'Brief dikerjakan',
+            'breakdown': 'Pesanan aset visual, logo, dan packaging aktif.',
+            'action': 'Proyek Desain',
+          },
+          {
+            'label': 'File Diserahkan',
+            'value': '22 Desain',
+            'icon': Icons.task_alt_outlined,
+            'color': const Color(0xFF10B981),
+            'trend': 'Master file terkirim',
+            'breakdown': 'File vector dan master desain yang telah selesai.',
+            'action': 'Proyek Berjalan',
+          },
+          {
+            'label': 'Aset Karya',
+            'value': '45 Aset',
+            'icon': Icons.collections_bookmark_outlined,
+            'color': const Color(0xFFF59E0B),
+            'trend': 'Koleksi marketplace',
+            'breakdown': 'Aset template dan mockup di profil kreator.',
+            'action': 'Tambah Karya',
+          },
+          {
+            'label': 'Pendapatan Desain',
+            'value': _overviewSummary['monthly_income']?.toString() ?? 'Rp 9,2 Jt',
+            'icon': Icons.account_balance_wallet_outlined,
+            'color': const Color(0xFF3B82F6),
+            'trend': '↑ 20% bulan ini',
+            'breakdown': 'Pendapatan dari proyek desain visual dan branding.',
+            'action': 'Grafik Performa',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.design_services_outlined, 'label': 'Proyek Desain'},
+          {'icon': Icons.palette_outlined, 'label': 'Paket Desain'},
+          {'icon': Icons.add_photo_alternate_outlined, 'label': 'Upload Karya'},
+          {'icon': Icons.search, 'label': 'Cari Klien'},
+          {'icon': Icons.payments_outlined, 'label': 'Tarik Dana'},
+          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+        ],
+        aiTips: [
+          'Tampilkan visualisasi mockup 3D untuk presentasi logo atau packaging',
+          'Sertakan palet warna HEX dan panduan font dalam penyerahan brand kit',
+          'Tawarkan variasi format (PNG transparan, SVG, AI/PSD) dalam paket',
+        ],
+      );
+    }
+
+    // 14. ANIMATOR 3D & MOTION DESIGNER
+    if (sub == 'animator' ||
+        sub == '3d_animator' ||
+        sub == 'motion_designer') {
+      return _RoleDashboardConfig(
+        badge: '✦ ANIMATOR 3D & MOTION DESIGNER',
+        greeting: 'Halo, $name! 🎬',
+        subtitle: 'Pantau antrean render animasi 3D, kelola motion graphic, dan serahkan aset digital.',
+        primaryButtonLabel: 'Antrean Render',
+        primaryButtonIcon: Icons.view_in_ar_outlined,
+        secondaryButtonLabel: 'Upload Aset 3D',
+        secondaryButtonIcon: Icons.upload_file_outlined,
+        recommendationTitle: 'Peluang Animasi & Motion Rekomendasi',
+        recommendationNiche: 'Animasi 3D',
+        recommendationRole: 'creator',
+        metrics: [
+          {
+            'label': 'Proyek 3D',
+            'value': inProgressCount > 0 ? '$inProgressCount' : '2',
+            'icon': Icons.view_in_ar_outlined,
+            'color': const Color(0xFF8B5CF6),
+            'trend': 'Modeling & Rigging',
+            'breakdown': 'Proyek karakter dan scene animasi 3D sedang berjalan.',
+            'action': 'Proyek Berjalan',
+          },
+          {
+            'label': 'Antrean Render',
+            'value': '3 Scene',
+            'icon': Icons.hourglass_top_outlined,
+            'color': const Color(0xFFF59E0B),
+            'trend': 'Render farm aktif',
+            'breakdown': 'Scene yang sedang dalam proses baking dan rendering.',
+            'action': 'Antrean Render',
+          },
+          {
+            'label': 'Aset Animasi',
+            'value': '14 Aset',
+            'icon': Icons.animation_outlined,
+            'color': const Color(0xFF10B981),
+            'trend': 'Model siap jual',
+            'breakdown': 'Rigged model dan motion pack di marketplace.',
+            'action': 'Tambah Karya',
+          },
+          {
+            'label': 'Pendapatan Animasi',
+            'value': _overviewSummary['monthly_income']?.toString() ?? 'Rp 16,5 Jt',
+            'icon': Icons.account_balance_wallet_outlined,
+            'color': const Color(0xFF3B82F6),
+            'trend': '↑ 25% bulan ini',
+            'breakdown': 'Hasil dari pesanan animasi dan lisensi aset 3D.',
+            'action': 'Grafik Performa',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.view_in_ar_outlined, 'label': 'Antrean Render'},
+          {'icon': Icons.upload_file_outlined, 'label': 'Upload Aset 3D'},
+          {'icon': Icons.animation_outlined, 'label': 'Paket Animasi'},
+          {'icon': Icons.search, 'label': 'Cari Klien'},
+          {'icon': Icons.payments_outlined, 'label': 'Tarik Dana'},
+          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+        ],
+        aiTips: [
+          'Sertakan wireframe dan render breakdown di showcase karya',
+          'Tentukan framerate (24fps vs 60fps) dan format render di awal brief',
+          'Kirim preview playblast resolusi rendah sebelum melakukan final render',
+        ],
+      );
+    }
+
+    // 15. MAKEUP ARTIST (MUA)
+    if (sub == 'mua' || sub == 'makeup_artist' || sub == 'makeup') {
+      return _RoleDashboardConfig(
+        badge: '✦ MAKEUP ARTIST & BEAUTY',
+        greeting: 'Halo, $name! 💄',
+        subtitle: 'Kelola jadwal booking makeup, tawarkan paket rias pengantin, dan pamerkan portofolio kecantikan.',
+        primaryButtonLabel: 'Paket MUA',
+        primaryButtonIcon: Icons.brush_outlined,
+        secondaryButtonLabel: 'Booking Rias',
+        secondaryButtonIcon: Icons.calendar_month_outlined,
+        recommendationTitle: 'Peluang Rias & Beauty Rekomendasi',
+        recommendationNiche: 'Makeup Artist',
+        recommendationRole: 'creator',
+        metrics: [
+          {
+            'label': 'Booking Rias',
+            'value': '6 Klien',
+            'icon': Icons.face_retouching_natural_outlined,
+            'color': const Color(0xFFEC4899),
+            'trend': 'Sesi terkonfirmasi',
+            'breakdown': 'Jadwal rias wisuda, prewedding, dan wedding mendatang.',
+            'action': 'Booking Rias',
+          },
+          {
+            'label': 'Jadwal Makeup',
+            'value': _agenda.isNotEmpty ? '${_agenda.length}' : '4',
+            'icon': Icons.calendar_month_outlined,
+            'color': const Color(0xFF10B981),
+            'trend': 'Jadwal minggu ini',
+            'breakdown': 'Waktu dan lokasi rias aktif di kalender.',
+            'action': 'Atur Jadwal',
+          },
+          {
+            'label': 'Portofolio MUA',
+            'value': '32 Look',
+            'icon': Icons.photo_library_outlined,
+            'color': const Color(0xFFF59E0B),
+            'trend': 'Galeri lookbook',
+            'breakdown': 'Koleksi riasan natural, bold, dan pengantin di profil.',
+            'action': 'Tambah Karya',
+          },
+          {
+            'label': 'Pendapatan Rias',
+            'value': _overviewSummary['monthly_income']?.toString() ?? 'Rp 6,8 Jt',
+            'icon': Icons.account_balance_wallet_outlined,
+            'color': const Color(0xFF3B82F6),
+            'trend': '↑ 14% bulan ini',
+            'breakdown': 'Total honorarium dari sesi rias yang terlaksana.',
+            'action': 'Grafik Performa',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.brush_outlined, 'label': 'Paket MUA'},
+          {'icon': Icons.calendar_month_outlined, 'label': 'Booking Rias'},
+          {'icon': Icons.photo_library_outlined, 'label': 'Upload Look'},
+          {'icon': Icons.search, 'label': 'Cari Klien'},
+          {'icon': Icons.payments_outlined, 'label': 'Tarik Saldo'},
+          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+        ],
+        aiTips: [
+          'Foto hasil riasan dengan pencahayaan natural ring-light untuk feed profil',
+          'Sertakan daftar merek kosmetik premium yang digunakan dalam paket',
+          'Konfirmasi alergi kulit klien H-2 sebelum sesi makeup dimulai',
+        ],
+      );
+    }
+
+    // 16. PILOT DRONE
+    if (sub == 'drone' || sub == 'drone_pilot' || sub == 'pilot_drone') {
+      return _RoleDashboardConfig(
+        badge: '✦ PILOT DRONE & AERIAL CREATOR',
+        greeting: 'Halo, $name! 🛸',
+        subtitle: 'Kelola misi penerbangan udara, pantau logbook drone, dan tawarkan jasa foto/video aerial.',
+        primaryButtonLabel: 'Paket Drone',
+        primaryButtonIcon: Icons.flight_takeoff_outlined,
+        secondaryButtonLabel: 'Booking Terbang',
+        secondaryButtonIcon: Icons.calendar_month_outlined,
+        recommendationTitle: 'Peluang Aerial & Mapping Rekomendasi',
+        recommendationNiche: 'Pilot Drone',
+        recommendationRole: 'creator',
+        metrics: [
+          {
+            'label': 'Sesi Terbang',
+            'value': '8 Misi',
+            'icon': Icons.flight_outlined,
+            'color': const Color(0xFF06B6D4),
+            'trend': 'Misi aktif terdaftar',
+            'breakdown': 'Misi aerial video dokumentasi dan pemetaan lahan.',
+            'action': 'Booking Terbang',
+          },
+          {
+            'label': 'Jadwal Mapping',
+            'value': _agenda.isNotEmpty ? '${_agenda.length}' : '3',
+            'icon': Icons.calendar_month_outlined,
+            'color': const Color(0xFF10B981),
+            'trend': 'Izin terbang aman',
+            'breakdown': 'Jadwal take-off di lokasi yang terkonfirmasi.',
+            'action': 'Atur Jadwal',
+          },
+          {
+            'label': 'Footage Udara',
+            'value': '20 Klip',
+            'icon': Icons.videocam_outlined,
+            'color': const Color(0xFFF59E0B),
+            'trend': 'Aset 4K terunggah',
+            'breakdown': 'Footage pemandangan dan arsitektur di marketplace.',
+            'action': 'Tambah Karya',
+          },
+          {
+            'label': 'Pendapatan Pilot',
+            'value': _overviewSummary['monthly_income']?.toString() ?? 'Rp 11,5 Jt',
+            'icon': Icons.account_balance_wallet_outlined,
+            'color': const Color(0xFF3B82F6),
+            'trend': '↑ 19% bulan ini',
+            'breakdown': 'Total honorarium dari misi penerbangan drone selesai.',
+            'action': 'Grafik Performa',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.flight_takeoff_outlined, 'label': 'Paket Drone'},
+          {'icon': Icons.calendar_month_outlined, 'label': 'Booking Terbang'},
+          {'icon': Icons.videocam_outlined, 'label': 'Upload Footage'},
+          {'icon': Icons.search, 'label': 'Cari Klien'},
+          {'icon': Icons.payments_outlined, 'label': 'Tarik Saldo'},
+          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+        ],
+        aiTips: [
+          'Pastikan sertifikat pilot FASI/DKPPU tercantum di badge profil',
+          'Cek prakiraan cuaca dan zona larangan terbang (NFZ) sebelum penerbangan',
+          'Simpan backup rekaman logbook baterai dan micro-SD segera pasca terbang',
+        ],
+      );
+    }
+
+    // 17. TALENT & PERFORMER (Model, Aktor, MC, Penyanyi, Musisi, Penari, VO, dll)
+    if (_isTalentAndPerformer) {
+      return _RoleDashboardConfig(
+        badge: '✦ ROLE TALENT & PERFORMER',
+        greeting: 'Halo, $name! 🌟',
+        subtitle: 'Tampilkan Bakat, Temukan Peluang, Bangun Reputasi — Ekosistem Kolaborasi dengan Klien, Kreator, Vendor, & Komunitas.',
+        primaryButtonLabel: 'Cari Casting & Job',
+        primaryButtonIcon: Icons.campaign_outlined,
+        secondaryButtonLabel: 'Unggah Showreel',
+        secondaryButtonIcon: Icons.smart_display_outlined,
+        recommendationTitle: 'Peluang Casting, Job & Event Rekomendasi',
+        recommendationNiche: 'Talent & Performer',
+        recommendationRole: 'creator',
+        metrics: [
+          {
+            'label': 'Casting & Peluang',
+            'value': '6 Panggilan',
+            'icon': Icons.campaign_outlined,
+            'color': const Color(0xFFEA580C),
+            'trend': 'Audisi & Kontrak Aktif',
+            'breakdown': 'Peluang casting iklan komersial, pemeran serial/film, MC formal, dan live show.',
+            'action': 'Cari Casting & Job',
+          },
+          {
+            'label': 'Jadwal Tampil',
+            'value': _agenda.isNotEmpty ? '${_agenda.length} Agenda' : '4 Agenda',
+            'icon': Icons.calendar_month_outlined,
+            'color': const Color(0xFF10B981),
+            'trend': 'Jadwal & Gladi Resik',
+            'breakdown': 'Waktu gladi resik, fitting kostum/MUA, dan live performa panggung tercatat rapi.',
+            'action': 'Jadwal & Ketersediaan',
+          },
+          {
+            'label': 'Showreel & Comp Card',
+            'value': 'Portofolio Aktif',
+            'icon': Icons.smart_display_outlined,
+            'color': const Color(0xFF8B5CF6),
+            'trend': 'Kualitas Terverifikasi',
+            'breakdown': 'Kartu komposit (sedcard), video showreel peragaan & performa panggung siap diajukan ke klien.',
+            'action': 'Unggah Showreel',
+          },
+          {
+            'label': 'Honor & Reputasi',
+            'value': _overviewSummary['monthly_income']?.toString() ?? 'Rp 14,8 Jt',
+            'icon': Icons.verified_rounded,
+            'color': const Color(0xFF2563EB),
+            'trend': '4.9 ★ (#Dampak)',
+            'breakdown': 'Total honorarium dari kontrak kerja selesai dan ulasan terpercaya dari klien & mitra ekosistem.',
+            'action': 'Rating & Reputasi',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.campaign_outlined, 'label': 'Cari Casting & Job'},
+          {'icon': Icons.smart_display_outlined, 'label': 'Unggah Showreel'},
+          {'icon': Icons.calendar_today_outlined, 'label': 'Jadwal & Ketersediaan'},
+          {'icon': Icons.groups_outlined, 'label': 'Kolaborasi Kreator'},
+          {'icon': Icons.handshake_outlined, 'label': 'Mitra Vendor & MUA'},
+          {'icon': Icons.stars_rounded, 'label': 'Rating & Ulasan'},
+        ],
+        aiTips: [
+          'Sertakan video showreel 60 detik terbaru untuk casting iklan TVC & video komersial brand ternama',
+          'Perbarui kalender panggung & ketersediaan tanggal H-3 sebelum audisi untuk mencegah bentrok jadwal',
+          'Manfaatkan jaringan mitra MUA & fotografer Kreavana untuk menyusun comp card standar internasional',
+        ],
+      );
+    }
+
+    // 18. CONTENT CREATOR
+    if (sub == 'content_creator' || sub == 'influencer' || sub == 'ugc') {
+      return _RoleDashboardConfig(
+        badge: '✦ CONTENT CREATOR & INFLUENCER',
+        greeting: 'Halo, $name! 📱',
+        subtitle: 'Kelola campaign promosi brand, atur jadwal posting, dan pantau engagement rate media kit Anda.',
+        primaryButtonLabel: 'Cari Campaign',
+        primaryButtonIcon: Icons.campaign_outlined,
+        secondaryButtonLabel: 'Paket Konten',
+        secondaryButtonIcon: Icons.library_add_check_outlined,
+        recommendationTitle: 'Peluang Campaign Brand Rekomendasi',
+        recommendationNiche: 'Content Creator',
+        recommendationRole: 'creator',
+        metrics: [
+          {
+            'label': 'Campaign Cocok',
+            'value': _overviewSummary['active_needs']?.toString() ?? '14',
+            'icon': Icons.campaign_outlined,
+            'color': const Color(0xFF7C3AED),
+            'trend': '↑ 5 campaign baru',
+            'breakdown': 'Peluang kolaborasi sponsorship brand sesuai niche Anda.',
+            'action': 'Cari Campaign',
+          },
+          {
+            'label': 'Jadwal Posting',
+            'value': _agenda.isNotEmpty ? '${_agenda.length}' : '6',
+            'icon': Icons.calendar_month_outlined,
+            'color': const Color(0xFF10B981),
+            'trend': 'Deadline posting aktif',
+            'breakdown': 'Jadwal upload konten reels/tiktok/story yang disepakati.',
+            'action': 'Jadwal Posting',
+          },
+          {
+            'label': 'Engagement Rate',
+            'value': '5.8%',
+            'icon': Icons.trending_up,
+            'color': const Color(0xFFF59E0B),
+            'trend': 'Rata-rata interaksi',
+            'breakdown': 'Tingkat like, komen, dan share rata-rata konten Anda.',
+            'action': 'Grafik Performa',
+          },
+          {
+            'label': 'Pendapatan Campaign',
+            'value': _overviewSummary['monthly_income']?.toString() ?? 'Rp 12,8 Jt',
+            'icon': Icons.account_balance_wallet_outlined,
+            'color': const Color(0xFF3B82F6),
+            'trend': '↑ 24% bulan ini',
+            'breakdown': 'Hasil dari endorsement dan campaign yang terlaksana.',
+            'action': 'Grafik Performa',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.campaign_outlined, 'label': 'Cari Campaign'},
+          {'icon': Icons.library_add_check_outlined, 'label': 'Paket Konten'},
+          {'icon': Icons.calendar_month_outlined, 'label': 'Jadwal Posting'},
+          {'icon': Icons.add_photo_alternate_outlined, 'label': 'Upload Karya'},
+          {'icon': Icons.payments_outlined, 'label': 'Tarik Dana'},
+          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+        ],
+        aiTips: [
+          'Sertakan insight tangkapan layar demografi followers di media kit',
+          'Kirim draft video ke klien melalui chat Kreavana sebelum diposting publik',
+          'Tulis hashtag dan disclosure kemitraan berbayar secara transparan',
+        ],
+      );
+    }
+
+    // 19. KREATOR SPESIFIK & UMUM (Fallback)
+    if (_isCreator || user.role == 'creator' || user.isCreator) {
+      final subLabel = sub.isNotEmpty
+          ? sub.replaceAll('_', ' ').toUpperCase()
+          : 'KREATOR';
+
+      return _RoleDashboardConfig(
+        badge: '✦ $subLabel PROFESIONAL',
+        greeting: 'Halo, $name! ✨',
+        subtitle: 'Temukan campaign & peluang proyek, kelola jadwal produksi, bangun portofolio, dan pantau penghasilan.',
+        primaryButtonLabel: 'Cari Peluang Proyek',
+        primaryButtonIcon: Icons.search_rounded,
+        secondaryButtonLabel: 'Kelola Portofolio',
+        secondaryButtonIcon: Icons.collections_bookmark_outlined,
+        recommendationTitle: 'Peluang & Campaign Rekomendasi',
+        recommendationNiche: 'Peluang Kreatif',
+        recommendationRole: 'creator',
+        metrics: [
+          {
+            'label': 'Campaign Cocok',
+            'value': _overviewSummary['active_needs']?.toString() ?? '21',
+            'icon': Icons.event_available_outlined,
+            'color': const Color(0xFF7C3AED),
+            'trend': '↑ 5 minggu ini',
+            'breakdown': 'Peluang proyek dan kampanye yang cocok dengan sub-role keahlian Anda.',
+            'action': 'Cari Peluang Proyek',
+          },
+          {
+            'label': 'Jadwal Posting / Event',
+            'value': _agenda.isNotEmpty ? '${_agenda.length}' : '8',
+            'icon': Icons.calendar_today_outlined,
+            'color': const Color(0xFF10B981),
+            'trend': '↑ 2 minggu ini',
+            'breakdown': 'Agenda jadwal pemotretan, produksi, atau penyerahan hasil karya aktif.',
+            'action': 'Atur Jadwal',
+          },
+          {
+            'label': 'Rating & Win Rate',
+            'value': '4.9 • 85%',
+            'icon': Icons.star_outline_rounded,
+            'color': const Color(0xFF3B82F6),
+            'trend': 'Rata-rata profil',
+            'breakdown': 'Kepuasan klien dan tingkat persetujuan proposal penawaran Anda.',
+            'action': 'Grafik Performa',
+          },
+          {
+            'label': 'Pendapatan Bulan Ini',
+            'value': _overviewSummary['monthly_income']?.toString() ?? 'Rp 18,4 Jt',
+            'icon': Icons.account_balance_wallet_outlined,
+            'color': const Color(0xFFF97316),
+            'trend': '↑ 24% bulan lalu',
+            'breakdown': 'Total pendapatan dari kontrak proyek yang telah diselesaikan.',
+            'action': 'Grafik Performa',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.search, 'label': 'Cari Peluang'},
+          {'icon': Icons.description_outlined, 'label': 'Kirim Proposal'},
+          {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+          {'icon': Icons.calendar_month_outlined, 'label': 'Atur Jadwal'},
+          {'icon': Icons.payments_outlined, 'label': 'Tarik Dana'},
+          {'icon': Icons.add_photo_alternate_outlined, 'label': 'Tambah Karya'},
+        ],
+        aiTips: [
+          'Perbarui media kit dan portofolio karya terbaru Anda di platform',
+          'Ajukan proposal dalam 24 jam pertama saat peluang proyek baru dibuka',
+          'Jaga komunikasi yang ramah, transparan, dan tepat waktu dengan klien',
+        ],
+      );
+    }
+
+    // 11. MODE TAMU / CLIENT UMUM (Default)
+    return _RoleDashboardConfig(
+      badge: user.isGuest ? '✦ MODE TAMU' : '✦ MODE KLIEN',
+      greeting: user.isGuest ? 'Halo, Tamu!' : 'Halo, $firstName!',
+      subtitle: 'Buat kebutuhan, temukan kreator terbaik, dan pantau proyek dalam satu tempat.',
+      primaryButtonLabel: 'Buat Kebutuhan',
+      primaryButtonIcon: Icons.add_circle_outline,
+      secondaryButtonLabel: 'Cari Kreator',
+      secondaryButtonIcon: Icons.search_rounded,
+      recommendationTitle: 'Kreator Rekomendasi',
+      recommendationNiche: 'Kebutuhan Kreatif',
+      recommendationRole: 'client',
+      metrics: [
+        {
+          'label': 'Kebutuhan Aktif',
+          'value': _overviewSummary['active_needs']?.toString() ?? '0',
+          'icon': Icons.description_outlined,
+          'color': const Color(0xFF3B82F6),
+          'trend': '↑ 2 minggu ini',
+          'breakdown': 'Kebutuhan proyek yang sedang dibuka dan mencari talenta kreator.',
+          'action': 'Semua Proyek',
+        },
+        {
+          'label': 'Proposal Masuk',
+          'value': _overviewSummary['proposals_count']?.toString() ?? '0',
+          'icon': Icons.mail_outline,
+          'color': const Color(0xFF10B981),
+          'trend': '↑ 6 minggu ini',
+          'breakdown': 'Total lamaran dan penawaran kerja sama masuk dari kreator.',
+          'action': 'Proposal Masuk',
+        },
+        {
+          'label': 'Proyek Berjalan',
+          'value': _overviewSummary['running_projects']?.toString() ?? '0',
+          'icon': Icons.folder_open,
+          'color': const Color(0xFF14B8A6),
+          'trend': '↑ 1 minggu ini',
+          'breakdown': 'Kontrak proyek yang sedang aktif berjalan dan dipantau progresnya.',
+          'action': 'Proyek Berjalan',
+        },
+        {
+          'label': 'Est. Pengeluaran',
+          'value': _overviewSummary['estimated_expenses']?.toString() ?? 'Rp 0',
+          'icon': Icons.account_balance_wallet_outlined,
+          'color': const Color(0xFF7C3AED),
+          'trend': '↑ 12% bulan ini',
+          'breakdown': 'Perkiraan total dana terbayar dan komitmen escrow untuk pekerjaan berjalan.',
+          'action': 'Grafik Performa',
+        },
+      ],
+      quickActions: [
+        {'icon': Icons.add_circle_outline, 'label': 'Buat Kebutuhan'},
+        {'icon': Icons.search, 'label': 'Cari Kreator'},
+        {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
+        {'icon': Icons.compare_arrows, 'label': 'Bandingkan'},
+        {'icon': Icons.check_circle_outline, 'label': 'Setujui Proyek'},
+        {'icon': Icons.payment, 'label': 'Bayar DP'},
+      ],
+      aiTips: [
+        'Buat brief lebih detail agar proposal kreator lebih tepat sasaran',
+        'Simpan kreator favorit untuk proyek atau repeat order berikutnya',
+        'Gunakan agenda untuk memantau deadline dan progres hasil kerja',
+      ],
+    );
+  }
+
+  void _openCreatorService(String serviceKey) {
+    if (widget.user.isGuest) {
+      AuthGuardDialog.show(context, actionName: 'mengakses layanan kreator');
+      return;
+    }
+    if (serviceKey.startsWith('komunitas_')) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CommunityDashboardScreen(
+            user: widget.user,
+            initialServiceKey: serviceKey,
+            onUserUpdated: widget.onUserUpdated,
+            showSidebar: true,
+          ),
+        ),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CreatorServiceScreen(
+          user: widget.user,
+          serviceKey: serviceKey,
+          onUserUpdated: widget.onUserUpdated,
+        ),
+      ),
+    );
+  }
+
+  void _openInstitutionWorkspace([String resourceType = 'dashboard']) {
+    if (widget.user.isGuest) {
+      AuthGuardDialog.show(context, actionName: 'mengakses workspace institusi');
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => InstitutionWorkspaceScreen(
+          user: widget.user,
+          resourceType: resourceType,
+          onUserUpdated: widget.onUserUpdated,
+        ),
+      ),
+    );
+  }
+
   void _navigateTo(String feature) {
-    switch (feature) {
-      case 'Buat Kebutuhan':
-        if (widget.user.isGuest) {
-          AuthGuardDialog.show(context, actionName: 'membuat kebutuhan proyek');
-          return;
+    final clean = feature.replaceAll('+', '').replaceAll('🔍', '').replaceAll('📁', '').trim();
+    final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
+
+    switch (clean) {
+      // ── Layanan EO ──
+      case 'Paket Event':
+        _openCreatorService('eo_paket');
+        break;
+      case 'Jadwal Event':
+        if (sub == 'event_organizer' || sub == 'eo') {
+          _openCreatorService('eo_jadwal');
+        } else if (sub == 'wedding_organizer' || sub == 'wo') {
+          _openCreatorService('wo_jadwal');
+        } else {
+          context.go(AppRoutes.agenda);
         }
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => BuatKebutuhanScreen(user: widget.user),
-          ),
-        );
         break;
-      case 'Cari Kreator':
-      case 'Cari Campaign':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => ExploreScreen(user: widget.user)),
-        );
-        break;
-      case 'Lengkapi Profil':
-      case 'Lihat Profil':
-        if (widget.user.isGuest) {
-          AuthGuardDialog.show(context, actionName: 'mengakses profil akun');
-          return;
+      case 'Vendor Partner':
+      case 'Vendor Terhubung':
+        if (sub == 'wedding_organizer' || sub == 'wo') {
+          _openCreatorService('wo_vendor');
+        } else {
+          _openCreatorService('eo_vendor');
         }
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ProfileScreen(
-              user: widget.user,
-              onUserUpdated: widget.onUserUpdated,
-              onLogout: () {},
-            ),
-          ),
-        );
         break;
-      case 'Lihat Semua':
-      case 'Lihat Semua Proyek':
-      case 'Semua Proyek':
-      case 'Semua Kebutuhan & Proyek':
-        if (widget.user.isGuest) {
-          AuthGuardDialog.show(context, actionName: 'melihat daftar kebutuhan & proyek');
-          return;
+      case 'Timeline EO':
+        _openCreatorService('eo_timeline');
+        break;
+
+      // ── Layanan WO ──
+      case 'Paket Pernikahan':
+      case 'Buat Paket Wedding':
+        _openCreatorService('wo_paket');
+        break;
+      case 'Timeline WO':
+        _openCreatorService('wo_timeline');
+        break;
+      case 'Jadwal Acara':
+        _openCreatorService('wo_jadwal');
+        break;
+
+      // ── Layanan Fotografi ──
+      case 'Galeri Portofolio':
+      case 'Upload Foto':
+        _openCreatorService('foto_galeri');
+        break;
+      case 'Booking & Jadwal':
+      case 'Booking Sesi':
+      case 'Booking Sesi Foto':
+        if (sub == 'videographer' || sub == 'video' || sub == 'videografer') {
+          _openCreatorService('video_booking');
+        } else if (sub == 'mua' || sub == 'makeup' || sub == 'makeup_artist') {
+          _openCreatorService('mua_booking');
+        } else if (sub == 'drone' || sub == 'drone_pilot' || sub == 'pilot_drone') {
+          _openCreatorService('drone_booking');
+        } else if (sub == 'mc') {
+          _openCreatorService('mc_booking');
+        } else if (sub == 'talent' || sub == 'model') {
+          _openCreatorService('talent_jadwal');
+        } else {
+          _openCreatorService('foto_booking');
         }
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ProyekSayaScreen(
-              user: widget.user,
-              onUserUpdated: widget.onUserUpdated,
-            ),
-          ),
-        );
         break;
-      case 'Lihat Semua Proposal':
-      case 'Proposal Masuk':
-        if (widget.user.isGuest) {
-          AuthGuardDialog.show(context, actionName: 'melihat daftar proposal masuk');
-          return;
+      case 'Paket Harga':
+      case 'Paket Foto':
+      case 'Paket Harga Aktif':
+        if (sub == 'videographer' || sub == 'video' || sub == 'videografer') {
+          _openCreatorService('video_paket');
+        } else if (sub == 'mua' || sub == 'makeup' || sub == 'makeup_artist') {
+          _openCreatorService('mua_paket');
+        } else if (sub == 'drone' || sub == 'drone_pilot' || sub == 'pilot_drone') {
+          _openCreatorService('drone_paket');
+        } else {
+          _openCreatorService('foto_paket');
         }
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ProyekSayaScreen(
-              user: widget.user,
-              onUserUpdated: widget.onUserUpdated,
-            ),
-          ),
-        );
         break;
-      case 'Lihat Semua Proyek Berjalan':
-      case 'Proyek Berjalan':
-        if (widget.user.isGuest) {
-          AuthGuardDialog.show(context, actionName: 'melihat proyek berjalan');
-          return;
+      case 'Cakupan Area':
+        _openCreatorService('foto_area');
+        break;
+
+      // ── Layanan Video ──
+      case 'Galeri Video':
+      case 'Upload Showreel':
+      case 'Showreel':
+        _openCreatorService('video_galeri');
+        break;
+      case 'Jadwal Syuting':
+        _openCreatorService('video_booking');
+        break;
+      case 'Paket Video':
+        _openCreatorService('video_paket');
+        break;
+      case 'Equipment':
+      case 'Equipment Siap':
+        if (sub == 'drone' || sub == 'drone_pilot' || sub == 'pilot_drone') {
+          _openCreatorService('drone_equipment');
+        } else {
+          _openCreatorService('video_equipment');
         }
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ProyekSayaScreen(
-              user: widget.user,
-              onUserUpdated: widget.onUserUpdated,
-            ),
-          ),
-        );
         break;
-      case 'Lihat Semua Agenda':
-      case 'Lihat Kalender':
-      case 'Atur Jadwal':
-        if (widget.user.isGuest) {
-          AuthGuardDialog.show(context, actionName: 'mengakses kalender & agenda');
-          return;
+
+      // ── Layanan Editor ──
+      case 'Portofolio Edit':
+        _openCreatorService('edit_portofolio');
+        break;
+      case 'Antrian Kerja':
+      case 'Antrean Editing':
+        _openCreatorService('edit_antrian');
+        break;
+      case 'Daftar Harga':
+      case 'Paket Edit':
+        _openCreatorService('edit_harga');
+        break;
+      case 'Spesialisasi':
+        if (sub == 'desainer' || sub == 'designer') {
+          _openCreatorService('desain_spesialisasi');
+        } else if (sub == 'mua' || sub == 'makeup') {
+          _openCreatorService('mua_spesialisasi');
+        } else {
+          _openCreatorService('edit_spesialisasi');
         }
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AgendaScreen()),
-        );
         break;
-      case 'Lihat Semua Karya':
-      case 'Buka Semua Aset':
-        if (widget.user.isGuest) {
-          AuthGuardDialog.show(context, actionName: 'melihat portofolio & karya');
-          return;
+
+      // ── Layanan Desainer ──
+      case 'Portofolio Desain':
+        _openCreatorService('desain_portofolio');
+        break;
+      case 'Proyek & Brief':
+      case 'Proyek Desain':
+      case 'Brief & Revisi Aktif':
+        _openCreatorService('desain_proyek');
+        break;
+      case 'Paket Desain':
+      case 'Paket Desain Aktif':
+        _openCreatorService('desain_paket');
+        break;
+
+      // ── Layanan Animator ──
+      case 'Showreel & Portofolio':
+        if (sub == 'animator' || sub == '3d_animator' || sub == 'motion_designer') {
+          _openCreatorService('animator_showreel');
+        } else {
+          _openCreatorService(sub == 'mc' ? 'mc_profil' : 'talent_profil');
         }
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MarketplaceKaryaScreen(
-              user: widget.user,
-              onUserUpdated: widget.onUserUpdated,
-            ),
-          ),
-        );
         break;
-      case 'Lihat Semua Rekomendasi':
-        if (widget.user.isGuest) {
-          AuthGuardDialog.show(context, actionName: 'melihat semua rekomendasi');
-          return;
-        }
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ExploreScreen(user: widget.user),
-          ),
-        );
+      case 'Upload Aset 3D':
+        _openCreatorService('animator_showreel');
         break;
-      case 'Lihat Semua Top Kreator':
-        if (widget.user.isGuest) {
-          AuthGuardDialog.show(context, actionName: 'melihat semua top kreator');
-          return;
-        }
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ExploreScreen(user: widget.user),
-          ),
-        );
+      case 'Antrian Render & Animasi':
+      case 'Antrian Render':
+        _openCreatorService('animator_antrian');
         break;
-      case 'Tambah Karya':
-        if (widget.user.isGuest) {
-          AuthGuardDialog.show(context, actionName: 'menambah karya baru');
-          return;
-        }
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MarketplaceKaryaScreen(
-              user: widget.user,
-              onUserUpdated: widget.onUserUpdated,
-            ),
-          ),
-        );
+      case 'Paket Karakter & Model':
+      case 'Paket Animasi':
+        _openCreatorService('animator_paket');
         break;
-      case 'Notifikasi':
-        if (widget.user.isGuest) {
-          AuthGuardDialog.show(context, actionName: 'melihat notifikasi');
-          return;
-        }
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => NotificationsScreen(userId: widget.user.id ?? ''),
-          ),
-        );
+      case 'Software & Spesialisasi':
+      case 'Software & Render':
+        _openCreatorService('animator_software');
         break;
-      case 'Pesan':
-        if (widget.user.isGuest) {
-          AuthGuardDialog.show(context, actionName: 'mengakses pesan');
-          return;
-        }
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const DirectMessageScreen()),
-        );
+
+      // ── Layanan MUA ──
+      case 'Portofolio MUA':
+      case 'Upload Look':
+      case 'Galeri Look MUA':
+        _openCreatorService('mua_portofolio');
         break;
-      case 'Bayar DP':
-      case 'Tarik Dana':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => TransferScreen(user: widget.user)),
-        );
+      case 'Jadwal Booking':
+      case 'Booking Rias':
+        _openCreatorService('mua_booking');
         break;
+      case 'Paket MUA':
+      case 'Paket Rias Aktif':
+        _openCreatorService('mua_paket');
+        break;
+
+      // ── Layanan Drone ──
+      case 'Galeri Hasil Drone':
+      case 'Upload Footage':
+      case 'Footage 4K Siap':
+        _openCreatorService('drone_galeri');
+        break;
+      case 'Booking Terbang':
+      case 'Jadwal Terbang':
+        _openCreatorService('drone_booking');
+        break;
+      case 'Paket Drone':
+        _openCreatorService('drone_paket');
+        break;
+      case 'Peralatan Drone':
+      case 'Unit Drone Siap':
+        _openCreatorService('drone_equipment');
+        break;
+
+      // ── Layanan Talent & Performer ──
+      case 'Profil Talent':
+      case 'Profil MC':
+      case 'Profil Talent / MC':
+      case 'Upload Comp Card':
+      case 'Comp Card & Portofolio':
+      case 'Unggah Showreel':
+      case 'Showreel & Comp Card':
+        _openCreatorService(sub == 'mc' ? 'mc_profil' : 'talent_profil');
+        break;
+      case 'Jadwal Tampil':
+      case 'Jadwal Panggung / Tampil':
+      case 'Jadwal Panggung':
+      case 'Jadwal & Ketersediaan':
+      case 'Jadwal & Booking':
+        _openCreatorService(sub == 'mc' ? 'mc_booking' : 'talent_jadwal');
+        break;
+      case 'Kategori Pekerjaan':
+      case 'Kategori Acara':
+      case 'Casting & Peluang':
+      case 'Casting & Kategori':
+      case 'Casting & MC':
+        _openCreatorService(sub == 'mc' ? 'mc_kategori' : 'talent_kategori');
+        break;
+      case 'Tarif & Rate Card':
+      case 'Tarif':
+      case 'Rate Card':
+      case 'Rate Card Aktif':
+      case 'Paket MC & Talent':
+      case 'Tarif & Kontrak':
+        _openCreatorService(sub == 'mc' ? 'mc_tarif' : 'talent_tarif');
+        break;
+      case 'Cari Casting & Job':
+      case 'Cari Casting':
+        context.go(AppRoutes.peluangProyek);
+        break;
+      case 'Kolaborasi Kreator':
+        context.go(AppRoutes.kolaborasi);
+        break;
+      case 'Mitra Vendor & MUA':
+      case 'Eksplor Vendor & MUA':
+      case 'Cari Mitra MUA/Studio':
+        context.go(AppRoutes.explore);
+        break;
+      case 'Rating & Ulasan':
+        context.go(AppRoutes.reputasi);
+        break;
+
+      // ── Layanan Konten Kreator ──
+      case 'Portofolio Konten':
+      case 'Upload Konten':
+        _openCreatorService('konten_portofolio');
+        break;
+      case 'Jadwal Posting & Deadline':
+      case 'Jadwal Posting':
+        _openCreatorService('konten_jadwal');
+        break;
+      case 'Paket Endorsement':
+      case 'Paket Konten':
+        _openCreatorService('konten_paket');
+        break;
+      case 'Media Kit & Rate Card':
+      case 'Media Kit':
+        _openCreatorService('konten_ratecard');
+        break;
+
+      // ── Layanan Komunitas ──
+      case 'Anggota Komunitas':
+      case 'Anggota':
+        _openCreatorService('komunitas_anggota');
+        break;
+      case 'Kegiatan Komunitas':
+      case 'Kegiatan':
+        _openCreatorService('komunitas_kegiatan');
+        break;
+      case 'Pengumuman Komunitas':
+      case 'Pengumuman':
+        _openCreatorService('komunitas_pengumuman');
+        break;
+      case 'Kolaborasi Komunitas':
+        _openCreatorService('komunitas_kolaborasi');
+        break;
+
+      // ── Layanan Sekolah ──
+      case 'Workspace Sekolah':
+      case 'Portofolio Siswa':
+      case 'Kurasi Siswa & Magang':
+      case 'Kolaborasi Sekolah':
+      case 'Pengaturan Siswa':
+      case 'Karya Siswa Terkurasi':
+      case 'Mitra Magang Industri':
+      case 'Buka Magang':
+      case 'Buka Lowongan Magang':
+      case 'Review Karya':
+        _openInstitutionWorkspace();
+        break;
+
+      // ── Layanan Pemerintah ──
+      case 'Tender & Pengadaan':
+      case 'Pengadaan Kreatif':
+      case 'Monitoring Proyek':
+        context.go(AppRoutes.proyek);
+        break;
+      case 'Laporan Realisasi':
       case 'Laporan':
         Navigator.push(
           context,
@@ -386,39 +2058,163 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         );
         break;
-      case 'Cari Peluang':
-      case 'Lihat Detail':
+      case 'Daftar Mitra Kreatif':
+      case 'Cari Mitra Industri':
+      case 'Kurasi Talenta':
+      case 'Kurasi Talenta Daerah':
+        context.go(AppRoutes.explore);
+        break;
+      case 'Alokasi Anggaran':
+      case 'Anggaran Dikelola':
+      case 'Estimasi Anggaran':
+      case 'Bayar DP':
+      case 'Tarik Dana':
+      case 'Tarik Saldo':
+      case 'Dompet':
+        context.go(AppRoutes.wallet);
+        break;
+
+      // ── Buat Kebutuhan ──
+      case 'Buat Kebutuhan':
+      case 'Buat Kebutuhan Baru':
+      case 'Buat Event':
+      case 'Buat Event Baru':
+      case 'Buat Brief Kampanye':
+      case 'Buka Proyek Korporat':
+      case 'Buat Kampanye Wisata':
+      case 'Buat Agenda Komunitas':
+        if (widget.user.isGuest) {
+          AuthGuardDialog.show(context, actionName: 'membuat kebutuhan proyek');
+          return;
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => PeluangProyekScreen(user: widget.user),
+            builder: (_) => BuatKebutuhanScreen(user: widget.user),
           ),
         );
         break;
+
+      // ── Tab Peluang Proyek ──
+      case 'Cari Peluang':
+      case 'Cari Peluang Proyek':
+      case 'Peluang Proyek':
+      case 'Peluang Proyek Cocok':
+      case 'Lihat Detail':
+        context.go(AppRoutes.peluangProyek);
+        break;
+
+      // ── Tab Proyek Saya ──
+      case 'Lihat Semua':
+      case 'Lihat Semua Proyek':
+      case 'Semua Proyek':
+      case 'Proyek Saya':
+      case 'Semua Kebutuhan & Proyek':
+      case 'Proyek Berjalan':
+      case 'Kontrak Berjalan':
+      case 'Lihat Semua Proyek Berjalan':
+      case 'Proposal Masuk':
+      case 'Lihat Semua Proposal':
       case 'Bandingkan':
       case 'Setujui Proyek':
+      case 'Total Event':
+      case 'Event Berjalan':
+      case 'Total Wedding':
+      case 'Kampanye Aktif':
+        context.go(AppRoutes.proyek);
+        break;
+
+      // ── Tab Explore / Cari Vendor / Kreator ──
+      case 'Cari Kreator':
+      case 'Cari Campaign':
+      case 'Cari Vendor':
+      case 'Cari Vendor Mitra':
+      case 'Cari Vendor Wedding':
+      case 'Cari Talenta':
+      case 'Cari Talenta Kreatif':
+      case 'Cari Kreator Promosi':
+      case 'Cari Kreator Konten':
+      case 'Eksplor Kolaborasi':
+      case 'Kirim Proposal':
+      case 'Lihat Semua Rekomendasi':
+      case 'Lihat Semua Top Kreator':
+      case 'Komunitas':
+      case 'Kelola Kampanye Brand':
+      case 'Kurasi & Seleksi Vendor':
+      case 'Cari Klien':
+      case 'Cari Audisi':
+        context.go(AppRoutes.explore);
+        break;
+
+      // ── Tab Agenda ──
+      case 'Lihat Semua Agenda':
+      case 'Lihat Kalender':
+      case 'Atur Jadwal':
+      case 'Jadwal & Agenda':
+      case 'Agenda':
+      case 'Agenda Daerah':
+        context.go(AppRoutes.agenda);
+        break;
+
+      // ── Tab Marketplace Karya ──
+      case 'Lihat Semua Karya':
+      case 'Buka Semua Aset':
+      case 'Tambah Karya':
+      case 'Portofolio':
+      case 'Kelola Portofolio':
+      case 'Marketplace':
+        context.go(AppRoutes.marketplaceKarya);
+        break;
+
+      // ── Tab Grafik Performa ──
+      case 'Grafik':
+      case 'Grafik Performa':
+      case 'Halaman Grafik':
+      case 'Page Grafik':
+      case 'Grafik Analitik':
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => ProyekSayaScreen(
-              user: widget.user,
-              onUserUpdated: widget.onUserUpdated,
-            ),
+            builder: (_) => GrafikScreen(user: widget.user),
           ),
         );
         break;
-      case 'Kirim Proposal':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => ExploreScreen(user: widget.user)),
-        );
+
+      // ── Tab Reputasi / Ulasan ──
+      case 'Reputasi':
+      case 'Ulasan':
+      case 'Rating & Win Rate':
+      case 'Rating & Reputasi':
+        context.go(AppRoutes.reputasi);
         break;
-      case 'Komunitas':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => ExploreScreen(user: widget.user)),
-        );
+
+      // ── Tab Kolaborasi ──
+      case 'Kolaborasi':
+        context.go(AppRoutes.kolaborasi);
         break;
+
+      // ── Notifikasi & Pesan ──
+      case 'Notifikasi':
+        context.go(AppRoutes.notifikasi);
+        break;
+      case 'Pesan':
+      case 'Direct Message':
+        context.go(AppRoutes.pesan);
+        break;
+
+      // ── Profil ──
+      case 'Lihat Profil':
+      case 'Lengkapi Profil':
+      case 'Profil':
+      case 'Profil Saya':
+        context.go(AppRoutes.profil);
+        break;
+
+      // ── Pengaturan ──
+      case 'Pengaturan':
+        context.go(AppRoutes.pengaturan);
+        break;
+
       default:
         _showDummyActionMessage(feature);
     }
@@ -426,16 +2222,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ── Hero Banner ──────────────────────────────────────────────────────────────
   Widget _buildHeroBanner(bool isDark) {
-    final greeting = widget.user.isGuest
-        ? 'Halo, Tamu!'
-        : (_isCreator
-            ? 'Halo, Kreator!'
-            : 'Halo, ${widget.user.name.split(' ').first}!');
-    final subtitle = _isCreator
-        ? 'Temukan campaign, kelola jadwal, bangun media kit, dan tingkatkan reputasimu.'
-        : 'Buat kebutuhan, temukan kreator terbaik, dan pantau proyek dalam satu tempat.';
-    final primaryLabel = _isCreator ? 'Lengkapi Profil' : 'Buat Kebutuhan';
-    final secondaryLabel = _isCreator ? 'Cari Campaign' : 'Cari Kreator';
+    final config = _getRoleConfig();
 
     const heroBgImages = [
       'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80',
@@ -494,9 +2281,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ],
                       ),
                       child: Text(
-                        widget.user.isGuest
-                            ? '✦ MODE TAMU'
-                            : (_isCreator ? '✦ KREATOR' : '✦ KLIEN'),
+                        config.badge,
                         style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -510,20 +2295,22 @@ class _DashboardScreenState extends State<DashboardScreen>
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          greeting,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            height: 1.2,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black87,
-                                offset: Offset(0, 2),
-                                blurRadius: 6,
-                              ),
-                            ],
+                        Flexible(
+                          child: Text(
+                            config.greeting,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              height: 1.2,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black87,
+                                  offset: Offset(0, 2),
+                                  blurRadius: 6,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -542,7 +2329,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      subtitle,
+                      config.subtitle,
                       style: const TextStyle(
                         fontSize: 13,
                         color: Color(0xFFE2E8F0),
@@ -562,17 +2349,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                       runSpacing: 8,
                       children: [
                         _HeroButton(
-                          label: primaryLabel,
-                          icon: _isCreator
-                              ? Icons.settings_suggest_outlined
-                              : Icons.add_circle_outline,
-                          onTap: () => _navigateTo(primaryLabel),
+                          label: config.primaryButtonLabel,
+                          icon: config.primaryButtonIcon,
+                          onTap: () => _navigateTo(config.primaryButtonLabel),
                           gradient: AppTheme.primaryGradient,
                         ),
                         _HeroButton(
-                          label: secondaryLabel,
-                          icon: Icons.search_rounded,
-                          onTap: () => _navigateTo(secondaryLabel),
+                          label: config.secondaryButtonLabel,
+                          icon: config.secondaryButtonIcon,
+                          onTap: () => _navigateTo(config.secondaryButtonLabel),
                           outlined: true,
                           isDark: true,
                         ),
@@ -608,9 +2393,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ],
                         ),
                         child: Icon(
-                          _isCreator
-                              ? Icons.camera_alt_outlined
-                              : Icons.laptop_mac_outlined,
+                          _getHeroIllustrationIcon(),
                           color: Colors.white.withValues(alpha: 0.85),
                           size: 28,
                         ),
@@ -678,71 +2461,8 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ── Animated Metric Cards ────────────────────────────────────────────────────
   Widget _buildMetricCards(bool isDark) {
-    final metrics = _isCreator
-        ? [
-            {
-              'label': 'Campaign Cocok',
-              'value':
-                  _overviewSummary['matching_campaigns']?.toString() ?? '21',
-              'icon': Icons.event_available_outlined,
-              'color': const Color(0xFF7C3AED),
-              'trend': '↑ 5 minggu ini',
-            },
-            {
-              'label': 'Jadwal Posting',
-              'value': _overviewSummary['posting_schedule']?.toString() ?? '8',
-              'icon': Icons.calendar_today_outlined,
-              'color': const Color(0xFF10B981),
-              'trend': '↑ 2 minggu ini',
-            },
-            {
-              'label': 'Engagement',
-              'value': _overviewSummary['engagement']?.toString() ?? '6,9%',
-              'icon': Icons.favorite_border,
-              'color': const Color(0xFF3B82F6),
-              'trend': 'Rata-rata konten',
-            },
-            {
-              'label': 'Pendapatan Bulan Ini',
-              'value':
-                  _overviewSummary['monthly_income']?.toString() ?? 'Rp18,4 Jt',
-              'icon': Icons.account_balance_wallet_outlined,
-              'color': const Color(0xFFF97316),
-              'trend': '↑ 24% bulan lalu',
-            },
-          ]
-        : [
-            {
-              'label': 'Kebutuhan Aktif',
-              'value': _overviewSummary['active_needs']?.toString() ?? '12',
-              'icon': Icons.description_outlined,
-              'color': const Color(0xFF3B82F6),
-              'trend': '↑ 2 minggu ini',
-            },
-            {
-              'label': 'Proposal Masuk',
-              'value': _overviewSummary['proposals_count']?.toString() ?? '28',
-              'icon': Icons.mail_outline,
-              'color': const Color(0xFF10B981),
-              'trend': '↑ 6 minggu ini',
-            },
-            {
-              'label': 'Proyek Berjalan',
-              'value': _overviewSummary['running_projects']?.toString() ?? '6',
-              'icon': Icons.folder_open,
-              'color': const Color(0xFF14B8A6),
-              'trend': '↑ 1 minggu ini',
-            },
-            {
-              'label': 'Est. Pengeluaran',
-              'value':
-                  _overviewSummary['estimated_expenses']?.toString() ??
-                  'Rp18,7 Jt',
-              'icon': Icons.account_balance_wallet_outlined,
-              'color': const Color(0xFF7C3AED),
-              'trend': '↑ 12% bulan ini',
-            },
-          ];
+    final config = _getRoleConfig();
+    final metrics = config.metrics;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -796,7 +2516,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildAnimatedMetricCard(Map<String, Object> m, int i, bool isDark) {
+  Widget _buildAnimatedMetricCard(Map<String, dynamic> m, int i, bool isDark) {
     return FadeTransition(
       opacity: _statsAnims[i],
       child: SlideTransition(
@@ -811,38 +2531,290 @@ class _DashboardScreenState extends State<DashboardScreen>
           color: m['color'] as Color,
           trend: m['trend'] as String,
           isDark: isDark,
+          onTap: () => _showMetricDetailDialog(m, isDark),
         ),
       ),
     );
   }
 
+  void _showMetricDetailDialog(Map<String, dynamic> metric, bool isDark) {
+    final title = metric['label'] as String? ?? 'Detail Metrik';
+    final value = metric['value'] as String? ?? '-';
+    final trend = metric['trend'] as String? ?? '';
+    final color = (metric['color'] as Color?) ?? AppTheme.primaryPurple;
+    final icon = (metric['icon'] as IconData?) ?? Icons.insights_rounded;
+    final breakdown = metric['breakdown'] as String? ??
+        'Data metrik dihitung secara real-time berdasarkan aktivitas terbaru akun Anda.';
+    final actionLabel = metric['action'] as String?;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: color.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Nilai Saat Ini',
+                            style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        const SizedBox(height: 2),
+                        Text(
+                          value,
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: color,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        trend,
+                        style: TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.bold, color: color),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text('Keterangan & Rincian:',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              Text(
+                breakdown,
+                style: TextStyle(
+                    fontSize: 13,
+                    height: 1.4,
+                    color: isDark ? Colors.white70 : Colors.black87),
+              ),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.teal.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                      color: Colors.teal.shade300.withValues(alpha: 0.3)),
+                ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.insights_rounded, size: 16, color: Colors.teal),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Anda dapat memantau pergerakan grafik historis lengkap di Halaman Grafik Performa.',
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.teal, height: 1.3),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Tutup'),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryPurple,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              if (actionLabel != null) {
+                _navigateTo(actionLabel);
+              } else {
+                _navigateTo('Grafik Performa');
+              }
+            },
+            icon: const Icon(Icons.arrow_forward_rounded,
+                size: 16, color: Colors.white),
+            label: Text(
+              actionLabel ?? 'Buka Grafik',
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Default curated data for high quality recommendation fallback ───────────
+  static const List<Map<String, dynamic>> _defaultOpportunities = [
+    {
+      'id': 'demo_opp_1',
+      'title': 'Dokumentasi & Live Broadcast Festival Musik Kreavana',
+      'badge': 'Event Organizer',
+      'badge_color': Color(0xFF6366F1),
+      'location': 'Jakarta Selatan',
+      'price': 'Rp 25.000.000',
+      'action_label': 'Lihat Detail',
+      'cover_url': 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=800&q=80',
+    },
+    {
+      'id': 'demo_opp_2',
+      'title': 'Fotografer & Videografer Kampanye Produk Fashion Lokal',
+      'badge': 'Fotografi & Video',
+      'badge_color': Color(0xFFEC4899),
+      'location': 'Bandung',
+      'price': 'Rp 8.500.000',
+      'action_label': 'Lihat Detail',
+      'cover_url': 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&w=800&q=80',
+    },
+    {
+      'id': 'demo_opp_3',
+      'title': 'Video Editor & Colorist Web Series Brand FMCG',
+      'badge': 'Video Editor',
+      'badge_color': Color(0xFF10B981),
+      'location': 'Yogyakarta',
+      'price': 'Rp 12.000.000',
+      'action_label': 'Lihat Detail',
+      'cover_url': 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=800&q=80',
+    },
+    {
+      'id': 'demo_opp_4',
+      'title': 'MC & Host Resepsi Pernikahan Adat Modern',
+      'badge': 'Talent & MC',
+      'badge_color': Color(0xFFF59E0B),
+      'location': 'Surabaya',
+      'price': 'Rp 5.000.000',
+      'action_label': 'Lihat Detail',
+      'cover_url': 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&w=800&q=80',
+    },
+  ];
+
+  static const List<Map<String, dynamic>> _defaultVendors = [
+    {
+      'id': 'demo_ven_1',
+      'name': 'Studio Lensa Kreatif',
+      'category': 'Fotografer & Video',
+      'location': 'Jakarta Selatan',
+      'starting_price': 'Mulai Rp 3.500.000',
+      'cover_url': 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&w=800&q=80',
+      'avatar_url': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
+    },
+    {
+      'id': 'demo_ven_2',
+      'name': 'Grand Mahligai Organizer',
+      'category': 'Wedding Organizer',
+      'location': 'Bandung',
+      'starting_price': 'Mulai Rp 15.000.000',
+      'cover_url': 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80',
+      'avatar_url': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+    },
+    {
+      'id': 'demo_ven_3',
+      'name': 'SkyMotion Aerial Drone',
+      'category': 'Pilot Drone 4K',
+      'location': 'Surabaya',
+      'starting_price': 'Mulai Rp 4.000.000',
+      'cover_url': 'https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&w=800&q=80',
+      'avatar_url': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+    },
+    {
+      'id': 'demo_ven_4',
+      'name': 'PixelWave Motion Studio',
+      'category': 'Desain & Animasi',
+      'location': 'Yogyakarta',
+      'starting_price': 'Mulai Rp 6.000.000',
+      'cover_url': 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=800&q=80',
+      'avatar_url': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
+    },
+  ];
+
   // ── Recommendation Section ───────────────────────────────────────────────────
   Widget _buildRecommendationSection(bool isDark) {
-    final recommendations = _vendorRecommendations.isNotEmpty
-        ? _vendorRecommendations
-        : [];
+    final config = _getRoleConfig();
+    final isLookingForOpps = config.recommendationRole == 'creator';
+
+    final List<Map<String, dynamic>> recommendations;
+    if (isLookingForOpps) {
+      if (_recommendedOpportunities.isNotEmpty) {
+        recommendations = _recommendedOpportunities;
+      } else if (_vendorRecommendations.isNotEmpty) {
+        recommendations = _vendorRecommendations;
+      } else {
+        recommendations = _defaultOpportunities;
+      }
+    } else {
+      if (_vendorRecommendations.isNotEmpty) {
+        recommendations = _vendorRecommendations;
+      } else {
+        recommendations = _defaultVendors;
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionHeader(
-          title: _isCreator ? 'Rekomendasi Untuk Anda' : 'Kreator Rekomendasi',
+          title: config.recommendationTitle,
           onViewAll: () => _navigateTo('Lihat Semua Rekomendasi'),
         ),
         const SizedBox(height: 12),
         AiRecommendationCard(
           user: widget.user,
-          role: _isCreator ? 'creator' : 'client',
-          niche: _isCreator ? 'Fotografi & Video' : 'Kebutuhan Kreatif',
+          role: config.recommendationRole,
+          niche: config.recommendationNiche,
         ),
         if (recommendations.isNotEmpty) ...[
           const SizedBox(height: 12),
           SizedBox(
-            height: 260,
+            height: 270,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               clipBehavior: Clip.hardEdge,
               itemCount: recommendations.length,
-              itemBuilder: (context, index) => _isCreator
+              itemBuilder: (context, index) => isLookingForOpps
                   ? _buildOpportunityCard(recommendations[index], isDark)
                   : _buildCreatorCard(recommendations[index], isDark),
             ),
@@ -857,8 +2829,42 @@ class _DashboardScreenState extends State<DashboardScreen>
         item['gradient_colors'] as List<Color>? ??
         [AppTheme.primaryPurple, AppTheme.deepPurple];
     final badgeColor = item['badge_color'] as Color? ?? AppTheme.primaryPurple;
+
+    final rawTitle = item['title']?.toString() ??
+        item['name']?.toString() ??
+        item['business_name']?.toString() ??
+        '';
+    final title = rawTitle.trim().isNotEmpty
+        ? rawTitle.trim()
+        : 'Peluang Proyek & Kolaborasi Kreatif';
+
+    final rawBadge = item['badge']?.toString() ??
+        item['category']?.toString() ??
+        item['sub_role']?.toString() ??
+        '';
+    final badgeText = rawBadge.trim().isNotEmpty
+        ? rawBadge.trim()
+        : 'Peluang';
+
+    final rawLocation = item['location']?.toString() ?? '';
+    final location = rawLocation.trim().isNotEmpty ? rawLocation.trim() : 'Indonesia';
+
+    final rawPrice = item['price']?.toString() ??
+        item['budget_range']?.toString() ??
+        item['starting_price']?.toString() ??
+        '';
+    final price = rawPrice.trim().isNotEmpty ? rawPrice.trim() : 'Budget Kompetitif';
+
+    final rawCoverUrl = item['cover_url']?.toString() ??
+        item['image_url']?.toString() ??
+        item['thumbnail_url']?.toString() ??
+        item['portfolio_sample_url']?.toString();
+    final displayCoverUrl = (rawCoverUrl != null && rawCoverUrl.isNotEmpty)
+        ? rawCoverUrl
+        : _getCategoryCoverFallback('$badgeText $title');
+
     return Container(
-      width: 210,
+      width: 220,
       margin: const EdgeInsets.only(right: 14),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardDark : Colors.white,
@@ -871,67 +2877,108 @@ class _DashboardScreenState extends State<DashboardScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image/gradient header
-          Container(
-            height: 90,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: gradientColors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(AppTheme.radiusMD),
-              ),
+          // Real HD Cover Image with gradient overlay and badge
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppTheme.radiusMD),
             ),
-            child: Stack(
-              children: [
-                Center(
-                  child: Icon(
-                    (item['icon'] as IconData?) ?? Icons.image_outlined,
-                    color: Colors.white.withValues(alpha: 0.4),
-                    size: 36,
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
+            child: SizedBox(
+              height: 105,
+              width: double.infinity,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CachedNetworkImage(
+                    imageUrl: ApiService.resolveAssetUrl(displayCoverUrl),
+                    fit: BoxFit.cover,
+                    memCacheWidth: 440,
+                    memCacheHeight: 220,
+                    fadeInDuration: const Duration(milliseconds: 150),
+                    placeholder: (context, url) => Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: gradientColors,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
                     ),
-                    decoration: BoxDecoration(
-                      color: badgeColor,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      item['badge']?.toString() ?? '',
-                      style: const TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                    errorWidget: (context, url, error) => Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: gradientColors,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          (item['icon'] as IconData?) ?? Icons.photo_library_outlined,
+                          color: Colors.white70,
+                          size: 32,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(5),
+                  Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.bookmark_border,
-                      color: AppTheme.primaryPurple,
-                      size: 14,
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.black.withValues(alpha: 0.25),
+                          Colors.black.withValues(alpha: 0.65),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3.5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: badgeColor,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.25),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        badgeText,
+                        style: const TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.bookmark_border,
+                        color: AppTheme.primaryPurple,
+                        size: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           Expanded(
@@ -941,7 +2988,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item['title']?.toString() ?? '',
+                    title,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
@@ -952,17 +2999,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.location_on_outlined,
-                        size: 10,
+                        size: 11,
                         color: AppTheme.textMuted,
                       ),
-                      const SizedBox(width: 2),
+                      const SizedBox(width: 3),
                       Expanded(
                         child: Text(
-                          item['location']?.toString() ?? '',
+                          location,
                           style: const TextStyle(
-                            fontSize: 10,
+                            fontSize: 10.5,
                             color: AppTheme.textMuted,
                           ),
                           overflow: TextOverflow.ellipsis,
@@ -972,11 +3019,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                   const Spacer(),
                   Text(
-                    item['price']?.toString() ?? '',
+                    price,
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 12.5,
                       fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryPurple,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 6),
                   SizedBox(
@@ -986,19 +3036,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                       onPressed: () {
                         final opp = OpportunityModel(
                           id: item['id']?.toString() ?? '1',
-                          title: item['title']?.toString() ?? 'Peluang Proyek',
+                          title: title,
                           description:
-                              'Proyek ${item['title']} - Peluang kerja kreatif berkualitas tinggi dengan alokasi budget transparan.',
-                          subRoleSlug: (item['badge']?.toString() ?? 'kreator')
-                              .toLowerCase(),
+                              'Peluang proyek $title dengan alokasi budget $price yang direkomendasikan langsung oleh Kreavana AI.',
+                          subRoleSlug: badgeText.toLowerCase(),
                           type: 'project',
-                          location: item['location']?.toString() ?? 'Indonesia',
-                          budgetRange: item['price']?.toString() ?? 'Sesuaikan',
+                          location: location,
+                          budgetRange: price,
                           status: 'open',
                           postedBy: 'admin',
-                          // Placeholder onboarding: poster admin default untuk
-                          // card demo rekomendasi saat user pertama kali buka
-                          // dashboard. User klik → akan tampil detail sample.
                           poster: OpportunityPoster(
                             id: 'admin',
                             name: 'Kreavana Verified Client',
@@ -1148,10 +3194,22 @@ class _DashboardScreenState extends State<DashboardScreen>
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.network(
-                      ApiService.resolveAssetUrl(displayCoverUrl),
+                    CachedNetworkImage(
+                      imageUrl: ApiService.resolveAssetUrl(displayCoverUrl),
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
+                      memCacheWidth: 400,
+                      memCacheHeight: 200,
+                      fadeInDuration: const Duration(milliseconds: 150),
+                      placeholder: (context, url) => Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: gradientColors,
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: gradientColors,
@@ -1298,26 +3356,442 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  // ── Curated Role-Specific Live & Fallback Data ──────────────────────────────
+  List<Map<String, dynamic>> _getEffectiveProjectNeeds() {
+    if (widget.user.isGuest) return const [];
+    if (_projectNeeds.isNotEmpty) return _projectNeeds;
+    if (_isTalentAndPerformer) {
+      return [
+        {
+          'id': 'talent_need_1',
+          'title': 'Casting Talent Iklan Komersial Brand FMCG',
+          'description': 'Pemeran utama video digital 60 detik (karakter energik, ekspresif & fotogenik)',
+          'status': 'Aktif',
+          'status_color': '#EA580C',
+          'budget': 'Rp 7.500.000',
+          'deadline': '25 Okt 2026',
+        },
+        {
+          'id': 'talent_need_2',
+          'title': 'MC Formal & Gala Dinner Perusahaan BUMN',
+          'description': 'Pemandu acara bilingual (ID/EN) untuk malam apresiasi tahunan',
+          'status': 'Panggilan',
+          'status_color': '#8B5CF6',
+          'budget': 'Rp 6.000.000',
+          'deadline': '02 Nov 2026',
+        },
+        {
+          'id': 'talent_need_3',
+          'title': 'Penyanyi & Band Pengisi Acara Festival Seni Komunitas',
+          'description': 'Penampilan live akustik 2 set lagu pop & indie di panggung kreatif',
+          'status': 'Konfirmasi',
+          'status_color': '#10B981',
+          'budget': 'Rp 5.000.000',
+          'deadline': '10 Nov 2026',
+        },
+      ];
+    }
+    final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
+    if (sub == 'event_organizer' || sub == 'eo') {
+      return [
+        {
+          'id': 'eo_need_1',
+          'title': 'Dokumentasi Video & Foto Gala Dinner Expo',
+          'description': 'Kebutuhan 2 Fotografer + 1 Videografer Sony A7IV untuk event B2B',
+          'status': 'Aktif',
+          'status_color': '#6366F1',
+          'budget': 'Rp 8.500.000',
+          'deadline': '28 Okt 2026',
+        },
+        {
+          'id': 'eo_need_2',
+          'title': 'Sound System 10.000W & Lighting Stage Outdoor',
+          'description': 'Panggung festival musik kampus outdoor 2 hari penuh',
+          'status': 'Review',
+          'status_color': '#F59E0B',
+          'budget': 'Rp 14.000.000',
+          'deadline': '05 Nov 2026',
+        },
+        {
+          'id': 'eo_need_3',
+          'title': 'Master of Ceremony (MC) Bilingual & Akustik',
+          'description': 'Acara resepsi korporasi & award ceremony malam apresiasi',
+          'status': 'Baru',
+          'status_color': '#10B981',
+          'budget': 'Rp 6.000.000',
+          'deadline': '10 Nov 2026',
+        },
+      ];
+    }
+    if (sub == 'wedding_organizer' || sub == 'wo') {
+      return [
+        {
+          'id': 'wo_need_1',
+          'title': 'Paket Wedding Cinematic & Drone 4K',
+          'description': 'Liputan akad & resepsi adat Sunda Modern di Ballroom',
+          'status': 'Aktif',
+          'status_color': '#EC4899',
+          'budget': 'Rp 12.000.000',
+          'deadline': '01 Nov 2026',
+        },
+        {
+          'id': 'wo_need_2',
+          'title': 'MUA Pengantin & 4 Ibu Pendamping',
+          'description': 'Makeup flawless modern dengan busana adat terkoordinasi',
+          'status': 'Review',
+          'status_color': '#8B5CF6',
+          'budget': 'Rp 9.500.000',
+          'deadline': '08 Nov 2026',
+        },
+      ];
+    }
+    if (sub == 'school' || sub == 'education' || sub == 'campus' || sub == 'sekolah' || sub == 'kampus') {
+      return [
+        {
+          'id': 'sch_need_1',
+          'title': 'Perekrutan Magang Siswa: 3D Modeler & Animator',
+          'description': 'Program magang industri 6 bulan bersama mitra studio kreatif',
+          'status': 'Aktif',
+          'status_color': '#06B6D4',
+          'budget': 'Uang Saku & Sertifikat',
+          'deadline': '15 Nov 2026',
+        },
+        {
+          'id': 'sch_need_2',
+          'title': 'Proyek Produksi Video Profil Sekolah Kejuruan',
+          'description': 'Kolaborasi karya siswa multimedia dengan supervisi industri',
+          'status': 'Berjalan',
+          'status_color': '#10B981',
+          'budget': 'Dana BOS & Industri',
+          'deadline': '20 Nov 2026',
+        },
+      ];
+    }
+    return [
+      {
+        'id': 'gen_need_1',
+        'title': _isCreator ? 'Shooting Video Promosi Brand Fashion' : 'Pengadaan Konten Video UGC & Reels',
+        'description': _isCreator ? 'Brief konten 3 video Reels durasi 60 detik' : 'Membutuhkan 3 video creator lifestyle',
+        'status': 'Aktif',
+        'status_color': '#7C3AED',
+        'budget': 'Rp 4.500.000',
+        'deadline': '30 Okt 2026',
+      },
+      {
+        'id': 'gen_need_2',
+        'title': _isCreator ? 'Desain Identitas Visual Brand Kafe & Resto' : 'Desain Kemasan Produk & Feed Instagram',
+        'description': 'Paket logo, color palette, dan 9 template posting feed',
+        'status': 'Review',
+        'status_color': '#3B82F6',
+        'budget': 'Rp 3.000.000',
+        'deadline': '04 Nov 2026',
+      },
+      {
+        'id': 'gen_need_3',
+        'title': _isCreator ? 'Editing Episode Podcast Multi-Cam' : 'Voice Over & Dubbing Iklan Layanan Masyarakat',
+        'description': 'Audio mastering, subtitle, dan cutting teaser 1 menit',
+        'status': 'Baru',
+        'status_color': '#10B981',
+        'budget': 'Rp 2.500.000',
+        'deadline': '12 Nov 2026',
+      },
+    ];
+  }
+
+  List<Map<String, dynamic>> _getEffectiveIncomingProposals() {
+    if (widget.user.isGuest) return const [];
+    if (_incomingProposals.isNotEmpty) return _incomingProposals;
+    final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
+    if (sub == 'event_organizer' || sub == 'eo' || sub == 'wedding_organizer' || sub == 'wo') {
+      return [
+        {
+          'id': 'prop_demo_1',
+          'opportunity_id': 'eo_need_1',
+          'opportunity_title': 'Dokumentasi Video & Foto Gala Dinner Expo',
+          'creator_id': 'creator_demo_1',
+          'creator_name': 'Studio Lensa Kreatif',
+          'bid_price': 'Rp 8.000.000',
+          'status': 'submitted',
+          'creator_avatar': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+          'created_at': '15 menit lalu',
+          'pitch_message': 'Halo! Tim Studio Lensa Kreatif berpengalaman 6+ tahun meliput Gala Dinner & Expo korporat. Dilengkapi 2 kamera Sony FX3 full-frame dan gimbal stabilizer.',
+        },
+        {
+          'id': 'prop_demo_2',
+          'opportunity_id': 'eo_need_2',
+          'opportunity_title': 'Highlight Reels & Live Social Media',
+          'creator_id': 'creator_demo_2',
+          'creator_name': 'Andi Editor Pro',
+          'bid_price': 'Rp 3.500.000',
+          'status': 'approved',
+          'creator_avatar': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+          'created_at': '1 jam lalu',
+          'pitch_message': 'Siap memproduksi 5 Reels vertikal dengan tempo cepat, dynamic captions, dan color grading cinematic langsung di hari yang sama.',
+        },
+        {
+          'id': 'prop_demo_3',
+          'opportunity_id': 'eo_need_1',
+          'opportunity_title': 'Fotografer VIP & Stage Area',
+          'creator_id': 'creator_demo_3',
+          'creator_name': 'Rina Photography',
+          'bid_price': 'Rp 4.000.000',
+          'status': 'submitted',
+          'creator_avatar': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
+          'created_at': '3 jam lalu',
+          'pitch_message': 'Fokus portrait VIP, red carpet session, dan stage ceremony dengan lighting godox flash wireless tanpa mengganggu jalannya acara.',
+        },
+      ];
+    }
+    return [
+      {
+        'id': 'prop_gen_1',
+        'opportunity_id': 'gen_need_1',
+        'opportunity_title': 'Liputan Dokumentasi & Livestreaming Event',
+        'creator_id': 'creator_demo_4',
+        'creator_name': _isCreator ? 'Lamaran Anda ke: PT Kreasi Nusantara' : 'Maya Wedding Organizer',
+        'bid_price': 'Rp 7.500.000',
+        'status': 'submitted',
+        'creator_avatar': 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80',
+        'created_at': '20 menit lalu',
+        'pitch_message': 'Kami siap menyediakan tim multi-cam livestreaming 1080p 60fps dengan backup koneksi bonding router.',
+      },
+      {
+        'id': 'prop_gen_2',
+        'opportunity_id': 'gen_need_2',
+        'opportunity_title': 'Video Promosi Produk & Reels Content',
+        'creator_id': 'creator_demo_5',
+        'creator_name': _isCreator ? 'Lamaran Anda ke: Brand FMCG Jakarta' : 'Dwi Videography Motion',
+        'bid_price': 'Rp 4.200.000',
+        'status': 'approved',
+        'creator_avatar': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+        'created_at': '2 jam lalu',
+        'pitch_message': 'Portfolio video produk viral kami telah mencapai 2M+ views di TikTok. Siap eksekusi sesuai storyboard.',
+      },
+    ];
+  }
+
+  List<Map<String, dynamic>> _getEffectiveRunningContracts() {
+    if (widget.user.isGuest) return const [];
+    if (_runningContracts.isNotEmpty) return _runningContracts;
+    final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
+    if (sub == 'event_organizer' || sub == 'eo' || sub == 'wedding_organizer' || sub == 'wo') {
+      return [
+        {
+          'id': 'cnt_demo_1',
+          'title': 'Gathering Korporasi BUMN 2026',
+          'creator_id': 'creator_demo_1',
+          'creator_name': 'Studio Lensa Kreatif',
+          'agreed_price': 'Rp 14.500.000',
+          'deadline': '25 Okt 2026',
+          'work_status': 'in_progress',
+          'description': 'Dokumentasi lengkap foto video dan aftermovie gathering korporasi BUMN.',
+        },
+        {
+          'id': 'cnt_demo_2',
+          'title': 'Teaser & Dokumentasi Expo Tech',
+          'creator_id': 'creator_demo_2',
+          'creator_name': 'Andi Editor Pro',
+          'agreed_price': 'Rp 6.000.000',
+          'deadline': '28 Okt 2026',
+          'work_status': 'review',
+          'description': 'Teaser video dan konten reels liputan pameran teknologi.',
+        },
+        {
+          'id': 'cnt_demo_3',
+          'title': 'Live Sound & Stage Festival Musik',
+          'creator_id': 'creator_demo_3',
+          'creator_name': 'SkySound Audio Engineering',
+          'agreed_price': 'Rp 12.000.000',
+          'deadline': '05 Nov 2026',
+          'work_status': 'in_progress',
+          'description': 'Penyediaan tata suara panggung konser dan sound engineering profesional.',
+        },
+      ];
+    }
+    return [
+      {
+        'id': 'cnt_gen_1',
+        'title': 'Kampanye Digital Marketing Q4',
+        'creator_id': 'creator_demo_4',
+        'creator_name': _isCreator ? 'PT Solusi Brand Indonesia' : 'Rina Photography Studio',
+        'agreed_price': 'Rp 8.500.000',
+        'deadline': '27 Okt 2026',
+        'work_status': 'in_progress',
+        'description': 'Produksi aset visual dan foto promosi kampanye akhir tahun.',
+      },
+      {
+        'id': 'cnt_gen_2',
+        'title': 'Desain Identitas & Kemasan Produk',
+        'creator_id': 'creator_demo_5',
+        'creator_name': _isCreator ? 'Kopi Senja Nusantara' : 'PixelWave Graphic House',
+        'agreed_price': 'Rp 4.000.000',
+        'deadline': '02 Nov 2026',
+        'work_status': 'review',
+        'description': 'Redesain packaging dan branding visual identitas kemasan.',
+      },
+    ];
+  }
+
+  List<Map<String, dynamic>> _getEffectiveAgenda() {
+    if (widget.user.isGuest) return const [];
+    if (_agenda.isNotEmpty) return _agenda;
+    if (_isTalentAndPerformer) {
+      return [
+        {
+          'id': 'talent_ag_1',
+          'title': 'Gladi Resik & Soundcheck Gala Dinner BUMN',
+          'date': '24',
+          'month': 'Okt',
+          'time': '16:00 - 18:30 WIB',
+          'type': 'Gladi Resik',
+          'type_color': '#EA580C',
+        },
+        {
+          'id': 'talent_ag_2',
+          'title': 'Shooting TVC & Photoshoot Kampanye Brand Fashion',
+          'date': '27',
+          'month': 'Okt',
+          'time': '08:00 - 15:00 WIB',
+          'type': 'Shooting',
+          'type_color': '#EC4899',
+        },
+        {
+          'id': 'talent_ag_3',
+          'title': 'Fitting Kostum & Briefing Tim Wardrobe / MUA',
+          'date': '30',
+          'month': 'Okt',
+          'time': '13:00 - 15:00 WIB',
+          'type': 'Fitting MUA',
+          'type_color': '#8B5CF6',
+        },
+      ];
+    }
+    return [
+      {
+        'id': 'ag_1',
+        'title': 'Gladi Resik & Technical Meeting Expo',
+        'date': '24',
+        'month': 'Okt',
+        'time': '14:00 - 17:00 WIB',
+        'type': 'Offline',
+        'type_color': '#F97316',
+      },
+      {
+        'id': 'ag_2',
+        'title': 'Review Final Edit Video Dokumentasi',
+        'date': '27',
+        'month': 'Okt',
+        'time': '10:00 - 11:30 WIB',
+        'type': 'Online',
+        'type_color': '#3B82F6',
+      },
+      {
+        'id': 'ag_3',
+        'title': 'Evaluasi Anggaran & Serah Terima Aset',
+        'date': '31',
+        'month': 'Okt',
+        'time': '15:00 - 16:30 WIB',
+        'type': 'Online',
+        'type_color': '#10B981',
+      },
+    ];
+  }
+
+  List<Map<String, dynamic>> _getEffectiveProjectAssets() {
+    if (widget.user.isGuest) return const [];
+    if (_projectAssets.isNotEmpty) return _projectAssets;
+    if (_isTalentAndPerformer) {
+      return [
+        {
+          'id': 'ast_t1',
+          'title': 'Showreel Performa 2026 (4K).mp4',
+          'type': 'video',
+          'gradient': [const Color(0xFFEA580C), const Color(0xFFF97316)],
+        },
+        {
+          'id': 'ast_t2',
+          'title': 'Comp Card & Sedcard Resmi.pdf',
+          'type': 'doc',
+          'icon': Icons.badge_outlined,
+          'gradient': [const Color(0xFF8B5CF6), const Color(0xFF6366F1)],
+        },
+        {
+          'id': 'ast_t3',
+          'title': 'Headshot & Full Body Photoshoot.zip',
+          'type': 'photo',
+          'gradient': [const Color(0xFFEC4899), const Color(0xFFF43F5E)],
+        },
+        {
+          'id': 'ast_t4',
+          'title': 'Voice Over Sample (Commercial).wav',
+          'type': 'audio',
+          'icon': Icons.mic_external_on_outlined,
+          'gradient': [const Color(0xFF10B981), const Color(0xFF059669)],
+        },
+      ];
+    }
+    return [
+      {
+        'id': 'ast_1',
+        'title': 'Foto Teaser Gathering.jpg',
+        'type': 'photo',
+        'gradient': [const Color(0xFF6366F1), const Color(0xFF8B5CF6)],
+      },
+      {
+        'id': 'ast_2',
+        'title': 'Highlight Reel Expo.mp4',
+        'type': 'video',
+        'gradient': [const Color(0xFFEC4899), const Color(0xFFF43F5E)],
+      },
+      {
+        'id': 'ast_3',
+        'title': 'Raw Master Audio.wav',
+        'type': 'audio',
+        'icon': Icons.audiotrack_rounded,
+        'gradient': [const Color(0xFF10B981), const Color(0xFF059669)],
+      },
+      {
+        'id': 'ast_4',
+        'title': 'Brand Assets & Guideline.zip',
+        'type': 'doc',
+        'icon': Icons.folder_zip_outlined,
+        'gradient': [const Color(0xFFF59E0B), const Color(0xFFD97706)],
+      },
+    ];
+  }
+
   // ── Three-column section ─────────────────────────────────────────────────────
   Widget _buildThreeColumnSection(bool isDark) {
     final w = MediaQuery.of(context).size.width;
-    final columns = _isCreator
+    final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
+    final showClientWorkflow = widget.user.isGuest ||
+        !_isCreator ||
+        sub == 'event_organizer' ||
+        sub == 'eo' ||
+        sub == 'wedding_organizer' ||
+        sub == 'wo' ||
+        sub == 'school' ||
+        sub == 'education' ||
+        sub == 'institution' ||
+        sub == 'government';
+
+    final columns = showClientWorkflow
         ? [
-            Expanded(child: _buildProjectNeedsSection(isDark)),
-            const SizedBox(width: 14),
-            Expanded(child: _buildAgendaSection(isDark)),
-            const SizedBox(width: 14),
-            Expanded(child: _buildProjectAssetsSection(isDark)),
-          ]
-        : [
             Expanded(child: _buildProjectNeedsSection(isDark)),
             const SizedBox(width: 14),
             Expanded(child: _buildClientProposalsSection(isDark)),
             const SizedBox(width: 14),
             Expanded(child: _buildClientActiveProjectsSection(isDark)),
+          ]
+        : [
+            Expanded(child: _buildProjectNeedsSection(isDark)),
+            const SizedBox(width: 14),
+            Expanded(child: _buildAgendaSection(isDark)),
+            const SizedBox(width: 14),
+            Expanded(child: _buildProjectAssetsSection(isDark)),
           ];
 
-    if (w > 700) {
+    if (w > 760) {
       return IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1326,30 +3800,31 @@ class _DashboardScreenState extends State<DashboardScreen>
       );
     }
     return Column(
-      children: _isCreator
+      children: showClientWorkflow
           ? [
-              _buildProjectNeedsSection(isDark),
-              const SizedBox(height: 14),
-              _buildAgendaSection(isDark),
-              const SizedBox(height: 14),
-              _buildProjectAssetsSection(isDark),
-            ]
-          : [
               _buildProjectNeedsSection(isDark),
               const SizedBox(height: 14),
               _buildClientProposalsSection(isDark),
               const SizedBox(height: 14),
               _buildClientActiveProjectsSection(isDark),
+            ]
+          : [
+              _buildProjectNeedsSection(isDark),
+              const SizedBox(height: 14),
+              _buildAgendaSection(isDark),
+              const SizedBox(height: 14),
+              _buildProjectAssetsSection(isDark),
             ],
     );
   }
 
   Widget _buildProjectNeedsSection(bool isDark) {
+    final needs = _getEffectiveProjectNeeds();
     return _SectionCard(
       title: _isCreator ? 'Proyek & Aktivitas' : 'Kebutuhan & Proyek',
       onViewAll: () => _navigateTo('Lihat Semua Proyek'),
       isDark: isDark,
-      child: _projectNeeds.isEmpty
+      child: needs.isEmpty
           ? _DashboardCardEmptyState(
               icon: Icons.folder_open_rounded,
               badgeLabel: _isCreator ? '✦ PROYEK AKTIF' : '✦ KEBUTUHAN PROYEK',
@@ -1362,7 +3837,8 @@ class _DashboardScreenState extends State<DashboardScreen>
               isDark: isDark,
             )
           : Column(
-              children: _projectNeeds
+              children: needs
+                  .take(3)
                   .map((need) => _buildNeedItem(need, isDark))
                   .toList(),
             ),
@@ -1379,18 +3855,20 @@ class _DashboardScreenState extends State<DashboardScreen>
       statusColor = AppTheme.primaryPurple;
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.inputDark : AppTheme.inputLight,
-        borderRadius: BorderRadius.circular(AppTheme.radiusSM),
-      ),
+    final budget = need['budget']?.toString() ??
+        need['budget_range']?.toString() ??
+        need['price']?.toString();
+    final title = need['title']?.toString() ?? '-';
+
+    return _InteractiveDashboardItemCard(
+      isDark: isDark,
+      tooltip: 'Buka detail proyek $title',
+      onTap: () => _handleNeedItemClick(need),
       child: Row(
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
               color: statusColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
@@ -1403,7 +3881,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  need['title']?.toString() ?? '-',
+                  title,
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -1419,10 +3897,26 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ? AppTheme.textMuted
                         : AppTheme.textMutedLight,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
+                if (budget != null && budget.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    budget,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.primaryPurple,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),
+          const SizedBox(width: 6),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
             decoration: BoxDecoration(
@@ -1438,18 +3932,82 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ),
           ),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 16,
+            color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+          ),
         ],
       ),
     );
   }
 
+  void _handleNeedItemClick(Map<String, dynamic> need) {
+    final id = need['id']?.toString() ?? '';
+    final title = need['title']?.toString() ?? 'Kebutuhan Proyek';
+    final desc = need['description']?.toString() ?? '';
+    final budget = need['budget']?.toString() ??
+        need['budget_range']?.toString() ??
+        need['price']?.toString();
+    final deadline = need['deadline']?.toString();
+    final status = need['status']?.toString() ?? 'open';
+    final isClosed = status.toLowerCase() == 'selesai' || status.toLowerCase() == 'closed';
+    final subRole = widget.user.subRole ?? 'event_organizer';
+
+    final opp = OpportunityModel(
+      id: id.isNotEmpty ? id : 'opp_demo_${DateTime.now().millisecondsSinceEpoch}',
+      title: title,
+      description: desc.isNotEmpty ? desc : 'Detail kebutuhan proyek $title.',
+      budgetRange: budget,
+      deadline: deadline,
+      status: isClosed ? 'closed' : 'open',
+      subRoleSlug: subRole.isNotEmpty ? subRole : 'event_organizer',
+      type: 'project',
+      postedBy: widget.user.id,
+      poster: OpportunityPoster(
+        id: widget.user.id,
+        name: widget.user.name,
+        username: widget.user.username,
+        avatarUrl: widget.user.avatarUrl,
+        role: widget.user.role,
+        isVerified: widget.user.isVerified,
+      ),
+      requirements: [
+        OpportunityRequirementModel(
+          id: 'req_1',
+          subRoleSlug: 'fotografer',
+          quantity: 2,
+          notes: 'Dokumentasi foto profesional & liputan panggung',
+        ),
+        OpportunityRequirementModel(
+          id: 'req_2',
+          subRoleSlug: 'videografer',
+          quantity: 1,
+          notes: 'Aftermovie 4K sinematik & reels liputan',
+        ),
+      ],
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DetailKebutuhanScreen(
+          opportunity: opp,
+          user: widget.user,
+        ),
+      ),
+    ).then((_) => _loadDashboardData());
+  }
+
   Widget _buildAgendaSection(bool isDark) {
+    final agenda = _getEffectiveAgenda();
     return _SectionCard(
       title: _isCreator ? 'Agenda / Kalender' : 'Agenda & Jadwal',
       onViewAll: () => _navigateTo('Lihat Kalender'),
       viewAllLabel: 'Kalender',
       isDark: isDark,
-      child: _agenda.isEmpty
+      child: agenda.isEmpty
           ? _DashboardCardEmptyState(
               icon: Icons.calendar_today_rounded,
               badgeLabel: '✦ JADWAL & AGENDA',
@@ -1460,7 +4018,8 @@ class _DashboardScreenState extends State<DashboardScreen>
               isDark: isDark,
             )
           : Column(
-              children: _agenda
+              children: agenda
+                  .take(3)
                   .map((item) => _buildAgendaItem(item, isDark))
                   .toList(),
             ),
@@ -1477,13 +4036,12 @@ class _DashboardScreenState extends State<DashboardScreen>
       typeColor = Colors.blue;
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.inputDark : AppTheme.inputLight,
-        borderRadius: BorderRadius.circular(AppTheme.radiusSM),
-      ),
+    final title = item['title']?.toString() ?? 'Agenda';
+
+    return _InteractiveDashboardItemCard(
+      isDark: isDark,
+      tooltip: 'Buka agenda: $title',
+      onTap: () => _handleAgendaItemClick(item),
       child: Row(
         children: [
           Container(
@@ -1521,7 +4079,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item['title']?.toString() ?? '',
+                  title,
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -1556,13 +4114,79 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ),
           ),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 16,
+            color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleAgendaItemClick(Map<String, dynamic> item) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final title = item['title']?.toString() ?? 'Agenda';
+    final date = '${item['date']} ${item['month']}';
+    final time = item['time']?.toString() ?? '';
+    final type = item['type']?.toString() ?? 'Event';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+        title: Row(
+          children: [
+            const Icon(Icons.event_note_rounded, color: AppTheme.primaryPurple),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Jadwal: $date • $time', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            Text('Kategori: $type', style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight)),
+            const SizedBox(height: 12),
+            Text(
+              'Aktivitas teragendakan pada kalender proyek Kreavana. Anda dapat mengelola waktu dan sinkronisasi jadwal di halaman Kalender.',
+              style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : Colors.grey.shade700, height: 1.4),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Tutup'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _navigateTo('Lihat Kalender');
+            },
+            icon: const Icon(Icons.calendar_month_rounded, size: 16, color: Colors.white),
+            label: const Text('Buka Kalender', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryPurple,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildProjectAssetsSection(bool isDark) {
-    final assets = _projectAssets;
+    final assets = _getEffectiveProjectAssets();
     return _SectionCard(
       title: _isCreator ? 'Portofolio & Karya' : 'Aset & Hasil Proyek',
       onViewAll: () => _navigateTo('Lihat Semua Karya'),
@@ -1577,18 +4201,24 @@ class _DashboardScreenState extends State<DashboardScreen>
               onAction: () => _navigateTo('Tambah Karya'),
               isDark: isDark,
             )
-          : GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-                childAspectRatio: 1.4,
-              ),
-              itemCount: assets.length > 4 ? 4 : assets.length,
-              itemBuilder: (context, index) =>
-                  _buildAssetThumbnail(assets[index], isDark),
+          : Column(
+              children: [
+                Row(
+                  children: [
+                    if (assets.isNotEmpty) Expanded(child: _buildAssetThumbnail(assets[0], isDark)),
+                    const SizedBox(width: 8),
+                    if (assets.length > 1) Expanded(child: _buildAssetThumbnail(assets[1], isDark)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (assets.length > 2) Expanded(child: _buildAssetThumbnail(assets[2], isDark)),
+                    const SizedBox(width: 8),
+                    if (assets.length > 3) Expanded(child: _buildAssetThumbnail(assets[3], isDark)),
+                  ],
+                ),
+              ],
             ),
     );
   }
@@ -1601,38 +4231,87 @@ class _DashboardScreenState extends State<DashboardScreen>
     final iconData =
         (asset['icon'] as IconData?) ??
         (type == 'video' ? Icons.play_circle_outline : Icons.photo_outlined);
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradientColors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Stack(
-        children: [
-          Center(
-            child: Icon(
-              iconData,
-              color: Colors.white.withValues(alpha: 0.4),
-              size: 24,
-            ),
+    final title = asset['title']?.toString() ?? 'Karya';
+
+    return _InteractiveDashboardItemCard(
+      isDark: isDark,
+      tooltip: 'Buka karya: $title',
+      onTap: () => _handleAssetClick(asset),
+      child: Container(
+        height: 72,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: gradientColors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          Positioned(
-            bottom: 5,
-            left: 6,
-            right: 6,
-            child: Text(
-              asset['title']?.toString() ?? '',
-              style: const TextStyle(
-                fontSize: 9,
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Stack(
+          children: [
+            Center(
+              child: Icon(
+                iconData,
+                color: Colors.white.withValues(alpha: 0.4),
+                size: 24,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            ),
+            Positioned(
+              bottom: 5,
+              left: 6,
+              right: 6,
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 9,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleAssetClick(Map<String, dynamic> asset) {
+    final title = asset['title']?.toString() ?? 'Karya';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+        title: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Aset karya portofolio kreatif yang telah dipublikasikan di profil Kreavana.',
+              style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : Colors.grey.shade700, height: 1.4),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Tutup'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _navigateTo('Lihat Semua Karya');
+            },
+            icon: const Icon(Icons.collections_rounded, size: 16, color: Colors.white),
+            label: const Text('Buka Portofolio', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryPurple,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
           ),
         ],
@@ -1642,12 +4321,13 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ── Client Sections: Proposal Masuk & Proyek Berjalan ─────────────────────────
   Widget _buildClientProposalsSection(bool isDark) {
+    final proposals = _getEffectiveIncomingProposals();
     return _SectionCard(
       title: 'Proposal Masuk',
       viewAllLabel: 'Lihat Semua',
       onViewAll: () => _navigateTo('Lihat Semua Proposal'),
       isDark: isDark,
-      child: _incomingProposals.isEmpty
+      child: proposals.isEmpty
           ? _DashboardCardEmptyState(
               icon: Icons.mark_email_unread_rounded,
               badgeLabel: '✦ PENAWARAN KREATOR',
@@ -1658,8 +4338,8 @@ class _DashboardScreenState extends State<DashboardScreen>
               isDark: isDark,
             )
           : Column(
-              children: _incomingProposals
-                  .take(4)
+              children: proposals
+                  .take(3)
                   .map((prop) => _buildProposalItem(prop, isDark))
                   .toList(),
             ),
@@ -1679,20 +4359,17 @@ class _DashboardScreenState extends State<DashboardScreen>
         isApproved ? const Color(0xFF10B981) : AppTheme.primaryPurple;
     final statusText = isApproved ? 'Disetujui' : 'Menunggu Review';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.inputDark : AppTheme.inputLight,
-        borderRadius: BorderRadius.circular(AppTheme.radiusSM),
-      ),
+    return _InteractiveDashboardItemCard(
+      isDark: isDark,
+      tooltip: 'Review proposal dari $creatorName',
+      onTap: () => _handleProposalItemClick(prop),
       child: Row(
         children: [
           CircleAvatar(
             radius: 17,
             backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.12),
             backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
-                ? NetworkImage(avatarUrl)
+                ? CachedNetworkImageProvider(ApiService.resolveAssetUrl(avatarUrl))
                 : null,
             child: (avatarUrl == null || avatarUrl.isEmpty)
                 ? Text(
@@ -1756,18 +4433,266 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ),
           ),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 16,
+            color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+          ),
         ],
       ),
     );
   }
 
+  void _handleProposalItemClick(Map<String, dynamic> prop) {
+    _showProposalDetailModal(prop);
+  }
+
+  void _showProposalDetailModal(Map<String, dynamic> prop) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final creatorName = prop['creator_name']?.toString() ?? 'Kreator';
+    final opportunityTitle =
+        prop['opportunity_title']?.toString() ?? 'Kebutuhan Proyek';
+    final bidPrice = prop['bid_price']?.toString() ?? 'Sesuai Budget';
+    final status = prop['status']?.toString() ?? 'submitted';
+    final avatarUrl = prop['creator_avatar']?.toString();
+    final creatorId = prop['creator_id']?.toString() ?? '';
+    final pitch = prop['pitch_message']?.toString() ??
+        'Proposal penawaran profesional untuk proyek $opportunityTitle.';
+    final oppId = prop['opportunity_id']?.toString() ?? '';
+
+    final isApproved = status == 'approved';
+    final statusColor =
+        isApproved ? const Color(0xFF10B981) : AppTheme.primaryPurple;
+    final statusText = isApproved ? 'Disetujui' : 'Menunggu Review';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 520),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryPurple.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.mark_email_read_rounded, color: AppTheme.primaryPurple, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Pengajuan Proposal Masuk',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          opportunityTitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    splashRadius: 18,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+
+              // Creator Profile Snippet
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.inputDark : AppTheme.inputLight,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.12),
+                      backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
+                          ? CachedNetworkImageProvider(ApiService.resolveAssetUrl(avatarUrl))
+                          : null,
+                      child: (avatarUrl == null || avatarUrl.isEmpty)
+                          ? Text(
+                              creatorName.isNotEmpty ? creatorName[0].toUpperCase() : 'K',
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryPurple),
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  creatorName,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.verified_rounded, size: 14, color: AppTheme.primaryPurple),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Ajuan Biaya: $bidPrice',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.primaryPurple,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        statusText,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: statusColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Pitch cover letter
+              const Text(
+                'Catatan Penawaran & Portofolio:',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF13111E) : Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+                  ),
+                ),
+                child: Text(
+                  pitch,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.45,
+                    color: isDark ? Colors.white70 : Colors.grey.shade800,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Action buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _openChatWithPartner(creatorId, creatorName);
+                      },
+                      icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
+                      label: const Text('Chat Kreator', style: TextStyle(fontSize: 12)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        // Navigate directly to the opportunity page
+                        _handleNeedItemClick({
+                          'id': oppId,
+                          'title': opportunityTitle,
+                          'description': 'Kebutuhan proyek $opportunityTitle',
+                          'budget': bidPrice,
+                        });
+                      },
+                      icon: const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
+                      label: const Text('Buka Halaman Proyek', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryPurple,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (creatorId.isNotEmpty && !creatorId.startsWith('creator_demo')) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      UserProfileModal.show(context, userId: creatorId);
+                    },
+                    icon: const Icon(Icons.person_search_rounded, size: 16),
+                    label: const Text('Lihat Profil Lengkap & Rating Kreator', style: TextStyle(fontSize: 11)),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildClientActiveProjectsSection(bool isDark) {
+    final contracts = _getEffectiveRunningContracts();
     return _SectionCard(
       title: 'Proyek Berjalan',
       viewAllLabel: 'Lihat Semua',
       onViewAll: () => _navigateTo('Lihat Semua Proyek Berjalan'),
       isDark: isDark,
-      child: _runningContracts.isEmpty
+      child: contracts.isEmpty
           ? _DashboardCardEmptyState(
               icon: Icons.handshake_rounded,
               badgeLabel: '✦ KONTRAK AKTIF',
@@ -1778,13 +4703,14 @@ class _DashboardScreenState extends State<DashboardScreen>
               isDark: isDark,
             )
           : Column(
-              children: _runningContracts
-                  .take(4)
+              children: contracts
+                  .take(3)
                   .map((contract) => _buildRunningContractItem(contract, isDark))
                   .toList(),
             ),
     );
   }
+
   Widget _buildRunningContractItem(Map<String, dynamic> c, bool isDark) {
     final title = c['title']?.toString() ?? 'Proyek Kontrak';
     final creatorName = c['creator_name']?.toString() ?? 'Kreator';
@@ -1806,18 +4732,28 @@ class _DashboardScreenState extends State<DashboardScreen>
       statusColor = const Color(0xFF10B981);
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.inputDark : AppTheme.inputLight,
-        borderRadius: BorderRadius.circular(AppTheme.radiusSM),
-      ),
+    final contractId = c['id']?.toString() ?? '';
+
+    return _InteractiveDashboardItemCard(
+      isDark: isDark,
+      tooltip: 'Buka kontrak proyek $title',
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProyekSayaScreen(
+              user: widget.user,
+              initialContractId: contractId,
+              initialTitle: title,
+            ),
+          ),
+        );
+      },
       child: Row(
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
               color: statusColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
@@ -1875,6 +4811,787 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ),
           ),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 16,
+            color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openChatWithPartner(String targetUserId, String? targetUserName) async {
+    final cleanId = targetUserId.trim();
+    if (cleanId.isEmpty || cleanId.startsWith('creator_demo') || cleanId.startsWith('client_demo')) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DirectMessageScreen(
+            currentUser: widget.user,
+            targetUserId: cleanId.isNotEmpty ? cleanId : 'demo_partner',
+            initialChat: {
+              'name': targetUserName ?? 'Partner',
+              'id': cleanId.isNotEmpty ? cleanId : 'demo_partner',
+            },
+          ),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final res = await ChatService.startPersonalChat(cleanId);
+      final chatData = res['data'];
+      final chatId = chatData != null ? chatData['id']?.toString() : null;
+      final chatMap = chatData != null ? Map<String, dynamic>.from(chatData) : null;
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DirectMessageScreen(
+              currentUser: widget.user,
+              targetUserId: cleanId,
+              chatId: chatId,
+              initialChat: chatMap,
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DirectMessageScreen(
+              currentUser: widget.user,
+              targetUserId: cleanId,
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  // ── Ekosistem 5 Pilar Talent & Performer ─────────────────────────────────────
+  Widget _buildTalentEcosystemSection(bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardDark : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+        border: Border.all(
+          color: const Color(0xFFEA580C).withValues(alpha: isDark ? 0.35 : 0.25),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFEA580C).withValues(alpha: isDark ? 0.15 : 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+          if (!isDark) ...AppTheme.cardShadowLight,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header section
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFEA580C).withValues(alpha: 0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.hub_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        const Text(
+                          'Ekosistem Kolaborasi Talent & Performer',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFEA580C), Color(0xFFC026D3)],
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            '#KolaborasiMembawaDampak',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      'Kreavana menghubungkan talent dan performer dengan klien, kreator, vendor, komunitas serta berbagai peluang industri kreatif untuk berkembang lebih jauh.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Profession / Scope Chips
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.04)
+                  : const Color(0xFFEA580C).withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : const Color(0xFFEA580C).withValues(alpha: 0.15),
+              ),
+            ),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.stars_rounded,
+                      size: 14,
+                      color: Color(0xFFEA580C),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Cakupan Talenta:',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+                ...[
+                  'Model',
+                  'Aktor',
+                  'MC & Host',
+                  'Penyanyi',
+                  'Musisi',
+                  'Penari',
+                  'Voice Over',
+                  'Influencer / KOL',
+                ].map(
+                  (role) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white10 : Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white24
+                            : Colors.black.withValues(alpha: 0.08),
+                      ),
+                    ),
+                    child: Text(
+                      role,
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : const Color(0xFF334155),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          // The 4 Pillar Cards (Responsive 2-column or 1-column)
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isTwoCol = constraints.maxWidth > 650;
+              final cards = [
+                _buildEcosystemPillarCard(
+                  title: 'Klien / Corporate',
+                  subtitle: 'Brand, Perusahaan, Instansi, BUMN, Swasta, dll',
+                  icon: Icons.corporate_fare_rounded,
+                  color: const Color(0xFF2563EB),
+                  isDark: isDark,
+                  benefits: const [
+                    'Peluang tampil di berbagai kampanye & proyek',
+                    'Job dan kontrak profesional terjamin',
+                    'Eksposur ke audiens yang lebih luas',
+                    'Penghasilan yang lebih stabil & terarah',
+                  ],
+                  contributions: const [
+                    'Penampilan & konten berkualitas sesuai brief',
+                    'Profesionalisme tinggi & disiplin waktu',
+                    'Representasi positif reputasi brand klien',
+                    'Partisipasi aktif dalam kegiatan promosi',
+                  ],
+                  actionLabel: 'Cari Proyek Klien',
+                  onAction: () => _navigateTo('Cari Casting & Job'),
+                ),
+                _buildEcosystemPillarCard(
+                  title: 'Kreator / Profesional Kreatif',
+                  subtitle: 'Fotografer, Videografer, Desainer, Content Creator',
+                  icon: Icons.camera_alt_rounded,
+                  color: const Color(0xFFEC4899),
+                  isDark: isDark,
+                  benefits: const [
+                    'Kolaborasi dalam berbagai proyek kreatif',
+                    'Portofolio & materi konten visual berkualitas',
+                    'Kesempatan membangun karya masterpiece bersama',
+                    'Jaringan luas dengan sesama insan kreatif',
+                  ],
+                  contributions: const [
+                    'Menjadi model, talent utama atau narasumber',
+                    'Memberikan performa panggung & visual terbaik',
+                    'Membantu proses produksi & pembuatan konten',
+                    'Merekomendasikan rekan kreator satu sama lain',
+                  ],
+                  actionLabel: 'Kolaborasi Kreator',
+                  onAction: () => _navigateTo('Kolaborasi Kreator'),
+                ),
+                _buildEcosystemPillarCard(
+                  title: 'Mitra / Vendor / Penyedia Jasa',
+                  subtitle: 'Studio, EO, MUA, Wardrobe, Rental Alat, Produksi',
+                  icon: Icons.handshake_rounded,
+                  color: const Color(0xFFF97316),
+                  isDark: isDark,
+                  benefits: const [
+                    'Layanan pendukung produksi berkualitas prima',
+                    'Penampilan visual lebih maksimal di set',
+                    'Paket kerja sama & penawaran harga khusus',
+                    'Jaringan kemitraan vendor terpercaya',
+                  ],
+                  contributions: const [
+                    'Menggunakan jasa layanan vendor terverifikasi',
+                    'Memberikan ulasan positif & testimoni nyata',
+                    'Memberi rekomendasi kepada sesama talent',
+                    'Kolaborasi harmonis dalam eksekusi produksi',
+                  ],
+                  actionLabel: 'Eksplor Vendor & MUA',
+                  onAction: () => _navigateTo('Mitra Vendor & MUA'),
+                ),
+                _buildEcosystemPillarCard(
+                  title: 'Komunitas & Event',
+                  subtitle: 'Komunitas Seni, Musik, Teater, Budaya, Wisata',
+                  icon: Icons.groups_rounded,
+                  color: const Color(0xFF10B981),
+                  isDark: isDark,
+                  benefits: const [
+                    'Kesempatan tampil di panggung festival & event',
+                    'Eksposur publik & jam terbang panggung baru',
+                    'Jaringan komunitas dengan sesama performer',
+                    'Dukungan moral & apresiasi tinggi dari audiens',
+                  ],
+                  contributions: const [
+                    'Berpartisipasi aktif dalam event dan kegiatan',
+                    'Berbagi pengalaman, wawasan & inspirasi',
+                    'Membantu promosi kegiatan komunitas',
+                    'Membangun ekosistem kreatif bersama-sama',
+                  ],
+                  actionLabel: 'Jelajahi Komunitas',
+                  onAction: () => context.go(AppRoutes.explore),
+                ),
+              ];
+
+              if (isTwoCol) {
+                return Column(
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: cards[0]),
+                        const SizedBox(width: 14),
+                        Expanded(child: cards[1]),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: cards[2]),
+                        const SizedBox(width: 14),
+                        Expanded(child: cards[3]),
+                      ],
+                    ),
+                  ],
+                );
+              }
+
+              return Column(
+                children: [
+                  cards[0],
+                  const SizedBox(height: 14),
+                  cards[1],
+                  const SizedBox(height: 14),
+                  cards[2],
+                  const SizedBox(height: 14),
+                  cards[3],
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 18),
+
+          // 5th Pillar: Tim Kreavana Banner
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isDark
+                    ? [
+                        const Color(0xFF4C1D95).withValues(alpha: 0.6),
+                        const Color(0xFF1E1B4B).withValues(alpha: 0.7),
+                      ]
+                    : [
+                        const Color(0xFF7C3AED).withValues(alpha: 0.08),
+                        const Color(0xFFC026D3).withValues(alpha: 0.05),
+                      ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFF7C3AED).withValues(alpha: isDark ? 0.4 : 0.25),
+                width: 1.2,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.primaryGradient,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primaryPurple.withValues(alpha: 0.35),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.verified_user_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Tim Kreavana — Platform & Ekosistem Kolaborasi',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Operasional, Marketing, IT, Talent Partnership, & Edukasi',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isWide = constraints.maxWidth > 650;
+                    final leftCol = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.check_circle_rounded,
+                                size: 14, color: AppTheme.primaryPurple),
+                            const SizedBox(width: 6),
+                            const Text(
+                              'Manfaat untuk Talent:',
+                              style: TextStyle(
+                                  fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        ...[
+                          'Pencocokan peluang cerdas (AI Matching) yang relevan',
+                          'Akses informasi casting, event, & proyek terbaru',
+                          'Dukungan penggunaan platform & negosiasi proyek aman',
+                          'Edukasi, pelatihan, workshop, & sertifikasi talenta',
+                          'Jaminan pembayaran escrow & bantuan kontrak hukum',
+                        ].map((m) => Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('✓ ',
+                                      style: TextStyle(
+                                          color: Color(0xFF10B981),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold)),
+                                  Expanded(
+                                    child: Text(m,
+                                        style: TextStyle(
+                                            fontSize: 10.5,
+                                            height: 1.35,
+                                            color: isDark
+                                                ? Colors.white70
+                                                : const Color(0xFF334155))),
+                                  ),
+                                ],
+                              ),
+                            )),
+                      ],
+                    );
+
+                    final rightCol = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.favorite_rounded,
+                                size: 14, color: const Color(0xFFEC4899)),
+                            const SizedBox(width: 6),
+                            const Text(
+                              'Kontribusi Talent:',
+                              style: TextStyle(
+                                  fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        ...[
+                          'Melengkapi data profil, portofolio & showreel resmi',
+                          'Aktif mencari, merespons, dan melamar peluang terbuka',
+                          'Memberikan feedback untuk penyempurnaan platform',
+                          'Menjaga reputasi positif, etika kerja, & profesionalisme',
+                          'Mendukung pertumbuhan ekosistem kreatif Kreavana',
+                        ].map((c) => Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('✓ ',
+                                      style: TextStyle(
+                                          color: Color(0xFF10B981),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold)),
+                                  Expanded(
+                                    child: Text(c,
+                                        style: TextStyle(
+                                            fontSize: 10.5,
+                                            height: 1.35,
+                                            color: isDark
+                                                ? Colors.white70
+                                                : const Color(0xFF334155))),
+                                  ),
+                                ],
+                              ),
+                            )),
+                      ],
+                    );
+
+                    if (isWide) {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: leftCol),
+                          const SizedBox(width: 18),
+                          Expanded(child: rightCol),
+                        ],
+                      );
+                    }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        leftCol,
+                        const SizedBox(height: 12),
+                        rightCol,
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 14),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Kreavana — Lebih dari Sekadar Platform, Ini Adalah Ekosistem.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontStyle: FontStyle.italic,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.primaryPurple,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    HoverLiftButton(
+                      glowColor: AppTheme.primaryPurple,
+                      scale: 1.03,
+                      translateY: -2.0,
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: () => context.go(AppRoutes.pesan),
+                      child: ElevatedButton.icon(
+                        onPressed: () => context.go(AppRoutes.pesan),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryPurple,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 0,
+                        ),
+                        icon: const Icon(Icons.chat_outlined, size: 14),
+                        label: const Text(
+                          'Hubungi Tim',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEcosystemPillarCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required bool isDark,
+    required List<String> benefits,
+    required List<String> contributions,
+    required String actionLabel,
+    required VoidCallback onAction,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark
+            ? color.withValues(alpha: 0.08)
+            : color.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withValues(alpha: isDark ? 0.35 : 0.22),
+          width: 1.1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Manfaat untuk Talent:',
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          ...benefits.map((b) => Padding(
+                padding: const EdgeInsets.only(bottom: 2.5),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('✓ ',
+                        style: TextStyle(
+                            color: Color(0xFF10B981),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold)),
+                    Expanded(
+                      child: Text(
+                        b,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isDark ? Colors.white70 : const Color(0xFF334155),
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+          const SizedBox(height: 8),
+          Text(
+            'Kontribusi Talent:',
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white70 : const Color(0xFF475569),
+            ),
+          ),
+          const SizedBox(height: 4),
+          ...contributions.map((c) => Padding(
+                padding: const EdgeInsets.only(bottom: 2.5),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('✓ ',
+                        style: TextStyle(
+                            color: Color(0xFF10B981),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold)),
+                    Expanded(
+                      child: Text(
+                        c,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 32,
+            child: HoverLiftButton(
+              glowColor: color,
+              scale: 1.02,
+              translateY: -1.5,
+              borderRadius: BorderRadius.circular(8),
+              onTap: onAction,
+              child: OutlinedButton(
+                onPressed: onAction,
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: color.withValues(alpha: 0.5)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  foregroundColor: color,
+                  padding: EdgeInsets.zero,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      actionLabel,
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.arrow_forward_rounded, size: 13),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1882,95 +5599,140 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ── Workflow steps ───────────────────────────────────────────────────────────
   Widget _buildWorkflowSection(bool isDark) {
-    final steps = _isCreator
+    final steps = _isTalentAndPerformer
         ? [
             {
               'n': '1',
-              'title': 'Profil Lengkap',
-              'sub': 'Isi data & niche',
-              'icon': Icons.person_outline,
-              'color': const Color(0xFF7C3AED),
+              'title': 'Daftar & Profil',
+              'sub': 'Isi data diri & jadwal',
+              'icon': Icons.badge_outlined,
+              'color': const Color(0xFF2563EB),
             },
             {
               'n': '2',
-              'title': 'Dapat Rekomendasi',
-              'sub': 'Peluang sesuai niche',
-              'icon': Icons.auto_awesome,
-              'color': const Color(0xFFEAB308),
+              'title': 'Unggah Showreel',
+              'sub': 'Foto, video & audio',
+              'icon': Icons.smart_display_outlined,
+              'color': const Color(0xFF8B5CF6),
             },
             {
               'n': '3',
-              'title': 'Ajukan Proposal',
-              'sub': 'Kirim penawaran terbaik',
-              'icon': Icons.description_outlined,
-              'color': const Color(0xFF3B82F6),
+              'title': 'Ajukan Peluang',
+              'sub': 'Job, event, casting',
+              'icon': Icons.search_rounded,
+              'color': const Color(0xFFEC4899),
             },
             {
               'n': '4',
-              'title': 'Jalankan Campaign',
-              'sub': 'Produksi & publikasi',
-              'icon': Icons.event_note_outlined,
-              'color': const Color(0xFF7C3AED),
+              'title': 'Hubungi Klien/Tim',
+              'sub': 'Chat & negosiasi aman',
+              'icon': Icons.chat_bubble_outline_rounded,
+              'color': const Color(0xFFEA580C),
             },
             {
               'n': '5',
-              'title': 'Dapat Review',
-              'sub': 'Ulasan & rating klien',
-              'icon': Icons.star_outline,
+              'title': 'Tampil & Eksekusi',
+              'sub': 'Realisasi proyek',
+              'icon': Icons.theater_comedy_rounded,
               'color': const Color(0xFF10B981),
             },
             {
               'n': '6',
-              'title': 'Reputasi Naik',
-              'sub': 'Peluang meningkat',
-              'icon': Icons.trending_up,
-              'color': const Color(0xFF14B8A6),
+              'title': 'Bangun Reputasi',
+              'sub': 'Rating & ulasan klien',
+              'icon': Icons.star_rounded,
+              'color': const Color(0xFF0EA5E9),
             },
           ]
-        : [
-            {
-              'n': '1',
-              'title': 'Buat Kebutuhan',
-              'sub': 'Tulis brief',
-              'icon': Icons.edit_note,
-              'color': const Color(0xFF3B82F6),
-            },
-            {
-              'n': '2',
-              'title': 'Cocokkan Kreator',
-              'sub': 'AI matching otomatis',
-              'icon': Icons.auto_awesome,
-              'color': const Color(0xFF7C3AED),
-            },
-            {
-              'n': '3',
-              'title': 'Terima Proposal',
-              'sub': 'Bandingkan tawaran',
-              'icon': Icons.mail_outline,
-              'color': const Color(0xFF10B981),
-            },
-            {
-              'n': '4',
-              'title': 'Pilih Kreator',
-              'sub': 'Setujui kolaborator',
-              'icon': Icons.person_add_outlined,
-              'color': const Color(0xFFF97316),
-            },
-            {
-              'n': '5',
-              'title': 'Pantau Proyek',
-              'sub': 'Review progres',
-              'icon': Icons.analytics_outlined,
-              'color': const Color(0xFF14B8A6),
-            },
-            {
-              'n': '6',
-              'title': 'Beri Ulasan',
-              'sub': 'Bangun ekosistem',
-              'icon': Icons.star_outline,
-              'color': const Color(0xFFEAB308),
-            },
-          ];
+        : _isCreator
+            ? [
+                {
+                  'n': '1',
+                  'title': 'Profil Lengkap',
+                  'sub': 'Isi data & niche',
+                  'icon': Icons.person_outline,
+                  'color': const Color(0xFF7C3AED),
+                },
+                {
+                  'n': '2',
+                  'title': 'Dapat Rekomendasi',
+                  'sub': 'Peluang sesuai niche',
+                  'icon': Icons.auto_awesome,
+                  'color': const Color(0xFFEAB308),
+                },
+                {
+                  'n': '3',
+                  'title': 'Ajukan Proposal',
+                  'sub': 'Kirim penawaran terbaik',
+                  'icon': Icons.description_outlined,
+                  'color': const Color(0xFF3B82F6),
+                },
+                {
+                  'n': '4',
+                  'title': 'Jalankan Campaign',
+                  'sub': 'Produksi & publikasi',
+                  'icon': Icons.event_note_outlined,
+                  'color': const Color(0xFF7C3AED),
+                },
+                {
+                  'n': '5',
+                  'title': 'Dapat Review',
+                  'sub': 'Ulasan & rating klien',
+                  'icon': Icons.star_outline,
+                  'color': const Color(0xFF10B981),
+                },
+                {
+                  'n': '6',
+                  'title': 'Reputasi Naik',
+                  'sub': 'Peluang meningkat',
+                  'icon': Icons.trending_up,
+                  'color': const Color(0xFF14B8A6),
+                },
+              ]
+            : [
+                {
+                  'n': '1',
+                  'title': 'Buat Kebutuhan',
+                  'sub': 'Tulis brief',
+                  'icon': Icons.edit_note,
+                  'color': const Color(0xFF3B82F6),
+                },
+                {
+                  'n': '2',
+                  'title': 'Cocokkan Kreator',
+                  'sub': 'AI matching otomatis',
+                  'icon': Icons.auto_awesome,
+                  'color': const Color(0xFF7C3AED),
+                },
+                {
+                  'n': '3',
+                  'title': 'Terima Proposal',
+                  'sub': 'Bandingkan tawaran',
+                  'icon': Icons.mail_outline,
+                  'color': const Color(0xFF10B981),
+                },
+                {
+                  'n': '4',
+                  'title': 'Pilih Kreator',
+                  'sub': 'Setujui kolaborator',
+                  'icon': Icons.person_add_outlined,
+                  'color': const Color(0xFFF97316),
+                },
+                {
+                  'n': '5',
+                  'title': 'Pantau Proyek',
+                  'sub': 'Review progres',
+                  'icon': Icons.analytics_outlined,
+                  'color': const Color(0xFF14B8A6),
+                },
+                {
+                  'n': '6',
+                  'title': 'Beri Ulasan',
+                  'sub': 'Bangun ekosistem',
+                  'icon': Icons.star_outline,
+                  'color': const Color(0xFFEAB308),
+                },
+              ];
 
     return Container(
       width: double.infinity,
@@ -1987,12 +5749,16 @@ class _DashboardScreenState extends State<DashboardScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _isCreator ? 'Alur Pertumbuhan Kreator' : 'Alur Kerja Klien',
+            _isTalentAndPerformer
+                ? 'Alur Aktivitas Talent & Performer di Kreavana'
+                : (_isCreator ? 'Alur Pertumbuhan Kreator' : 'Alur Kerja Klien'),
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
           Text(
-            '6 langkah menuju kolaborasi sukses di Kreavana',
+            _isTalentAndPerformer
+                ? 'Mudah, Terarah, dan Penuh Peluang (#KolaborasiMembawaDampak)'
+                : '6 langkah menuju kolaborasi sukses di Kreavana',
             style: TextStyle(
               fontSize: 11,
               color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
@@ -2012,26 +5778,32 @@ class _DashboardScreenState extends State<DashboardScreen>
                       width: 110,
                       child: Column(
                         children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  color.withValues(alpha: 0.2),
-                                  color.withValues(alpha: 0.05),
-                                ],
+                          HoverLiftButton(
+                            glowColor: color,
+                            scale: 1.08,
+                            translateY: -2.5,
+                            borderRadius: BorderRadius.circular(44),
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    color.withValues(alpha: 0.2),
+                                    color.withValues(alpha: 0.05),
+                                  ],
+                                ),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: color.withValues(alpha: 0.3),
+                                ),
                               ),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: color.withValues(alpha: 0.3),
+                              child: Icon(
+                                (step['icon'] as IconData?) ??
+                                    Icons.image_outlined,
+                                color: color,
+                                size: 20,
                               ),
-                            ),
-                            child: Icon(
-                              (step['icon'] as IconData?) ??
-                                  Icons.image_outlined,
-                              color: color,
-                              size: 20,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -2317,26 +6089,35 @@ class _DashboardScreenState extends State<DashboardScreen>
                     const SizedBox(height: 14),
                     SizedBox(
                       width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: () => ProfileCompleteness.showChecklistModal(
+                      child: HoverLiftButton(
+                        glowColor: accentColor,
+                        scale: 1.025,
+                        translateY: -2.0,
+                        onTap: () => ProfileCompleteness.showChecklistModal(
                           context,
                           widget.user,
                         ),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          side: BorderSide(
-                            color: accentColor.withValues(alpha: 0.4),
+                        child: OutlinedButton(
+                          onPressed: () => ProfileCompleteness.showChecklistModal(
+                            context,
+                            widget.user,
                           ),
-                          foregroundColor: accentColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            side: BorderSide(
+                              color: accentColor.withValues(alpha: 0.4),
+                            ),
+                            foregroundColor: accentColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
-                        ),
-                        child: const Text(
-                          'Lengkapi Profil',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                          child: const Text(
+                            'Lengkapi Profil',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
@@ -2352,26 +6133,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildQuickActionsCard(bool isDark) {
-    final actions = _isCreator
-        ? [
-            {'icon': Icons.search, 'label': 'Cari Peluang'},
-            {'icon': Icons.description_outlined, 'label': 'Kirim Proposal'},
-            {
-              'icon': Icons.add_photo_alternate_outlined,
-              'label': 'Tambah Karya',
-            },
-            {'icon': Icons.calendar_month_outlined, 'label': 'Atur Jadwal'},
-            {'icon': Icons.payments_outlined, 'label': 'Tarik Dana'},
-            {'icon': Icons.groups_outlined, 'label': 'Komunitas'},
-          ]
-        : [
-            {'icon': Icons.add_circle_outline, 'label': 'Buat Kebutuhan'},
-            {'icon': Icons.search, 'label': 'Cari Kreator'},
-            {'icon': Icons.compare_arrows, 'label': 'Bandingkan'},
-            {'icon': Icons.check_circle_outline, 'label': 'Setujui Proyek'},
-            {'icon': Icons.payment, 'label': 'Bayar DP'},
-            {'icon': Icons.analytics_outlined, 'label': 'Laporan'},
-          ];
+    final config = _getRoleConfig();
+    final actions = config.quickActions;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -2403,47 +6166,11 @@ class _DashboardScreenState extends State<DashboardScreen>
             itemCount: actions.length,
             itemBuilder: (context, index) {
               final action = actions[index];
-              return InkWell(
+              return _QuickActionItemCard(
+                action: action,
+                isDark: isDark,
                 onTap: () => _navigateTo(action['label'] as String),
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryPurple.withValues(
-                      alpha: isDark ? 0.1 : 0.06,
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: AppTheme.primaryPurple.withValues(
-                        alpha: isDark ? 0.2 : 0.1,
-                      ),
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        (action['icon'] as IconData?) ?? Icons.image_outlined,
-                        color: AppTheme.primaryPurple,
-                        size: 22,
-                      ),
-                      const SizedBox(height: 6),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: Text(
-                          action['label'] as String,
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.white : AppTheme.textDark,
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                accentColor: AppTheme.primaryPurple,
               );
             },
           ),
@@ -2453,17 +6180,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildAiTipsCard(bool isDark) {
-    final tips = _isCreator
-        ? [
-            'Perbarui media kit dan insight terbaru',
-            'Tambahkan portofolio reels & UGC terbaru',
-            'Aktif di komunitas creator untuk kolaborasi',
-          ]
-        : [
-            'Buat brief lebih detail agar proposal lebih tepat',
-            'Simpan kreator favorit untuk proyek berikutnya',
-            'Gunakan agenda untuk memantau deadline',
-          ];
+    final config = _getRoleConfig();
+    final tips = config.aiTips;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -3130,246 +6848,61 @@ class _DashboardScreenState extends State<DashboardScreen>
       automaticallyImplyLeading: false,
       title: Row(
         children: [
-          // Search bar
+          // Search bar interaktif dengan hover glow & scale
           Expanded(
-            child: GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => GlobalSearchScreen(user: widget.user),
-                ),
-              ),
-              child: Container(
-                height: 42,
-                decoration: BoxDecoration(
-                  color: isDark ? AppTheme.inputDark : AppTheme.inputLight,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark
-                        ? AppTheme.inputBorder
-                        : AppTheme.inputBorderLight,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 12),
-                    Icon(
-                      Icons.search,
-                      color: isDark
-                          ? AppTheme.textMuted
-                          : AppTheme.textMutedLight,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _isCreator
-                            ? 'Cari peluang, campaign, komunitas...'
-                            : 'Cari kreator, layanan, proyek...',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? AppTheme.textMuted
-                              : AppTheme.textMutedLight,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Container(
-                      margin: const EdgeInsets.only(right: 10),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? AppTheme.inputBorder
-                            : Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      child: Text(
-                        '⌘K',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: isDark
-                              ? AppTheme.textMuted
-                              : AppTheme.textMutedLight,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            child: InteractiveDashboardSearchBar(
+              user: widget.user,
+              isDark: isDark,
+              accentColor: AppTheme.primaryPurple,
+              placeholder: _getSearchHint(),
             ),
           ),
           const SizedBox(width: 12),
           if (!widget.user.isGuest) ...[
-            ListenableBuilder(
-              listenable: BadgeService(),
-              builder: (_, _) => _NotifIconBtn(
-                icon: Icons.notifications_none_outlined,
-                count: BadgeService().unreadNotifications,
-                onTap: () => _navigateTo('Notifikasi'),
-                isDark: isDark,
-              ),
+            AppBarBadgeWidget(
+              icon: Icons.notifications_none_outlined,
+              isDark: isDark,
+              accentColor: AppTheme.primaryPurple,
+              onTap: () => _navigateTo('Notifikasi'),
+              tooltipMessage: 'Notifikasi',
             ),
-            const SizedBox(width: 2),
-            // Chat
-            ListenableBuilder(
-              listenable: BadgeService(),
-              builder: (_, _) => _NotifIconBtn(
-                icon: Icons.chat_bubble_outline,
-                count: BadgeService().unreadMessages,
-                onTap: () => _navigateTo('Pesan'),
-                isDark: isDark,
-              ),
+            const SizedBox(width: 6),
+            AppBarBadgeWidget(
+              icon: Icons.chat_bubble_outline,
+              isDark: isDark,
+              accentColor: AppTheme.primaryPurple,
+              onTap: () => _navigateTo('Pesan'),
+              tooltipMessage: 'Pesan & Diskusi',
             ),
             const SizedBox(width: 8),
           ],
-          // Theme toggle
-          Builder(
-            builder: (btnCtx) => IconButton(
-              key: _themeBtnKey,
-              icon: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                transitionBuilder: (child, anim) => RotationTransition(
-                  turns: Tween(begin: 0.75, end: 1.0).animate(anim),
-                  child: FadeTransition(opacity: anim, child: child),
-                ),
-                child: Icon(
-                  isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                  key: ValueKey(isDark),
-                  size: 20,
-                ),
-              ),
-              onPressed: () {
-                final box =
-                    _themeBtnKey.currentContext?.findRenderObject()
-                        as RenderBox?;
-                final origin = box != null
-                    ? box.localToGlobal(box.size.center(Offset.zero))
-                    : Offset.zero;
-                ThemeTransitionService.animateToggle(
-                  origin: origin,
-                  toDark: !isDark,
-                );
-              },
-            ),
+          // Theme toggle interaktif dengan rotasi & glow
+          AppBarThemeToggle(
+            isDark: isDark,
+            btnKey: _themeBtnKey,
+            accentColor: AppTheme.primaryPurple,
           ),
           if (widget.user.isGuest) ...[
-            const SizedBox(width: 8),
-            OutlinedButton(
-              onPressed: () => context.go(AppRoutes.login),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                minimumSize: const Size(0, 36),
-                side: BorderSide(
-                  color: isDark
-                      ? AppTheme.inputBorder
-                      : AppTheme.primaryPurple.withValues(alpha: 0.5),
-                ),
-                foregroundColor: isDark ? Colors.white : AppTheme.primaryPurple,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-              child: const Text(
-                'Masuk',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: () => context.go(AppRoutes.register),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryPurple,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                minimumSize: const Size(0, 36),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-              child: const Text(
-                'Daftar',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-              ),
+            const SizedBox(width: 10),
+            AppBarGuestActions(
+              isDark: isDark,
+              accentColor: AppTheme.primaryPurple,
+              onLogin: () => context.go(AppRoutes.login),
+              onRegister: () => context.go(AppRoutes.register),
             ),
           ] else ...[
-            // Avatar
-            GestureDetector(
+            const SizedBox(width: 8),
+            // Profile Badge interaktif dengan capsule glow & chevron animation
+            AppBarProfileBadge(
+              user: widget.user,
+              isDark: isDark,
+              accentColor: AppTheme.primaryPurple,
+              customSubRole: widget.user.subRole ?? (_isCreator ? 'Creator' : 'Klien'),
               onTap: () => _navigateTo('Lihat Profil'),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 17,
-                    backgroundColor: AppTheme.primaryPurple.withValues(
-                      alpha: 0.15,
-                    ),
-                    backgroundImage: widget.user.avatarUrl?.isNotEmpty == true
-                        ? CachedNetworkImageProvider(
-                            ApiService.resolveAssetUrl(widget.user.avatarUrl!),
-                          )
-                        : null,
-                    child: widget.user.avatarUrl?.isNotEmpty != true
-                        ? Icon(
-                            Icons.person,
-                            color: AppTheme.primaryPurple,
-                            size: 18,
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        widget.user.name.split(' ').first,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        widget.user.subRole ?? (_isCreator ? 'Creator' : 'Klien'),
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: isDark
-                              ? AppTheme.textMuted
-                              : AppTheme.textMutedLight,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    Icons.keyboard_arrow_down,
-                    size: 16,
-                    color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
-                  ),
-                ],
-              ),
             ),
           ],
         ],
       ),
-      bottom: (widget.user.role == 'creator' && widget.user.isCreatorApproved)
-          ? PreferredSize(
-              preferredSize: const Size.fromHeight(56),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                child: RoleToggle(
-                  currentRole: _currentRole,
-                  isCreator: true,
-                  onRoleChanged: (role) {
-                    setState(() => _currentRole = role);
-                    _loadDashboardData();
-                  },
-                ),
-              ),
-            )
-          : null,
     );
   }
 
@@ -3407,6 +6940,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                           const SizedBox(height: 24),
                           RepaintBoundary(child: _buildThreeColumnSection(isDark)),
                           const SizedBox(height: 24),
+                          if (_isTalentAndPerformer) ...[
+                            RepaintBoundary(child: _buildTalentEcosystemSection(isDark)),
+                            const SizedBox(height: 24),
+                          ],
                           RepaintBoundary(child: _buildWorkflowSection(isDark)),
                         ],
                       ),
@@ -3426,6 +6963,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                     const SizedBox(height: 24),
                     RepaintBoundary(child: _buildThreeColumnSection(isDark)),
                     const SizedBox(height: 24),
+                    if (_isTalentAndPerformer) ...[
+                      RepaintBoundary(child: _buildTalentEcosystemSection(isDark)),
+                      const SizedBox(height: 24),
+                    ],
                     RepaintBoundary(child: _buildWorkflowSection(isDark)),
                   ],
                 ),
@@ -3624,7 +7165,7 @@ class _HeroBannerBackgroundCarouselState
 }
 
 // ── Supporting widgets ────────────────────────────────────────────────────────
-class _HeroButton extends StatelessWidget {
+class _HeroButton extends StatefulWidget {
   final String label;
   final IconData icon;
   final VoidCallback onTap;
@@ -3642,60 +7183,439 @@ class _HeroButton extends StatelessWidget {
   });
 
   @override
+  State<_HeroButton> createState() => _HeroButtonState();
+}
+
+class _HeroButtonState extends State<_HeroButton> {
+  bool _isHovered = false;
+  bool _isPressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    if (outlined) {
-      return OutlinedButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, size: 16),
-        label: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-          ),
-        ),
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          backgroundColor: isDark ? Colors.white.withValues(alpha: 0.12) : null,
-          side: BorderSide(
-            color: isDark ? Colors.white.withValues(alpha: 0.35) : AppTheme.inputBorderLight,
-          ),
-          foregroundColor: isDark ? Colors.white : AppTheme.textDark,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+    if (widget.outlined) {
+      return MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() {
+          _isHovered = false;
+          _isPressed = false;
+        }),
+        child: GestureDetector(
+          onTapDown: (_) => setState(() => _isPressed = true),
+          onTapUp: (_) => setState(() => _isPressed = false),
+          onTapCancel: () => setState(() => _isPressed = false),
+          onTap: widget.onTap,
+          child: AnimatedScale(
+            scale: _isPressed ? 0.96 : (_isHovered ? 1.03 : 1.0),
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              transform: Matrix4.translationValues(
+                0,
+                _isPressed ? 0.5 : (_isHovered ? -2.0 : 0.0),
+                0,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: widget.isDark
+                    ? (_isHovered
+                        ? Colors.white.withValues(alpha: 0.22)
+                        : Colors.white.withValues(alpha: 0.12))
+                    : (_isHovered
+                        ? AppTheme.primaryPurple.withValues(alpha: 0.10)
+                        : Colors.white.withValues(alpha: 0.85)),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: _isHovered
+                      ? (widget.isDark
+                          ? Colors.white.withValues(alpha: 0.70)
+                          : AppTheme.primaryPurple)
+                      : (widget.isDark
+                          ? Colors.white.withValues(alpha: 0.35)
+                          : AppTheme.inputBorderLight),
+                  width: _isHovered ? 1.5 : 1.0,
+                ),
+                boxShadow: _isHovered
+                    ? [
+                        BoxShadow(
+                          color: (widget.isDark
+                                  ? Colors.white
+                                  : AppTheme.primaryPurple)
+                              .withValues(alpha: 0.25),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    widget.icon,
+                    size: 16,
+                    color: widget.isDark
+                        ? Colors.white
+                        : (_isHovered
+                            ? AppTheme.primaryPurple
+                            : AppTheme.textDark),
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        widget.label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: widget.isDark
+                              ? Colors.white
+                              : (_isHovered
+                                  ? AppTheme.primaryPurple
+                                  : AppTheme.textDark),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       );
     }
-    return Container(
-      decoration: BoxDecoration(
-        gradient: gradient,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: AppTheme.primaryShadow,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, color: Colors.white, size: 16),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      label,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() {
+        _isHovered = false;
+        _isPressed = false;
+      }),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _isPressed ? 0.96 : (_isHovered ? 1.03 : 1.0),
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            transform: Matrix4.translationValues(
+              0,
+              _isPressed ? 0.5 : (_isHovered ? -2.0 : 0.0),
+              0,
+            ),
+            decoration: BoxDecoration(
+              gradient: widget.gradient ?? AppTheme.primaryGradient,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryPurple.withValues(
+                    alpha: _isHovered ? 0.55 : 0.35,
+                  ),
+                  blurRadius: _isHovered ? 20 : 12,
+                  spreadRadius: _isHovered ? 1 : 0,
+                  offset: Offset(0, _isHovered ? 6 : 4),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(widget.icon, color: Colors.white, size: 16),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        widget.label,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MetricCard extends StatefulWidget {
+  final String label, value, trend;
+  final IconData icon;
+  final Color color;
+  final bool isDark;
+  final VoidCallback? onTap;
+
+  const _MetricCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+    required this.trend,
+    required this.isDark,
+    this.onTap,
+  });
+
+  @override
+  State<_MetricCard> createState() => _MetricCardState();
+}
+
+class _MetricCardState extends State<_MetricCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _isHovered ? 1.02 : 1.0,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            transform: Matrix4.translationValues(
+              0,
+              _isHovered ? -3.0 : 0.0,
+              0,
+            ),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: widget.isDark
+                  ? (_isHovered ? const Color(0xFF1B172E) : AppTheme.cardDark)
+                  : (_isHovered ? const Color(0xFFFCFCFF) : Colors.white),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+              border: Border.all(
+                color: _isHovered
+                    ? widget.color.withValues(alpha: widget.isDark ? 0.65 : 0.45)
+                    : (widget.isDark
+                        ? AppTheme.inputBorder
+                        : AppTheme.inputBorderLight),
+                width: _isHovered ? 1.4 : 1.0,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: _isHovered
+                      ? widget.color.withValues(alpha: widget.isDark ? 0.30 : 0.16)
+                      : (widget.isDark
+                          ? Colors.black.withValues(alpha: 0.2)
+                          : Colors.black.withValues(alpha: 0.04)),
+                  blurRadius: _isHovered ? 20 : 8,
+                  spreadRadius: _isHovered ? 1 : 0,
+                  offset: Offset(0, _isHovered ? 8 : 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.label,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: widget.isDark
+                              ? AppTheme.textMuted
+                              : AppTheme.textMutedLight,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: widget.color.withValues(alpha: _isHovered ? 0.22 : 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: _isHovered
+                            ? [
+                                BoxShadow(
+                                  color: widget.color.withValues(alpha: 0.35),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Icon(widget.icon, color: widget.color, size: 18),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    widget.value,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.trend,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: widget.color,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 14,
+                      color: _isHovered
+                          ? widget.color
+                          : (widget.isDark ? Colors.white30 : Colors.grey.shade400),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickActionItemCard extends StatefulWidget {
+  final Map<String, dynamic> action;
+  final bool isDark;
+  final VoidCallback onTap;
+  final Color? accentColor;
+
+  const _QuickActionItemCard({
+    required this.action,
+    required this.isDark,
+    required this.onTap,
+    this.accentColor,
+  });
+
+  @override
+  State<_QuickActionItemCard> createState() => _QuickActionItemCardState();
+}
+
+class _QuickActionItemCardState extends State<_QuickActionItemCard> {
+  bool _isHovered = false;
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = widget.accentColor ?? AppTheme.primaryPurple;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() {
+        _isHovered = false;
+        _isPressed = false;
+      }),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _isPressed ? 0.95 : (_isHovered ? 1.04 : 1.0),
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            transform: Matrix4.translationValues(
+              0,
+              _isPressed ? 0.5 : (_isHovered ? -2.5 : 0.0),
+              0,
+            ),
+            decoration: BoxDecoration(
+              color: accent.withValues(
+                alpha: widget.isDark
+                    ? (_isHovered ? 0.22 : 0.10)
+                    : (_isHovered ? 0.14 : 0.06),
+              ),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: accent.withValues(
+                  alpha: widget.isDark
+                      ? (_isHovered ? 0.60 : 0.20)
+                      : (_isHovered ? 0.45 : 0.10),
+                ),
+                width: _isHovered ? 1.4 : 1.0,
+              ),
+              boxShadow: _isHovered
+                  ? [
+                      BoxShadow(
+                        color: accent.withValues(alpha: widget.isDark ? 0.35 : 0.20),
+                        blurRadius: 12,
+                        spreadRadius: 1,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedScale(
+                  scale: _isHovered ? 1.12 : 1.0,
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  child: Icon(
+                    (widget.action['icon'] as IconData?) ?? Icons.image_outlined,
+                    color: accent,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text(
+                    widget.action['label'] as String,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: _isHovered ? FontWeight.bold : FontWeight.w600,
+                      color: widget.isDark ? Colors.white : AppTheme.textDark,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -3707,94 +7627,6 @@ class _HeroButton extends StatelessWidget {
   }
 }
 
-class _MetricCard extends StatelessWidget {
-  final String label, value, trend;
-  final IconData icon;
-  final Color color;
-  final bool isDark;
-
-  const _MetricCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-    required this.trend,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.cardDark : Colors.white,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMD),
-        border: Border.all(
-          color: isDark ? AppTheme.inputBorder : AppTheme.inputBorderLight,
-        ),
-        boxShadow: isDark ? null : AppTheme.cardShadowLight,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: isDark
-                        ? AppTheme.textMuted
-                        : AppTheme.textMutedLight,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 18),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                letterSpacing: -0.5,
-              ),
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            trend,
-            style: TextStyle(
-              fontSize: 10,
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _SectionHeader extends StatelessWidget {
   final String title;
@@ -4161,57 +7993,77 @@ class _DashboardCardEmptyState extends StatelessWidget {
   }
 }
 
-class _NotifIconBtn extends StatelessWidget {
-  final IconData icon;
-  final int count;
+class _InteractiveDashboardItemCard extends StatefulWidget {
+  final Widget child;
   final VoidCallback onTap;
   final bool isDark;
+  final String? tooltip;
 
-  const _NotifIconBtn({
-    required this.icon,
-    required this.count,
+  const _InteractiveDashboardItemCard({
+    required this.child,
     required this.onTap,
     required this.isDark,
+    this.tooltip,
   });
 
   @override
+  State<_InteractiveDashboardItemCard> createState() => _InteractiveDashboardItemCardState();
+}
+
+class _InteractiveDashboardItemCardState extends State<_InteractiveDashboardItemCard> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        IconButton(
-          icon: Icon(
-            icon,
-            size: 22,
-            color: isDark ? Colors.white70 : Colors.grey.shade700,
-          ),
-          onPressed: onTap,
-          visualDensity: VisualDensity.compact,
-        ),
-        if (count > 0)
-          Positioned(
-            top: 6,
-            right: 6,
-            child: Container(
-              width: 16,
-              height: 16,
-              decoration: const BoxDecoration(
-                color: AppTheme.error,
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  count > 9 ? '9+' : '$count',
-                  style: const TextStyle(
-                    fontSize: 8,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+    final bgColor = widget.isDark ? AppTheme.inputDark : AppTheme.inputLight;
+    final hoverBgColor = widget.isDark
+        ? const Color(0xFF231F36)
+        : const Color(0xFFF3F0FA);
+    final borderColor = _isHovered
+        ? AppTheme.primaryPurple.withValues(alpha: 0.45)
+        : Colors.transparent;
+
+    Widget card = MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: _isHovered ? hoverBgColor : bgColor,
+          borderRadius: BorderRadius.circular(AppTheme.radiusSM),
+          border: Border.all(color: borderColor, width: 1.2),
+          boxShadow: _isHovered
+              ? [
+                  BoxShadow(
+                    color: AppTheme.primaryPurple.withValues(alpha: 0.12),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
                   ),
-                ),
-              ),
-            ),
+                ]
+              : null,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: BorderRadius.circular(AppTheme.radiusSM),
+            child: widget.child,
           ),
-      ],
+        ),
+      ),
     );
+
+    if (widget.tooltip != null) {
+      return Tooltip(
+        message: widget.tooltip!,
+        child: card,
+      );
+    }
+    return card;
   }
 }
+

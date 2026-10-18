@@ -249,6 +249,7 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/', [JobContractController::class, 'store']);
         Route::get('{id}', [JobContractController::class, 'show']);
         Route::post('{id}/confirm-schedule', [JobContractController::class, 'confirmSchedule']);
+        Route::post('{id}/repeat-order', [JobContractController::class, 'repeatOrder']);
         Route::post('{contract}/transitions', [JobContractTransitionController::class, 'store']);
     });
 

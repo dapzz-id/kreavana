@@ -112,6 +112,46 @@ class JobContractSeeder extends Seeder
                 'scheduled_end_date' => Carbon::now()->subDays(3)->format('Y-m-d'),
                 'deadline' => Carbon::now()->subDays(2)->format('Y-m-d'),
             ],
+            CreatorSubRole::TALENT->value => [
+                'title' => 'Shooting Iklan TVC Minuman Sehat Alami',
+                'contract_status' => ContractStatus::Active,
+                'work_status' => WorkStatus::InProgress,
+                'scheduled_start_date' => Carbon::now()->addDays(2)->format('Y-m-d'),
+                'scheduled_end_date' => Carbon::now()->addDays(4)->format('Y-m-d'),
+                'deadline' => Carbon::now()->addDays(5)->format('Y-m-d'),
+            ],
+            CreatorSubRole::DESIGNER->value => [
+                'title' => 'Redesain Logo & Brand Guidelines Perusahaan',
+                'contract_status' => ContractStatus::Active,
+                'work_status' => WorkStatus::InProgress,
+                'scheduled_start_date' => Carbon::now()->subDays(1)->format('Y-m-d'),
+                'scheduled_end_date' => Carbon::now()->addDays(6)->format('Y-m-d'),
+                'deadline' => Carbon::now()->addDays(7)->format('Y-m-d'),
+            ],
+            CreatorSubRole::DRONE_PILOT->value => [
+                'title' => 'Dokumentasi Udara Kawasan Wisata Bahari',
+                'contract_status' => ContractStatus::Approved,
+                'work_status' => WorkStatus::Scheduled,
+                'scheduled_start_date' => Carbon::now()->addDays(3)->format('Y-m-d'),
+                'scheduled_end_date' => Carbon::now()->addDays(4)->format('Y-m-d'),
+                'deadline' => Carbon::now()->addDays(5)->format('Y-m-d'),
+            ],
+            CreatorSubRole::CONTENT_CREATOR->value => [
+                'title' => 'Campaign Reels Instagram Launching Produk Herbal',
+                'contract_status' => ContractStatus::Active,
+                'work_status' => WorkStatus::InProgress,
+                'scheduled_start_date' => Carbon::now()->subDays(2)->format('Y-m-d'),
+                'scheduled_end_date' => Carbon::now()->addDays(5)->format('Y-m-d'),
+                'deadline' => Carbon::now()->addDays(6)->format('Y-m-d'),
+            ],
+            CreatorSubRole::ANIMATOR->value => [
+                'title' => 'Video Animasi Explainer Fitur Aplikasi Kasir',
+                'contract_status' => ContractStatus::Active,
+                'work_status' => WorkStatus::InProgress,
+                'scheduled_start_date' => Carbon::now()->subDays(3)->format('Y-m-d'),
+                'scheduled_end_date' => Carbon::now()->addDays(7)->format('Y-m-d'),
+                'deadline' => Carbon::now()->addDays(8)->format('Y-m-d'),
+            ],
             'general' => [
                 'title' => 'Produksi Konten Kreatif Terpadu & Promosi Digital',
                 'contract_status' => ContractStatus::Active,
@@ -272,6 +312,79 @@ class JobContractSeeder extends Seeder
                     'from_work_status' => WorkStatus::Review->value,
                     'to_work_status' => WorkStatus::Completed->value,
                 ]);
+            }
+        }
+
+        $talentCreator = $creators->firstWhere('sub_role', CreatorSubRole::TALENT->value);
+        if ($talentCreator) {
+            $talentContracts = [
+                [
+                    'title' => 'Shooting Iklan TVC Minuman Sehat Alami',
+                    'description' => 'Talent utama pemeran video komersial televisi, sesi shooting di Studio Gaharu Jakarta Selatan.',
+                    'contract_status' => ContractStatus::Active,
+                    'work_status' => WorkStatus::InProgress,
+                    'scheduled_start_date' => Carbon::now()->addDays(2)->format('Y-m-d'),
+                    'scheduled_end_date' => Carbon::now()->addDays(4)->format('Y-m-d'),
+                    'deadline' => Carbon::now()->addDays(5)->format('Y-m-d'),
+                    'agreed_price' => 8500000.00,
+                    'escrow_amount' => 8500000.00,
+                ],
+                [
+                    'title' => 'Sesi Pemotretan Koleksi Busana Lebaran 2026',
+                    'description' => 'Foto katalog editorial 20 busana muslim premium, lokasi di Kota Tua & Studio Seni.',
+                    'contract_status' => ContractStatus::Approved,
+                    'work_status' => WorkStatus::Scheduled,
+                    'scheduled_start_date' => Carbon::now()->addDays(6)->format('Y-m-d'),
+                    'scheduled_end_date' => Carbon::now()->addDays(7)->format('Y-m-d'),
+                    'deadline' => Carbon::now()->addDays(8)->format('Y-m-d'),
+                    'agreed_price' => 5000000.00,
+                    'escrow_amount' => 5000000.00,
+                ],
+                [
+                    'title' => 'Talent Live Broadcast Peluncuran Smartphone Flagship',
+                    'description' => 'Co-host interaktif mendampingi MC utama, live demo fitur kamera smartphone terbaru.',
+                    'contract_status' => ContractStatus::Proposed,
+                    'work_status' => WorkStatus::Pending,
+                    'scheduled_start_date' => Carbon::now()->addDays(10)->format('Y-m-d'),
+                    'scheduled_end_date' => Carbon::now()->addDays(10)->format('Y-m-d'),
+                    'deadline' => Carbon::now()->addDays(11)->format('Y-m-d'),
+                    'agreed_price' => 3500000.00,
+                    'escrow_amount' => 0.00,
+                ],
+                [
+                    'title' => 'Pemotretan Cover Majalah Gaya Hidup Urban',
+                    'description' => 'Model cover dan rubrik fashion profil edisi September, editorial interview.',
+                    'contract_status' => ContractStatus::Completed,
+                    'work_status' => WorkStatus::Completed,
+                    'scheduled_start_date' => Carbon::now()->subDays(14)->format('Y-m-d'),
+                    'scheduled_end_date' => Carbon::now()->subDays(12)->format('Y-m-d'),
+                    'deadline' => Carbon::now()->subDays(10)->format('Y-m-d'),
+                    'agreed_price' => 6000000.00,
+                    'escrow_amount' => 6000000.00,
+                ],
+            ];
+
+            foreach ($talentContracts as $tc) {
+                JobContract::updateOrCreate(
+                    [
+                        'client_id' => $client->id,
+                        'creator_id' => $talentCreator->id,
+                        'title' => $tc['title'],
+                    ],
+                    [
+                        'description' => $tc['description'],
+                        'terms' => 'Pembayaran via Escrow Kreavana, revisi maksimal 2 kali.',
+                        'agreed_price' => $tc['agreed_price'],
+                        'escrow_amount' => $tc['escrow_amount'],
+                        'contract_status' => $tc['contract_status'],
+                        'work_status' => $tc['work_status'],
+                        'scheduled_start_date' => $tc['scheduled_start_date'],
+                        'scheduled_end_date' => $tc['scheduled_end_date'],
+                        'deadline' => $tc['deadline'],
+                        'creator_approved' => true,
+                        'client_approved' => true,
+                    ]
+                );
             }
         }
     }

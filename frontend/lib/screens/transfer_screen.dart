@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../services/wallet_service.dart';
 import '../app/theme.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 
 class TransferScreen extends StatefulWidget {
   final UserModel user;
@@ -183,7 +184,7 @@ class _TransferScreenState extends State<TransferScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
+    final content = Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Kirim Saldo'),
@@ -384,6 +385,13 @@ class _TransferScreenState extends State<TransferScreen> {
           ],
         ),
       ),
+    );
+
+    return DesktopSidebarLayout(
+      user: widget.user,
+      activeRoute: 'pembayaran',
+      onUserUpdated: widget.onUserUpdated,
+      child: content,
     );
   }
 

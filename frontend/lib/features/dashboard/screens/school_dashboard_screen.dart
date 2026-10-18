@@ -1,9 +1,9 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import '../../../app/app_animations.dart';
 import '../../../services/api_service.dart';
 import '../../../services/job_contract_service.dart';
 import '../../../models/job_contract.dart';
-import '../../../services/theme_transition_service.dart';
 import '../../../models/user_model.dart';
 import '../../../screens/profile_screen.dart';
 import '../../../screens/direct_message_screen.dart';
@@ -347,28 +347,17 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
             accentColor: _schoolColor,
           ),
           const SizedBox(width: 8),
-          Tooltip(
-            message: isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap',
-            child: IconButton(
-              key: _themeBtnKey,
-              mouseCursor: SystemMouseCursors.click,
-              hoverColor: _schoolColor.withValues(alpha: isDark ? 0.2 : 0.1),
-              icon: Icon(
-                isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                size: 20,
-              ),
-              onPressed: () {
-                final box = _themeBtnKey.currentContext?.findRenderObject() as RenderBox?;
-                final origin = box != null
-                    ? box.localToGlobal(box.size.center(Offset.zero))
-                    : const Offset(0, 0);
-                ThemeTransitionService.animateToggle(origin: origin, toDark: !isDark);
-              },
-            ),
+          AppBarThemeToggle(
+            isDark: isDark,
+            btnKey: _themeBtnKey,
+            accentColor: _schoolColor,
           ),
           const SizedBox(width: 8),
-          InkWell(
-            borderRadius: BorderRadius.circular(10),
+          AppBarProfileBadge(
+            user: widget.user,
+            isDark: isDark,
+            accentColor: _schoolColor,
+            customSubRole: 'Role Sekolah / Kampus',
             onTap: () {
               Navigator.push(
                 context,
@@ -381,40 +370,6 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
                 ),
               );
             },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: _schoolColor.withValues(alpha: isDark ? 0.2 : 0.08),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _schoolColor.withValues(alpha: 0.25)),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: _schoolColor,
-                    child: const Icon(Icons.school, color: Colors.white, size: 16),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        widget.user.name,
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const Text(
-                        'Role Sekolah / Kampus',
-                        style: TextStyle(fontSize: 10, color: _schoolColor, fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
           ),
         ],
       ),
@@ -511,41 +466,49 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
             spacing: 10,
             runSpacing: 10,
             children: [
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => BuatKebutuhanScreen(user: widget.user),
-                    ),
-                  ).then((_) => _loadDashboardData());
-                },
-                icon: const Icon(Icons.add_circle_outline, size: 16),
-                label: const Text('Buka Program / Magang'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: _schoolColor,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              HoverLiftButton(
+                borderRadius: BorderRadius.circular(10),
+                glowColor: Colors.white,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BuatKebutuhanScreen(user: widget.user),
+                      ),
+                    ).then((_) => _loadDashboardData());
+                  },
+                  icon: const Icon(Icons.add_circle_outline, size: 16),
+                  label: const Text('Buka Program / Magang'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: _schoolColor,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
                 ),
               ),
-              OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AgendaScreen(user: widget.user),
-                    ),
-                  ).then((_) => _loadDashboardData());
-                },
-                icon: const Icon(Icons.event_available_outlined, size: 16, color: Colors.white),
-                label: const Text('Buat Event / Lomba', style: TextStyle(color: Colors.white, fontSize: 12)),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.white, width: 1.2),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              HoverLiftButton(
+                borderRadius: BorderRadius.circular(10),
+                glowColor: Colors.white,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AgendaScreen(user: widget.user),
+                      ),
+                    ).then((_) => _loadDashboardData());
+                  },
+                  icon: const Icon(Icons.event_available_outlined, size: 16, color: Colors.white),
+                  label: const Text('Buat Event / Lomba', style: TextStyle(color: Colors.white, fontSize: 12)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.white, width: 1.2),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
                 ),
               ),
             ],

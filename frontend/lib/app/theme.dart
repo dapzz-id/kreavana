@@ -452,37 +452,181 @@ class AppTheme {
       ),
       // Elevated Button
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radiusMD),
+        style: ButtonStyle(
+          mouseCursor: WidgetStateProperty.all(SystemMouseCursors.click),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return const Color(0xFFE2E8F0);
+            }
+            if (states.contains(WidgetState.hovered)) {
+              return const Color(0xFF6D28D9);
+            }
+            return primaryPurple;
+          }),
+          foregroundColor: WidgetStateProperty.all(Colors.white),
+          elevation: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) return 0.0;
+            if (states.contains(WidgetState.hovered)) return 2.5;
+            if (states.contains(WidgetState.pressed)) return 0.5;
+            return 1.0;
+          }),
+          shadowColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return primaryPurple.withValues(alpha: 0.35);
+            }
+            return primaryPurple.withValues(alpha: 0.18);
+          }),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return Colors.white.withValues(alpha: 0.12);
+            }
+            if (states.contains(WidgetState.pressed)) {
+              return Colors.white.withValues(alpha: 0.22);
+            }
+            return null;
+          }),
+          shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(radiusMD),
+            ),
           ),
-          elevation: 0,
-          textStyle: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.3,
+          padding: WidgetStateProperty.all(
+            const EdgeInsets.symmetric(vertical: 14, horizontal: 22),
           ),
+          textStyle: WidgetStateProperty.all(
+            const TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
+          ),
+          animationDuration: const Duration(milliseconds: 200),
         ),
       ),
       // Outlined Button
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
-          side: BorderSide(color: inputBorderLight, width: 1.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radiusMD),
+        style: ButtonStyle(
+          mouseCursor: WidgetStateProperty.all(SystemMouseCursors.click),
+          elevation: WidgetStateProperty.all(0.0),
+          shadowColor: WidgetStateProperty.all(Colors.transparent),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return primaryPurple.withValues(alpha: 0.07);
+            }
+            return Colors.transparent;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return primaryPurple;
+            }
+            return textDark;
+          }),
+          side: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return const BorderSide(color: primaryPurple, width: 1.8);
+            }
+            return BorderSide(color: inputBorderLight, width: 1.5);
+          }),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return primaryPurple.withValues(alpha: 0.08);
+            }
+            return null;
+          }),
+          shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(radiusMD),
+            ),
           ),
-          foregroundColor: textDark,
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          padding: WidgetStateProperty.all(
+            const EdgeInsets.symmetric(vertical: 13, horizontal: 20),
+          ),
+          textStyle: WidgetStateProperty.all(
+            const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+          animationDuration: const Duration(milliseconds: 180),
         ),
       ),
       // Text Button
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: primaryPurple,
-          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        style: ButtonStyle(
+          mouseCursor: WidgetStateProperty.all(SystemMouseCursors.click),
+          foregroundColor: WidgetStateProperty.all(primaryPurple),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return primaryPurple.withValues(alpha: 0.08);
+            }
+            return Colors.transparent;
+          }),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return primaryPurple.withValues(alpha: 0.10);
+            }
+            return null;
+          }),
+          shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(radiusSM),
+            ),
+          ),
+          padding: WidgetStateProperty.all(
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+          textStyle: WidgetStateProperty.all(
+            const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          animationDuration: const Duration(milliseconds: 180),
+        ),
+      ),
+      // Filled Button
+      filledButtonTheme: FilledButtonThemeData(
+        style: ButtonStyle(
+          mouseCursor: WidgetStateProperty.all(SystemMouseCursors.click),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return const Color(0xFFE2E8F0);
+            }
+            if (states.contains(WidgetState.hovered)) {
+              return const Color(0xFF6D28D9);
+            }
+            return primaryPurple;
+          }),
+          foregroundColor: WidgetStateProperty.all(Colors.white),
+          elevation: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) return 4.0;
+            if (states.contains(WidgetState.pressed)) return 1.0;
+            return 0.5;
+          }),
+          shadowColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return primaryPurple.withValues(alpha: 0.40);
+            }
+            return primaryPurple.withValues(alpha: 0.20);
+          }),
+          shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(radiusMD),
+            ),
+          ),
+          padding: WidgetStateProperty.all(
+            const EdgeInsets.symmetric(vertical: 14, horizontal: 22),
+          ),
+          textStyle: WidgetStateProperty.all(
+            const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          ),
+          animationDuration: const Duration(milliseconds: 180),
+        ),
+      ),
+      // Icon Button
+      iconButtonTheme: IconButtonThemeData(
+        style: ButtonStyle(
+          mouseCursor: WidgetStateProperty.all(SystemMouseCursors.click),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return primaryPurple.withValues(alpha: 0.12);
+            }
+            return null;
+          }),
         ),
       ),
       // Tab Bar
@@ -536,19 +680,7 @@ class AppTheme {
         showDragHandle: true,
         dragHandleColor: Color(0xFFC7C3E8),
       ),
-      // Filled Button
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: primaryPurple,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radiusMD),
-          ),
-          elevation: 0,
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-        ),
-      ),
+
       // Progress indicators
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: primaryPurple,
@@ -692,37 +824,181 @@ class AppTheme {
       ),
       // Elevated Button
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radiusMD),
+        style: ButtonStyle(
+          mouseCursor: WidgetStateProperty.all(SystemMouseCursors.click),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return const Color(0xFF2D2A3E);
+            }
+            if (states.contains(WidgetState.hovered)) {
+              return const Color(0xFF8B5CF6);
+            }
+            return primaryPurple;
+          }),
+          foregroundColor: WidgetStateProperty.all(Colors.white),
+          elevation: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) return 0.0;
+            if (states.contains(WidgetState.hovered)) return 2.5;
+            if (states.contains(WidgetState.pressed)) return 0.5;
+            return 1.0;
+          }),
+          shadowColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return primaryPurple.withValues(alpha: 0.45);
+            }
+            return primaryPurple.withValues(alpha: 0.25);
+          }),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return Colors.white.withValues(alpha: 0.14);
+            }
+            if (states.contains(WidgetState.pressed)) {
+              return Colors.white.withValues(alpha: 0.25);
+            }
+            return null;
+          }),
+          shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(radiusMD),
+            ),
           ),
-          elevation: 0,
-          textStyle: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.3,
+          padding: WidgetStateProperty.all(
+            const EdgeInsets.symmetric(vertical: 14, horizontal: 22),
           ),
+          textStyle: WidgetStateProperty.all(
+            const TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
+          ),
+          animationDuration: const Duration(milliseconds: 200),
         ),
       ),
       // Outlined Button
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
-          side: const BorderSide(color: inputBorder, width: 1.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radiusMD),
+        style: ButtonStyle(
+          mouseCursor: WidgetStateProperty.all(SystemMouseCursors.click),
+          elevation: WidgetStateProperty.all(0.0),
+          shadowColor: WidgetStateProperty.all(Colors.transparent),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return lightPurple.withValues(alpha: 0.15);
+            }
+            return Colors.transparent;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return Colors.white;
+            }
+            return textWhite;
+          }),
+          side: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return const BorderSide(color: lightPurple, width: 1.8);
+            }
+            return const BorderSide(color: inputBorder, width: 1.5);
+          }),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return lightPurple.withValues(alpha: 0.12);
+            }
+            return null;
+          }),
+          shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(radiusMD),
+            ),
           ),
-          foregroundColor: textWhite,
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          padding: WidgetStateProperty.all(
+            const EdgeInsets.symmetric(vertical: 13, horizontal: 20),
+          ),
+          textStyle: WidgetStateProperty.all(
+            const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+          animationDuration: const Duration(milliseconds: 180),
         ),
       ),
       // Text Button
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: lightPurple,
-          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        style: ButtonStyle(
+          mouseCursor: WidgetStateProperty.all(SystemMouseCursors.click),
+          foregroundColor: WidgetStateProperty.all(lightPurple),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return lightPurple.withValues(alpha: 0.12);
+            }
+            return Colors.transparent;
+          }),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return lightPurple.withValues(alpha: 0.15);
+            }
+            return null;
+          }),
+          shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(radiusSM),
+            ),
+          ),
+          padding: WidgetStateProperty.all(
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+          textStyle: WidgetStateProperty.all(
+            const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          animationDuration: const Duration(milliseconds: 180),
+        ),
+      ),
+      // Filled Button
+      filledButtonTheme: FilledButtonThemeData(
+        style: ButtonStyle(
+          mouseCursor: WidgetStateProperty.all(SystemMouseCursors.click),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return const Color(0xFF2D2A3E);
+            }
+            if (states.contains(WidgetState.hovered)) {
+              return const Color(0xFF8B5CF6);
+            }
+            return primaryPurple;
+          }),
+          foregroundColor: WidgetStateProperty.all(Colors.white),
+          elevation: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) return 5.0;
+            if (states.contains(WidgetState.pressed)) return 1.0;
+            return 0.5;
+          }),
+          shadowColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return primaryPurple.withValues(alpha: 0.55);
+            }
+            return primaryPurple.withValues(alpha: 0.25);
+          }),
+          shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(radiusMD),
+            ),
+          ),
+          padding: WidgetStateProperty.all(
+            const EdgeInsets.symmetric(vertical: 14, horizontal: 22),
+          ),
+          textStyle: WidgetStateProperty.all(
+            const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          ),
+          animationDuration: const Duration(milliseconds: 180),
+        ),
+      ),
+      // Icon Button
+      iconButtonTheme: IconButtonThemeData(
+        style: ButtonStyle(
+          mouseCursor: WidgetStateProperty.all(SystemMouseCursors.click),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return lightPurple.withValues(alpha: 0.18);
+            }
+            return null;
+          }),
         ),
       ),
       // Tab Bar
@@ -773,19 +1049,7 @@ class AppTheme {
         showDragHandle: true,
         dragHandleColor: Color(0xFF3D3A52),
       ),
-      // Filled Button
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: primaryPurple,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radiusMD),
-          ),
-          elevation: 0,
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-        ),
-      ),
+
       // Progress indicators
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: lightPurple,

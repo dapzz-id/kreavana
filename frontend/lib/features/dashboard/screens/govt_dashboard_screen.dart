@@ -1,12 +1,12 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
+import '../../../app/app_animations.dart';
 import '../../../app/subrole_theme_engine.dart';
 import '../../../models/user_model.dart';
 import '../../../models/job_contract.dart';
 import '../../../services/job_contract_service.dart';
 import '../../../services/api_service.dart';
-import '../../../services/theme_transition_service.dart';
 import '../services/dashboard_service.dart';
 import '../../../widgets/subrole_right_sidebar.dart';
 import '../../../screens/buat_kebutuhan_screen.dart';
@@ -637,100 +637,30 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
             isDark: isDark,
             accentColor: _govBlue,
           ),
-          const SizedBox(width: 12),
-          Builder(
-            builder: (btnCtx) => Tooltip(
-              message: isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap',
-              waitDuration: const Duration(milliseconds: 300),
-              child: IconButton(
-                key: _themeBtnKey,
-                mouseCursor: SystemMouseCursors.click,
-                hoverColor: _govBlue.withValues(alpha: isDark ? 0.2 : 0.1),
-                icon: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  transitionBuilder: (child, anim) => RotationTransition(
-                    turns: Tween(begin: 0.75, end: 1.0).animate(anim),
-                    child: FadeTransition(opacity: anim, child: child),
-                  ),
-                  child: Icon(
-                    isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                    key: ValueKey(isDark),
-                    size: 20,
-                  ),
-                ),
-                onPressed: () {
-                  final box =
-                      _themeBtnKey.currentContext?.findRenderObject()
-                          as RenderBox?;
-                  final origin = box != null
-                      ? box.localToGlobal(box.size.center(Offset.zero))
-                      : const Offset(0, 0);
-                  ThemeTransitionService.animateToggle(
-                    origin: origin,
-                    toDark: !isDark,
-                  );
-                },
-              ),
-            ),
+          const SizedBox(width: 10),
+          AppBarThemeToggle(
+            isDark: isDark,
+            btnKey: _themeBtnKey,
+            accentColor: _govBlue,
           ),
           const SizedBox(width: 8),
-          Tooltip(
-            message: 'Profil Instansi (${widget.user.name})',
-            waitDuration: const Duration(milliseconds: 300),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              mouseCursor: SystemMouseCursors.click,
-              hoverColor: _govBlue.withValues(alpha: isDark ? 0.15 : 0.08),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ProfileScreen(
-                      user: widget.user,
-                      onUserUpdated: widget.onUserUpdated,
-                      onLogout: _handleLogout,
-                    ),
+          AppBarProfileBadge(
+            user: widget.user,
+            isDark: isDark,
+            accentColor: _govBlue,
+            customSubRole: 'Pejabat Pembuat Komitmen (PPK)',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProfileScreen(
+                    user: widget.user,
+                    onUserUpdated: widget.onUserUpdated,
+                    onLogout: _handleLogout,
                   ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: _govBlue.withValues(alpha: 0.12),
-                      child: Icon(
-                        Icons.account_balance_rounded,
-                        color: _govBlue,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          widget.user.name,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          'Pejabat Pembuat Komitmen (PPK)',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ],
       ),
@@ -878,51 +808,59 @@ class _GovtDashboardScreenState extends State<GovtDashboardScreen> {
           spacing: 10,
           runSpacing: 10,
           children: [
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => InstitutionWorkspaceScreen(
-                      user: widget.user,
-                      resourceType: 'tenders',
-                      onUserUpdated: widget.onUserUpdated,
+            HoverLiftButton(
+              borderRadius: BorderRadius.circular(10),
+              glowColor: const Color(0xFF1D4ED8),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => InstitutionWorkspaceScreen(
+                        user: widget.user,
+                        resourceType: 'tenders',
+                        onUserUpdated: widget.onUserUpdated,
+                      ),
                     ),
+                  ).then((_) => _fetchStats());
+                },
+                icon: const Icon(Icons.add_circle_outline, size: 16),
+                label: const Text('Buat Tender LPSE'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1D4ED8),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                ).then((_) => _fetchStats());
-              },
-              icon: const Icon(Icons.add_circle_outline, size: 16),
-              label: const Text('Buat Tender LPSE'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1D4ED8),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
             ),
-            OutlinedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => InstitutionWorkspaceScreen(
-                      user: widget.user,
-                      resourceType: 'announcements',
-                      onUserUpdated: widget.onUserUpdated,
+            HoverLiftButton(
+              borderRadius: BorderRadius.circular(10),
+              glowColor: const Color(0xFF1D4ED8),
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => InstitutionWorkspaceScreen(
+                        user: widget.user,
+                        resourceType: 'announcements',
+                        onUserUpdated: widget.onUserUpdated,
+                      ),
                     ),
+                  ).then((_) => _fetchStats());
+                },
+                icon: const Icon(Icons.campaign_outlined, size: 16),
+                label: const Text('Terbitkan Siaran Pers'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: isDark ? Colors.white : const Color(0xFF1D4ED8),
+                  side: BorderSide(color: const Color(0xFF1D4ED8).withValues(alpha: 0.5)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                ).then((_) => _fetchStats());
-              },
-              icon: const Icon(Icons.campaign_outlined, size: 16),
-              label: const Text('Terbitkan Siaran Pers'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: isDark ? Colors.white : const Color(0xFF1D4ED8),
-                side: BorderSide(color: const Color(0xFF1D4ED8).withValues(alpha: 0.5)),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
             ),

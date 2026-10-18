@@ -2,13 +2,13 @@ import '../../../services/badge_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui' show PointerDeviceKind;
 import '../../../app/theme.dart';
+import '../../../app/app_animations.dart';
 import '../../../app/subrole_theme_engine.dart';
 import '../../../models/user_model.dart';
 import '../services/dashboard_service.dart';
 import '../../../widgets/dashboard_stats_charts.dart';
 import '../../../widgets/subrole_right_sidebar.dart';
 import '../../../screens/explore_screen.dart';
-import '../../../screens/global_search_screen.dart';
 import '../../../screens/daftar_kebutuhan_screen.dart';
 import '../../../screens/notifications_screen.dart';
 import '../../../screens/direct_message_screen.dart';
@@ -18,6 +18,7 @@ import '../../../widgets/waving_hand_emoji.dart';
 import '../../../services/job_contract_service.dart';
 import '../../../models/job_contract.dart';
 import '../../../services/api_service.dart';
+import '../../../widgets/app_bar_badge.dart';
 
 class UmkmDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -201,45 +202,11 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
       title: Row(
         children: [
           Expanded(
-            child: GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => GlobalSearchScreen(user: widget.user),
-                ),
-              ),
-              child: Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF1A1830)
-                      : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 14),
-                    Icon(
-                      Icons.search,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Cari kreator, paket foto UMKM, desain produk...',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark
-                            ? AppTheme.textMuted
-                            : Colors.grey.shade500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            child: InteractiveDashboardSearchBar(
+              user: widget.user,
+              isDark: isDark,
+              accentColor: _accentColor,
+              placeholder: 'Cari kreator, paket foto UMKM, desain produk...',
             ),
           ),
           const SizedBox(width: 12),
@@ -267,22 +234,16 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          ListenableBuilder(
-            listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(
-              Icons.notifications_none_outlined,
-              BadgeService().unreadNotificationsText,
-              isDark,
-            ),
+          AppBarBadgeWidget(
+            icon: Icons.notifications_none_outlined,
+            isDark: isDark,
+            accentColor: _accentColor,
           ),
-          const SizedBox(width: 4),
-          ListenableBuilder(
-            listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(
-              Icons.chat_bubble_outline,
-              BadgeService().unreadMessagesText,
-              isDark,
-            ),
+          const SizedBox(width: 6),
+          AppBarBadgeWidget(
+            icon: Icons.chat_bubble_outline,
+            isDark: isDark,
+            accentColor: _accentColor,
           ),
         ],
       ),
@@ -359,53 +320,61 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
             spacing: 12,
             runSpacing: 10,
             children: [
-              ElevatedButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ExploreScreen(user: widget.user),
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: _accentColor,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                icon: const Icon(Icons.add_a_photo_outlined, size: 18),
-                label: const Text(
-                  'Buat Project Foto Produk',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.push(
+              HoverLiftButton(
+                borderRadius: BorderRadius.circular(12),
+                glowColor: Colors.white,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => PeluangProyekScreen(user: widget.user),
+                      builder: (_) => ExploreScreen(user: widget.user),
                     ),
-                  );
-                },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Colors.white70, width: 1.5),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: _accentColor,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(Icons.add_a_photo_outlined, size: 18),
+                  label: const Text(
+                    'Buat Project Foto Produk',
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
-                icon: const Icon(Icons.card_giftcard, size: 18),
-                label: const Text('Klaim Subsidi Branding UMKM'),
+              ),
+              HoverLiftButton(
+                borderRadius: BorderRadius.circular(12),
+                glowColor: Colors.white,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PeluangProyekScreen(user: widget.user),
+                      ),
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white70, width: 1.5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(Icons.card_giftcard, size: 18),
+                  label: const Text('Klaim Subsidi Branding UMKM'),
+                ),
               ),
             ],
           ),
@@ -917,67 +886,6 @@ class _UmkmDashboardScreenState extends State<UmkmDashboardScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildAppBarBadge(IconData icon, String count, bool isDark) {
-    final isNotification = icon == Icons.notifications_none_outlined;
-    return ListenableBuilder(
-      listenable: BadgeService(),
-      builder: (context, _) {
-        final badgeCount = isNotification
-            ? BadgeService().unreadNotificationsText
-            : BadgeService().unreadMessagesText;
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => isNotification
-                    ? NotificationsScreen(userId: '')
-                    : const DirectMessageScreen(),
-              ),
-            );
-          },
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  icon,
-                  size: 20,
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
-                if (badgeCount.isNotEmpty && badgeCount != '0')
-                  Positioned(
-                    right: -4,
-                    top: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.redAccent,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        badgeCount,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }

@@ -8,7 +8,6 @@ import '../features/auth/services/auth_service.dart';
 import '../services/profile_service.dart';
 import '../services/api_service.dart';
 import '../features/dashboard/screens/dashboard_screen.dart';
-import '../features/dashboard/screens/govt_dashboard_screen.dart';
 import 'institution_workspace_screen.dart';
 import 'marketing_dashboard_screen.dart';
 import 'tim_hak_akses_screen.dart';
@@ -30,25 +29,7 @@ import 'peluang_proyek_screen.dart';
 import 'ulasan_reputasi_screen.dart';
 import 'pengaturan_screen.dart';
 import 'wallet_screen.dart';
-import '../features/dashboard/screens/company_dashboard_screen.dart';
-import '../features/dashboard/screens/eo_dashboard_screen.dart';
-import '../features/dashboard/screens/wo_dashboard_screen.dart';
-import '../features/dashboard/screens/school_dashboard_screen.dart';
-import '../features/dashboard/screens/tourism_dashboard_screen.dart';
-import '../features/dashboard/screens/individual_dashboard_screen.dart';
 import '../features/dashboard/screens/community_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_general_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_fotografer_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_videografer_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_editor_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_desainer_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_mua_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_talent_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_drone_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_content_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_animator_dashboard_screen.dart';
-import '../features/dashboard/screens/umkm_dashboard_screen.dart';
-import '../features/dashboard/screens/agency_dashboard_screen.dart';
 import 'creator_service_screen.dart';
 import 'direct_message_screen.dart';
 import '../app/subrole_theme_engine.dart';
@@ -211,8 +192,8 @@ class _MainNavigationState extends State<MainNavigation> {
           },
           borderRadius: BorderRadius.circular(12),
           hoverColor: isDark
-              ? Colors.white.withValues(alpha: 0.04)
-              : Colors.black.withValues(alpha: 0.03),
+              ? activeColor.withValues(alpha: 0.14)
+              : activeColor.withValues(alpha: 0.08),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             padding: EdgeInsets.symmetric(
@@ -309,8 +290,8 @@ class _MainNavigationState extends State<MainNavigation> {
           },
           borderRadius: BorderRadius.circular(12),
           hoverColor: isDark
-              ? Colors.white.withValues(alpha: 0.04)
-              : Colors.black.withValues(alpha: 0.03),
+              ? activeColor.withValues(alpha: 0.14)
+              : activeColor.withValues(alpha: 0.08),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             padding: EdgeInsets.symmetric(
@@ -2172,249 +2153,21 @@ class _MainNavigationState extends State<MainNavigation> {
     if (_currentUser.isMarketing) {
       return MarketingDashboardScreen(user: _currentUser);
     }
-
     if (_currentUser.role == 'creator' || _currentUser.isCreator) {
       return _buildCreatorDashboardScreen();
     }
 
-    if (_isCompany) {
-      return CompanyDashboardScreen(
-        user: _currentUser,
-        onUserUpdated: _onUserUpdated,
-      );
-    }
-
-    final subRole = (_currentUser.subRole ?? '').toLowerCase().trim();
-    switch (subRole) {
-      case 'umkm':
-        return UmkmDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'brand_agency':
-      case 'agency':
-        return AgencyDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'government':
-      case 'pemerintah':
-      case 'instansi':
-        return GovtDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'company':
-      case 'business':
-      case 'corporate':
-      case 'perusahaan':
-      case 'bisnis':
-        return CompanyDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'event_organizer':
-      case 'eo':
-        return EoDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'wedding_organizer':
-      case 'wo':
-        return WoDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'school':
-      case 'education':
-      case 'campus':
-      case 'sekolah':
-      case 'kampus':
-      case 'institution':
-      case 'institusi':
-        return SchoolDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'tourism':
-      case 'desa_wisata':
-      case 'pariwisata':
-        return TourismDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'individual':
-      case 'personal':
-      case 'family':
-      case 'pribadi':
-      case 'individu':
-      case 'keluarga':
-        return IndividualDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'community':
-      case 'komunitas':
-        return CommunityDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-          showSidebar: false,
-        );
-
-      case 'animator':
-      case '3d_animator':
-      case 'motion_designer':
-        return CreatorAnimatorDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      default:
-        // Tampilan Klien Umum (Default untuk akun baru atau sub_role kosong / umum / null)
-        return DashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-    }
+    return DashboardScreen(
+      user: _currentUser,
+      onUserUpdated: _onUserUpdated,
+    );
   }
 
   Widget _buildCreatorDashboardScreen() {
-    final subRole = (_currentUser.subRole ?? '').toLowerCase().trim();
-    switch (subRole) {
-      case 'government':
-      case 'pemerintah':
-      case 'instansi':
-        return GovtDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'school':
-      case 'education':
-      case 'campus':
-      case 'sekolah':
-      case 'kampus':
-      case 'institution':
-      case 'institusi':
-        return SchoolDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'fotografer':
-      case 'photographer':
-      case 'foto':
-        return CreatorFotograferDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'videografer':
-      case 'videographer':
-      case 'video':
-        return CreatorVideograferDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'editor':
-      case 'photo_editor':
-      case 'video_editor':
-        return CreatorEditorDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'desainer':
-      case 'designer':
-      case 'graphic_designer':
-      case 'desain':
-        return CreatorDesainerDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'mua':
-      case 'makeup_artist':
-      case 'makeup':
-        return CreatorMuaDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'talent':
-      case 'model':
-      case 'talent_model':
-      case 'mc':
-      case 'singer':
-      case 'penyanyi':
-        return CreatorTalentDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'wedding_organizer':
-      case 'wo':
-        return WoDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'event_organizer':
-      case 'eo':
-        return EoDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'community':
-      case 'komunitas':
-        return CommunityDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-          showSidebar: false,
-        );
-
-      case 'drone':
-      case 'drone_pilot':
-      case 'pilot_drone':
-        return CreatorDroneDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'content_creator':
-      case 'influencer':
-      case 'ugc':
-        return CreatorContentDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'animator':
-      case '3d_animator':
-      case 'motion_designer':
-        return CreatorAnimatorDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      default:
-        // Kreator Umum (Default untuk kreator baru yang belum memilih kategori)
-        return CreatorGeneralDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-    }
+    return DashboardScreen(
+      user: _currentUser,
+      onUserUpdated: _onUserUpdated,
+    );
   }
 
   bool get _isGovernment {

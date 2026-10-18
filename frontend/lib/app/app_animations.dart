@@ -218,6 +218,7 @@ class HoverRaise extends StatefulWidget {
   final double riseOffset;
   final BorderRadius? borderRadius;
   final Color? glowColor;
+  final VoidCallback? onTap;
 
   const HoverRaise({
     super.key,
@@ -226,6 +227,7 @@ class HoverRaise extends StatefulWidget {
     this.riseOffset = -3.0,
     this.borderRadius,
     this.glowColor,
+    this.onTap,
   });
 
   @override
@@ -240,46 +242,140 @@ class _HoverRaiseState extends State<HoverRaise> {
     final radius =
         widget.borderRadius ?? const BorderRadius.all(Radius.circular(14));
     return MouseRegion(
+      cursor: widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: AppMotion.normal,
-        curve: AppMotion.easeOut,
-        transform: Matrix4(
-          _hovered ? widget.raisedScale : 1.0,
-          0,
-          0,
-          0,
-          0,
-          _hovered ? widget.raisedScale : 1.0,
-          0,
-          0,
-          0,
-          0,
-          1,
-          0,
-          0,
-          _hovered ? widget.riseOffset : 0.0,
-          0,
-          1,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: AppMotion.fast,
+          curve: AppMotion.easeOut,
+          transform: Matrix4(
+            _hovered ? widget.raisedScale : 1.0,
+            0,
+            0,
+            0,
+            0,
+            _hovered ? widget.raisedScale : 1.0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            _hovered ? widget.riseOffset : 0.0,
+            0,
+            1,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            boxShadow: _hovered
+                ? [
+                    BoxShadow(
+                      color:
+                          (widget.glowColor ??
+                                  Theme.of(context).colorScheme.primary)
+                              .withValues(alpha: 0.22),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ]
+                : null,
+          ),
+          child: widget.child,
         ),
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          boxShadow: _hovered
-              ? [
-                  BoxShadow(
-                    color:
-                        (widget.glowColor ??
-                                Theme.of(context).colorScheme.primary)
-                            .withValues(alpha: 0.18),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
-                  ),
-                ]
-              : null,
-        ),
-        child: widget.child,
       ),
     );
   }
 }
+
+/// Interactive desktop/web hover button wrapper.
+/// Features smooth 180ms easeOut scale, slight translation lift,
+/// shadow glow, pointer cursor, and subtle tactile press feedback.
+class HoverLiftButton extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  final double scale;
+  final double translateY;
+  final BorderRadius? borderRadius;
+  final Color? glowColor;
+  final BoxShadow? customHoverShadow;
+  final Duration duration;
+  final Curve curve;
+  final HitTestBehavior behavior;
+
+  const HoverLiftButton({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.scale = 1.02,
+    this.translateY = 0.0,
+    this.borderRadius,
+    this.glowColor,
+    this.customHoverShadow,
+    this.duration = const Duration(milliseconds: 200),
+    this.curve = Curves.easeOutCubic,
+    this.behavior = HitTestBehavior.opaque,
+  });
+
+  @override
+  State<HoverLiftButton> createState() => _HoverLiftButtonState();
+}
+
+class _HoverLiftButtonState extends State<HoverLiftButton> {
+  bool _isHovered = false;
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveRadius = widget.borderRadius ?? BorderRadius.circular(12);
+    final accent = widget.glowColor ?? Theme.of(context).colorScheme.primary;
+
+    return MouseRegion(
+      cursor: widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+      onEnter: (_) {
+        if (!_isHovered) setState(() => _isHovered = true);
+      },
+      onExit: (_) {
+        if (_isHovered || _isPressed) {
+          setState(() {
+            _isHovered = false;
+            _isPressed = false;
+          });
+        }
+      },
+      child: GestureDetector(
+        behavior: widget.onTap != null ? widget.behavior : HitTestBehavior.deferToChild,
+        onTapDown: widget.onTap != null ? (_) => setState(() => _isPressed = true) : null,
+        onTapUp: widget.onTap != null ? (_) => setState(() => _isPressed = false) : null,
+        onTapCancel: widget.onTap != null ? () => setState(() => _isPressed = false) : null,
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _isPressed ? 0.98 : (_isHovered ? widget.scale : 1.0),
+          duration: widget.duration,
+          curve: widget.curve,
+          alignment: Alignment.center,
+          child: AnimatedContainer(
+            duration: widget.duration,
+            curve: widget.curve,
+            decoration: BoxDecoration(
+              borderRadius: effectiveRadius,
+              boxShadow: [
+                widget.customHoverShadow ??
+                    BoxShadow(
+                      color: accent.withValues(alpha: _isHovered ? 0.28 : 0.0),
+                      blurRadius: _isHovered ? 14 : 0,
+                      spreadRadius: _isHovered ? 1 : 0,
+                      offset: Offset(0, _isHovered ? 4 : 0),
+                    ),
+              ],
+            ),
+            child: widget.child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+

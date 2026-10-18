@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app/theme.dart';
+import '../app/app_animations.dart';
 import '../models/user_model.dart';
 import '../models/opportunity_model.dart';
 import '../services/ai_service.dart';
@@ -527,9 +528,12 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                     ),
                     const SizedBox(width: 10),
                     // Location Pill Button
-                    InkWell(
-                      onTap: () => _showLocationPickerModal(isDark),
+                    HoverLiftButton(
+                      glowColor: accent,
+                      scale: 1.03,
+                      translateY: -1.5,
                       borderRadius: BorderRadius.circular(20),
+                      onTap: () => _showLocationPickerModal(isDark),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
@@ -567,14 +571,21 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                     ),
                     const Spacer(),
                     if (_recommendations != null)
-                      TextButton.icon(
-                        onPressed: _isLoading ? null : _fetchRecommendations,
-                        icon: const Icon(Icons.refresh_rounded, size: 14, color: AppTheme.primaryPurple),
-                        label: const Text('Refresh', style: TextStyle(fontSize: 11, color: AppTheme.primaryPurple)),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      HoverLiftButton(
+                        glowColor: AppTheme.primaryPurple,
+                        scale: 1.04,
+                        translateY: -1.5,
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: _isLoading ? null : _fetchRecommendations,
+                        child: TextButton.icon(
+                          onPressed: _isLoading ? null : _fetchRecommendations,
+                          icon: const Icon(Icons.refresh_rounded, size: 14, color: AppTheme.primaryPurple),
+                          label: const Text('Refresh', style: TextStyle(fontSize: 11, color: AppTheme.primaryPurple)),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
                         ),
                       ),
                   ],
@@ -592,7 +603,12 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                     itemBuilder: (ctx, idx) {
                       final item = _subRoleOptions[idx];
                       final isSelected = _selectedSubRole == item['id'];
-                      return InkWell(
+                      return _AiFilterHoverChip(
+                        item: item,
+                        isSelected: isSelected,
+                        isDark: isDark,
+                        accent: accent,
+                        borderColor: borderColor,
                         onTap: () {
                           setState(() {
                             _selectedSubRole = item['id'];
@@ -601,43 +617,6 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                             _fetchRecommendations();
                           }
                         },
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? accent
-                                : (isDark ? const Color(0xFF221E38) : Colors.white),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isSelected ? accent : borderColor,
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                item['icon'] as IconData,
-                                size: 13,
-                                color: isSelected
-                                    ? Colors.white
-                                    : (isDark ? Colors.white70 : Colors.black87),
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                item['label'] as String,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                  color: isSelected
-                                      ? Colors.white
-                                      : (isDark ? Colors.white70 : Colors.black87),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                       );
                     },
                   ),
@@ -654,40 +633,47 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
             child: _recommendations == null
                 ? SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _isLoading ? null : _fetchRecommendations,
-                      icon: _isLoading
-                          ? const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
+                    child: HoverLiftButton(
+                      glowColor: accent,
+                      scale: 1.025,
+                      translateY: -2.0,
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: _isLoading ? null : _fetchRecommendations,
+                      child: ElevatedButton.icon(
+                        onPressed: _isLoading ? null : _fetchRecommendations,
+                        icon: _isLoading
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Image.asset(
+                                'assets/brandlogo.png',
+                                width: 16,
+                                height: 16,
+                                fit: BoxFit.contain,
                               ),
-                            )
-                          : Image.asset(
-                              'assets/brandlogo.png',
-                              width: 16,
-                              height: 16,
-                              fit: BoxFit.contain,
-                            ),
-                      label: Text(
-                        _isLoading
-                            ? 'Menganalisis $_selectedSubRoleLabel di $_activeLocationLabel...'
-                            : 'Dapatkan Rekomendasi AI ($_selectedSubRoleLabel • $_activeLocationLabel)',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12.5,
+                        label: Text(
+                          _isLoading
+                              ? 'Menganalisis $_selectedSubRoleLabel di $_activeLocationLabel...'
+                              : 'Dapatkan Rekomendasi AI ($_selectedSubRoleLabel • $_activeLocationLabel)',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12.5,
+                          ),
                         ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: accent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: accent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          elevation: 2,
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        elevation: 2,
                       ),
                     ),
                   )
@@ -938,6 +924,109 @@ class _AiRecommendationCardState extends State<AiRecommendationCard> {
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AiFilterHoverChip extends StatefulWidget {
+  final Map<String, dynamic> item;
+  final bool isSelected;
+  final bool isDark;
+  final Color accent;
+  final Color borderColor;
+  final VoidCallback onTap;
+
+  const _AiFilterHoverChip({
+    required this.item,
+    required this.isSelected,
+    required this.isDark,
+    required this.accent,
+    required this.borderColor,
+    required this.onTap,
+  });
+
+  @override
+  State<_AiFilterHoverChip> createState() => _AiFilterHoverChipState();
+}
+
+class _AiFilterHoverChipState extends State<_AiFilterHoverChip> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isSelected = widget.isSelected;
+    final isDark = widget.isDark;
+    final accent = widget.accent;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _isHovered ? 1.04 : 1.0,
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOutCubic,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? accent
+                  : (_isHovered
+                      ? accent.withValues(alpha: isDark ? 0.20 : 0.10)
+                      : (isDark ? const Color(0xFF221E38) : Colors.white)),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isSelected
+                    ? accent
+                    : (_isHovered
+                        ? accent.withValues(alpha: 0.5)
+                        : widget.borderColor),
+                width: 1,
+              ),
+              boxShadow: _isHovered
+                  ? [
+                      BoxShadow(
+                        color: accent.withValues(alpha: isSelected ? 0.35 : 0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  widget.item['icon'] as IconData,
+                  size: 13,
+                  color: isSelected
+                      ? Colors.white
+                      : (_isHovered
+                          ? accent
+                          : (isDark ? Colors.white70 : Colors.black87)),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  widget.item['label'] as String,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: isSelected || _isHovered ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected
+                        ? Colors.white
+                        : (_isHovered
+                            ? accent
+                            : (isDark ? Colors.white70 : Colors.black87)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

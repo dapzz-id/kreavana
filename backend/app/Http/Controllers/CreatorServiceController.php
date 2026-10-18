@@ -107,27 +107,28 @@ class CreatorServiceController extends Controller
     public function mine(Request $request)
     {
         $packageType = $request->query('package_type');
-        $services = CreatorService::query()
-            ->where('creator_id', $request->user()->id)
-            ->when(
-                $request->query('category'),
-                function ($query, $category) use ($packageType) {
-                    if ($category === self::CREATOR_PACKAGE_CATEGORY) {
-                        $query->whereIn('category', [
-                            self::CREATOR_PACKAGE_CATEGORY,
-                            self::EO_PACKAGE_CATEGORY,
-                        ]);
-                    } else {
-                        $query->where('category', $category);
-                    }
+        $category = $request->query('category');
 
-                    if ($packageType) {
-                        $query->where('package_type', $packageType);
-                    }
-                },
-            )
-            ->latest()
-            ->get();
+        $query = CreatorService::query()
+            ->where('creator_id', $request->user()->id);
+
+        if ($packageType) {
+            $query->where(function ($q) use ($packageType) {
+                $q->where('package_type', $packageType)
+                  ->orWhere('category', $packageType);
+            });
+        } elseif ($category) {
+            if ($category === self::CREATOR_PACKAGE_CATEGORY) {
+                $query->whereIn('category', [
+                    self::CREATOR_PACKAGE_CATEGORY,
+                    self::EO_PACKAGE_CATEGORY,
+                ]);
+            } else {
+                $query->where('category', $category);
+            }
+        }
+
+        $services = $query->latest()->get();
 
         return $this->successResponse('Daftar layanan Anda berhasil diambil', $services->toArray());
     }

@@ -185,6 +185,16 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
       return;
     }
 
+    if (!widget.opportunity.canApply) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Acara atau event untuk proyek ini sudah berjalan atau telah dimulai, pendaftaran lamaran sudah ditutup.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final reqs = widget.opportunity.requirements.isNotEmpty
         ? widget.opportunity.requirements
         : [OpportunityRequirementModel(subRoleSlug: widget.opportunity.subRoleSlug)];
@@ -1026,19 +1036,50 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
             ),
           ],
         ] else ...[
+          if (opp.isEventRunning) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.amber.shade400.withValues(alpha: 0.5)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.amber.shade700, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      opp.status != 'open'
+                          ? 'Pendaftaran lamaran ditutup karena proyek tidak lagi berstatus buka.'
+                          : 'Event/kegiatan proyek ini sudah berjalan atau telah lewat tanggal mulainya. Pendaftaran sudah ditutup.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.amber.shade300 : Colors.amber.shade900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           Row(
             children: [
               Expanded(
                 flex: 3,
                 child: ElevatedButton.icon(
-                  onPressed: opp.status == 'open' ? () => _showApplicationDialog(context) : null,
-                  icon: const Icon(Icons.assignment_turned_in, color: Colors.white),
+                  onPressed: opp.canApply ? () => _showApplicationDialog(context) : null,
+                  icon: Icon(opp.canApply ? Icons.assignment_turned_in : Icons.lock_clock_outlined, color: Colors.white),
                   label: Text(
-                    opp.status == 'open' ? 'Ambil Peluang' : 'Proyek Ditutup',
+                    opp.canApply
+                        ? 'Ambil Peluang'
+                        : (opp.isEventRunning ? 'Pendaftaran Ditutup' : 'Proyek Ditutup'),
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal.shade700,
+                    backgroundColor: opp.canApply ? Colors.teal.shade700 : Colors.grey.shade500,
                     minimumSize: const Size(double.infinity, 48),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),

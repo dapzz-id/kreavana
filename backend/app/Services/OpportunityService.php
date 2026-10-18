@@ -135,6 +135,19 @@ class OpportunityService extends BaseService
                 abort(400, 'Peluang proyek ini sudah ditutup atau tidak menerima lamaran baru.');
             }
 
+            // Guard: if event is already running or past start date, cannot apply
+            $eventDate = $opp->event_start_date ?? $opp->event_date;
+            $isEventStarted = false;
+            if ($eventDate) {
+                $parsedDate = \Carbon\Carbon::parse($eventDate)->startOfDay();
+                if ($parsedDate->isPast() && !$parsedDate->isToday()) {
+                    $isEventStarted = true;
+                }
+            }
+            if ($opp->event_progress > 0 || $isEventStarted) {
+                abort(400, 'Acara atau event untuk proyek ini sudah berjalan atau telah dimulai, pendaftaran lamaran sudah ditutup.');
+            }
+
             if ($opp->posted_by === $creatorId) {
                 abort(400, 'Anda tidak dapat melamar proyek yang Anda buat sendiri.');
             }
@@ -302,10 +315,34 @@ class OpportunityService extends BaseService
 
         $clampedProgress = max(0, min(100, $progress));
         $opp->event_progress = $clampedProgress;
+        $isCompleted = false;
         if ($clampedProgress >= 100) {
             $opp->status = 'completed';
+            $isCompleted = true;
         }
         $opp->save();
+
+        // Notify approved creators about progress
+        $approvedCreators = OpportunityApplication::where('opportunity_id', $opp->id)
+            ->where('status', 'approved')
+            ->pluck('creator_id');
+
+        foreach ($approvedCreators as $creatorId) {
+            $this->notificationRepo->create([
+                'user_id' => $creatorId,
+                'title' => $isCompleted ? 'Proyek Selesai!' : 'Update Progress Proyek',
+                'message' => $isCompleted
+                    ? 'Proyek "' . $opp->title . '" telah selesai 100%. Terima kasih atas kontribusi Anda!'
+                    : 'Pemilik proyek memperbarui progress "' . $opp->title . '" menjadi ' . $clampedProgress . '%.',
+                'type' => 'project',
+                'data' => [
+                    'opportunity_id' => $opp->id,
+                    'event_progress' => $clampedProgress,
+                ],
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
+        }
 
         return $this->formatOpportunity($opp->fresh(['approvedApplications.creator', 'user']), true);
     }
@@ -327,6 +364,24 @@ class OpportunityService extends BaseService
         $merged = array_merge($currentDocs, $documents);
         $application->submitted_documents = $merged;
         $application->save();
+
+        // Notify project owner
+        $creator = User::find($userId);
+        $creatorName = $creator ? $creator->name : 'Kreator';
+        if ($opp->posted_by && $opp->posted_by !== $userId) {
+            $this->notificationRepo->create([
+                'user_id' => $opp->posted_by,
+                'title' => 'Dokumen Hasil Kerja Dikirim',
+                'message' => $creatorName . ' telah mengunggah dokumen / tautan hasil kerja untuk proyek "' . $opp->title . '".',
+                'type' => 'project',
+                'data' => [
+                    'opportunity_id' => $opp->id,
+                    'application_id' => $application->id,
+                ],
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
+        }
 
         return [
             'application_id' => $application->id,
@@ -352,6 +407,30 @@ class OpportunityService extends BaseService
         $opp->meeting_notes = $data['meeting_notes'] ?? $opp->meeting_notes;
         $opp->meeting_status = 'pending_marketing_review';
         $opp->save();
+
+        // Notify approved creators
+        $approvedCreators = OpportunityApplication::where('opportunity_id', $opp->id)
+            ->where('status', 'approved')
+            ->pluck('creator_id');
+
+        $meetingDateStr = $opp->meeting_date ? \Carbon\Carbon::parse($opp->meeting_date)->format('d M Y') : '';
+        $meetingLocStr = $opp->meeting_location ?? 'Lokasi Ditentukan';
+
+        foreach ($approvedCreators as $creatorId) {
+            $this->notificationRepo->create([
+                'user_id' => $creatorId,
+                'title' => 'Jadwal Pertemuan Diatur',
+                'message' => 'Pertemuan untuk proyek "' . $opp->title . '" dijadwalkan pada ' . $meetingDateStr . ' ' . ($opp->meeting_time ?? '') . ' di ' . $meetingLocStr . '.',
+                'type' => 'project',
+                'data' => [
+                    'opportunity_id' => $opp->id,
+                    'meeting_date' => $opp->meeting_date,
+                    'meeting_time' => $opp->meeting_time,
+                ],
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
+        }
 
         return $this->formatOpportunity($opp->fresh(['approvedApplications.creator', 'user']), true);
     }

@@ -43,8 +43,19 @@ class CreatorSidebarMenus {
       'singer',
       'penyanyi',
       'talent',
+      'performer',
+      'talent_performer',
       'model',
       'talent_model',
+      'actor',
+      'aktor',
+      'penari',
+      'dancer',
+      'musisi',
+      'musician',
+      'voice_over',
+      'vo',
+      'voiceover',
       'makeup_artist',
       'mua',
       'makeup',
@@ -109,9 +120,18 @@ class CreatorSidebarMenus {
       case 'penyanyi':
         return 'LAYANAN PENYANYI';
       case 'talent':
+      case 'performer':
+      case 'talent_performer':
       case 'model':
       case 'talent_model':
-        return 'LAYANAN TALENT';
+      case 'actor':
+      case 'aktor':
+      case 'penari':
+      case 'dancer':
+      case 'voice_over':
+      case 'vo':
+      case 'voiceover':
+        return 'LAYANAN TALENT & PERFORMER';
       case 'makeup_artist':
       case 'mua':
       case 'makeup':
@@ -293,27 +313,36 @@ class CreatorSidebarMenus {
           ),
         ];
       case 'talent':
+      case 'performer':
+      case 'talent_performer':
       case 'model':
       case 'talent_model':
+      case 'actor':
+      case 'aktor':
+      case 'penari':
+      case 'dancer':
+      case 'voice_over':
+      case 'vo':
+      case 'voiceover':
         return const [
           CreatorSidebarMenuEntry(
-            icon: Icons.portrait_outlined,
-            label: 'Profil Talent',
+            icon: Icons.smart_display_outlined,
+            label: 'Showreel & Portofolio',
             serviceKey: 'talent_profil',
           ),
           CreatorSidebarMenuEntry(
             icon: Icons.calendar_today_outlined,
-            label: 'Jadwal & Booking',
+            label: 'Jadwal & Ketersediaan',
             serviceKey: 'talent_jadwal',
           ),
           CreatorSidebarMenuEntry(
-            icon: Icons.work_outline,
-            label: 'Kategori Pekerjaan',
+            icon: Icons.campaign_outlined,
+            label: 'Casting & Peluang',
             serviceKey: 'talent_kategori',
           ),
           CreatorSidebarMenuEntry(
             icon: Icons.payments_outlined,
-            label: 'Tarif',
+            label: 'Tarif & Kontrak',
             serviceKey: 'talent_tarif',
           ),
         ];

@@ -324,16 +324,24 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       BadgeService().markNotificationsRead();
     }
 
+    final data = notif.data ?? {};
+    final oppId = (data['opportunity_id'] ?? (notif.type == 'opportunity' ? data['id'] : null))?.toString();
+    final contractId = (data['contract_id'] ?? data['job_contract_id'] ?? (notif.type == 'contract' ? data['id'] : null))?.toString();
+
     if (notif.type == 'message' || notif.type == 'chat') {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const DirectMessageScreen()),
       );
-    } else if (notif.type == 'project' || notif.type == 'contract' || notif.type == 'opportunity') {
+    } else {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ProyekSayaScreen(user: widget.user),
+          builder: (_) => ProyekSayaScreen(
+            user: widget.user,
+            initialOpportunityId: oppId,
+            initialContractId: contractId,
+          ),
         ),
       );
     }
