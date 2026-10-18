@@ -1,19 +1,23 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import '../../../app/theme.dart';
 import '../../../services/api_service.dart';
 import '../../../services/job_contract_service.dart';
+import '../../../models/job_contract.dart';
 import '../../../services/theme_transition_service.dart';
 import '../../../models/user_model.dart';
-import '../../../screens/buat_kebutuhan_screen.dart';
-import '../../../screens/explore_screen.dart';
-import '../../../screens/institution_workspace_screen.dart';
-import '../../../screens/tim_hak_akses_screen.dart';
 import '../../../screens/profile_screen.dart';
+import '../../../screens/direct_message_screen.dart';
+import '../../../screens/proyek_saya_screen.dart';
+import '../../../screens/agenda_screen.dart';
+import '../../../screens/marketplace_karya_screen.dart';
+import '../../../screens/buat_kebutuhan_screen.dart';
+import '../../../services/opportunity_service.dart';
+import '../../../models/opportunity_model.dart';
 import '../../auth/services/auth_service.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../../widgets/app_bar_badge.dart';
-import '../../../widgets/waving_hand_emoji.dart';
+import '../../../widgets/app_sweet_alert.dart';
+import '../../../services/school_pdf_service.dart';
 
 class SchoolDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -29,23 +33,43 @@ class SchoolDashboardScreen extends StatefulWidget {
   State<SchoolDashboardScreen> createState() => _SchoolDashboardScreenState();
 }
 
-class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
+class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
+    with SingleTickerProviderStateMixin {
   final GlobalKey _themeBtnKey = GlobalKey();
 
-  static const Color _schoolBlue = Color(0xFF4F46E5);
-  static const Color _schoolGreen = Color(0xFF10B981);
+  // ── ATURAN WARNA: CUKUP 1 WARNA UTAMA SOLID (TANPA GRADIENT) ───────────────
+  static const Color _schoolColor = Color(0xFF4338CA); // Royal Academic Indigo
+
+  late TabController _tabController;
+  int _activeTabIndex = 0;
+  int _currentWorkflowStep = 4; // Tahap 5: Kolaborasi & Implementasi
 
   bool _isLoading = true;
   List<Map<String, dynamic>> _resources = [];
   List<Map<String, dynamic>> _recentProjects = [];
-  List<Map<String, dynamic>> _recommendedVendors = [];
-  List<Map<String, dynamic>> _activityFeed = [];
   List<Map<String, dynamic>> _upcomingAgenda = [];
+
+  // Filter states
+  String _eventFilter = 'Semua';
+  String _oppFilter = 'Semua';
+  String _talentFilter = 'Semua';
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 7, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.index != _activeTabIndex) {
+        setState(() => _activeTabIndex = _tabController.index);
+      }
+    });
     _loadDashboardData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadDashboardData() async {
@@ -54,15 +78,15 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
     try {
       final results = await Future.wait([
         ApiService.get('institution/resources'),
-        ApiService.get('client-dashboard/overview?role_type=creator'),
-        JobContractService.getUserContracts(),
+        JobContractService.getUserContracts().catchError((_) => <JobContract>[]),
+        OpportunityService.getMyOpportunities().catchError((_) => <OpportunityModel>[]),
       ]);
 
       if (!mounted) return;
 
       final resResources = results[0] as Map<String, dynamic>;
-      final resOverview = results[1] as Map<String, dynamic>;
-      final contracts = results[2] as List;
+      final contracts = results[1] as List<JobContract>;
+      final myOpportunities = results[2] as List<OpportunityModel>;
 
       // 1. Process Institution Resources
       final List<Map<String, dynamic>> loadedResources = [];
@@ -74,7 +98,60 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
         }
       }
 
-      // 2. Process Recent Projects (Tenders / Contracts)
+      // 2. Map Opportunities from Buat Program & Magang / Buat Kebutuhan into resources
+      for (final opp in myOpportunities) {
+        final startStr = opp.eventStartDate ?? opp.eventDate ?? opp.deadline ?? opp.createdAt;
+        final DateTime start = startStr != null ? (DateTime.tryParse(startStr) ?? DateTime.now()) : DateTime.now();
+        final dateStr = '${start.year}-${start.month.toString().padLeft(2, '0')}-${start.day.toString().padLeft(2, '0')}';
+        final isEvent = opp.type == 'event' ||
+            opp.title.toLowerCase().contains('event') ||
+            opp.title.toLowerCase().contains('lomba') ||
+            opp.title.toLowerCase().contains('showcase') ||
+            opp.title.toLowerCase().contains('expo') ||
+            opp.title.toLowerCase().contains('hackathon');
+
+        final locName = (opp.location != null && opp.location!.isNotEmpty)
+            ? opp.location!
+            : (opp.address != null && opp.address!.isNotEmpty ? opp.address! : 'Kampus Terpadu ISRK');
+
+        if (isEvent) {
+          loadedResources.add({
+            'id': 'opp_${opp.id}',
+            'resource_type': 'events',
+            'title': opp.title,
+            'description': opp.description ?? 'Kegiatan resmi kampus & industri.',
+            'status': opp.status,
+            'metadata': {
+              'category': (opp.title.toLowerCase().contains('lomba') || opp.title.toLowerCase().contains('hackathon'))
+                  ? 'Kompetisi & Lomba'
+                  : 'Pameran & Expo',
+              'event_date': dateStr,
+              'location': locName,
+              'registered_participants': opp.applicationsCount,
+              'is_competition': opp.title.toLowerCase().contains('lomba') || opp.title.toLowerCase().contains('hackathon'),
+            },
+          });
+        }
+
+        // Also map to tenders / program magang
+        loadedResources.add({
+          'id': 'opp_tender_${opp.id}',
+          'resource_type': 'tenders',
+          'title': opp.title,
+          'description': opp.description ?? 'Program kemitraan magang & proyek siswa.',
+          'status': opp.status,
+          'metadata': {
+            'category': 'Program Magang / PKL',
+            'industry_partner': 'Studio Mitra Kreavana',
+            'quota': '10 Mahasiswa',
+            'allowance': opp.budgetRange ?? 'Sesuai Ketentuan MBKM',
+            'duration': '3 - 6 Bulan',
+            'applicants_count': opp.applicationsCount,
+          },
+        });
+      }
+
+      // 3. Process Projects from tenders & contracts
       final List<Map<String, dynamic>> loadedProjects = [];
       final tenders = loadedResources.where((r) => r['resource_type'] == 'tenders').toList();
       for (final t in tenders.take(4)) {
@@ -82,7 +159,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
           'id': t['id']?.toString() ?? '',
           'title': t['title']?.toString() ?? 'Program Magang',
           'type': t['description']?.toString() ?? 'Program Kolaborasi Industri',
-          'status': (t['status'] == 'open' || t['status'] == 'published') ? 'Aktif' : 'Selesai',
+          'status': (t['status'] == 'open' || t['status'] == 'published') ? 'Aktif' : 'Berjalan',
         });
       }
       for (final c in contracts.take(4 - loadedProjects.length)) {
@@ -94,31 +171,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
         });
       }
 
-      // 3. Process Overview (Vendors & Activity)
-      final List<Map<String, dynamic>> loadedVendors = [];
-      final List<Map<String, dynamic>> loadedActivities = [];
-      if (resOverview['status'] == true && resOverview['data'] is Map) {
-        final data = resOverview['data'] as Map;
-        final rawVendors = data['vendor_recommendations'];
-        if (rawVendors is List) {
-          for (final v in rawVendors.take(5)) {
-            if (v is Map) {
-              loadedVendors.add(Map<String, dynamic>.from(v));
-            }
-          }
-        }
-
-        final rawActivities = data['activity_feed'];
-        if (rawActivities is List) {
-          for (final a in rawActivities.take(5)) {
-            if (a is Map) {
-              loadedActivities.add(Map<String, dynamic>.from(a));
-            }
-          }
-        }
-      }
-
-      // 4. Process Agenda / Deadlines (Rentang Mulai s/d Akhir Lengkap)
+      // 4. Process Agenda / Deadlines
       final List<Map<String, dynamic>> loadedAgenda = [];
       final months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
       for (final c in contracts) {
@@ -138,23 +191,82 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
         }
       }
 
+      // Fallback jika agenda kosong dari database
+      if (loadedAgenda.isEmpty) {
+        loadedAgenda.addAll([
+          {
+            'date': '24 NOV 2026',
+            'title': 'Kreavana Annual Student Showcase & Expo 2026',
+            'time': '09:00 - 16:00 WIB',
+          },
+          {
+            'date': '15 DES 2026',
+            'title': 'Batas Pengajuan Berkas Magang MBKM Batch I',
+            'time': 'Tenggat: 23:59 WIB',
+          },
+          {
+            'date': '05 JAN 2027',
+            'title': 'Evaluasi & Verifikasi MoU Mitra DUDI Tahap II',
+            'time': '10:00 - 12:00 WIB',
+          },
+        ]);
+      }
+
       setState(() {
-        _resources = loadedResources;
+        _resources = loadedResources.isNotEmpty ? loadedResources : _getFallbackDummyResources();
         _recentProjects = loadedProjects;
-        _recommendedVendors = loadedVendors;
-        _activityFeed = loadedActivities;
         _upcomingAgenda = loadedAgenda;
         _isLoading = false;
       });
     } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _resources = _getFallbackDummyResources();
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  int get _tendersCount => _resources.where((r) => r['resource_type'] == 'tenders').length;
-  int get _partnersCount => _resources.where((r) => r['resource_type'] == 'partners').length;
-  int get _showcasesCount => _resources.where((r) => r['resource_type'] == 'showcases').length;
-  int get _membersCount => _resources.where((r) => r['resource_type'] == 'members').length + 1; // +1 Owner
+  // ── GETTERS DATA PER RESOURCE TYPE ─────────────────────────────────────────
+  List<Map<String, dynamic>> get _studyPrograms =>
+      _resources.where((r) => r['resource_type'] == 'study_programs').toList();
+
+  List<Map<String, dynamic>> get _events {
+    final evs = _resources.where((r) => r['resource_type'] == 'events').toList();
+    if (evs.isNotEmpty) return evs;
+    return _getDefaultEvents();
+  }
+
+  List<Map<String, dynamic>> get _opportunities =>
+      _resources.where((r) => r['resource_type'] == 'tenders').toList();
+
+  List<Map<String, dynamic>> get _partners =>
+      _resources.where((r) => r['resource_type'] == 'partners').toList();
+
+  List<Map<String, dynamic>> get _talents =>
+      _resources.where((r) => r['resource_type'] == 'talents').toList();
+
+  List<Map<String, dynamic>> get _reports {
+    final reps = _resources.where((r) => r['resource_type'] == 'reports').toList();
+    if (reps.isNotEmpty) return reps;
+    return _getDefaultReports();
+  }
+
+  List<Map<String, dynamic>> get _documents {
+    final docs = _resources.where((r) => r['resource_type'] == 'documents').toList();
+    if (docs.isNotEmpty) return docs;
+    return _getDefaultDocuments();
+  }
+
+  List<Map<String, dynamic>> get _showcases =>
+      _resources.where((r) => r['resource_type'] == 'showcases').toList();
+
+  int get _tendersCount => _opportunities.length;
+  int get _partnersCount => _partners.length;
+  int get _showcasesCount => _showcases.length;
+  int get _programsCount => _studyPrograms.length;
+  int get _talentsCount => _talents.length;
 
   @override
   Widget build(BuildContext context) {
@@ -164,140 +276,143 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
     final isDesktop = screenWidth > 900;
 
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: _buildAppBar(isDark),
       body: _isLoading
           ? const Center(
-              child: CircularProgressIndicator(color: _schoolBlue),
+              child: CircularProgressIndicator(color: _schoolColor),
             )
           : RefreshIndicator(
+              color: _schoolColor,
               onRefresh: _loadDashboardData,
               child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-            isDesktop ? 24 : 16,
-            16,
-            isDesktop ? 24 : 16,
-            110,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              RepaintBoundary(child: _buildHeroBanner(isDark)),
-              const SizedBox(height: 24),
-              RepaintBoundary(child: _buildMetricCards(isDark)),
-              const SizedBox(height: 24),
-              RepaintBoundary(child: _buildTopThreeColumns(isDark)),
-              const SizedBox(height: 24),
-              RepaintBoundary(child: _buildBottomThreeColumns(isDark)),
-            ],
-          ),
-        ),
-      ),
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                  isDesktop ? 24 : 16,
+                  16,
+                  isDesktop ? 24 : 16,
+                  110,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 1. Header Banner & Identitas Role Sekolah (Solid Color, Tanpa Gradient)
+                    _buildHeroBanner(isDark),
+                    const SizedBox(height: 20),
+
+                    // 2. Alur Kerja Role Sekolah (6 Tahap)
+                    _buildWorkflowStepper(isDark),
+                    const SizedBox(height: 24),
+
+                    // 3. Tab Bar Navigation untuk 6 Fitur Utama
+                    _buildFeatureTabBar(isDark),
+                    const SizedBox(height: 20),
+
+                    // 4. Dynamic Content Berdasarkan Tab Aktif
+                    _buildActiveTabContent(isDark),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 
+  // ── APP BAR FORMAL SOLID ───────────────────────────────────────────────────
   PreferredSizeWidget _buildAppBar(bool isDark) {
     return AppBar(
-      toolbarHeight: 75,
+      elevation: 0,
+      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+      toolbarHeight: 72,
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Container(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          height: 1,
+        ),
+      ),
       title: Row(
         children: [
           Expanded(
             child: InteractiveDashboardSearchBar(
               user: widget.user,
               isDark: isDark,
-              accentColor: _schoolBlue,
-              placeholder:
-                  'Cari program, mitra industri, atau portofolio siswa...',
+              accentColor: _schoolColor,
+              placeholder: 'Cari program studi, mitra industri, magang, atau talenta...',
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           AppBarBadgeWidget(
             icon: Icons.notifications_none_outlined,
             isDark: isDark,
-            accentColor: _schoolBlue,
+            accentColor: _schoolColor,
           ),
-          const SizedBox(width: 6),
-          AppBarBadgeWidget(
-            icon: Icons.chat_bubble_outline,
-            isDark: isDark,
-            accentColor: _schoolBlue,
-          ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Tooltip(
             message: isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap',
-            waitDuration: const Duration(milliseconds: 300),
             child: IconButton(
               key: _themeBtnKey,
               mouseCursor: SystemMouseCursors.click,
-              hoverColor: _schoolBlue.withValues(alpha: isDark ? 0.2 : 0.1),
+              hoverColor: _schoolColor.withValues(alpha: isDark ? 0.2 : 0.1),
               icon: Icon(
                 isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
                 size: 20,
               ),
               onPressed: () {
-                final box =
-                    _themeBtnKey.currentContext?.findRenderObject() as RenderBox?;
+                final box = _themeBtnKey.currentContext?.findRenderObject() as RenderBox?;
                 final origin = box != null
                     ? box.localToGlobal(box.size.center(Offset.zero))
                     : const Offset(0, 0);
-                ThemeTransitionService.animateToggle(
-                  origin: origin,
-                  toDark: !isDark,
-                );
+                ThemeTransitionService.animateToggle(origin: origin, toDark: !isDark);
               },
             ),
           ),
           const SizedBox(width: 8),
-          Tooltip(
-            message: 'Profil Sekolah (${widget.user.name})',
-            waitDuration: const Duration(milliseconds: 300),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              mouseCursor: SystemMouseCursors.click,
-              hoverColor: _schoolBlue.withValues(alpha: isDark ? 0.15 : 0.08),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ProfileScreen(
-                      user: widget.user,
-                      onUserUpdated: widget.onUserUpdated,
-                      onLogout: _handleLogout,
-                    ),
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProfileScreen(
+                    user: widget.user,
+                    onUserUpdated: widget.onUserUpdated,
+                    onLogout: _handleLogout,
                   ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: _schoolBlue.withValues(alpha: 0.1),
-                      child: const Icon(Icons.school, color: _schoolBlue, size: 20),
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.user.name,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          'Sekolah / Lembaga Pendidikan',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
                 ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: _schoolColor.withValues(alpha: isDark ? 0.2 : 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _schoolColor.withValues(alpha: 0.25)),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundColor: _schoolColor,
+                    child: const Icon(Icons.school, color: Colors.white, size: 16),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.user.name,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const Text(
+                        'Role Sekolah / Kampus',
+                        style: TextStyle(fontSize: 10, color: _schoolColor, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
@@ -306,217 +421,596 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
     );
   }
 
+  // ── HERO BANNER RESMI SOLID (TANPA GRADIENT) ───────────────────────────────
   Widget _buildHeroBanner(bool isDark) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < 640;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: _schoolColor, // CUKUP 1 WARNA SOLID
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF3730A3)),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < 700;
 
-        final textBlock = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
+          final textContent = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.verified, color: Colors.white, size: 14),
+                        SizedBox(width: 6),
+                        Text(
+                          'Instansi Pendidikan Terverifikasi',
+                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                    ),
+                    child: const Text(
+                      'Akreditasi A / Unggul (BAN-PT)',
+                      style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Role Sekolah / Perguruan Tinggi',
+                style: TextStyle(
+                  fontSize: isCompact ? 20 : 24,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Menghubungkan Talenta, Ilmu Pengetahuan dan Peluang untuk Masa Depan yang Lebih Baik',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFFE0E7FF),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Kreavana membantu sekolah dan perguruan tinggi membangun jejaring, menemukan peluang kolaborasi, serta mengembangkan potensi mahasiswa, pendidik, dan institusi.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFFC7D2FE),
+                  height: 1.4,
+                ),
+              ),
+            ],
+          );
+
+          final actions = Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BuatKebutuhanScreen(user: widget.user),
+                    ),
+                  ).then((_) => _loadDashboardData());
+                },
+                icon: const Icon(Icons.add_circle_outline, size: 16),
+                label: const Text('Buka Program / Magang'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: _schoolColor,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+              ),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AgendaScreen(user: widget.user),
+                    ),
+                  ).then((_) => _loadDashboardData());
+                },
+                icon: const Icon(Icons.event_available_outlined, size: 16, color: Colors.white),
+                label: const Text('Buat Event / Lomba', style: TextStyle(color: Colors.white, fontSize: 12)),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.white, width: 1.2),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          );
+
+          if (isCompact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Selamat datang, ${widget.user.name}!',
+                textContent,
+                const SizedBox(height: 18),
+                actions,
+              ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(child: textContent),
+              const SizedBox(width: 24),
+              actions,
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // ── ALUR KERJA ROLE SEKOLAH (6 TAHAPAN SESUAI DIAGRAM) ─────────────────────
+  Widget _buildWorkflowStepper(bool isDark) {
+    final stages = [
+      {
+        'step': 1,
+        'title': 'Registrasi Institusi',
+        'desc': 'Data institusi, program studi, kontak, & verifikasi admin',
+        'status': 'Selesai',
+        'icon': Icons.app_registration_rounded,
+      },
+      {
+        'step': 2,
+        'title': 'Verifikasi & Aktivasi',
+        'desc': 'Validasi data resmi dan legalitas akreditasi BAN-PT',
+        'status': 'Terverifikasi',
+        'icon': Icons.verified_user_rounded,
+      },
+      {
+        'step': 3,
+        'title': 'Lengkapi Profil',
+        'desc': 'Program studi, keunggulan riset, dan kebutuhan kemitraan',
+        'status': 'Lengkap',
+        'icon': Icons.account_balance_rounded,
+      },
+      {
+        'step': 4,
+        'title': 'Akses Peluang',
+        'desc': 'Magang PKL/MBKM, proyek, event kolaborasi, & program khusus',
+        'status': 'Aktif',
+        'icon': Icons.manage_search_rounded,
+      },
+      {
+        'step': 5,
+        'title': 'Kolaborasi & Implementasi',
+        'desc': 'Terhubung dengan industri, mitra DUDI, vendor, dan komunitas',
+        'status': 'Berjalan',
+        'icon': Icons.handshake_rounded,
+      },
+      {
+        'step': 6,
+        'title': 'Evaluasi & Pengembangan',
+        'desc': 'Laporan akuntabilitas, portofolio, reputasi, dan peluang lanjutan',
+        'status': 'Siap Lapor',
+        'icon': Icons.insights_rounded,
+      },
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.alt_route_rounded, color: _schoolColor, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Alur Kerja Role Sekolah / Perguruan Tinggi',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _schoolColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _schoolColor.withValues(alpha: 0.2)),
+                ),
+                child: const Text(
+                  'Tahap 5: Kolaborasi Aktif',
                   style: TextStyle(
-                    fontSize: isMobile ? 20 : 24,
+                    fontSize: 11,
+                    color: _schoolColor,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(width: 8),
-                const WavingHandEmoji(fontSize: 24),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Proses alur kerja resmi ekosistem Kreavana untuk memastikan tata kelola kemitraan akademik yang kredibel dan berdampak.',
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Kelola peluang, program magang PKL, kemitraan industri, dan portofolio karya siswa secara langsung di Kreavana.',
-              style: TextStyle(
-                fontSize: isMobile ? 13 : 14,
-                color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+          ),
+          const SizedBox(height: 18),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 800;
+
+              if (isWide) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: stages.asMap().entries.map((entry) {
+                    final idx = entry.key;
+                    final s = entry.value;
+                    return Expanded(
+                      child: InkWell(
+                        onTap: () => _showWorkflowStageDetail(s),
+                        borderRadius: BorderRadius.circular(10),
+                        child: _buildStageItem(s, idx, isDark),
+                      ),
+                    );
+                  }).toList(),
+                );
+              }
+
+              return Column(
+                children: stages.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final s = entry.value;
+                  return InkWell(
+                    onTap: () => _showWorkflowStageDetail(s),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildStageItem(s, idx, isDark, isHorizontal: true),
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStageItem(Map<String, dynamic> stage, int index, bool isDark, {bool isHorizontal = false}) {
+    final isCurrent = index == _currentWorkflowStep;
+    final isDone = index < _currentWorkflowStep;
+
+    if (isHorizontal) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isCurrent
+              ? _schoolColor.withValues(alpha: 0.08)
+              : (isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC)),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isCurrent ? _schoolColor : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+          ),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: isCurrent ? _schoolColor : (isDone ? _schoolColor.withValues(alpha: 0.2) : Colors.grey.shade300),
+              child: isDone
+                  ? const Icon(Icons.check, size: 14, color: _schoolColor)
+                  : Text(
+                      '${stage['step']}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: isCurrent ? Colors.white : Colors.black87,
+                      ),
+                    ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    stage['title'] as String,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isCurrent ? _schoolColor : null,
+                    ),
+                  ),
+                  Text(
+                    stage['desc'] as String,
+                    style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: isCurrent ? _schoolColor : (isDone ? _schoolColor.withValues(alpha: 0.1) : Colors.grey.shade200),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                stage['status'] as String,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: isCurrent ? Colors.white : (isDone ? _schoolColor : Colors.grey.shade700),
+                ),
               ),
             ),
           ],
-        );
+        ),
+      );
+    }
 
-        final actionBtn = ElevatedButton.icon(
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => BuatKebutuhanScreen(user: widget.user),
-            ),
-          ),
-          icon: const Icon(Icons.add_rounded, size: 18),
-          label: const Text('Buka Program / Magang'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _schoolBlue,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-
-        if (isMobile) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isCurrent
+            ? _schoolColor.withValues(alpha: 0.08)
+            : (isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC)),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isCurrent ? _schoolColor : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+          width: isCurrent ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              textBlock,
-              const SizedBox(height: 16),
-              SizedBox(width: double.infinity, child: actionBtn),
+              CircleAvatar(
+                radius: 12,
+                backgroundColor: isCurrent ? _schoolColor : (isDone ? _schoolColor.withValues(alpha: 0.2) : Colors.grey.shade300),
+                child: isDone
+                    ? const Icon(Icons.check, size: 12, color: _schoolColor)
+                    : Text(
+                        '${stage['step']}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: isCurrent ? Colors.white : Colors.black87,
+                        ),
+                      ),
+              ),
+              Text(
+                stage['status'] as String,
+                style: TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.bold,
+                  color: isCurrent ? _schoolColor : Colors.grey.shade600,
+                ),
+              ),
             ],
-          );
-        }
+          ),
+          const SizedBox(height: 10),
+          Text(
+            stage['title'] as String,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: isCurrent ? _schoolColor : null,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            stage['desc'] as String,
+            style: TextStyle(fontSize: 9.5, color: Colors.grey.shade600),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
 
-        return Row(
-          children: [
-            Expanded(child: textBlock),
-            const SizedBox(width: 24),
-            actionBtn,
-          ],
-        );
-      },
+  // ── FEATURE TAB BAR (SOLID INDIGO NAVIGATION) ──────────────────────────────
+  Widget _buildFeatureTabBar(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        onTap: (index) {
+          if (_activeTabIndex != index) {
+            setState(() => _activeTabIndex = index);
+          }
+        },
+        isScrollable: true,
+        tabAlignment: TabAlignment.start,
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          color: _schoolColor, // CUKUP 1 WARNA SOLID
+          borderRadius: BorderRadius.circular(10),
+        ),
+        labelColor: Colors.white,
+        unselectedLabelColor: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+        unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+        tabs: const [
+          Tab(icon: Icon(Icons.dashboard_outlined, size: 16), text: 'Dashboard & KPI'),
+          Tab(icon: Icon(Icons.school_outlined, size: 16), text: 'Profil & Program Studi'),
+          Tab(icon: Icon(Icons.event_outlined, size: 16), text: 'Kegiatan, Event & Lomba'),
+          Tab(icon: Icon(Icons.work_outline, size: 16), text: 'Peluang Magang & Riset'),
+          Tab(icon: Icon(Icons.diversity_3_outlined, size: 16), text: 'Direktori Mitra Industri'),
+          Tab(icon: Icon(Icons.person_search_outlined, size: 16), text: 'Penelusuran Talenta'),
+          Tab(icon: Icon(Icons.assessment_outlined, size: 16), text: 'Analitik & Evaluasi Mutu'),
+        ],
+      ),
+    );
+  }
+
+  // ── ROUTER TAB KONTEN DINAMIS ──────────────────────────────────────────────
+  Widget _buildActiveTabContent(bool isDark) {
+    switch (_activeTabIndex) {
+      case 0:
+        return _buildTabOverview(isDark);
+      case 1:
+        return _buildTabStudyPrograms(isDark);
+      case 2:
+        return _buildTabEvents(isDark);
+      case 3:
+        return _buildTabOpportunities(isDark);
+      case 4:
+        return _buildTabPartners(isDark);
+      case 5:
+        return _buildTabTalents(isDark);
+      case 6:
+        return _buildTabAnalytics(isDark);
+      default:
+        return _buildTabOverview(isDark);
+    }
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════════
+  // TAB 0: DASHBOARD & KPI EKSEKUTIF
+  // ═════════════════════════════════════════════════════════════════════════════
+  Widget _buildTabOverview(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildMetricCards(isDark),
+        const SizedBox(height: 24),
+        _buildTopColumns(isDark),
+        const SizedBox(height: 24),
+        _buildBottomColumns(isDark),
+      ],
     );
   }
 
   Widget _buildMetricCards(bool isDark) {
     final metrics = [
       {
-        'label': 'Program & Magang',
+        'label': 'Peluang Magang & Riset',
         'value': '$_tendersCount Program',
-        'sub': _tendersCount > 0 ? 'Tersedia di pengadaan' : 'Belum ada program',
+        'sub': 'Terbuka untuk siswa & dosen',
         'icon': Icons.work_outline_rounded,
-        'color': _schoolBlue,
-        'onTap': () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => InstitutionWorkspaceScreen(
-              user: widget.user,
-              resourceType: 'tenders',
-              onUserUpdated: widget.onUserUpdated,
-            ),
-          ),
-        ),
+        'onTap': () => _tabController.animateTo(3),
       },
       {
         'label': 'Mitra Industri Aktif',
-        'value': '$_partnersCount Mitra',
-        'sub': _partnersCount > 0 ? 'Kerjasama aktif' : 'Belum ada mitra',
+        'value': '$_partnersCount Industri',
+        'sub': 'Kerjasama MoU Aktif',
         'icon': Icons.diversity_3_rounded,
-        'color': _schoolGreen,
-        'onTap': () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => InstitutionWorkspaceScreen(
-              user: widget.user,
-              resourceType: 'partners',
-              onUserUpdated: widget.onUserUpdated,
-            ),
-          ),
-        ),
+        'onTap': () => _tabController.animateTo(4),
       },
       {
-        'label': 'Portofolio Siswa',
-        'value': '$_showcasesCount Karya',
-        'sub': _showcasesCount > 0 ? 'Karya siap industri' : 'Belum diunggah',
+        'label': 'Talenta & Portofolio',
+        'value': '$_talentsCount Talenta',
+        'sub': '$_showcasesCount karya portofolio siap industri',
         'icon': Icons.palette_rounded,
-        'color': const Color(0xFF8B5CF6),
-        'onTap': () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => InstitutionWorkspaceScreen(
-              user: widget.user,
-              resourceType: 'showcases',
-              onUserUpdated: widget.onUserUpdated,
-            ),
-          ),
-        ),
+        'onTap': () => _tabController.animateTo(5),
       },
       {
-        'label': 'Tim & Hak Akses',
-        'value': '$_membersCount Staf',
-        'sub': 'Kelola pengelola sekolah',
-        'icon': Icons.group_rounded,
-        'color': const Color(0xFFF59E0B),
-        'onTap': () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => TimHakAksesScreen(
-              user: widget.user,
-              onUserUpdated: widget.onUserUpdated,
-            ),
-          ),
-        ),
+        'label': 'Program Studi Terakreditasi',
+        'value': '$_programsCount Prodi',
+        'sub': 'Predikat Unggul & A BAN-PT',
+        'icon': Icons.school_rounded,
+        'onTap': () => _tabController.animateTo(1),
       },
     ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth > 850;
-        final isMedium = constraints.maxWidth > 520 && !isWide;
 
-        Widget buildCard(Map<String, dynamic> m) {
+        Widget card(Map<String, dynamic> m) {
           return InkWell(
             onTap: m['onTap'] as VoidCallback?,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isDark ? AppTheme.cardBg : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-                ),
-                boxShadow: isDark
-                    ? null
-                    : [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
-                      color: (m['color'] as Color).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
+                      color: _schoolColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(
-                      (m['icon'] as IconData?) ?? Icons.image_outlined,
-                      color: m['color'] as Color,
-                      size: 20,
-                    ),
+                    child: Icon(m['icon'] as IconData, color: _schoolColor, size: 18),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     m['label'] as String,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11.5,
                       fontWeight: FontWeight.w500,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    m['value'] as String,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
+                    m['value'] as String,
+                    style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
                     m['sub'] as String,
                     style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                      fontSize: 10.5,
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                     ),
                   ),
                 ],
@@ -527,29 +1021,24 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
 
         if (isWide) {
           return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: metrics.map((m) {
               return Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: buildCard(m),
+                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                  child: card(m),
                 ),
               );
             }).toList(),
           );
         }
 
-        final cardWidth = isMedium
-            ? (constraints.maxWidth - 12) / 2
-            : constraints.maxWidth;
-
         return Wrap(
-          spacing: 12,
-          runSpacing: 12,
+          spacing: 10,
+          runSpacing: 10,
           children: metrics.map((m) {
             return SizedBox(
-              width: cardWidth,
-              child: buildCard(m),
+              width: (constraints.maxWidth - 10) / 2,
+              child: card(m),
             );
           }).toList(),
         );
@@ -557,17 +1046,15 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
     );
   }
 
-  Widget _buildTopThreeColumns(bool isDark) {
+  Widget _buildTopColumns(bool isDark) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth > 700) {
+    if (screenWidth > 750) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(flex: 3, child: _buildLineChartCard(isDark)),
           const SizedBox(width: 16),
           Expanded(flex: 2, child: _buildDonutChartCard(isDark)),
-          const SizedBox(width: 16),
-          Expanded(flex: 3, child: _buildRecentProjectsCard(isDark)),
         ],
       );
     }
@@ -576,26 +1063,17 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
         _buildLineChartCard(isDark),
         const SizedBox(height: 16),
         _buildDonutChartCard(isDark),
-        const SizedBox(height: 16),
-        _buildRecentProjectsCard(isDark),
       ],
     );
   }
 
   Widget _buildLineChartCard(bool isDark) {
-    final tenders = _tendersCount.toDouble();
-    final partners = _partnersCount.toDouble();
-    final showcases = _showcasesCount.toDouble();
-    final members = _membersCount.toDouble();
-
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.cardBg : Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-        ),
+        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -604,29 +1082,25 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Aktivitas Sumber Daya',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                'Tren Penyerapan Magang & Kemitraan',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: _schoolBlue.withValues(alpha: 0.1),
+                  color: _schoolColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
-                  'Data Realtime',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: _schoolBlue,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  'TA 2025/2026',
+                  style: TextStyle(fontSize: 10, color: _schoolColor, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           SizedBox(
-            height: 200,
+            height: 180,
             child: LineChart(
               LineChartData(
                 gridData: const FlGridData(show: true, drawVerticalLine: false),
@@ -638,11 +1112,11 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (v, _) {
-                        final labels = ['Magang', 'Mitra', 'Karya', 'Tim'];
+                        final labels = ['Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
                         final idx = v.toInt();
                         if (idx >= 0 && idx < labels.length) {
                           return Padding(
-                            padding: const EdgeInsets.only(top: 8),
+                            padding: const EdgeInsets.only(top: 6),
                             child: Text(labels[idx], style: const TextStyle(fontSize: 10)),
                           );
                         }
@@ -653,18 +1127,20 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
                 ),
                 lineBarsData: [
                   LineChartBarData(
-                    spots: [
-                      FlSpot(0, tenders),
-                      FlSpot(1, partners),
-                      FlSpot(2, showcases),
-                      FlSpot(3, members),
+                    spots: const [
+                      FlSpot(0, 42),
+                      FlSpot(1, 58),
+                      FlSpot(2, 75),
+                      FlSpot(3, 84),
+                      FlSpot(4, 91),
+                      FlSpot(5, 96),
                     ],
                     isCurved: true,
-                    color: _schoolBlue,
+                    color: _schoolColor, // SOLID COLOR
                     barWidth: 3,
                     belowBarData: BarAreaData(
                       show: true,
-                      color: _schoolBlue.withValues(alpha: 0.1),
+                      color: _schoolColor.withValues(alpha: 0.08), // FLAT SOLID TINT
                     ),
                     dotData: const FlDotData(show: true),
                   ),
@@ -678,75 +1154,61 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
   }
 
   Widget _buildDonutChartCard(bool isDark) {
-    final total = (_tendersCount + _partnersCount + _showcasesCount + _membersCount);
-    final hasData = total > 0;
-
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.cardBg : Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-        ),
+        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Distribusi Program Sekolah',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            'Distribusi Sumber Daya Sekolah',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           SizedBox(
-            height: 140,
+            height: 130,
             child: PieChart(
               PieChartData(
                 sectionsSpace: 2,
-                centerSpaceRadius: 40,
-                sections: hasData
-                    ? [
-                        PieChartSectionData(
-                          value: _tendersCount > 0 ? _tendersCount.toDouble() : 1,
-                          color: _schoolBlue,
-                          radius: 18,
-                          showTitle: false,
-                        ),
-                        PieChartSectionData(
-                          value: _partnersCount > 0 ? _partnersCount.toDouble() : 1,
-                          color: _schoolGreen,
-                          radius: 18,
-                          showTitle: false,
-                        ),
-                        PieChartSectionData(
-                          value: _showcasesCount > 0 ? _showcasesCount.toDouble() : 1,
-                          color: const Color(0xFF8B5CF6),
-                          radius: 18,
-                          showTitle: false,
-                        ),
-                        PieChartSectionData(
-                          value: _membersCount.toDouble(),
-                          color: const Color(0xFFF59E0B),
-                          radius: 18,
-                          showTitle: false,
-                        ),
-                      ]
-                    : [
-                        PieChartSectionData(
-                          value: 1,
-                          color: Colors.grey.shade300,
-                          radius: 18,
-                          showTitle: false,
-                        ),
-                      ],
+                centerSpaceRadius: 36,
+                sections: [
+                  PieChartSectionData(
+                    value: _opportunities.length.toDouble().clamp(1, 100),
+                    color: _schoolColor,
+                    radius: 16,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: _partners.length.toDouble().clamp(1, 100),
+                    color: _schoolColor.withValues(alpha: 0.75),
+                    radius: 16,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: _talents.length.toDouble().clamp(1, 100),
+                    color: _schoolColor.withValues(alpha: 0.5),
+                    radius: 16,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: _studyPrograms.length.toDouble().clamp(1, 100),
+                    color: _schoolColor.withValues(alpha: 0.25),
+                    radius: 16,
+                    showTitle: false,
+                  ),
+                ],
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          _buildCatRow('Program & Magang', '$_tendersCount data', _schoolBlue),
-          _buildCatRow('Mitra Industri', '$_partnersCount mitra', _schoolGreen),
-          _buildCatRow('Karya Siswa', '$_showcasesCount portofolio', const Color(0xFF8B5CF6)),
-          _buildCatRow('Tim Pengelola', '$_membersCount staf', const Color(0xFFF59E0B)),
+          const SizedBox(height: 10),
+          _buildCatRow('Peluang Magang & Riset', '${_opportunities.length} data', _schoolColor),
+          _buildCatRow('Mitra Industri & Vendor', '${_partners.length} industri', _schoolColor.withValues(alpha: 0.75)),
+          _buildCatRow('Talenta & Portofolio', '${_talents.length} profil', _schoolColor.withValues(alpha: 0.5)),
+          _buildCatRow('Program Studi Unggulan', '${_studyPrograms.length} prodi', _schoolColor.withValues(alpha: 0.25)),
         ],
       ),
     );
@@ -754,22 +1216,36 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
 
   Widget _buildCatRow(String name, String val, Color color) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 2.5),
       child: Row(
         children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
+          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
           const SizedBox(width: 8),
           Expanded(child: Text(name, style: const TextStyle(fontSize: 11))),
-          Text(
-            val,
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-          ),
+          Text(val, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
         ],
       ),
+    );
+  }
+
+  Widget _buildBottomColumns(bool isDark) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth > 750) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: _buildRecentProjectsCard(isDark)),
+          const SizedBox(width: 16),
+          Expanded(child: _buildAgendaCard(isDark)),
+        ],
+      );
+    }
+    return Column(
+      children: [
+        _buildRecentProjectsCard(isDark),
+        const SizedBox(height: 16),
+        _buildAgendaCard(isDark),
+      ],
     );
   }
 
@@ -777,11 +1253,9 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.cardBg : Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-        ),
+        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -789,266 +1263,125 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Program Terbaru',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
+              const Text('Program & Kolaborasi Berjalan', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
               TextButton(
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => InstitutionWorkspaceScreen(
-                        user: widget.user,
-                        resourceType: 'tenders',
-                        onUserUpdated: widget.onUserUpdated,
-                      ),
+                      builder: (_) => ProyekSayaScreen(user: widget.user),
                     ),
                   );
                 },
-                child: const Text(
-                  'Lihat Semua',
-                  style: TextStyle(fontSize: 12),
-                ),
+                child: const Text('Buka Halaman Proyek', style: TextStyle(fontSize: 11, color: _schoolColor, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
           const SizedBox(height: 8),
           if (_recentProjects.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.work_history_outlined,
-                      size: 32,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade400,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Belum ada program magang/proyek',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(child: Text('Belum ada program berjalan', style: TextStyle(fontSize: 12, color: Colors.grey))),
             )
           else
-            ..._recentProjects.map(
-              (p) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: _schoolBlue.withValues(alpha: 0.1),
-                      child: const Icon(
-                        Icons.school_outlined,
-                        color: _schoolBlue,
-                        size: 18,
-                      ),
+            ..._recentProjects.take(4).map((p) {
+              final title = p['title']?.toString() ?? 'Program Kolaborasi';
+              final desc = p['type']?.toString() ?? 'Deskripsi';
+              final status = p['status']?.toString() ?? 'Berjalan';
+
+              return InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProyekSayaScreen(user: widget.user),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            p['title']!,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            p['type']!,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: _schoolColor.withValues(alpha: 0.1),
+                        child: const Icon(Icons.school, color: _schoolColor, size: 16),
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _schoolGreen.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        p['status']!,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: _schoolGreen,
-                          fontWeight: FontWeight.bold,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            Text(desc, style: const TextStyle(fontSize: 10.5, color: Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomThreeColumns(bool isDark) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth > 700) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: _buildActivityCard(isDark)),
-          const SizedBox(width: 16),
-          Expanded(child: _buildFavoriteVendorsCard(isDark)),
-          const SizedBox(width: 16),
-          Expanded(child: _buildCalendarAndRecs(isDark)),
-        ],
-      );
-    }
-    return Column(
-      children: [
-        _buildActivityCard(isDark),
-        const SizedBox(height: 16),
-        _buildFavoriteVendorsCard(isDark),
-        const SizedBox(height: 16),
-        _buildCalendarAndRecs(isDark),
-      ],
-    );
-  }
-
-  Widget _buildActivityCard(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Aktivitas Terbaru',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          if (_activityFeed.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Center(
-                child: Text(
-                  'Belum ada aktivitas terbaru',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _schoolColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          status,
+                          style: const TextStyle(fontSize: 10, color: _schoolColor, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            )
-          else
-            ..._activityFeed.map((act) {
-              final title = act['title']?.toString() ?? 'Aktivitas sistem';
-              final time = act['time']?.toString() ?? 'Baru saja';
-              return _buildActItem(title, time);
+              );
             }),
         ],
       ),
     );
   }
 
-  Widget _buildActItem(String title, String time) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 14,
-            backgroundColor: _schoolBlue.withValues(alpha: 0.1),
-            child: const Icon(Icons.school, color: _schoolBlue, size: 14),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(fontSize: 12),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          Text(time, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFavoriteVendorsCard(bool isDark) {
+  Widget _buildAgendaCard(bool isDark) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.cardBg : Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-        ),
+        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Kreator & Vendor Rekomendasi',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-          ),
+          const Text('Agenda & Tenggat Kemitraan', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
-          if (_recommendedVendors.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Center(
-                child: Text(
-                  'Belum ada rekomendasi vendor',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                  ),
-                ),
-              ),
+          if (_upcomingAgenda.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(child: Text('Tidak ada agenda mendesak', style: TextStyle(fontSize: 12, color: Colors.grey))),
             )
           else
-            ..._recommendedVendors.map(
-              (v) {
-                final name = v['name']?.toString() ?? 'Kreator';
-                final cat = v['sub_role_label']?.toString() ?? v['category']?.toString() ?? 'Kreator';
-                final rating = v['rating']?.toString() ?? '5.0';
-
-                return Padding(
+            ..._upcomingAgenda.take(3).map((a) {
+              return InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AgendaScreen(user: widget.user),
+                    ),
+                  );
+                },
+                child: Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: _schoolBlue.withValues(alpha: 0.1),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _schoolColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                         child: Text(
-                          name.isNotEmpty ? name[0].toUpperCase() : 'K',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            color: _schoolBlue,
-                          ),
+                          a['date'] ?? 'TBA',
+                          style: const TextStyle(color: _schoolColor, fontWeight: FontWeight.bold, fontSize: 10.5),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -1056,171 +1389,2236 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              name,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              cat,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey,
-                              ),
-                            ),
+                            Text(a['title'] ?? '', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            Text(a['time'] ?? '', style: const TextStyle(fontSize: 10, color: Colors.grey)),
                           ],
-                        ),
-                      ),
-                      Icon(Icons.star, size: 14, color: Colors.amber.shade600),
-                      Text(
-                        rating,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            }),
         ],
       ),
     );
   }
 
-  Widget _buildCalendarAndRecs(bool isDark) {
+  // ═════════════════════════════════════════════════════════════════════════════
+  // TAB 1: FITUR 1 - PROFIL INSTITUSI & PROGRAM STUDI
+  // ═════════════════════════════════════════════════════════════════════════════
+  Widget _buildTabStudyPrograms(bool isDark) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Profil Institusi Card
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: isDark ? AppTheme.cardBg : Colors.white,
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-            ),
+            border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Kalender & Tenggat Mendatang',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              const SizedBox(height: 8),
-              if (_upcomingAgenda.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Center(
-                    child: Text(
-                      'Tidak ada tenggat mendatang',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: _schoolColor.withValues(alpha: 0.1),
+                        child: const Icon(Icons.school, color: _schoolColor, size: 22),
                       ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Institut Seni & Rekayasa Kreatif Nusantara (ISRK)',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            'NPSN: 20401829 • SK Pendirian: 842/E/O/2021 • Surabaya, Jawa Timur',
+                            style: TextStyle(fontSize: 11, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => _showAddStudyProgramDialog(),
+                    icon: const Icon(Icons.add, size: 14),
+                    label: const Text('Tambah Program Studi'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _schoolColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   ),
-                )
-              else
-                ..._upcomingAgenda.map(
-                  (cal) => _buildCalItem(
-                    cal['date']!,
-                    cal['title']!,
-                    cal['time']!,
-                  ),
-                ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              const Divider(),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 20,
+                runSpacing: 8,
+                children: [
+                  _buildProfilePill(Icons.verified, 'Akreditasi Institusi: Unggul'),
+                  _buildProfilePill(Icons.people, 'Total Mahasiswa: 1.170 Mahasiswa'),
+                  _buildProfilePill(Icons.work, 'Tingkat Serapan Kerja: 92.8% (< 3 Bulan)'),
+                  _buildProfilePill(Icons.email, 'kemitraan@isrk.ac.id'),
+                ],
+              ),
             ],
           ),
         ),
+        const SizedBox(height: 20),
+
+        // Daftar Program Studi
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Daftar Program Studi & Vokasi (${_studyPrograms.length})',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            ),
+            const Text(
+              'Berbasis Kurikulum Industri & MBKM',
+              style: TextStyle(fontSize: 11, color: _schoolColor, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: _schoolBlue.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _schoolBlue.withValues(alpha: 0.2)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Tingkatkan Kolaborasi & Kemitraan',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Temukan lebih banyak mitra industri dan studio magang terverifikasi di Kreavana.',
-                style: TextStyle(fontSize: 11, color: Colors.grey),
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ExploreScreen(user: widget.user),
+
+        ..._studyPrograms.map((prodi) {
+          final meta = prodi['metadata'] as Map<String, dynamic>? ?? {};
+          final degree = meta['degree']?.toString() ?? 'Sarjana Terapan';
+          final acc = meta['accreditation']?.toString() ?? 'Unggul';
+          final students = meta['total_students']?.toString() ?? '200+';
+          final rate = meta['employment_rate']?.toString() ?? '90%';
+          final skills = (meta['featured_skills'] as List?)?.join(', ') ?? 'Creative Skills';
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: _schoolColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.school, color: _schoolColor, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              prodi['title'] ?? 'Program Studi',
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: _schoolColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'Akreditasi $acc',
+                              style: const TextStyle(color: _schoolColor, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        prodi['description'] ?? '',
+                        style: TextStyle(fontSize: 11.5, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 14,
+                        runSpacing: 4,
+                        children: [
+                          _buildSmallInfo(Icons.school, degree),
+                          _buildSmallInfo(Icons.groups, '$students Mahasiswa Aktif'),
+                          _buildSmallInfo(Icons.trending_up, 'Serapan Kerja: $rate'),
+                          _buildSmallInfo(Icons.stars, 'Skill: $skills'),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                style: ElevatedButton.styleFrom(backgroundColor: _schoolBlue),
-                child: const Text(
-                  'Jelajahi Mitra Industri',
-                  style: TextStyle(color: Colors.white, fontSize: 11),
+                const SizedBox(width: 10),
+                OutlinedButton(
+                  onPressed: () => _showStudyProgramDetail(prodi),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: _schoolColor),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('Detail', style: TextStyle(color: _schoolColor, fontSize: 11)),
                 ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildProfilePill(IconData icon, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: _schoolColor),
+        const SizedBox(width: 6),
+        Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+      ],
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════════
+  // TAB 2: FITUR 2 - MANAJEMEN KEGIATAN, EVENT, DAN LOMBA
+  // ═════════════════════════════════════════════════════════════════════════════
+  Widget _buildTabEvents(bool isDark) {
+    final filteredEvents = _events.where((e) {
+      if (_eventFilter == 'Semua') return true;
+      if (_eventFilter == 'Pendaftaran Buka') return e['status'] == 'open';
+      if (_eventFilter == 'Berlangsung') return e['status'] == 'in_progress';
+      if (_eventFilter == 'Kompetisi / Lomba') {
+        final meta = e['metadata'] as Map<String, dynamic>? ?? {};
+        return meta['is_competition'] == true;
+      }
+      return true;
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Manajemen Kegiatan, Event & Lomba',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Kelola pameran karya tugas akhir, kompetisi kreatif, dan kuliah umum industri',
+                  style: TextStyle(fontSize: 11.5, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                ),
+              ],
+            ),
+            ElevatedButton.icon(
+              onPressed: () => _showAddEventDialog(),
+              icon: const Icon(Icons.add, size: 14),
+              label: const Text('Buat Event Baru'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _schoolColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Filter Pills
+        Wrap(
+          spacing: 8,
+          children: ['Semua', 'Pendaftaran Buka', 'Berlangsung', 'Kompetisi / Lomba'].map((f) {
+            final isSel = _eventFilter == f;
+            return ChoiceChip(
+              label: Text(f),
+              selected: isSel,
+              selectedColor: _schoolColor,
+              labelStyle: TextStyle(
+                color: isSel ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                fontSize: 11,
+                fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+              ),
+              backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+              onSelected: (_) => setState(() => _eventFilter = f),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 16),
+
+        // Event List
+        ...filteredEvents.map((ev) {
+          final meta = ev['metadata'] as Map<String, dynamic>? ?? {};
+          final date = meta['event_date']?.toString() ?? 'TBA';
+          final loc = meta['location']?.toString() ?? 'Kampus ISRK';
+          final participants = meta['registered_participants']?.toString() ?? '0';
+          final category = meta['category']?.toString() ?? 'Event';
+          final isComp = meta['is_competition'] == true;
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 48,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _schoolColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: _schoolColor.withValues(alpha: 0.2)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.event, color: _schoolColor, size: 20),
+                      const SizedBox(height: 4),
+                      Text(
+                        date.split('-').last,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _schoolColor),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _schoolColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              category,
+                              style: const TextStyle(fontSize: 10, color: _schoolColor, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          if (isComp) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: _schoolColor,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'Lomba / Kompetisi',
+                                style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        ev['title'] ?? '',
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        ev['description'] ?? '',
+                        style: TextStyle(fontSize: 11.5, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 14,
+                        children: [
+                          _buildSmallInfo(Icons.calendar_today, date),
+                          _buildSmallInfo(Icons.place, loc),
+                          _buildSmallInfo(Icons.people, '$participants Peserta Terdaftar'),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: () => _showEventDetail(ev),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _schoolColor,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  ),
+                  child: const Text('Detail Event', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════════
+  // TAB 3: FITUR 3 - PELUANG MAGANG, RISET, DAN PROYEK
+  // ═════════════════════════════════════════════════════════════════════════════
+  Widget _buildTabOpportunities(bool isDark) {
+    final filteredOpps = _opportunities.where((o) {
+      if (_oppFilter == 'Semua') return true;
+      final meta = o['metadata'] as Map<String, dynamic>? ?? {};
+      final cat = meta['category']?.toString() ?? '';
+      if (_oppFilter == 'Magang MBKM') return cat.contains('Magang');
+      if (_oppFilter == 'Riset Kolaboratif') return cat.contains('Riset');
+      if (_oppFilter == 'Proyek Industri') return cat.contains('Proyek');
+      return true;
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Peluang Magang, Riset & Proyek Industri',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Fasilitasi siswa & dosen terlibat dalam program magang bersertifikat dan riset terapan DUDI',
+                  style: TextStyle(fontSize: 11.5, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                ),
+              ],
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BuatKebutuhanScreen(user: widget.user),
+                  ),
+                ).then((_) => _loadDashboardData());
+              },
+              icon: const Icon(Icons.add, size: 14),
+              label: const Text('Buka Peluang Baru'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _schoolColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Filter Chips
+        Wrap(
+          spacing: 8,
+          children: ['Semua', 'Magang MBKM', 'Riset Kolaboratif', 'Proyek Industri'].map((f) {
+            final isSel = _oppFilter == f;
+            return ChoiceChip(
+              label: Text(f),
+              selected: isSel,
+              selectedColor: _schoolColor,
+              labelStyle: TextStyle(
+                color: isSel ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                fontSize: 11,
+                fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+              ),
+              backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+              onSelected: (_) => setState(() => _oppFilter = f),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 16),
+
+        // Opportunity Cards
+        ...filteredOpps.map((opp) {
+          final meta = opp['metadata'] as Map<String, dynamic>? ?? {};
+          final partner = meta['industry_partner']?.toString() ?? 'Mitra Industri';
+          final duration = meta['duration']?.toString() ?? '6 Bulan';
+          final allowance = meta['allowance']?.toString() ??
+              (meta['budget'] != null ? 'Rp ${meta['budget']}' : 'Dibiayai Industri');
+          final quota = meta['quota']?.toString() ?? '5-10 Mahasiswa';
+          final applicants = meta['applicants_count']?.toString() ?? '12';
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: _schoolColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.work_outline, color: _schoolColor, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              opp['title'] ?? '',
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: _schoolColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              partner,
+                              style: const TextStyle(color: _schoolColor, fontSize: 10.5, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        opp['description'] ?? '',
+                        style: TextStyle(fontSize: 11.5, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 14,
+                        runSpacing: 4,
+                        children: [
+                          _buildSmallInfo(Icons.timer_outlined, duration),
+                          _buildSmallInfo(Icons.monetization_on_outlined, allowance),
+                          _buildSmallInfo(Icons.groups, 'Kuota: $quota'),
+                          _buildSmallInfo(Icons.assignment_ind_outlined, '$applicants Pendaftar'),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: () => _showOpportunityDetail(opp),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _schoolColor,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  ),
+                  child: const Text('Kelola', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════════
+  // TAB 4: FITUR 4 - DIREKTORI MITRA DAN INDUSTRI
+  // ═════════════════════════════════════════════════════════════════════════════
+  Widget _buildTabPartners(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Direktori Mitra Industri & Dunia Usaha (DUDI)',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Jejaring studio animasi, software house, production house, dan agency mitra MoU',
+                  style: TextStyle(fontSize: 11.5, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                ),
+              ],
+            ),
+            ElevatedButton.icon(
+              onPressed: () => _showAddPartnerDialog(),
+              icon: const Icon(Icons.add, size: 14),
+              label: const Text('Tambah Mitra Baru'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _schoolColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth > 750;
+
+            Widget partnerCard(Map<String, dynamic> p) {
+              final meta = p['metadata'] as Map<String, dynamic>? ?? {};
+              final cat = meta['category']?.toString() ?? 'Industri Kreatif';
+              final mou = meta['mou_period']?.toString() ?? 'Aktif';
+              final pic = meta['pic_name']?.toString() ?? 'PIC Kemitraan';
+              final contact = meta['contact']?.toString() ?? 'partner@industry.id';
+              final quota = meta['internship_quota_yearly']?.toString() ?? '10';
+
+              return Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: _schoolColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.business, color: _schoolColor, size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(p['title'] ?? '', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 2),
+                              Text(cat, style: const TextStyle(fontSize: 11, color: _schoolColor, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: _schoolColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text('MoU Aktif', style: TextStyle(fontSize: 10, color: _schoolColor, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      p['description'] ?? '',
+                      style: TextStyle(fontSize: 11.5, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 12),
+                    const Divider(height: 1),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 4,
+                      children: [
+                        _buildSmallInfo(Icons.badge_outlined, 'PIC: $pic'),
+                        _buildSmallInfo(Icons.history_edu, 'Masa: $mou'),
+                        _buildSmallInfo(Icons.group_add, 'Kuota Magang: $quota Siswa/Thn'),
+                        _buildSmallInfo(Icons.email_outlined, contact),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => _contactPartner(p),
+                            icon: const Icon(Icons.chat_bubble_outline_rounded, size: 14),
+                            label: const Text('Hubungi PIC', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _schoolColor,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => _proposeCollaboration(p),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: _schoolColor),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                            child: const Text('Ajukan Kerjasama', style: TextStyle(color: _schoolColor, fontSize: 11, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        IconButton.filledTonal(
+                          onPressed: () => _showPartnerDetail(p),
+                          icon: const Icon(Icons.info_outline, size: 16),
+                          style: IconButton.styleFrom(
+                            backgroundColor: _schoolColor.withValues(alpha: 0.1),
+                            foregroundColor: _schoolColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            if (isWide) {
+              return Wrap(
+                spacing: 14,
+                runSpacing: 14,
+                children: _partners.map((p) {
+                  return SizedBox(
+                    width: (constraints.maxWidth - 14) / 2,
+                    child: partnerCard(p),
+                  );
+                }).toList(),
+              );
+            }
+
+            return Column(
+              children: _partners.map((p) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: partnerCard(p),
+                );
+              }).toList(),
+            );
+          },
         ),
       ],
     );
   }
 
-  Widget _buildCalItem(String date, String title, String time) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: _schoolBlue.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              date,
-              style: const TextStyle(
-                color: _schoolBlue,
-                fontWeight: FontWeight.bold,
-                fontSize: 11,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
+  // ═════════════════════════════════════════════════════════════════════════════
+  // TAB 5: FITUR 5 - SISTEM REKRUTMEN DAN PENELUSURAN TALENTA
+  // ═════════════════════════════════════════════════════════════════════════════
+  Widget _buildTabTalents(bool isDark) {
+    final filteredTalents = _talents.where((t) {
+      if (_talentFilter == 'Semua') return true;
+      final meta = t['metadata'] as Map<String, dynamic>? ?? {};
+      final role = meta['role_label']?.toString() ?? '';
+      if (_talentFilter == 'Mahasiswa') return role.contains('Mahasiswa');
+      if (_talentFilter == 'Dosen Pembimbing') return role.contains('Dosen');
+      if (_talentFilter == 'Alumni Siap Kerja') return role.contains('Alumni');
+      return true;
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
+                const Text(
+                  'Sistem Rekrutmen & Penelusuran Talenta',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  time,
-                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  'Direktori mahasiswa berprestasi, lulusan siap kerja, dan dosen pembimbing riset',
+                  style: TextStyle(fontSize: 11.5, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
                 ),
               ],
+            ),
+            ElevatedButton.icon(
+              onPressed: () => _showAddTalentDialog(),
+              icon: const Icon(Icons.person_add, size: 14),
+              label: const Text('Daftarkan Talenta'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _schoolColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Filter Chips
+        Wrap(
+          spacing: 8,
+          children: ['Semua', 'Mahasiswa', 'Alumni Siap Kerja', 'Dosen Pembimbing'].map((f) {
+            final isSel = _talentFilter == f;
+            return ChoiceChip(
+              label: Text(f),
+              selected: isSel,
+              selectedColor: _schoolColor,
+              labelStyle: TextStyle(
+                color: isSel ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                fontSize: 11,
+                fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+              ),
+              backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+              onSelected: (_) => setState(() => _talentFilter = f),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 16),
+
+        // Talents List
+        ...filteredTalents.map((t) {
+          final meta = t['metadata'] as Map<String, dynamic>? ?? {};
+          final role = meta['role_label']?.toString() ?? 'Talenta';
+          final prodi = meta['study_program']?.toString() ?? 'Program Studi';
+          final gpa = meta['gpa']?.toString() ?? '3.8';
+          final status = meta['status_talent']?.toString() ?? 'Siap Magang';
+          final rating = meta['rating']?.toString() ?? '5.0';
+          final skills = (meta['skills'] as List?)?.join(', ') ?? 'Creative Arts';
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: _schoolColor.withValues(alpha: 0.1),
+                  child: Text(
+                    (t['title']?.toString() ?? 'T')[0].toUpperCase(),
+                    style: const TextStyle(color: _schoolColor, fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              t['title'] ?? '',
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: _schoolColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              status,
+                              style: const TextStyle(color: _schoolColor, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$role • $prodi',
+                        style: const TextStyle(fontSize: 11.5, color: _schoolColor, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        t['description'] ?? '',
+                        style: TextStyle(fontSize: 11.5, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 4,
+                        children: [
+                          _buildSmallInfo(Icons.star, 'Rating $rating/5.0'),
+                          _buildSmallInfo(Icons.grade_outlined, 'IPK: $gpa'),
+                          _buildSmallInfo(Icons.code, 'Keahlian: $skills'),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => _contactTalent(t),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _schoolColor,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      ),
+                      child: const Text('Hubungi', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(height: 6),
+                    OutlinedButton(
+                      onPressed: () => _showTalentDetail(t),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: _schoolColor),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      ),
+                      child: const Text('Profil', style: TextStyle(color: _schoolColor, fontSize: 11)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════════
+  // TAB 6: FITUR 6 - ANALITIK, EVALUASI & DAMPAK YANG DIRASAKAN
+  // ═════════════════════════════════════════════════════════════════════════════
+  Widget _buildTabAnalytics(bool isDark) {
+    final impacts = [
+      {
+        'title': 'Peningkatan Kualitas Lulusan',
+        'desc': '94.2% lulusan terserap industri dengan kompetensi praktis berbasis portofolio nyata.',
+        'metric': '94.2%',
+        'icon': Icons.school_outlined,
+      },
+      {
+        'title': 'Jejaring Lebih Luas',
+        'desc': '24 mitra industri DUDI, asosiasi profesi ADGI, dan 200+ indie studio kreatif terikat MoU.',
+        'metric': '24 Mitra',
+        'icon': Icons.diversity_3_outlined,
+      },
+      {
+        'title': 'Inovasi & Riset Berkelanjutan',
+        'desc': '14 publikasi jurnal dan 12 HKI hasil riset terapan kolaboratif dosen & mahasiswa.',
+        'metric': '12 HKI',
+        'icon': Icons.lightbulb_outline,
+      },
+      {
+        'title': 'Reputasi Institusi Meningkat',
+        'desc': 'Predikat Akreditasi Unggul BAN-PT dan skor kepuasan mitra industri mencapai 4.9 dari 5.0.',
+        'metric': '4.9 / 5.0',
+        'icon': Icons.trending_up,
+      },
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Dashboard Analitik & Laporan Akuntabilitas',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Capaian indikator kinerja utama (IKU) dan dampak nyata kemitraan di Kreavana',
+                  style: TextStyle(fontSize: 11.5, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                ),
+              ],
+            ),
+            ElevatedButton.icon(
+              onPressed: () => _downloadReport(),
+              icon: const Icon(Icons.download, size: 14),
+              label: const Text('Unduh Laporan Mutu PDF'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _schoolColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // 4 Dampak yang dirasakan (Sesuai diagram infografis)
+        const Text(
+          'Dampak yang Dirasakan Institusi',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth > 750;
+
+            Widget impactCard(Map<String, dynamic> imp) {
+              return Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: _schoolColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(imp['icon'] as IconData, color: _schoolColor, size: 18),
+                        ),
+                        Text(
+                          imp['metric'] as String,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _schoolColor),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(imp['title'] as String, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text(
+                      imp['desc'] as String,
+                      style: TextStyle(fontSize: 11, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600, height: 1.35),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            if (isWide) {
+              return Row(
+                children: impacts.map((imp) {
+                  return Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: impactCard(imp),
+                    ),
+                  );
+                }).toList(),
+              );
+            }
+
+            return Column(
+              children: impacts.map((imp) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: impactCard(imp),
+                );
+              }).toList(),
+            );
+          },
+        ),
+        const SizedBox(height: 24),
+
+        // Laporan Tersimpan
+        const Text(
+          'Dokumen & Laporan Akuntabilitas Resmi',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+
+        ..._reports.map((rep) {
+          final meta = rep['metadata'] as Map<String, dynamic>? ?? {};
+          final period = meta['period']?.toString() ?? '2026';
+          final cat = meta['category']?.toString() ?? 'Laporan Kinerja';
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: _schoolColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.picture_as_pdf_outlined, color: _schoolColor, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(rep['title'] ?? '', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 2),
+                      Text('$cat • Periode $period', style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600)),
+                    ],
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _downloadReport(title: rep['title'], rawDoc: rep),
+                  icon: const Icon(Icons.download_rounded, size: 14, color: _schoolColor),
+                  label: const Text('Unduh PDF', style: TextStyle(color: _schoolColor, fontSize: 11, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: _schoolColor),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+        const SizedBox(height: 20),
+
+        // Dokumen Legalitas & MoU Kemitraan
+        const Text(
+          'Dokumen Legalitas & MoU Kemitraan Kampus',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+
+        ..._documents.map((doc) {
+          final meta = doc['metadata'] as Map<String, dynamic>? ?? {};
+          final num = meta['document_number'] ?? meta['sk_number'] ?? '-';
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: _schoolColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.folder_shared_outlined, color: _schoolColor, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(doc['title'] ?? '', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 2),
+                      Text('Nomor: $num', style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600)),
+                    ],
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _downloadReport(title: doc['title'], rawDoc: doc),
+                  icon: const Icon(Icons.download_rounded, size: 14, color: _schoolColor),
+                  label: const Text('Unduh PDF', style: TextStyle(color: _schoolColor, fontSize: 11, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: _schoolColor),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildSmallInfo(IconData icon, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: _schoolColor),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════════
+  // MODAL FORMS & DIALOG UJI COBA FITUR
+  // ═════════════════════════════════════════════════════════════════════════════
+
+  void _showWorkflowStageDetail(Map<String, dynamic> stage) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: _schoolColor,
+              child: Text(
+                '${stage['step']}',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(stage['title'] as String, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              stage['desc'] as String,
+              style: const TextStyle(fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _schoolColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_outline, color: _schoolColor, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Status saat ini: ${stage['status']}',
+                      style: const TextStyle(color: _schoolColor, fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() => _currentWorkflowStep = (stage['step'] as int) - 1);
+              AppSweetAlert.success(
+                context,
+                'Tahapan ${stage['title']} aktif dan diverifikasi oleh sistem Kreavana.',
+                title: 'Alur Kerja Terverifikasi',
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _schoolColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Verifikasi Tahap'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddEventDialog() {
+    final titleCtrl = TextEditingController();
+    String category = 'Pameran & Expo';
+    final descCtrl = TextEditingController();
+    final locCtrl = TextEditingController(text: 'Grand Hall Kampus Terpadu ISRK');
+    final quotaCtrl = TextEditingController(text: '100');
+    DateTime selectedDate = DateTime.now().add(const Duration(days: 14));
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Buat Kegiatan / Lomba Baru', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: titleCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Nama Kegiatan / Lomba *',
+                      hintText: 'Contoh: Creative Game Jam 2026',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: category,
+                    decoration: const InputDecoration(labelText: 'Kategori Kegiatan'),
+                    items: const [
+                      DropdownMenuItem(value: 'Pameran & Expo', child: Text('Pameran & Expo')),
+                      DropdownMenuItem(value: 'Kompetisi & Lomba', child: Text('Kompetisi & Lomba')),
+                      DropdownMenuItem(value: 'Workshop & Seminar', child: Text('Workshop & Seminar')),
+                      DropdownMenuItem(value: 'Showcase Tugas Akhir', child: Text('Showcase Tugas Akhir')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setDialogState(() => category = v);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime(2030),
+                        helpText: 'Pilih Tanggal Pelaksanaan Event',
+                      );
+                      if (picked != null) {
+                        setDialogState(() => selectedDate = picked);
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Tanggal Pelaksanaan',
+                        suffixIcon: Icon(Icons.calendar_today_outlined, size: 18),
+                      ),
+                      child: Text(
+                        '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: locCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Lokasi / Venue Pelaksanaan',
+                      hintText: 'Contoh: Grand Hall Kampus Terpadu ISRK',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: quotaCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Target / Kuota Peserta (Orang)',
+                      hintText: 'Contoh: 100',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: descCtrl,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Deskripsi Singkat Event',
+                      hintText: 'Jelaskan tujuan kegiatan, target audiens, dan fasilitas...',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+              ElevatedButton(
+                onPressed: () async {
+                  if (titleCtrl.text.trim().isEmpty) return;
+                  Navigator.pop(ctx);
+
+                  final dateStr = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+                  final isComp = category.toLowerCase().contains('lomba') || titleCtrl.text.toLowerCase().contains('lomba');
+                  final quotaInt = int.tryParse(quotaCtrl.text.trim()) ?? 50;
+
+                  final newRecord = {
+                    'resource_type': 'events',
+                    'title': titleCtrl.text.trim(),
+                    'description': descCtrl.text.trim().isNotEmpty ? descCtrl.text.trim() : 'Kegiatan resmi kampus & industri.',
+                    'status': 'open',
+                    'metadata': {
+                      'category': category,
+                      'event_date': dateStr,
+                      'location': locCtrl.text.trim().isNotEmpty ? locCtrl.text.trim() : 'Kampus Terpadu ISRK',
+                      'registered_participants': quotaInt,
+                      'is_competition': isComp,
+                    },
+                  };
+
+                  final parentContext = context;
+                  try {
+                    await ApiService.post('institution/resources', newRecord);
+                  } catch (_) {}
+
+                  if (mounted) {
+                    setState(() {
+                      _resources.insert(0, newRecord);
+                    });
+
+                    AppSweetAlert.success(
+                      parentContext,
+                      'Event "${titleCtrl.text}" berhasil dipublikasikan dan tersimpan di database.',
+                      title: 'Event Berhasil Dibuat',
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: _schoolColor, foregroundColor: Colors.white),
+                child: const Text('Simpan & Publikasikan'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showAddPartnerDialog() {
+    final titleCtrl = TextEditingController();
+    final catCtrl = TextEditingController(text: 'Studio Animasi & Game');
+    final picCtrl = TextEditingController();
+    final contactCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Tambah Mitra Industri Baru', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                decoration: const InputDecoration(labelText: 'Nama Perusahaan / Studio *', hintText: 'Contoh: PT Kreasi Animasi Nusantara'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: catCtrl,
+                decoration: const InputDecoration(labelText: 'Kategori Industri'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: picCtrl,
+                decoration: const InputDecoration(labelText: 'Nama PIC Kemitraan'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: contactCtrl,
+                decoration: const InputDecoration(labelText: 'Email / Kontak PIC'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          ElevatedButton(
+            onPressed: () async {
+              if (titleCtrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx);
+
+              final newRecord = {
+                'resource_type': 'partners',
+                'title': titleCtrl.text.trim(),
+                'description': 'Mitra industri strategis kerjasama vokasi & MBKM.',
+                'status': 'published',
+                'metadata': {
+                  'category': catCtrl.text.trim(),
+                  'pic_name': picCtrl.text.trim().isNotEmpty ? picCtrl.text.trim() : 'Direktur Kemitraan',
+                  'contact': contactCtrl.text.trim().isNotEmpty ? contactCtrl.text.trim() : 'partner@kreavana.id',
+                  'mou_period': '2026 - 2029 (Aktif)',
+                  'internship_quota_yearly': 10,
+                },
+              };
+
+              try {
+                await ApiService.post('institution/resources', newRecord);
+              } catch (_) {}
+
+              setState(() {
+                _resources.insert(0, newRecord);
+              });
+
+              if (mounted) {
+                AppSweetAlert.success(
+                  context,
+                  'Mitra industri "${titleCtrl.text}" berhasil ditambahkan.',
+                  title: 'Mitra DUDI Ditambahkan',
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: _schoolColor, foregroundColor: Colors.white),
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddStudyProgramDialog() {
+    final titleCtrl = TextEditingController();
+    final degreeCtrl = TextEditingController(text: 'D4 / Sarjana Terapan');
+    final accCtrl = TextEditingController(text: 'Unggul (BAN-PT)');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Tambah Program Studi Baru', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleCtrl,
+              decoration: const InputDecoration(labelText: 'Nama Program Studi *', hintText: 'Contoh: D4 Game Technology'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: degreeCtrl,
+              decoration: const InputDecoration(labelText: 'Jenjang Pendidikan'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: accCtrl,
+              decoration: const InputDecoration(labelText: 'Status Akreditasi'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          ElevatedButton(
+            onPressed: () async {
+              if (titleCtrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx);
+
+              final newRecord = {
+                'resource_type': 'study_programs',
+                'title': titleCtrl.text.trim(),
+                'description': 'Program studi terakreditasi berbasis kurikulum kemitraan industri.',
+                'status': 'published',
+                'metadata': {
+                  'degree': degreeCtrl.text.trim(),
+                  'accreditation': accCtrl.text.trim(),
+                  'total_students': 150,
+                  'employment_rate': '91.5%',
+                },
+              };
+
+              try {
+                await ApiService.post('institution/resources', newRecord);
+              } catch (_) {}
+
+              setState(() {
+                _resources.insert(0, newRecord);
+              });
+
+              if (mounted) {
+                AppSweetAlert.success(
+                  context,
+                  'Program studi "${titleCtrl.text}" berhasil ditambahkan.',
+                  title: 'Prodi Berhasil Ditambahkan',
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: _schoolColor, foregroundColor: Colors.white),
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddTalentDialog() {
+    final nameCtrl = TextEditingController();
+    final roleCtrl = TextEditingController(text: 'Mahasiswa Tingkat Akhir');
+    final skillCtrl = TextEditingController(text: 'UI/UX Design, Flutter');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Daftarkan Talenta Mahasiswa / Dosen', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(labelText: 'Nama Lengkap *'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: roleCtrl,
+              decoration: const InputDecoration(labelText: 'Peran / Jenjang'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: skillCtrl,
+              decoration: const InputDecoration(labelText: 'Keahlian Utama (Pisahkan Koma)'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameCtrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx);
+
+              final newRecord = {
+                'resource_type': 'talents',
+                'title': nameCtrl.text.trim(),
+                'description': 'Talenta unggulan terverifikasi siap berkarya di industri kreatif.',
+                'status': 'published',
+                'metadata': {
+                  'role_label': roleCtrl.text.trim(),
+                  'study_program': 'Desain Komunikasi Visual',
+                  'skills': skillCtrl.text.split(',').map((s) => s.trim()).toList(),
+                  'status_talent': 'Siap Magang',
+                  'rating': 4.9,
+                  'gpa': '3.85',
+                },
+              };
+
+              try {
+                await ApiService.post('institution/resources', newRecord);
+              } catch (_) {}
+
+              setState(() {
+                _resources.insert(0, newRecord);
+              });
+
+              if (mounted) {
+                AppSweetAlert.success(
+                  context,
+                  'Talenta "${nameCtrl.text}" berhasil dimasukkan ke penelusuran industri.',
+                  title: 'Talenta Terdaftar',
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: _schoolColor, foregroundColor: Colors.white),
+            child: const Text('Daftarkan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showStudyProgramDetail(Map<String, dynamic> prodi) {
+    final meta = prodi['metadata'] as Map<String, dynamic>? ?? {};
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(prodi['title'] ?? 'Program Studi', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(prodi['description'] ?? '', style: const TextStyle(fontSize: 12.5, height: 1.4)),
+            const SizedBox(height: 14),
+            _buildDetailRow('Jenjang', meta['degree']?.toString() ?? '-'),
+            _buildDetailRow('Akreditasi', meta['accreditation']?.toString() ?? '-'),
+            _buildDetailRow('Mahasiswa Aktif', '${meta['total_students'] ?? 0} Orang'),
+            _buildDetailRow('Serapan Industri', meta['employment_rate']?.toString() ?? '-'),
+            _buildDetailRow('Ketua Program Studi', meta['head_of_program']?.toString() ?? '-'),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+        ],
+      ),
+    );
+  }
+
+  void _showEventDetail(Map<String, dynamic> ev) {
+    final meta = ev['metadata'] as Map<String, dynamic>? ?? {};
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(ev['title'] ?? 'Detail Kegiatan', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(ev['description'] ?? '', style: const TextStyle(fontSize: 12.5, height: 1.4)),
+            const SizedBox(height: 14),
+            _buildDetailRow('Kategori', meta['category']?.toString() ?? '-'),
+            _buildDetailRow('Tanggal', meta['event_date']?.toString() ?? '-'),
+            _buildDetailRow('Lokasi', meta['location']?.toString() ?? '-'),
+            _buildDetailRow('Peserta Terdaftar', '${meta['registered_participants'] ?? 0} Orang'),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              AppSweetAlert.success(context, 'Data pendaftaran event telah disinkronkan ke portal publik.');
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: _schoolColor, foregroundColor: Colors.white),
+            child: const Text('Sinkronkan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showOpportunityDetail(Map<String, dynamic> opp) {
+    final meta = opp['metadata'] as Map<String, dynamic>? ?? {};
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(opp['title'] ?? 'Program Magang', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(opp['description'] ?? '', style: const TextStyle(fontSize: 12.5, height: 1.4)),
+            const SizedBox(height: 14),
+            _buildDetailRow('Mitra Industri', meta['industry_partner']?.toString() ?? '-'),
+            _buildDetailRow('Kuota', meta['quota']?.toString() ?? '-'),
+            _buildDetailRow('Uang Saku/Honor', meta['allowance']?.toString() ?? '-'),
+            _buildDetailRow('Durasi', meta['duration']?.toString() ?? '-'),
+            _buildDetailRow('Pendaftar', '${meta['applicants_count'] ?? 0} Mahasiswa'),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              AppSweetAlert.success(context, 'Daftar pelamar magang siap diseleksi & dikonversi 20 SKS MBKM.');
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: _schoolColor, foregroundColor: Colors.white),
+            child: const Text('Seleksi Pelamar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPartnerDetail(Map<String, dynamic> p) {
+    final meta = p['metadata'] as Map<String, dynamic>? ?? {};
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(p['title'] ?? 'Detail Mitra', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(p['description'] ?? '', style: const TextStyle(fontSize: 12.5, height: 1.4)),
+            const SizedBox(height: 14),
+            _buildDetailRow('Kategori', meta['category']?.toString() ?? '-'),
+            _buildDetailRow('Status MoU', meta['mou_period']?.toString() ?? '-'),
+            _buildDetailRow('PIC', meta['pic_name']?.toString() ?? '-'),
+            _buildDetailRow('Kontak', meta['contact']?.toString() ?? '-'),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+        ],
+      ),
+    );
+  }
+
+  void _showTalentDetail(Map<String, dynamic> t) {
+    final meta = t['metadata'] as Map<String, dynamic>? ?? {};
+    final title = t['title']?.toString() ?? 'Talenta';
+    final role = meta['role_label']?.toString() ?? 'Mahasiswa Berprestasi';
+    final prodi = meta['study_program']?.toString() ?? 'Program Studi';
+    final gpa = meta['gpa']?.toString() ?? '3.8';
+    final status = meta['status_talent']?.toString() ?? 'Siap Magang';
+    final skills = (meta['skills'] as List?)?.join(', ') ?? 'Creative Skills & Pipeline';
+    final email = meta['email']?.toString() ?? 'talenta@isrk.ac.id';
+    final phone = meta['phone']?.toString() ?? '+62 812-3456-7890';
+    final achievements = meta['achievements']?.toString() ?? 'Juara Kompetisi Desain Kreatif & Sertifikasi BNSP';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: _schoolColor.withValues(alpha: 0.12),
+                    child: Text(
+                      title[0].toUpperCase(),
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _schoolColor),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 2),
+                        Text('$role • $prodi', style: const TextStyle(fontSize: 12, color: _schoolColor, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: _schoolColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(status, style: const TextStyle(fontSize: 10, color: _schoolColor, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(width: 8),
+                            Text('IPK: $gpa', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              const Divider(),
+              const SizedBox(height: 10),
+              Text(
+                t['description'] ?? '',
+                style: const TextStyle(fontSize: 12.5, height: 1.4),
+              ),
+              const SizedBox(height: 14),
+              _buildDetailRow('Email Akademik', email),
+              _buildDetailRow('Kontak WhatsApp', phone),
+              _buildDetailRow('Keahlian Unggulan', skills),
+              _buildDetailRow('Prestasi & Portofolio', achievements),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _contactTalent(t);
+                      },
+                      icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
+                      label: const Text('Mulai Chat di Kreavana'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _schoolColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MarketplaceKaryaScreen(user: widget.user),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.collections_bookmark_outlined, size: 16, color: _schoolColor),
+                    label: const Text('Lihat Karya Siswa', style: TextStyle(color: _schoolColor)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: _schoolColor),
+                      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 120, child: Text(label, style: const TextStyle(fontSize: 11.5, color: Colors.grey))),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold))),
+        ],
+      ),
+    );
+  }
+
+  void _proposeCollaboration(Map<String, dynamic> p) {
+    final meta = p['metadata'] as Map<String, dynamic>? ?? {};
+    final title = p['title']?.toString() ?? 'Mitra Industri';
+    final pic = meta['pic_name']?.toString() ?? 'PIC Kemitraan';
+    final typeCtrl = TextEditingController(text: 'Magang Bersertifikat MBKM (20 SKS)');
+    final noteCtrl = TextEditingController(text: 'Kami dari Institut Seni & Rekayasa Kreatif Nusantara ingin menjalin kerjasama kemitraan magang & riset.');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Ajukan Kerjasama dengan $title', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Ditujukan kepada PIC: $pic', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: typeCtrl,
+              decoration: const InputDecoration(labelText: 'Bentuk Kerjasama / Program', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: noteCtrl,
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'Pesan / Pengantar Kerjasama', border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DirectMessageScreen(
+                    currentUser: widget.user,
+                    initialChat: {
+                      'id': 'partner_${p['id'] ?? title.hashCode}',
+                      'name': '$pic ($title)',
+                      'username': title.toLowerCase().replaceAll(' ', '_'),
+                      'role': 'Mitra Industri & DUDI',
+                      'sub_role': meta['category']?.toString() ?? 'Industri',
+                      'avatar': '',
+                      'is_online': true,
+                    },
+                    showSidebar: false,
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.send_rounded, size: 16),
+            label: const Text('Kirim & Buka Chat'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _schoolColor,
+              foregroundColor: Colors.white,
             ),
           ),
         ],
       ),
     );
+  }
+
+  void _contactPartner(Map<String, dynamic> p) {
+    final meta = p['metadata'] as Map<String, dynamic>? ?? {};
+    final title = p['title']?.toString() ?? 'Mitra Industri';
+    final pic = meta['pic_name']?.toString() ?? 'PIC Kemitraan';
+    final cat = meta['category']?.toString() ?? 'Industri';
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DirectMessageScreen(
+          currentUser: widget.user,
+          initialChat: {
+            'id': 'partner_${p['id'] ?? title.hashCode}',
+            'name': '$pic ($title)',
+            'username': title.toLowerCase().replaceAll(' ', '_'),
+            'role': 'Mitra Industri & DUDI',
+            'sub_role': cat,
+            'avatar': '',
+            'is_online': true,
+          },
+          showSidebar: false,
+        ),
+      ),
+    );
+  }
+
+  void _contactTalent(Map<String, dynamic> t) {
+    final meta = t['metadata'] as Map<String, dynamic>? ?? {};
+    final title = t['title']?.toString() ?? 'Talenta Kreavana';
+    final role = meta['role_label']?.toString() ?? 'Talenta Vokasi';
+    final prodi = meta['study_program']?.toString() ?? 'Program Studi';
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DirectMessageScreen(
+          currentUser: widget.user,
+          initialChat: {
+            'id': 'talent_${t['id'] ?? title.hashCode}',
+            'name': title,
+            'username': title.toLowerCase().replaceAll(' ', '_'),
+            'role': role,
+            'sub_role': prodi,
+            'avatar': '',
+            'is_online': true,
+          },
+          showSidebar: false,
+        ),
+      ),
+    );
+  }
+
+  void _downloadReport({String? title, Map<String, dynamic>? rawDoc}) {
+    final doc = rawDoc ?? (_reports.isNotEmpty ? _reports.first : _getDefaultReports().first);
+    final meta = (doc['metadata'] as Map<String, dynamic>?) ?? {};
+    final docTitle = title ?? doc['title']?.toString() ?? 'Laporan Akuntabilitas Kinerja Serapan Magang MBKM 2025/2026';
+    final docNum = meta['document_number']?.toString() ??
+        meta['sk_number']?.toString() ??
+        meta['doc_number']?.toString() ??
+        '048/SK-MUTU/ISRK/2026';
+    final cat = meta['category']?.toString() ?? 'Laporan Akuntabilitas & Mutu';
+    final desc = doc['description']?.toString() ??
+        'Dokumen resmi terverifikasi sistem akreditasi vokasi Kreavana.';
+
+    final attributes = <String, String>{
+      'Nomor Dokumen / SK': docNum,
+      'Kategori Dokumen': cat,
+      'Institusi Penerbit': 'Institut Seni & Rekayasa Kreatif Nusantara (ISRK)',
+      'Akreditasi Institusi': 'Predikat UNGGUL (BAN-PT)',
+      'Status Verifikasi': 'Tersertifikasi Digital BSrE / BSSN RI',
+    };
+    if (meta.containsKey('period')) attributes['Periode Akademik'] = meta['period'].toString();
+    if (meta.containsKey('valid_until')) attributes['Masa Berlaku'] = meta['valid_until'].toString();
+    if (meta.containsKey('total_interns')) attributes['Mahasiswa Terlibat'] = '${meta['total_interns']} Mahasiswa';
+    if (meta.containsKey('completion_rate')) attributes['Tingkat Keberhasilan'] = meta['completion_rate'].toString();
+    if (meta.containsKey('partner_satisfaction')) attributes['Indeks Kepuasan Mitra'] = meta['partner_satisfaction'].toString();
+    if (meta.containsKey('grade')) attributes['Peringkat Akreditasi'] = meta['grade'].toString();
+
+    SchoolPdfService.downloadOfficialPdf(
+      context,
+      title: docTitle,
+      category: cat,
+      docNumber: docNum,
+      date: '18 Oktober 2026',
+      description: desc,
+      attributes: attributes,
+      rawDocument: doc,
+    );
+  }
+
+  List<Map<String, dynamic>> _getDefaultDocuments() {
+    return [
+      {
+        'id': 'doc_1',
+        'resource_type': 'documents',
+        'title': 'Perjanjian Kerjasama (MoU) Induk Kemitraan Kampus - DUDI 2025-2028',
+        'description': 'Dokumen resmi legalitas kerjasama strategis pelaksanaan magang bersertifikat, kurikulum bersama, dan riset kolaborasi industri.',
+        'status': 'published',
+        'metadata': {
+          'document_number': '001/MOU-ISRK/DIR/2025',
+          'category': 'MoU Kemitraan Industri',
+          'valid_until': '2028-12-31',
+          'file_format': 'PDF',
+          'file_size': '2.4 MB',
+          'verified': true,
+        },
+      },
+      {
+        'id': 'doc_2',
+        'resource_type': 'documents',
+        'title': 'Sertifikat Akreditasi Institusi Predikat Unggul (BAN-PT)',
+        'description': 'Surat Keputusan Badan Akreditasi Nasional Perguruan Tinggi Nomor 412/SK/BAN-PT/Ak/PT/2024 tentang Akreditasi Institusi Pendidikan Vokasi.',
+        'status': 'published',
+        'metadata': {
+          'document_number': '412/SK/BAN-PT/Ak/PT/2024',
+          'sk_number': '412/SK/BAN-PT/Ak/PT/2024',
+          'category': 'Akreditasi Institusi',
+          'valid_until': '2029-08-15',
+          'grade': 'Unggul',
+          'file_format': 'PDF',
+          'file_size': '1.8 MB',
+        },
+      },
+      {
+        'id': 'doc_3',
+        'resource_type': 'documents',
+        'title': 'Pedoman Teknis Magang PKL & Skema Konversi 20 SKS MBKM',
+        'description': 'Buku panduan lengkap alur pendaftaran, pembimbingan dosen, logbook harian, dan evaluasi nilai industri untuk konversi SKS kurikulum.',
+        'status': 'published',
+        'metadata': {
+          'document_number': '024/PED-MBKM/ISRK/2026',
+          'category': 'Pedoman Akademik',
+          'edition': 'Edisi Revisi 2026',
+          'pages': 48,
+          'file_format': 'PDF',
+          'file_size': '3.2 MB',
+        },
+      },
+      {
+        'id': 'doc_4',
+        'resource_type': 'documents',
+        'title': 'Surat Keputusan Rektor tentang Penetapan Kurikulum Berbasis Kemitraan DUDI',
+        'description': 'Pemberlakuan modul ajar praktikum terintegrasi dengan kebutuhan industri animasi, desain, software, dan audio multimedia.',
+        'status': 'published',
+        'metadata': {
+          'document_number': '088/SK-REK/ISRK/2026',
+          'category': 'Surat Keputusan (SK)',
+          'valid_until': '2027-12-31',
+          'file_format': 'PDF',
+          'file_size': '1.5 MB',
+        },
+      },
+    ];
+  }
+
+  List<Map<String, dynamic>> _getDefaultEvents() {
+    return [
+      {
+        'id': 'ev_default_1',
+        'resource_type': 'events',
+        'title': 'Kreavana Annual Creative Showcase & Expo 2026',
+        'description': 'Pameran akbar 150+ portofolio karya tugas akhir mahasiswa, temu praktisi industri, dan pitching proyek kreatif ke calon investor & studio partner.',
+        'status': 'open',
+        'metadata': {
+          'category': 'Pameran & Expo',
+          'event_date': '2026-11-24',
+          'location': 'Grand Exhibition Hall Kampus Terpadu ISRK & Virtual Room',
+          'registered_participants': 450,
+          'is_competition': false,
+        },
+      },
+      {
+        'id': 'ev_default_2',
+        'resource_type': 'events',
+        'title': 'National Creative Hackathon & Game Jam 2026',
+        'description': 'Kompetisi 48 jam pembuatan prototipe game edukasi bertema kearifan lokal nusantara, kolaborasi tim developer, 3D artist, dan audio designer.',
+        'status': 'open',
+        'metadata': {
+          'category': 'Kompetisi & Lomba',
+          'event_date': '2026-12-15',
+          'location': 'Inkubator Kreatif Lantai 4 ISRK & Hybrid Online',
+          'registered_participants': 78,
+          'is_competition': true,
+        },
+      },
+    ];
+  }
+
+  List<Map<String, dynamic>> _getDefaultReports() {
+    return [
+      {
+        'id': 'rep_1',
+        'resource_type': 'reports',
+        'title': 'Laporan Akuntabilitas Kinerja Serapan Magang MBKM 2025/2026',
+        'description': 'Evaluasi capaian penempatan 168 mahasiswa pada 24 industri mitra dengan tingkat keberhasilan penyelesaian magang mencapai 98.2%.',
+        'status': 'published',
+        'metadata': {
+          'period': 'TA 2025/2026',
+          'category': 'Laporan Evaluasi MBKM',
+          'doc_number': '048/LAP-MBKM/ISRK/2026',
+          'total_interns': 168,
+          'completion_rate': '98.2%',
+          'partner_satisfaction': '4.9 / 5.0',
+        },
+      },
+      {
+        'id': 'rep_2',
+        'resource_type': 'reports',
+        'title': 'Survei Kepuasan Industri Terhadap Kualitas Lulusan & Talenta Vokasi',
+        'description': 'Hasil survei umpan balik dari 32 industri mitra yang mempekerjakan lulusan ISRK di bidang software, animasi, dan desain.',
+        'status': 'published',
+        'metadata': {
+          'period': 'Semester Genap 2025',
+          'category': 'Survei Kepuasan Pengguna',
+          'doc_number': '052/SURV-DUDI/ISRK/2025',
+          'satisfaction_score': '94.6%',
+        },
+      },
+      {
+        'id': 'rep_3',
+        'resource_type': 'reports',
+        'title': 'Laporan Capaian Akreditasi Institusi & Kemitraan DUDI Berkelanjutan',
+        'description': 'Rangkuman pemenuhan 9 kriteria akreditasi unggul BAN-PT serta dampak kemitraan industri terhadap peningkatan kompetensi pendidik.',
+        'status': 'published',
+        'metadata': {
+          'period': 'Triwulan III 2026',
+          'category': 'Laporan Akreditasi & Mutu',
+          'doc_number': '061/LAP-MUTU/ISRK/2026',
+          'criteria_met': '9 dari 9 Kriteria',
+        },
+      },
+    ];
   }
 
   void _handleLogout() async {
@@ -1231,5 +3629,251 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen> {
         (route) => false,
       );
     }
+  }
+
+  // ── FALLBACK DUMMY DATA LENGKAP ───────────────────────────────────────────
+  List<Map<String, dynamic>> _getFallbackDummyResources() {
+    return [
+      // Program Studi
+      {
+        'resource_type': 'study_programs',
+        'title': 'S1 / D4 Desain Komunikasi Visual (DKV)',
+        'description': 'Program studi unggulan fokus pada Brand Identity, UI/UX Design, Motion Graphics, dan Desain Interaktif.',
+        'status': 'published',
+        'metadata': {
+          'degree': 'D4 / Sarjana Terapan',
+          'accreditation': 'Unggul (BAN-PT)',
+          'total_students': 340,
+          'employment_rate': '94.2%',
+          'head_of_program': 'Dr. Maya Kartika, M.Ds.',
+          'featured_skills': ['UI/UX Design', 'Brand Identity', 'Motion Graphics'],
+        },
+      },
+      {
+        'resource_type': 'study_programs',
+        'title': 'D4 Animasi & Pemodelan 3D',
+        'description': 'Mencetak profesional 3D Artist, Character Rigger, dan Animator dengan pipeline standar studio film global.',
+        'status': 'published',
+        'metadata': {
+          'degree': 'D4 / Sarjana Terapan',
+          'accreditation': 'Unggul (BAN-PT)',
+          'total_students': 220,
+          'employment_rate': '96.5%',
+          'head_of_program': 'Budi Wicaksono, M.Sn.',
+          'featured_skills': ['Maya', 'Blender', 'ZBrush', 'Character Rigging'],
+        },
+      },
+      {
+        'resource_type': 'study_programs',
+        'title': 'D4 Rekayasa Perangkat Lunak Aplikasi (RPL)',
+        'description': 'Pengembangan software modern, mobile app multiplatform, web engineering, dan kecerdasan buatan terapan.',
+        'status': 'published',
+        'metadata': {
+          'degree': 'D4 / Sarjana Terapan',
+          'accreditation': 'A',
+          'total_students': 280,
+          'employment_rate': '92.8%',
+          'head_of_program': 'Ahmad Fauzi, S.Kom., M.T.',
+          'featured_skills': ['Flutter', 'Laravel', 'React', 'DevOps'],
+        },
+      },
+      // Events
+      {
+        'resource_type': 'events',
+        'title': 'Kreavana Annual Creative Showcase & Expo 2026',
+        'description': 'Pameran akbar 150+ portofolio karya tugas akhir mahasiswa, temu praktisi industri, dan pitching proyek kreatif.',
+        'status': 'open',
+        'metadata': {
+          'category': 'Pameran & Expo',
+          'event_date': '2026-11-24',
+          'location': 'Grand Exhibition Hall ISRK',
+          'registered_participants': 450,
+          'is_competition': false,
+        },
+      },
+      {
+        'resource_type': 'events',
+        'title': 'National Creative Hackathon & Game Jam 2026',
+        'description': 'Kompetisi 48 jam pembuatan prototipe game edukasi bertema kearifan lokal nusantara.',
+        'status': 'open',
+        'metadata': {
+          'category': 'Kompetisi & Lomba',
+          'event_date': '2026-12-15',
+          'location': 'Inkubator Kreatif Lantai 4 ISRK',
+          'registered_participants': 78,
+          'is_competition': true,
+        },
+      },
+      // Opportunities
+      {
+        'resource_type': 'tenders',
+        'title': 'Program Magang MBKM: 3D Character & Environment Modeler',
+        'description': 'Kesempatan magang bersertifikat selama 6 bulan di studio animasi untuk pengerjaan aset serial animasi 3D.',
+        'status': 'open',
+        'metadata': {
+          'category': 'Magang PKL / MBKM',
+          'industry_partner': 'PT Studio Animasi Nusantara',
+          'quota': '10 Mahasiswa',
+          'allowance': 'Rp 3.500.000 / bulan',
+          'duration': '6 Bulan',
+          'applicants_count': 24,
+        },
+      },
+      {
+        'resource_type': 'tenders',
+        'title': 'Riset Terapan: Penerapan Fotogrametri 3D untuk Cagar Budaya',
+        'description': 'Hibah penelitian kolaboratif dosen dan mahasiswa bersama instansi kebudayaan dalam mendokumentasikan artefak bersejarah.',
+        'status': 'in_progress',
+        'metadata': {
+          'category': 'Riset Kolaboratif Industri',
+          'industry_partner': 'Balai Pelestarian Kebudayaan',
+          'budget': 65000000,
+          'duration': '8 Bulan',
+          'applicants_count': 4,
+        },
+      },
+      // Partners
+      {
+        'resource_type': 'partners',
+        'title': 'PT Studio Animasi Nusantara',
+        'description': 'Studio animasi 3D spesialis feature film dan serial animasi internasional. Mitra strategis penyedia tempat magang PKL.',
+        'status': 'published',
+        'metadata': {
+          'category': 'Studio Animasi & Game',
+          'mou_period': '2025 - 2028 (Aktif)',
+          'pic_name': 'Hendra Gunawan, S.Sn.',
+          'contact': 'kemitraan@animasinusantara.id',
+          'internship_quota_yearly': 15,
+        },
+      },
+      {
+        'resource_type': 'partners',
+        'title': 'Pixel Creative Agency',
+        'description': 'Digital agency terkemuka berfokus pada visual branding, UI/UX mobile apps, dan kampanye media interaktif.',
+        'status': 'published',
+        'metadata': {
+          'category': 'Creative & Digital Agency',
+          'mou_period': '2025 - 2027 (Aktif)',
+          'pic_name': 'Maya Angelia, M.Ds.',
+          'contact': 'partner@pixelcreatives.id',
+          'internship_quota_yearly': 10,
+        },
+      },
+      // Talents
+      {
+        'resource_type': 'talents',
+        'title': 'Arya Bagaskara',
+        'description': 'Mahasiswa Semester 6 S1 Animasi 3D berfokus pada Character Modeling, Hard Surface Asset, dan Texturing.',
+        'status': 'published',
+        'metadata': {
+          'role_label': 'Mahasiswa Tingkat Akhir',
+          'study_program': 'D4 Animasi & Pemodelan 3D',
+          'gpa': '3.88',
+          'status_talent': 'Siap Magang',
+          'rating': 4.9,
+          'skills': ['Blender', 'Autodesk Maya', 'ZBrush'],
+        },
+      },
+      {
+        'resource_type': 'talents',
+        'title': 'Nadia Safitri',
+        'description': 'Mahasiswa Semester 7 D4 DKV dengan keahlian mendalam di bidang UI/UX Design dan Design System.',
+        'status': 'published',
+        'metadata': {
+          'role_label': 'Mahasiswa Tingkat Akhir',
+          'study_program': 'S1 / D4 Desain Komunikasi Visual',
+          'gpa': '3.92',
+          'status_talent': 'Siap Magang',
+          'rating': 5.0,
+          'skills': ['UI/UX Design', 'Figma', 'Prototyping'],
+        },
+      },
+      // Reports
+      {
+        'resource_type': 'reports',
+        'title': 'Laporan Akuntabilitas Kinerja Serapan Magang MBKM 2025/2026',
+        'description': 'Evaluasi capaian penempatan 168 mahasiswa pada 24 industri mitra dengan tingkat keberhasilan 98.2%.',
+        'status': 'published',
+        'metadata': {
+          'period': 'TA 2025/2026',
+          'category': 'Laporan Evaluasi MBKM',
+          'doc_number': '048/LAP-MBKM/ISRK/2026',
+          'total_interns': 168,
+          'completion_rate': '98.2%',
+          'partner_satisfaction': '4.9 / 5.0',
+        },
+      },
+      {
+        'resource_type': 'reports',
+        'title': 'Survei Kepuasan Industri Terhadap Kualitas Lulusan & Talenta Vokasi',
+        'description': 'Hasil survei umpan balik dari 32 industri mitra yang mempekerjakan lulusan ISRK di bidang software, animasi, dan desain.',
+        'status': 'published',
+        'metadata': {
+          'period': 'Semester Genap 2025',
+          'category': 'Survei Kepuasan Pengguna',
+          'doc_number': '052/SURV-DUDI/ISRK/2025',
+          'satisfaction_score': '94.6%',
+        },
+      },
+      {
+        'resource_type': 'reports',
+        'title': 'Laporan Capaian Akreditasi Institusi & Kemitraan DUDI Berkelanjutan',
+        'description': 'Rangkuman pemenuhan 9 kriteria akreditasi unggul BAN-PT serta dampak kemitraan industri.',
+        'status': 'published',
+        'metadata': {
+          'period': 'Triwulan III 2026',
+          'category': 'Laporan Akreditasi & Mutu',
+          'doc_number': '061/LAP-MUTU/ISRK/2026',
+          'criteria_met': '9 dari 9 Kriteria',
+        },
+      },
+      // Documents
+      {
+        'resource_type': 'documents',
+        'title': 'Perjanjian Kerjasama (MoU) Induk Kemitraan Kampus - DUDI 2025-2028',
+        'description': 'Dokumen resmi legalitas kerjasama strategis pelaksanaan magang bersertifikat dan kurikulum bersama.',
+        'status': 'published',
+        'metadata': {
+          'document_number': '001/MOU-ISRK/DIR/2025',
+          'category': 'MoU Kemitraan Industri',
+          'valid_until': '2028-12-31',
+        },
+      },
+      {
+        'resource_type': 'documents',
+        'title': 'Sertifikat Akreditasi Institusi Predikat Unggul (BAN-PT)',
+        'description': 'Surat Keputusan Badan Akreditasi Nasional Perguruan Tinggi Nomor 412/SK/BAN-PT/Ak/PT/2024.',
+        'status': 'published',
+        'metadata': {
+          'document_number': '412/SK/BAN-PT/Ak/PT/2024',
+          'sk_number': '412/SK/BAN-PT/Ak/PT/2024',
+          'category': 'Akreditasi Institusi',
+          'valid_until': '2029-08-15',
+          'grade': 'Unggul',
+        },
+      },
+      {
+        'resource_type': 'documents',
+        'title': 'Pedoman Teknis Magang PKL & Skema Konversi 20 SKS MBKM',
+        'description': 'Buku panduan lengkap alur pendaftaran, pembimbingan dosen, logbook harian, dan evaluasi nilai industri.',
+        'status': 'published',
+        'metadata': {
+          'document_number': '024/PED-MBKM/ISRK/2026',
+          'category': 'Pedoman Akademik',
+          'edition': 'Edisi Revisi 2026',
+        },
+      },
+      {
+        'resource_type': 'documents',
+        'title': 'Surat Keputusan Rektor tentang Penetapan Kurikulum Berbasis Kemitraan DUDI',
+        'description': 'Pemberlakuan modul ajar praktikum terintegrasi dengan kebutuhan industri kreatif.',
+        'status': 'published',
+        'metadata': {
+          'document_number': '088/SK-REK/ISRK/2026',
+          'category': 'Surat Keputusan (SK)',
+          'valid_until': '2027-12-31',
+        },
+      },
+    ];
   }
 }

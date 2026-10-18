@@ -21,6 +21,14 @@ class InstitutionResourceController extends Controller
         'showcases',
         'members',
         'team',
+        'study_programs',
+        'programs',
+        'events',
+        'competitions',
+        'internships',
+        'research',
+        'talents',
+        'students',
     ];
 
     private const STATUSES = [
@@ -56,10 +64,16 @@ class InstitutionResourceController extends Controller
                 'government', 'pemerintah', 'instansi', 'dinas', 'bumn', 'kementerian'
             ], true);
 
+            $isSchool = in_array($subRoleLower, [
+                'institution', 'school', 'sekolah', 'kampus', 'education', 'institusi'
+            ], true);
+
             if ($isCorporate && InstitutionResource::where('user_id', $user->id)->count() === 0) {
                 \Database\Seeders\CorporateDummySeeder::seedForUser($user);
             } elseif ($isGovernment && InstitutionResource::where('user_id', $user->id)->count() === 0) {
                 \Database\Seeders\GovernmentDummySeeder::seedForUser($user);
+            } elseif ($isSchool && InstitutionResource::where('user_id', $user->id)->count() === 0) {
+                \Database\Seeders\SchoolDummySeeder::seedForUser($user);
             }
         }
 

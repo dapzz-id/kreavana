@@ -113,17 +113,17 @@ class SubRoleThemeEngine {
     ),
     'institution': SubRoleThemeConfig(
       slug: 'institution',
-      label: 'Lembaga / Yayasan',
-      icon: Icons.assured_workload_rounded,
-      primaryColor: Color(0xFF0F766E), // Slate Teal
-      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+      label: 'Sekolah & Perguruan Tinggi',
+      icon: Icons.school_rounded,
+      primaryColor: Color(0xFF4338CA), // Solid Academic Indigo
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
     ),
     'instansi': SubRoleThemeConfig(
       slug: 'instansi',
-      label: 'Lembaga / Yayasan',
-      icon: Icons.domain_rounded,
-      primaryColor: Color(0xFF0F766E),
-      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+      label: 'Sekolah & Perguruan Tinggi',
+      icon: Icons.school_rounded,
+      primaryColor: Color(0xFF4338CA),
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
     ),
     'community': SubRoleThemeConfig(
       slug: 'community',
@@ -141,17 +141,17 @@ class SubRoleThemeEngine {
     ),
     'school': SubRoleThemeConfig(
       slug: 'school',
-      label: 'Sekolah & Kampus',
+      label: 'Sekolah & Perguruan Tinggi',
       icon: Icons.school_rounded,
-      primaryColor: Color(0xFF3B82F6), // Ocean Blue
-      description: 'Peluang media akademik, buku tahunan, & event pendidikan',
+      primaryColor: Color(0xFF4338CA),
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
     ),
     'sekolah': SubRoleThemeConfig(
       slug: 'sekolah',
-      label: 'Sekolah & Kampus',
+      label: 'Sekolah & Perguruan Tinggi',
       icon: Icons.school_outlined,
-      primaryColor: Color(0xFF3B82F6),
-      description: 'Peluang media akademik, buku tahunan, & event pendidikan',
+      primaryColor: Color(0xFF4338CA),
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
     ),
     'tourism': SubRoleThemeConfig(
       slug: 'tourism',
@@ -209,10 +209,10 @@ class SubRoleThemeEngine {
   static const Map<String, SubRoleThemeConfig> creatorConfigs = {
     'institution': SubRoleThemeConfig(
       slug: 'institution',
-      label: 'Lembaga / Yayasan',
-      icon: Icons.assured_workload_rounded,
-      primaryColor: Color(0xFF0F766E), // Slate Teal
-      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+      label: 'Sekolah & Perguruan Tinggi',
+      icon: Icons.school_rounded,
+      primaryColor: Color(0xFF4338CA), // Solid Academic Indigo
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
     ),
     'government': SubRoleThemeConfig(
       slug: 'government',
