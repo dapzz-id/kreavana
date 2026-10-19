@@ -122,6 +122,31 @@ class _DashboardScreenState extends State<DashboardScreen>
         sub == 'voiceover';
   }
 
+  bool get _isVendorOrMitra {
+    final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
+    return sub == 'vendor' ||
+        sub == 'mitra_pendukung' ||
+        sub == 'mitra' ||
+        sub == 'penyedia_jasa' ||
+        sub == 'studio' ||
+        sub == 'rental_alat' ||
+        sub == 'rental' ||
+        sub == 'wardrobe' ||
+        sub == 'dekorasi' ||
+        sub == 'katering' ||
+        sub == 'printing' ||
+        sub == 'lighting' ||
+        sub == 'sound' ||
+        sub == 'lighting_sound' ||
+        sub == 'transportasi' ||
+        sub == 'logistik';
+  }
+
+  SubRoleThemeConfig get _roleThemeConfig =>
+      SubRoleThemeEngine.getConfig(widget.user.role, widget.user.subRole);
+
+  Color get _roleAccentColor => _roleThemeConfig.primaryColor;
+
   final GlobalKey _themeBtnKey = GlobalKey();
 
   @override
@@ -267,6 +292,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   IconData _getHeroIllustrationIcon() {
+    if (_isVendorOrMitra) return Icons.storefront_outlined;
     if (_isTalentAndPerformer) return Icons.theater_comedy_outlined;
     final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
     if (sub == 'event_organizer' || sub == 'eo') return Icons.festival_outlined;
@@ -285,6 +311,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   String _getSearchHint() {
+    if (_isVendorOrMitra) {
+      return 'Cari permintaan sewa alat, proyek event EO, atau kolaborasi kreator...';
+    }
     if (_isTalentAndPerformer) {
       return 'Cari casting, job panggung, kreator, atau vendor MUA...';
     }
@@ -1429,6 +1458,73 @@ class _DashboardScreenState extends State<DashboardScreen>
       );
     }
 
+    // VENDOR & PENYEDIA JASA PENDUKUNG (Role 3: Studio, Rental Alat, MUA, Wardrobe, Dekorasi, Katering, Printing, Lighting, Transportasi)
+    if (_isVendorOrMitra) {
+      return _RoleDashboardConfig(
+        badge: '✦ ROLE 3: VENDOR & PENYEDIA JASA PENDUKUNG',
+        greeting: 'Halo, $name! 🏢',
+        subtitle: 'Studio, rental alat, MUA, wardrobe, dekorasi, katering, printing, lighting, sound, transportasi, dan jasa pendukung lainnya.',
+        primaryButtonLabel: 'Katalog & Harga',
+        primaryButtonIcon: Icons.inventory_2_outlined,
+        secondaryButtonLabel: 'Atur Ketersediaan',
+        secondaryButtonIcon: Icons.calendar_today_outlined,
+        recommendationTitle: 'Permintaan Sewa Alat & Jasa Pendukung',
+        recommendationNiche: 'Vendor & Jasa Pendukung',
+        recommendationRole: 'creator',
+        metrics: [
+          {
+            'label': 'Katalog Produk & Alat',
+            'value': '18 Item',
+            'icon': Icons.inventory_2_outlined,
+            'color': const Color(0xFFD97706),
+            'trend': 'Tersedia & Siap Sewa',
+            'breakdown': 'Studio, kamera, lighting, wardrobe, dekorasi & armada aktif di katalog.',
+            'action': 'Katalog & Harga',
+          },
+          {
+            'label': 'Ketersediaan & Jadwal',
+            'value': '8 Booking',
+            'icon': Icons.event_available_outlined,
+            'color': const Color(0xFF10B981),
+            'trend': 'Slot Terjadwal',
+            'breakdown': 'Kalender ketersediaan sewa studio, unit gear, dan tim layanan terverifikasi.',
+            'action': 'Atur Ketersediaan',
+          },
+          {
+            'label': 'Permintaan Masuk',
+            'value': '5 Order Baru',
+            'icon': Icons.move_to_inbox_outlined,
+            'color': const Color(0xFFEA580C),
+            'trend': 'Perlu Konfirmasi',
+            'breakdown': 'Permintaan penyewaan & jasa pendukung dari kreator, klien, dan EO.',
+            'action': 'Terima Permintaan',
+          },
+          {
+            'label': 'Total Omzet Sewa',
+            'value': _overviewSummary['monthly_income']?.toString() ?? 'Rp 28,5 Jt',
+            'icon': Icons.verified_rounded,
+            'color': const Color(0xFF2563EB),
+            'trend': '4.9 ★ (#Dampak)',
+            'breakdown': 'Pendapatan riil dari penyewaan unit alat, fasilitas, dan jasa operasional.',
+            'action': 'Ulasan & Reputasi',
+          },
+        ],
+        quickActions: [
+          {'icon': Icons.inventory_2_outlined, 'label': 'Katalog & Harga'},
+          {'icon': Icons.calendar_today_outlined, 'label': 'Atur Ketersediaan'},
+          {'icon': Icons.move_to_inbox_outlined, 'label': 'Terima Permintaan'},
+          {'icon': Icons.build_circle_outlined, 'label': 'Laksanakan Layanan'},
+          {'icon': Icons.star_rate_rounded, 'label': 'Ulasan & Reputasi'},
+          {'icon': Icons.travel_explore_outlined, 'label': 'Jelajahi Permintaan Proyek'},
+        ],
+        aiTips: [
+          'Lengkapi spesifikasi unit rental dan syarat deposit pada katalog untuk mempercepat proses booking klien.',
+          'Sinkronkan kalender ketersediaan H-1 event besar agar tidak terjadi double-booking antar tim.',
+          'Berikan checklist serah-terima (handover) saat unit diambil untuk mempertahankan rating bintang 5.',
+        ],
+      );
+    }
+
     // 17. TALENT & PERFORMER (Model, Aktor, MC, Penyanyi, Musisi, Penari, VO, dll)
     if (_isTalentAndPerformer) {
       return _RoleDashboardConfig(
@@ -1753,6 +1849,45 @@ class _DashboardScreenState extends State<DashboardScreen>
     final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
 
     switch (clean) {
+      // ── Layanan Vendor & Jasa Pendukung (Role 3) ──
+      case 'Katalog & Harga':
+      case 'Unggah Katalog':
+      case 'Katalog Produk & Alat':
+      case 'Katalog Vendor':
+        _openCreatorService('vendor_katalog');
+        break;
+      case 'Atur Ketersediaan':
+      case 'Jadwal & Ketersediaan':
+      case 'Jadwal & Ketersediaan Alat':
+      case 'Kalender Sewa':
+      case 'Ketersediaan Sewa':
+        _openCreatorService('vendor_ketersediaan');
+        break;
+      case 'Terima Permintaan':
+      case 'Permintaan Sewa':
+      case 'Order Masuk':
+      case 'Pesanan & Order Masuk':
+      case 'Permintaan & Pesanan':
+        _openCreatorService('vendor_permintaan');
+        break;
+      case 'Laksanakan Layanan':
+      case 'Operasional & Handover':
+      case 'Status Handover':
+      case 'Eksekusi Layanan':
+      case 'Layanan & Operasional':
+        _openCreatorService('vendor_operasional');
+        break;
+      case 'Ulasan & Reputasi':
+      case 'Ulasan Vendor':
+      case 'Bangun Reputasi':
+      case 'Reputasi & Ulasan Klien':
+        _openCreatorService('vendor_reputasi');
+        break;
+      case 'Jelajahi Permintaan Proyek':
+      case 'Cari Permintaan Proyek':
+        context.go(AppRoutes.peluangProyek);
+        break;
+
       // ── Layanan EO ──
       case 'Paket Event':
         _openCreatorService('eo_paket');
@@ -2121,11 +2256,16 @@ class _DashboardScreenState extends State<DashboardScreen>
       case 'Event Berjalan':
       case 'Total Wedding':
       case 'Kampanye Aktif':
+        if (widget.user.isGuest) {
+          AuthGuardDialog.show(context, actionName: 'mengakses manajemen proyek');
+          return;
+        }
         context.go(AppRoutes.proyek);
         break;
 
       // ── Tab Explore / Cari Vendor / Kreator ──
       case 'Cari Kreator':
+      case 'Cari Kreator & Vendor':
       case 'Cari Campaign':
       case 'Cari Vendor':
       case 'Cari Vendor Mitra':
@@ -2143,6 +2283,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       case 'Kurasi & Seleksi Vendor':
       case 'Cari Klien':
       case 'Cari Audisi':
+        if (widget.user.isGuest) {
+          AuthGuardDialog.show(context, actionName: 'mencari kreator');
+          return;
+        }
         context.go(AppRoutes.explore);
         break;
 
@@ -2220,15 +2364,152 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  // ── Hero Banner ──────────────────────────────────────────────────────────────
-  Widget _buildHeroBanner(bool isDark) {
-    final config = _getRoleConfig();
-
-    const heroBgImages = [
+  List<String> _getRoleHeroImages() {
+    if (_isVendorOrMitra) {
+      return const [
+        'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1200&q=80',
+      ];
+    }
+    if (_isTalentAndPerformer) {
+      return const [
+        'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=80',
+      ];
+    }
+    final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
+    if (sub == 'event_organizer' || sub == 'eo') {
+      return const [
+        'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1600&q=80',
+      ];
+    }
+    if (sub == 'wedding_organizer' || sub == 'wo') {
+      return const [
+        'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?auto=format&fit=crop&w=1600&q=80',
+      ];
+    }
+    if (sub == 'school' || sub == 'education' || sub == 'campus' || sub == 'sekolah' || sub == 'kampus') {
+      return const [
+        'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=1600&q=80',
+      ];
+    }
+    if (sub == 'government' || sub == 'pemerintah' || sub == 'instansi') {
+      return const [
+        'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1600&q=80',
+      ];
+    }
+    if (sub == 'company' || sub == 'business' || sub == 'corporate' || sub == 'perusahaan') {
+      return const [
+        'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1600&q=80',
+      ];
+    }
+    if (sub == 'umkm') {
+      return const [
+        'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1556742049-0a67c5574f73?auto=format&fit=crop&w=1600&q=80',
+      ];
+    }
+    if (sub == 'fotografer' || sub == 'fotografi') {
+      return const [
+        'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1502982720700-bfff97f2ecac?auto=format&fit=crop&w=1600&q=80',
+      ];
+    }
+    if (sub == 'videografer' || sub == 'videografi') {
+      return const [
+        'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?auto=format&fit=crop&w=1600&q=80',
+      ];
+    }
+    if (sub == 'editor' || sub == 'video_editor') {
+      return const [
+        'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=1600&q=80',
+      ];
+    }
+    if (sub == 'desainer' || sub == 'graphic_designer' || sub == 'designer') {
+      return const [
+        'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1542744094-3a31f272c490?auto=format&fit=crop&w=1600&q=80',
+      ];
+    }
+    if (sub == 'animator' || sub == 'animasi') {
+      return const [
+        'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1600&q=80',
+      ];
+    }
+    if (sub == 'musisi' || sub == 'musik' || sub == 'penyanyi') {
+      return const [
+        'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?auto=format&fit=crop&w=1600&q=80',
+      ];
+    }
+    if (sub == 'mc' || sub == 'presenter') {
+      return const [
+        'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1515187029135-18ee286d815b?auto=format&fit=crop&w=1600&q=80',
+      ];
+    }
+    if (sub == 'mua' || sub == 'makeup_artist') {
+      return const [
+        'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=1600&q=80',
+      ];
+    }
+    if (sub == 'drone' || sub == 'drone_pilot') {
+      return const [
+        'https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1473968512647-3e447244af8f?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1527977966376-1c8408f9f108?auto=format&fit=crop&w=1600&q=80',
+      ];
+    }
+    if (sub == 'konten' || sub == 'content_creator') {
+      return const [
+        'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=1600&q=80',
+      ];
+    }
+    if (sub == 'komunitas' || sub == 'community') {
+      return const [
+        'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1600&q=80',
+        'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80',
+      ];
+    }
+    return const [
       'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80',
       'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=1600&q=80',
       'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=1600&q=80',
     ];
+  }
+
+  // ── Hero Banner ──────────────────────────────────────────────────────────────
+  Widget _buildHeroBanner(bool isDark) {
+    final config = _getRoleConfig();
+    final heroBgImages = _getRoleHeroImages();
 
     return Container(
       width: double.infinity,
@@ -2663,7 +2944,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryPurple,
+              backgroundColor: _roleAccentColor,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
             ),
@@ -3360,6 +3641,37 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Map<String, dynamic>> _getEffectiveProjectNeeds() {
     if (widget.user.isGuest) return const [];
     if (_projectNeeds.isNotEmpty) return _projectNeeds;
+    if (_isVendorOrMitra) {
+      return [
+        {
+          'id': 'vnd_need_1',
+          'title': 'Sewa Studio Foto & Rig Lighting 2 Hari',
+          'description': 'Shooting TVC Komersial Fashion Brand — butuh cyclorama putih & 4 head flash',
+          'status': 'Permintaan Baru',
+          'status_color': '#D97706',
+          'budget': 'Rp 8.000.000',
+          'deadline': '26 Okt 2026',
+        },
+        {
+          'id': 'vnd_need_2',
+          'title': 'Paket Sound System & Lighting Panggung Festival',
+          'description': 'Event Komunitas Seni Musik 10.000 watt line array & moving head',
+          'status': 'Terkonfirmasi',
+          'status_color': '#10B981',
+          'budget': 'Rp 16.500.000',
+          'deadline': '03 Nov 2026',
+        },
+        {
+          'id': 'vnd_need_3',
+          'title': 'Sewa 2 Unit HiAce & Logistik Crew Produksi Film',
+          'description': 'Transportasi kru film & peralatan syuting lokasi outdoor 3 hari',
+          'status': 'Dalam Proses',
+          'status_color': '#2563EB',
+          'budget': 'Rp 6.000.000',
+          'deadline': '08 Nov 2026',
+        },
+      ];
+    }
     if (_isTalentAndPerformer) {
       return [
         {
@@ -3635,6 +3947,37 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Map<String, dynamic>> _getEffectiveAgenda() {
     if (widget.user.isGuest) return const [];
     if (_agenda.isNotEmpty) return _agenda;
+    if (_isVendorOrMitra) {
+      return [
+        {
+          'id': 'vnd_ag_1',
+          'title': 'Handover Unit Sony FX3 Cinema Kit + GM Lens',
+          'date': '24',
+          'month': 'Okt',
+          'time': '09:00 - 10:30 WIB',
+          'type': 'Handover',
+          'type_color': '#D97706',
+        },
+        {
+          'id': 'vnd_ag_2',
+          'title': 'Setup Sound & Stage Lighting Festival Seni Kreavana',
+          'date': '28',
+          'month': 'Okt',
+          'time': '13:00 - 18:00 WIB',
+          'type': 'Setup Teknis',
+          'type_color': '#EA580C',
+        },
+        {
+          'id': 'vnd_ag_3',
+          'title': 'Pengembalian & QC Unit Studio Ruang Cyclorama',
+          'date': '31',
+          'month': 'Okt',
+          'time': '17:00 - 19:00 WIB',
+          'type': 'Return QC',
+          'type_color': '#10B981',
+        },
+      ];
+    }
     if (_isTalentAndPerformer) {
       return [
         {
@@ -4139,7 +4482,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         backgroundColor: isDark ? const Color(0xFF1E1B2E) : Colors.white,
         title: Row(
           children: [
-            const Icon(Icons.event_note_rounded, color: AppTheme.primaryPurple),
+            Icon(Icons.event_note_rounded, color: _roleAccentColor),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -4310,7 +4653,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             icon: const Icon(Icons.collections_rounded, size: 16, color: Colors.white),
             label: const Text('Buka Portofolio', style: TextStyle(color: Colors.white)),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryPurple,
+              backgroundColor: _roleAccentColor,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
           ),
@@ -4325,7 +4668,13 @@ class _DashboardScreenState extends State<DashboardScreen>
     return _SectionCard(
       title: 'Proposal Masuk',
       viewAllLabel: 'Lihat Semua',
-      onViewAll: () => _navigateTo('Lihat Semua Proposal'),
+      onViewAll: () {
+        if (widget.user.isGuest) {
+          AuthGuardDialog.show(context, actionName: 'melihat proposal masuk');
+          return;
+        }
+        _navigateTo('Lihat Semua Proposal');
+      },
       isDark: isDark,
       child: proposals.isEmpty
           ? _DashboardCardEmptyState(
@@ -4334,7 +4683,13 @@ class _DashboardScreenState extends State<DashboardScreen>
               title: 'Belum Ada Proposal',
               subtitle: 'Penawaran dari kreator akan muncul di sini',
               actionLabel: 'Cari Kreator',
-              onAction: () => _navigateTo('Cari Kreator'),
+              onAction: () {
+                if (widget.user.isGuest) {
+                  AuthGuardDialog.show(context, actionName: 'mencari kreator');
+                  return;
+                }
+                _navigateTo('Cari Kreator');
+              },
               isDark: isDark,
             )
           : Column(
@@ -4356,7 +4711,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     final isApproved = status == 'approved';
     final statusColor =
-        isApproved ? const Color(0xFF10B981) : AppTheme.primaryPurple;
+        isApproved ? const Color(0xFF10B981) : _roleAccentColor;
     final statusText = isApproved ? 'Disetujui' : 'Menunggu Review';
 
     return _InteractiveDashboardItemCard(
@@ -4367,7 +4722,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           CircleAvatar(
             radius: 17,
-            backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.12),
+            backgroundColor: _roleAccentColor.withValues(alpha: 0.12),
             backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
                 ? CachedNetworkImageProvider(ApiService.resolveAssetUrl(avatarUrl))
                 : null,
@@ -4409,10 +4764,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                 const SizedBox(height: 2),
                 Text(
                   bidPrice,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.primaryPurple,
+                    color: _roleAccentColor,
                   ),
                 ),
               ],
@@ -4463,7 +4818,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     final isApproved = status == 'approved';
     final statusColor =
-        isApproved ? const Color(0xFF10B981) : AppTheme.primaryPurple;
+        isApproved ? const Color(0xFF10B981) : _roleAccentColor;
     final statusText = isApproved ? 'Disetujui' : 'Menunggu Review';
 
     showDialog(
@@ -4485,10 +4840,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryPurple.withValues(alpha: 0.12),
+                      color: _roleAccentColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.mark_email_read_rounded, color: AppTheme.primaryPurple, size: 20),
+                    child: Icon(Icons.mark_email_read_rounded, color: _roleAccentColor, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -4534,14 +4889,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                   children: [
                     CircleAvatar(
                       radius: 22,
-                      backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.12),
+                      backgroundColor: _roleAccentColor.withValues(alpha: 0.12),
                       backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
                           ? CachedNetworkImageProvider(ApiService.resolveAssetUrl(avatarUrl))
                           : null,
                       child: (avatarUrl == null || avatarUrl.isEmpty)
                           ? Text(
                               creatorName.isNotEmpty ? creatorName[0].toUpperCase() : 'K',
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryPurple),
+                              style: TextStyle(fontWeight: FontWeight.bold, color: _roleAccentColor),
                             )
                           : null,
                     ),
@@ -4560,16 +4915,16 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 ),
                               ),
                               const SizedBox(width: 4),
-                              const Icon(Icons.verified_rounded, size: 14, color: AppTheme.primaryPurple),
+                              Icon(Icons.verified_rounded, size: 14, color: _roleAccentColor),
                             ],
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'Ajuan Biaya: $bidPrice',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: AppTheme.primaryPurple,
+                              color: _roleAccentColor,
                             ),
                           ),
                         ],
@@ -4655,7 +5010,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       icon: const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
                       label: const Text('Buka Halaman Proyek', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryPurple,
+                        backgroundColor: _roleAccentColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -4690,7 +5045,13 @@ class _DashboardScreenState extends State<DashboardScreen>
     return _SectionCard(
       title: 'Proyek Berjalan',
       viewAllLabel: 'Lihat Semua',
-      onViewAll: () => _navigateTo('Lihat Semua Proyek Berjalan'),
+      onViewAll: () {
+        if (widget.user.isGuest) {
+          AuthGuardDialog.show(context, actionName: 'melihat proyek berjalan');
+          return;
+        }
+        _navigateTo('Lihat Semua Proyek Berjalan');
+      },
       isDark: isDark,
       child: contracts.isEmpty
           ? _DashboardCardEmptyState(
@@ -4699,7 +5060,13 @@ class _DashboardScreenState extends State<DashboardScreen>
               title: 'Belum Ada Proyek Aktif',
               subtitle: 'Proyek berjalan bersama kreator akan tampil di sini',
               actionLabel: 'Cari Kreator',
-              onAction: () => _navigateTo('Cari Kreator'),
+              onAction: () {
+                if (widget.user.isGuest) {
+                  AuthGuardDialog.show(context, actionName: 'mencari kreator');
+                  return;
+                }
+                _navigateTo('Cari Kreator');
+              },
               isDark: isDark,
             )
           : Column(
@@ -5597,10 +5964,780 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  // ── Ekosistem Role 3: Vendor & Penyedia Jasa Pendukung ────────────────────────
+  Widget _buildVendorEcosystemSection(bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardDark : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLG),
+        border: Border.all(
+          color: const Color(0xFFD97706).withValues(alpha: isDark ? 0.35 : 0.25),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFD97706).withValues(alpha: isDark ? 0.15 : 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+          if (!isDark) ...AppTheme.cardShadowLight,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header section
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFD97706), Color(0xFFEA580C)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFD97706).withValues(alpha: 0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.storefront_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD97706),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'Role 3',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        const Text(
+                          'Vendor & Penyedia Jasa Pendukung',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFD97706), Color(0xFFEA580C)],
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            '#KolaborasiMembangunDampak',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      'Studio, rental alat, MUA, wardrobe, dekorasi, katering, printing, lighting, sound, transportasi, dan jasa pendukung lainnya.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          // Two Value Panels: Manfaat yang Didapat & Manfaat yang Diberikan ke Kreavana
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 700;
+
+              final getPanel = Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF10B981).withValues(alpha: 0.08)
+                      : const Color(0xFF10B981).withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFF10B981).withValues(alpha: isDark ? 0.35 : 0.22),
+                    width: 1.1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF10B981),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.arrow_upward_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Manfaat yang Didapat',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF10B981),
+                                ),
+                              ),
+                              Text(
+                                'Nilai yang Anda peroleh dengan bergabung di Kreavana',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ...[
+                      'Pesanan dan penyewaan dari kreator, klien, dan EO',
+                      'Pelanggan baru dari berbagai industri dan daerah',
+                      'Portofolio layanan yang lebih luas dan terstruktur',
+                      'Jaringan dengan kreator, talent, klien, dan mitra lainnya',
+                      'Pertumbuhan pendapatan dan peluang kerja sama jangka panjang',
+                    ].map(
+                      (point) => Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.check_circle_rounded,
+                              size: 14,
+                              color: Color(0xFF10B981),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                point,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  height: 1.35,
+                                  color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+              final givePanel = Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF2563EB).withValues(alpha: 0.08)
+                      : const Color(0xFF2563EB).withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFF2563EB).withValues(alpha: isDark ? 0.35 : 0.22),
+                    width: 1.1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF2563EB),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.arrow_downward_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Manfaat yang Diberikan ke Kreavana',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2563EB),
+                                ),
+                              ),
+                              Text(
+                                'Kontribusi Anda untuk membangun ekosistem yang lebih kuat',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ...[
+                      'Produk, peralatan, dan fasilitas yang tersedia untuk proyek dan penyewaan',
+                      'Jasa dan layanan pendukung dengan kualitas terbaik',
+                      'Kualitas dan keandalan layanan untuk menjaga kepuasan pengguna',
+                      'Ketersediaan untuk proyek, event, dan kolaborasi',
+                      'Ulasan, testimoni, dan dokumentasi hasil kerja',
+                    ].map(
+                      (point) => Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.check_circle_rounded,
+                              size: 14,
+                              color: Color(0xFF2563EB),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                point,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  height: 1.35,
+                                  color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+              if (isWide) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: getPanel),
+                    const SizedBox(width: 14),
+                    Expanded(child: givePanel),
+                  ],
+                );
+              }
+              return Column(
+                children: [
+                  getPanel,
+                  const SizedBox(height: 14),
+                  givePanel,
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 20),
+
+          // 7-Stakeholder Ecosystem Connector (Kreavana in Center)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.03)
+                  : const Color(0xFFD97706).withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : const Color(0xFFD97706).withValues(alpha: 0.15),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(
+                      Icons.hub_outlined,
+                      size: 18,
+                      color: Color(0xFFD97706),
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'Pusat Ekosistem Kolaborasi Kreatif Kreavana',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Sebagai Vendor & Penyedia Jasa, Anda terhubung langsung dengan 7 pilar pemangku kepentingan industri kreatif:',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    _buildVendorEcosystemNode(
+                      title: 'Perusahaan / Corporate',
+                      desc: 'Klien & Brand',
+                      icon: Icons.business_rounded,
+                      color: const Color(0xFF0284C7),
+                      isDark: isDark,
+                    ),
+                    _buildVendorEcosystemNode(
+                      title: 'EO, WO, Agency',
+                      desc: 'Event & Produksi',
+                      icon: Icons.event_available_rounded,
+                      color: const Color(0xFFDB2777),
+                      isDark: isDark,
+                    ),
+                    _buildVendorEcosystemNode(
+                      title: 'Venue & Lokasi',
+                      desc: 'Studio, Gedung, Destinasi',
+                      icon: Icons.location_on_rounded,
+                      color: const Color(0xFFEA580C),
+                      isDark: isDark,
+                    ),
+                    _buildVendorEcosystemNode(
+                      title: 'Tim Kreavana',
+                      desc: 'Operasional, Marketing, IT',
+                      icon: Icons.verified_user_rounded,
+                      color: const Color(0xFF7C3AED),
+                      isDark: isDark,
+                    ),
+                    _buildVendorEcosystemNode(
+                      title: 'Komunitas',
+                      desc: 'Seni, Hobi, Profesi',
+                      icon: Icons.groups_rounded,
+                      color: const Color(0xFF059669),
+                      isDark: isDark,
+                    ),
+                    _buildVendorEcosystemNode(
+                      title: 'Talent / Performer',
+                      desc: 'Model, MC, Aktor, dsb',
+                      icon: Icons.theater_comedy_rounded,
+                      color: const Color(0xFF6366F1),
+                      isDark: isDark,
+                    ),
+                    _buildVendorEcosystemNode(
+                      title: 'Kreator / Freelancer',
+                      desc: 'Foto, Video, Desain',
+                      icon: Icons.camera_alt_rounded,
+                      color: const Color(0xFFDC2626),
+                      isDark: isDark,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 9 Layanan & Peralatan Utama (Visual Category Cards Grid)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '9 Kategori Layanan & Fasilitas Utama',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Klik kategori untuk mengelola unit inventaris dan penawaran sewa',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                    ),
+                  ),
+                ],
+              ),
+              HoverLiftButton(
+                glowColor: const Color(0xFFD97706),
+                scale: 1.03,
+                translateY: -1.5,
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => _openCreatorService('vendor_katalog'),
+                child: TextButton.icon(
+                  onPressed: () => _openCreatorService('vendor_katalog'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFD97706),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                  label: const Text(
+                    'Katalog Lengkap',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              final crossAxisCount = width > 900 ? 3 : (width > 550 ? 2 : 1);
+
+              final categories = [
+                {
+                  'title': 'Studio & Ruang Produksi',
+                  'desc': 'Cyclorama, podcast room, green screen, soundproofing studio',
+                  'icon': Icons.videocam_outlined,
+                  'color': const Color(0xFF2563EB),
+                },
+                {
+                  'title': 'Rental Alat Foto & Video',
+                  'desc': 'Cinema cameras, Sony/Canon lenses, gimbals, drones & monitors',
+                  'icon': Icons.camera_alt_outlined,
+                  'color': const Color(0xFFD97706),
+                },
+                {
+                  'title': 'MUA & Beauty Service',
+                  'desc': 'Pro makeup artist, hair do, bridal beauty & special FX makeup',
+                  'icon': Icons.face_retouching_natural_outlined,
+                  'color': const Color(0xFFEC4899),
+                },
+                {
+                  'title': 'Wardrobe & Kostum',
+                  'desc': 'Baju adat daerah, kostum cosplay, gaun pesta & setelan jas',
+                  'icon': Icons.checkroom_outlined,
+                  'color': const Color(0xFF8B5CF6),
+                },
+                {
+                  'title': 'Dekorasi & Properti',
+                  'desc': 'Backdrop panggung, lighting booth, dekorasi tematik & bunga',
+                  'icon': Icons.deck_outlined,
+                  'color': const Color(0xFF10B981),
+                },
+                {
+                  'title': 'Katering & Food Service',
+                  'desc': 'Buffet catering kru produksi, meal box event & coffee station',
+                  'icon': Icons.restaurant_outlined,
+                  'color': const Color(0xFFEA580C),
+                },
+                {
+                  'title': 'Printing & Merchandise',
+                  'desc': 'Cetak banner spanduk, flyer, kartu nama, totebag & sablon kaos',
+                  'icon': Icons.print_outlined,
+                  'color': const Color(0xFF0284C7),
+                },
+                {
+                  'title': 'Lighting & Sound System',
+                  'desc': 'Line array speakers, wireless mics, moving head & smoke machine',
+                  'icon': Icons.speaker_group_outlined,
+                  'color': const Color(0xFFF59E0B),
+                },
+                {
+                  'title': 'Transportasi & Logistik',
+                  'desc': 'Mobil van kru, armada truk box towing & logistik antar jemput',
+                  'icon': Icons.local_shipping_outlined,
+                  'color': const Color(0xFF475569),
+                },
+              ];
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: categories.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  childAspectRatio: crossAxisCount == 1 ? 3.8 : 2.5,
+                ),
+                itemBuilder: (context, index) {
+                  final cat = categories[index];
+                  final catColor = cat['color'] as Color;
+                  return InkWell(
+                    onTap: () => _openCreatorService('vendor_katalog'),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? catColor.withValues(alpha: 0.08)
+                            : catColor.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: catColor.withValues(alpha: isDark ? 0.35 : 0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: catColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              cat['icon'] as IconData,
+                              color: catColor,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  cat['title'] as String,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  cat['desc'] as String,
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                                    height: 1.25,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 11,
+                            color: catColor.withValues(alpha: 0.6),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+
+          // Footer bar
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Kreavana — Lebih dari Sekadar Platform, Ini Adalah Ekosistem.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFD97706),
+                  ),
+                ),
+              ),
+              HoverLiftButton(
+                glowColor: const Color(0xFFD97706),
+                scale: 1.03,
+                translateY: -2.0,
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => _openCreatorService('vendor_katalog'),
+                child: ElevatedButton.icon(
+                  onPressed: () => _openCreatorService('vendor_katalog'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD97706),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    elevation: 0,
+                  ),
+                  icon: const Icon(Icons.inventory_2_outlined, size: 14),
+                  label: const Text(
+                    'Kelola Katalog',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVendorEcosystemNode({
+    required String title,
+    required String desc,
+    required IconData icon,
+    required Color color,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark
+            ? color.withValues(alpha: 0.12)
+            : color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: color.withValues(alpha: isDark ? 0.4 : 0.25),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+              ),
+              Text(
+                desc,
+                style: TextStyle(
+                  fontSize: 9,
+                  color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Workflow steps ───────────────────────────────────────────────────────────
   Widget _buildWorkflowSection(bool isDark) {
-    final steps = _isTalentAndPerformer
+    final steps = _isVendorOrMitra
         ? [
+            {
+              'n': '1',
+              'title': 'Daftar & Profil',
+              'sub': 'Bisnis, kontak, lokasi',
+              'icon': Icons.app_registration_rounded,
+              'color': const Color(0xFF2563EB),
+            },
+            {
+              'n': '2',
+              'title': 'Katalog & Harga',
+              'sub': 'Produk, alat, & tarif',
+              'icon': Icons.inventory_2_outlined,
+              'color': const Color(0xFFD97706),
+            },
+            {
+              'n': '3',
+              'title': 'Atur Ketersediaan',
+              'sub': 'Jadwal sewa & slot event',
+              'icon': Icons.calendar_month_outlined,
+              'color': const Color(0xFF8B5CF6),
+            },
+            {
+              'n': '4',
+              'title': 'Terima Permintaan',
+              'sub': 'Pesanan klien/kreator/EO',
+              'icon': Icons.chat_bubble_outline_rounded,
+              'color': const Color(0xFFEA580C),
+            },
+            {
+              'n': '5',
+              'title': 'Laksanakan Layanan',
+              'sub': 'Siapkan alat & tim',
+              'icon': Icons.build_circle_outlined,
+              'color': const Color(0xFF10B981),
+            },
+            {
+              'n': '6',
+              'title': 'Bangun Reputasi',
+              'sub': 'Ulasan & testimoni',
+              'icon': Icons.star_rounded,
+              'color': const Color(0xFF0EA5E9),
+            },
+          ]
+        : _isTalentAndPerformer
+            ? [
             {
               'n': '1',
               'title': 'Daftar & Profil',
@@ -5749,16 +6886,20 @@ class _DashboardScreenState extends State<DashboardScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _isTalentAndPerformer
-                ? 'Alur Aktivitas Talent & Performer di Kreavana'
-                : (_isCreator ? 'Alur Pertumbuhan Kreator' : 'Alur Kerja Klien'),
+            _isVendorOrMitra
+                ? 'Alur Kerja Vendor & Penyedia Jasa di Kreavana'
+                : (_isTalentAndPerformer
+                    ? 'Alur Aktivitas Talent & Performer di Kreavana'
+                    : (_isCreator ? 'Alur Pertumbuhan Kreator' : 'Alur Kerja Klien')),
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
           Text(
-            _isTalentAndPerformer
-                ? 'Mudah, Terarah, dan Penuh Peluang (#KolaborasiMembawaDampak)'
-                : '6 langkah menuju kolaborasi sukses di Kreavana',
+            _isVendorOrMitra
+                ? 'Dari pendaftaran hingga membangun reputasi jangka panjang (#KolaborasiMembangunDampak)'
+                : (_isTalentAndPerformer
+                    ? 'Mudah, Terarah, dan Penuh Peluang (#KolaborasiMembawaDampak)'
+                    : '6 langkah menuju kolaborasi sukses di Kreavana'),
             style: TextStyle(
               fontSize: 11,
               color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
@@ -6944,6 +8085,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                             RepaintBoundary(child: _buildTalentEcosystemSection(isDark)),
                             const SizedBox(height: 24),
                           ],
+                          if (_isVendorOrMitra) ...[
+                            RepaintBoundary(child: _buildVendorEcosystemSection(isDark)),
+                            const SizedBox(height: 24),
+                          ],
                           RepaintBoundary(child: _buildWorkflowSection(isDark)),
                         ],
                       ),
@@ -6965,6 +8110,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                     const SizedBox(height: 24),
                     if (_isTalentAndPerformer) ...[
                       RepaintBoundary(child: _buildTalentEcosystemSection(isDark)),
+                      const SizedBox(height: 24),
+                    ],
+                    if (_isVendorOrMitra) ...[
+                      RepaintBoundary(child: _buildVendorEcosystemSection(isDark)),
                       const SizedBox(height: 24),
                     ],
                     RepaintBoundary(child: _buildWorkflowSection(isDark)),
@@ -7034,91 +8183,102 @@ class _HeroBannerBackgroundCarouselState
   Widget build(BuildContext context) {
     final currentUrl = widget.images[_currentIndex];
 
-    return Stack(
-      children: [
-        // ── Layer 1: Smooth Cross-fade Image Background ──
-        Positioned.fill(
-          child: AnimatedSwitcher(
-            duration: _HeroBannerBackgroundCarousel.fadeDuration,
-            switchInCurve: Curves.easeInOutCubic,
-            switchOutCurve: Curves.easeInOutCubic,
-            transitionBuilder: (child, animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: child,
-              );
-            },
-            layoutBuilder: (currentChild, previousChildren) {
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  ...previousChildren,
-                  ?currentChild,
-                ],
-              );
-            },
-            child: Image.network(
-              currentUrl,
-              key: ValueKey<String>(currentUrl),
-              fit: BoxFit.cover,
-              alignment: Alignment.centerRight,
-              loadingBuilder: (context, child, progress) {
-                if (progress == null) return child;
-                return Container(color: const Color(0xFF07060D));
-              },
-              errorBuilder: (_, _, _) => Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF07060D), Color(0xFF1E1B38)],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 650;
+        final imageWidth = isCompact ? constraints.maxWidth * 0.72 : (constraints.maxWidth * 0.58).clamp(380.0, 750.0);
+
+        return Stack(
+          children: [
+            // ── Layer 1: Smooth Cross-fade Image Background (Anchored Right) ──
+            Positioned(
+              top: 0,
+              bottom: 0,
+              right: 0,
+              width: imageWidth,
+              child: AnimatedSwitcher(
+                duration: _HeroBannerBackgroundCarousel.fadeDuration,
+                switchInCurve: Curves.easeInOutCubic,
+                switchOutCurve: Curves.easeInOutCubic,
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  );
+                },
+                layoutBuilder: (currentChild, previousChildren) {
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ...previousChildren,
+                      ?currentChild,
+                    ],
+                  );
+                },
+                child: Image.network(
+                  currentUrl,
+                  key: ValueKey<String>(currentUrl),
+                  fit: BoxFit.cover,
+                  alignment: const Alignment(0.15, -0.22),
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    return Container(color: const Color(0xFF07060D));
+                  },
+                  errorBuilder: (_, _, _) => Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF07060D), Color(0xFF1E1B38)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ),
 
-        // ── Layer 2: Seamless Horizontal Dark Gradient (Black Left, Photo Right) ──
-        Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  const Color(0xFF07060E),
-                  const Color(0xFF07060E),
-                  const Color(0xFF07060E).withValues(alpha: 0.95),
-                  const Color(0xFF07060E).withValues(alpha: 0.76),
-                  const Color(0xFF07060E).withValues(alpha: 0.32),
-                  Colors.black.withValues(alpha: 0.10),
-                ],
-                stops: const [0.0, 0.35, 0.50, 0.65, 0.82, 1.0],
+            // ── Layer 2: Seamless Horizontal Dark Gradient (Black Left, Photo Clear Right) ──
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      const Color(0xFF07060E),
+                      const Color(0xFF07060E),
+                      const Color(0xFF07060E).withValues(alpha: 0.94),
+                      const Color(0xFF07060E).withValues(alpha: 0.55),
+                      const Color(0xFF07060E).withValues(alpha: 0.12),
+                      Colors.transparent,
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.35, 0.48, 0.62, 0.74, 0.84, 1.0],
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
 
-        // ── Layer 3: Kreavana Ambient Purple/Pink Brand Glow ──
-        Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppTheme.primaryPurple.withValues(alpha: 0.24),
-                  Colors.transparent,
-                  AppTheme.accentPink.withValues(alpha: 0.10),
-                ],
+            // ── Layer 3: Kreavana Ambient Purple/Pink Brand Glow ──
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(-0.85, -0.5),
+                    radius: 1.15,
+                    colors: [
+                      AppTheme.primaryPurple.withValues(alpha: 0.28),
+                      AppTheme.accentPink.withValues(alpha: 0.08),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.55, 1.0],
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
 
-        // ── Layer 4: Foreground Content ──
-        widget.child,
+            // ── Layer 4: Foreground Content ──
+            widget.child,
 
         // ── Layer 5: Subtle Slide Indicator Dots ──
         if (widget.images.length > 1)
@@ -7160,6 +8320,8 @@ class _HeroBannerBackgroundCarouselState
             ),
           ),
       ],
+    );
+      },
     );
   }
 }

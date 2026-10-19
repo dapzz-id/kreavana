@@ -41,6 +41,7 @@ import 'admin_system_settings_screen.dart';
 import '../services/system_settings_service.dart';
 import '../widgets/feature_disabled_view.dart';
 import '../widgets/app_sweet_alert.dart';
+import '../widgets/sidebar_hover_tile.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -170,97 +171,36 @@ class _MainNavigationState extends State<MainNavigation> {
         ? (_isCompany ? defaultAccent : const Color(0xFF8B5CF6))
         : defaultAccent;
 
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: isCollapsed ? 8 : 12,
-        vertical: 2,
-      ),
-      child: Tooltip(
-        message: isCollapsed ? label : '',
-        child: InkWell(
-          onTap: () {
-            if (isMobileDrawer) Navigator.pop(context);
-            _navigateToScreenIndex(index);
-            final shouldRefresh = _currentUser.isAdmin
-                ? index == 2 || index == 3
-                : index == 9 || index == 10;
-            if (shouldRefresh) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) _refreshProfile();
-              });
-            }
-          },
-          borderRadius: BorderRadius.circular(12),
-          hoverColor: isDark
-              ? activeColor.withValues(alpha: 0.14)
-              : activeColor.withValues(alpha: 0.08),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: EdgeInsets.symmetric(
-              horizontal: isCollapsed ? 0 : 12,
-              vertical: 10,
-            ),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? activeColor.withValues(alpha: isDark ? 0.18 : 0.09)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-              border: isSelected
-                  ? Border.all(
-                      color: activeColor.withValues(alpha: isDark ? 0.35 : 0.2),
-                      width: 1,
-                    )
-                  : null,
-            ),
-            child: Row(
-              mainAxisAlignment: isCollapsed
-                  ? MainAxisAlignment.center
-                  : MainAxisAlignment.start,
-              children: [
-                Icon(
-                  isSelected ? activeIcon : icon,
-                  color: isAi && isSelected
-                      ? const Color(0xFF8B5CF6)
-                      : (isSelected
-                            ? activeColor
-                            : (isDark
-                                  ? AppTheme.textMuted
-                                  : AppTheme.textSecondary)),
-                  size: 20,
-                ),
-                if (!isCollapsed) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontWeight: isSelected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        fontSize: 13.5,
-                        color: isSelected
-                            ? (isDark ? Colors.white : activeColor)
-                            : (isDark ? Colors.white70 : AppTheme.textPrimary),
-                      ),
-                    ),
-                  ),
-                  if (isAi)
-                    Text(
-                      'AI',
-                      style: TextStyle(
-                        color: _isCompany ? defaultAccent : const Color(0xFF8B5CF6),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
+    return SidebarHoverTile(
+      icon: icon,
+      activeIcon: activeIcon,
+      label: label,
+      onTap: () {
+        if (isMobileDrawer) Navigator.pop(context);
+        _navigateToScreenIndex(index);
+        final shouldRefresh = _currentUser.isAdmin
+            ? index == 2 || index == 3
+            : index == 9 || index == 10;
+        if (shouldRefresh) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _refreshProfile();
+          });
+        }
+      },
+      isSelected: isSelected,
+      isDark: isDark,
+      isCollapsed: isCollapsed,
+      activeColor: activeColor,
+      trailing: isAi
+          ? Text(
+              'AI',
+              style: TextStyle(
+                color: _isCompany ? defaultAccent : const Color(0xFF8B5CF6),
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+              ),
+            )
+          : null,
     );
   }
 
@@ -274,90 +214,19 @@ class _MainNavigationState extends State<MainNavigation> {
     bool isMobileDrawer = false,
   }) {
     final activeColor = SubRoleThemeEngine.getAccentColorForUser(_currentUser);
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: isCollapsed ? 8 : 12,
-        vertical: 2,
-      ),
-      child: Tooltip(
-        message: isCollapsed ? label : '',
-        child: InkWell(
-          onTap: () {
-            if (isMobileDrawer) {
-              Navigator.pop(context);
-            }
-            onTap();
-          },
-          borderRadius: BorderRadius.circular(12),
-          hoverColor: isDark
-              ? activeColor.withValues(alpha: 0.14)
-              : activeColor.withValues(alpha: 0.08),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: EdgeInsets.symmetric(
-              horizontal: isCollapsed ? 0 : 12,
-              vertical: 10,
-            ),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? activeColor.withValues(alpha: isDark ? 0.18 : 0.09)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-              border: isSelected
-                  ? Border.all(
-                      color: activeColor.withValues(alpha: isDark ? 0.35 : 0.2),
-                      width: 1,
-                    )
-                  : null,
-            ),
-            child: Row(
-              mainAxisAlignment: isCollapsed
-                  ? MainAxisAlignment.center
-                  : MainAxisAlignment.start,
-              children: [
-                if (!isCollapsed && isSelected) ...[
-                  Container(
-                    width: 3.5,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: activeColor,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                Icon(
-                  icon,
-                  color: isSelected
-                      ? activeColor
-                      : (isDark ? AppTheme.textMuted : AppTheme.textSecondary),
-                  size: 20,
-                ),
-                if (!isCollapsed) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontWeight: isSelected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        fontSize: 13.5,
-                        color: isSelected
-                            ? (isDark ? Colors.white : activeColor)
-                            : (isDark ? Colors.white70 : AppTheme.textPrimary),
-                        letterSpacing: isSelected ? 0.1 : 0,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
+    return SidebarHoverTile(
+      icon: icon,
+      label: label,
+      onTap: () {
+        if (isMobileDrawer) {
+          Navigator.pop(context);
+        }
+        onTap();
+      },
+      isSelected: isSelected,
+      isDark: isDark,
+      isCollapsed: isCollapsed,
+      activeColor: activeColor,
     );
   }
 
@@ -1634,7 +1503,13 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.storefront_outlined,
           label: 'Cari Kreator & Vendor',
-          onTap: () => _navigateToScreenIndex(3),
+          onTap: () {
+            if (_currentUser.isGuest) {
+              AuthGuardDialog.show(context, actionName: 'mencari kreator & vendor');
+              return;
+            }
+            _navigateToScreenIndex(3);
+          },
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _currentIndex == 3 && _activeGovRoute == null,

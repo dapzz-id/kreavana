@@ -186,6 +186,19 @@ class UserSeeder extends Seeder
                 'email' => 'nabila.zahra@kreavana.id',
                 'username' => 'nabila_zahra',
             ],
+            // 5. Role 3: Vendor & Penyedia Jasa Pendukung
+            [
+                'sub_role' => CreatorSubRole::VENDOR,
+                'name' => 'Kreavana Demo Vendor & Penyedia Jasa',
+                'email' => 'vendor@kreavana.id',
+                'username' => 'vendor_demo',
+            ],
+            [
+                'sub_role' => CreatorSubRole::MITRA_PENDUKUNG,
+                'name' => 'Kreavana Demo Mitra Jasa Pendukung',
+                'email' => 'mitra@kreavana.id',
+                'username' => 'mitra_demo',
+            ],
         ];
 
         $capacities = [
@@ -200,6 +213,8 @@ class UserSeeder extends Seeder
             CreatorSubRole::COMMUNITY->value => 5,
             CreatorSubRole::INSTITUTION->value => 5,
             CreatorSubRole::GOVERNMENT->value => 5,
+            CreatorSubRole::VENDOR->value => 10,
+            CreatorSubRole::MITRA_PENDUKUNG->value => 8,
         ];
 
         foreach ($creators as $data) {

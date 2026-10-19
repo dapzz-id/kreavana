@@ -351,27 +351,107 @@ class _NotificationsScreenState extends State<NotificationsScreen>
   Widget _buildHeaderHero(bool isDark) {
     final unreadCount = _notifications.where((n) => !n.isRead).length;
 
+    const heroBgUrl =
+        'https://images.unsplash.com/photo-1577563908411-5077b6dc7624?auto=format&fit=crop&w=1400&q=80';
+    const baseDark = Color(0xFF0A0F1D);
+    const accentBlue = Color(0xFF2563EB);
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDark
-              ? [const Color(0xFF0F172A), const Color(0xFF1E293B)]
-              : [const Color(0xFF1E3A8A), const Color(0xFF2563EB)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: baseDark,
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: isDark ? 0.12 : 0.22),
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E3A8A).withValues(alpha: 0.25),
-            blurRadius: 16,
+            color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.20),
+            blurRadius: 20,
             offset: const Offset(0, 6),
+          ),
+          BoxShadow(
+            color: accentBlue.withValues(alpha: isDark ? 0.25 : 0.18),
+            blurRadius: 32,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
+      clipBehavior: Clip.antiAlias,
       child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < 620;
+          final imageWidth = isCompact ? constraints.maxWidth * 0.72 : (constraints.maxWidth * 0.58).clamp(380.0, 750.0);
+
+          return Stack(
+            children: [
+              // ── Layer 1: Contextual High-Resolution Background Photo (Anchored Right) ──
+              Positioned(
+                top: 0,
+                bottom: 0,
+                right: 0,
+                width: imageWidth,
+                child: Image.network(
+                  heroBgUrl,
+                  fit: BoxFit.cover,
+                  alignment: const Alignment(0.15, -0.22),
+                  errorBuilder: (_, _, _) => Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Layer 2: Seamless Horizontal Dark Gradient (Left Dark, Right Clear) ──
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        baseDark,
+                        baseDark,
+                        baseDark.withValues(alpha: 0.94),
+                        baseDark.withValues(alpha: 0.55),
+                        baseDark.withValues(alpha: 0.12),
+                        Colors.transparent,
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.35, 0.48, 0.62, 0.74, 0.84, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Layer 3: Vibrant Accent Glow from Top-Left ──
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(-0.85, -0.5),
+                      radius: 1.15,
+                      colors: [
+                        accentBlue.withValues(alpha: isDark ? 0.35 : 0.45),
+                        accentBlue.withValues(alpha: 0.10),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.55, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Layer 4: Foreground Content ──
+              Padding(
+            padding: const EdgeInsets.all(22),
+            child: LayoutBuilder(
         builder: (context, constraints) {
           final isCompact = constraints.maxWidth < 620;
 
@@ -519,8 +599,13 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           );
         },
       ),
-    );
-  }
+          ),
+        ],
+      );
+    },
+  ),
+);
+}
 
   // ── KPI SUMMARY CARDS ──────────────────────────────────────────────────────
   Widget _buildKpiRow(bool isDark) {
@@ -905,9 +990,16 @@ class _NotificationsScreenState extends State<NotificationsScreen>
 
     final scaffold = Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
+        automaticallyImplyLeading: Navigator.canPop(context),
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                tooltip: 'Kembali',
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
         toolbarHeight: 70,
-        titleSpacing: isDesktop ? 24 : 16,
+        titleSpacing: (isDesktop && !Navigator.canPop(context)) ? 24 : 16,
         elevation: 0,
         title: Row(
           children: [

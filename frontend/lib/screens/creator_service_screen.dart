@@ -15,11 +15,13 @@ import '../services/job_contract_service.dart';
 import '../widgets/app_breadcrumbs.dart';
 import 'main_navigation.dart';
 import 'direct_message_screen.dart';
-import 'explore_screen.dart';
 import '../widgets/subrole_right_sidebar.dart';
 import '../features/dashboard/screens/community_dashboard_screen.dart';
 import '../app/subrole_theme_engine.dart';
 import '../app/app_animations.dart';
+import 'notifications_screen.dart';
+import 'ulasan_reputasi_screen.dart';
+import '../services/badge_service.dart';
 
 const _reviewableCreatorPackageKeys = {
   'foto_paket',
@@ -32,6 +34,7 @@ const _reviewableCreatorPackageKeys = {
   'konten_paket',
   'talent_profil',
   'talent_tarif',
+  'vendor_katalog',
 };
 
 const _creatorBookingKeys = {
@@ -48,6 +51,8 @@ const _creatorBookingKeys = {
   'desain_proyek',
   'konten_campaign',
   'animator_antrian',
+  'vendor_ketersediaan',
+  'vendor_permintaan',
 };
 
 class CreatorServiceItem {
@@ -962,6 +967,245 @@ class CreatorServiceData {
       icon: Icons.language_outlined,
       gradient: [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)],
     ),
+    // ─── Vendor & Penyedia Jasa Pendukung (Role 3) ───────────────────
+    'vendor_katalog': CreatorServiceData(
+      key: 'vendor_katalog',
+      title: 'Katalog & Harga Layanan',
+      subtitle: 'Daftar fasilitas, peralatan sewa, paket logistik, dan jasa pendukung produksi Anda.',
+      icon: Icons.inventory_2_outlined,
+      gradient: [Color(0xFFD97706), Color(0xFFB45309), Color(0xFF92400E)],
+      actionLabel: 'Tambah Katalog Produk',
+      items: [
+        CreatorServiceItem(
+          id: 'vk-1',
+          title: 'Studio & Ruang Produksi Cyclorama 12x8m',
+          subtitle: 'Studio kedap suara, green screen infinity wall, lighting grid ceiling & ruang makeup VIP.',
+          icon: Icons.camera_indoor_outlined,
+          tag: 'Tayang Publik',
+          value: 'Rp 2.500.000 / Shift',
+          active: true,
+          thumbnailUrl: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=1200&q=80',
+        ),
+        CreatorServiceItem(
+          id: 'vk-2',
+          title: 'Rental Kamera Sony FX3 Cinema Line + Lensa G-Master',
+          subtitle: 'Kamera sinematik 4K 120fps, kit lensa 24-70mm f/2.8 GM II, 4 baterai, rig & memori 160GB.',
+          icon: Icons.camera_alt_outlined,
+          tag: 'Tayang Publik',
+          value: 'Rp 1.250.000 / Hari',
+          active: true,
+          thumbnailUrl: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=80',
+        ),
+        CreatorServiceItem(
+          id: 'vk-3',
+          title: 'Lighting & Sound System Line Array 20.000 Watt',
+          subtitle: 'Speaker gantung line array, digital mixer 32-ch, 12 moving head beam, par-LED & genset 60kVA.',
+          icon: Icons.speaker_group_outlined,
+          tag: 'Tayang Publik',
+          value: 'Rp 14.500.000',
+          active: true,
+          thumbnailUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1200&q=80',
+        ),
+        CreatorServiceItem(
+          id: 'vk-4',
+          title: 'Dekorasi & Properti Panggung Grand Event',
+          subtitle: 'Panggung modular 10x6m, backdrop 3D tematik, karpet panggung, miniatur pameran & photobooth.',
+          icon: Icons.local_florist_outlined,
+          tag: 'Tayang Publik',
+          value: 'Rp 8.000.000',
+          active: true,
+          thumbnailUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80',
+        ),
+        CreatorServiceItem(
+          id: 'vk-5',
+          title: 'Wardrobe & Kostum Pengantin / Teatrikal',
+          subtitle: 'Koleksi busana pengantin tradisional & modern, jas tuxedo, kostum penari & fitting di lokasi.',
+          icon: Icons.checkroom_outlined,
+          tag: 'Tayang Publik',
+          value: 'Rp 2.000.000',
+          active: true,
+          thumbnailUrl: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=1200&q=80',
+        ),
+        CreatorServiceItem(
+          id: 'vk-6',
+          title: 'Katering & Food Service Buffet 300 Pax',
+          subtitle: 'Menu prasmanan nusantara 6 lauk utama, dessert bar, live cooking stall & snack box kru.',
+          icon: Icons.restaurant_menu_outlined,
+          tag: 'Tayang Publik',
+          value: 'Rp 12.000.000',
+          active: true,
+          thumbnailUrl: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=1200&q=80',
+        ),
+        CreatorServiceItem(
+          id: 'vk-7',
+          title: 'Printing Backdrop Vinyl & Merchandise Kit',
+          subtitle: 'Cetak spanduk UV high-res 12x4m, booklet agenda, ID card lanyard, & goodybag sablon.',
+          icon: Icons.print_outlined,
+          tag: 'Tayang Publik',
+          value: 'Rp 1.800.000',
+          active: true,
+          thumbnailUrl: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1200&q=80',
+        ),
+        CreatorServiceItem(
+          id: 'vk-8',
+          title: 'Transportasi & Logistik Kru (HiAce Premio 14 Seat)',
+          subtitle: 'Armada van nyaman AC dingin, driver profesional berpengalaman, BBM & operasional jabodetabek.',
+          icon: Icons.local_shipping_outlined,
+          tag: 'Tayang Publik',
+          value: 'Rp 1.100.000 / Hari',
+          active: true,
+          thumbnailUrl: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&w=1200&q=80',
+        ),
+      ],
+    ),
+    'vendor_ketersediaan': CreatorServiceData(
+      key: 'vendor_ketersediaan',
+      title: 'Jadwal & Ketersediaan Fasilitas',
+      subtitle: 'Kelola kalender booking studio, masa rental alat, dan slot ketersediaan layanan untuk proyek.',
+      icon: Icons.calendar_today_outlined,
+      gradient: [Color(0xFFD97706), Color(0xFFB45309), Color(0xFF92400E)],
+      actionLabel: 'Atur Ketersediaan Baru',
+      items: [
+        CreatorServiceItem(
+          id: 'vs-1',
+          title: 'Studio Cyclorama — Photoshoot Brand E-Commerce',
+          subtitle: 'Klien: PT Fashion Trend Nusantara • Durasi: 09:00 - 17:00 WIB (8 Jam)',
+          icon: Icons.calendar_month_outlined,
+          tag: 'Terjadwal',
+          value: 'Rp 3.500.000',
+          active: true,
+        ),
+        CreatorServiceItem(
+          id: 'vs-2',
+          title: 'Rental 2x Sony FX3 + Lens Kit — Aftermovie Konser Indie',
+          subtitle: 'Kreator: Dimas Arya Cinematography • Durasi: 2 Hari Sewa (Pickup H-1)',
+          icon: Icons.videocam_outlined,
+          tag: 'Terjadwal',
+          value: 'Rp 2.500.000',
+          active: true,
+        ),
+        CreatorServiceItem(
+          id: 'vs-3',
+          title: 'Paket Rigging Panggung & Sound 20k Watt — Festival Budaya',
+          subtitle: 'EO: Kreavana Event Solution • Lokasi: Lapangan Banteng Jakarta',
+          icon: Icons.speaker_group_outlined,
+          tag: 'Selesai',
+          value: 'Rp 14.500.000',
+          active: false,
+        ),
+      ],
+    ),
+    'vendor_permintaan': CreatorServiceData(
+      key: 'vendor_permintaan',
+      title: 'Permintaan & Pesanan Masuk',
+      subtitle: 'Inquiry pesanan, permintaan sewa alat, dan tawaran kerja sama dari kreator, klien, dan EO.',
+      icon: Icons.mark_chat_unread_outlined,
+      gradient: [Color(0xFFD97706), Color(0xFFB45309), Color(0xFF92400E)],
+      actionLabel: 'Tinjau Permintaan',
+      items: [
+        CreatorServiceItem(
+          id: 'vp-1',
+          title: 'Inquiry Sewa Studio & Lighting Grid — Shooting MV Musik',
+          subtitle: 'Pemohon: Band Indie Jakarta • Tanggal: Sabtu depan (Full Day Shift)',
+          icon: Icons.mail_outline_rounded,
+          tag: 'Menunggu Konfirmasi',
+          value: 'Rp 3.800.000',
+          active: true,
+        ),
+        CreatorServiceItem(
+          id: 'vp-2',
+          title: 'Permintaan Katering Kru 80 Pax — Produksi TVC Minuman',
+          subtitle: 'Pemohon: PT Creative Media Agency • Lokasi: Studio 2 Cilandak',
+          icon: Icons.restaurant_outlined,
+          tag: 'Menunggu Konfirmasi',
+          value: 'Rp 3.200.000',
+          active: true,
+        ),
+        CreatorServiceItem(
+          id: 'vp-3',
+          title: 'Pemesanan Sewa HiAce Kru + Logistik Box 3 Hari',
+          subtitle: 'Pemohon: Tim Dokumentasi EO Java Jazz • Status DP: Escrow Terverifikasi',
+          icon: Icons.directions_bus_outlined,
+          tag: 'Diterima',
+          value: 'Rp 3.300.000',
+          active: true,
+        ),
+      ],
+    ),
+    'vendor_operasional': CreatorServiceData(
+      key: 'vendor_operasional',
+      title: 'Layanan & Operasional Tim',
+      subtitle: 'Checklist kesiapan alat, penugasan teknisi/kru lapangan, dan logistik pengiriman tepat waktu.',
+      icon: Icons.build_circle_outlined,
+      gradient: [Color(0xFFD97706), Color(0xFFB45309), Color(0xFF92400E)],
+      actionLabel: 'Tambah Checklist Operasional',
+      items: [
+        CreatorServiceItem(
+          id: 'vo-1',
+          title: 'Inspeksi Baterai & Sensor Kamera Sony FX3',
+          subtitle: 'Pengecekan firmware, pembersihan sensor, kalibrasi gimbal DJI RS3 Pro.',
+          icon: Icons.verified_outlined,
+          tag: 'Siap Pakai',
+          value: '100% Lolos Uji',
+          active: true,
+        ),
+        CreatorServiceItem(
+          id: 'vo-2',
+          title: 'Setup & Soundcheck Tata Suara 20.000 Watt',
+          subtitle: 'Tim teknisi audio 4 orang, pengujian frekuensi mic wireless & genset standby.',
+          icon: Icons.settings_input_composite_outlined,
+          tag: 'On Progress',
+          value: 'H-4 Jam Acara',
+          active: true,
+        ),
+        CreatorServiceItem(
+          id: 'vo-3',
+          title: 'Serah Terima Busana & Fitting Wardrobe di Lokasi',
+          subtitle: 'Pengantaran 6 set gaun, steamer uap portable, dan asisten fitting stand-by.',
+          icon: Icons.checkroom_outlined,
+          tag: 'Selesai',
+          value: 'Terverifikasi',
+          active: false,
+        ),
+      ],
+    ),
+    'vendor_reputasi': CreatorServiceData(
+      key: 'vendor_reputasi',
+      title: 'Ulasan & Reputasi Kemitraan',
+      subtitle: 'Testimoni kepuasan klien, rating keandalan alat, dan rekam jejak kerja sama di ekosistem Kreavana.',
+      icon: Icons.star_outline_rounded,
+      gradient: [Color(0xFFD97706), Color(0xFFB45309), Color(0xFF92400E)],
+      actionLabel: 'Lihat Sertifikasi Mitra',
+      items: [
+        CreatorServiceItem(
+          id: 'vr-1',
+          title: 'Ulasan Bintang 5.0 — PT Kreasi Visual Mandiri',
+          subtitle: '"Alat kamera dan lighting sangat terawat, baterai full dan kabel rapi. Recommended vendor!"',
+          icon: Icons.star_rounded,
+          tag: 'Rating 5.0 ★',
+          value: 'Ulasan Klien',
+          active: true,
+        ),
+        CreatorServiceItem(
+          id: 'vr-2',
+          title: 'Ulasan Bintang 4.9 — Event Organizer Jakarta Fest',
+          subtitle: '"Sound system mantap dan teknisi sangat kooperatif saat rundown berubah mendadak."',
+          icon: Icons.star_rounded,
+          tag: 'Rating 4.9 ★',
+          value: 'Ulasan EO',
+          active: true,
+        ),
+        CreatorServiceItem(
+          id: 'vr-3',
+          title: 'Badge Mitra Terverifikasi Kreavana Priority',
+          subtitle: 'Tingkat kepuasan 98,5% dengan 140+ transaksi sewa dan nol komplain kerusakan.',
+          icon: Icons.verified_rounded,
+          tag: 'Verified Partner',
+          value: 'Mitra Unggulan',
+          active: true,
+        ),
+      ],
+    ),
   };
 
   static CreatorServiceData? of(String key) => registry[key];
@@ -1143,6 +1387,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     }
     if (key.startsWith('singer_') || key.startsWith('penyanyi_')) {
       return SubRoleThemeEngine.creatorConfigs['singer']!;
+    }
+    if (key.startsWith('vendor_') || key.startsWith('mitra_')) {
+      return SubRoleThemeEngine.creatorConfigs['vendor']!;
     }
     if (key.startsWith('mua_')) {
       return SubRoleThemeEngine.creatorConfigs['mua']!;
@@ -1873,187 +2120,43 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
         actions: _isEoMenu
             ? const []
             : [
-                _buildActionChip(
-                  icon: Icons.notifications_outlined,
-                  label: null,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        behavior: SnackBarBehavior.floating,
-                        backgroundColor: _roleAccentColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        content: Row(
-                          children: [
-                            const Icon(
-                              Icons.notifications_active_rounded,
-                              color: Colors.white,
-                              size: 18,
+                ListenableBuilder(
+                  listenable: BadgeService(),
+                  builder: (context, _) {
+                    final unreadCount = BadgeService().unreadNotifications;
+                    return _buildActionChip(
+                      icon: Icons.notifications_outlined,
+                      label: null,
+                      tooltip: unreadCount > 0
+                          ? 'Notifikasi ($unreadCount belum dibaca)'
+                          : 'Notifikasi',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => NotificationsScreen(
+                              userId: _user.id ?? '',
+                              user: _user,
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text(
-                                    'Notifikasi',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${(_user.followersCount ~/ 18).clamp(2, 47)} notifikasi baru untuk Anda',
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        duration: const Duration(seconds: 2),
-                      ),
+                          ),
+                        );
+                      },
+                      hasBadge: unreadCount > 0,
                     );
                   },
-                  hasBadge: true,
                 ),
                 _buildActionChip(
                   icon: Icons.star_rounded,
                   label: _ratingDisplay,
+                  tooltip: 'Rating & Reputasi Layanan ($_ratingDisplay / 5.0)',
                   onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(22),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => UlasanReputasiScreen(
+                          user: _user,
+                          onUserUpdated: widget.onUserUpdated,
                         ),
-                        title: Row(
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: const Color(
-                                  0xFFF59E0B,
-                                ).withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.star_rounded,
-                                color: Color(0xFFF59E0B),
-                                size: 22,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Text(
-                                'Rating & Reputasi',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  _ratingDisplay,
-                                  style: const TextStyle(
-                                    fontSize: 42,
-                                    fontWeight: FontWeight.w900,
-                                    color: Color(0xFFF59E0B),
-                                    letterSpacing: -1,
-                                  ),
-                                ),
-                                const Padding(
-                                  padding: EdgeInsets.only(bottom: 12),
-                                  child: Text(
-                                    '/5.0',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFFF59E0B),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: List.generate(
-                                5,
-                                (i) => Icon(
-                                  i < _personalRating.round()
-                                      ? Icons.star_rounded
-                                      : Icons.star_border_rounded,
-                                  size: 18,
-                                  color: const Color(0xFFF59E0B),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            Text(
-                              'Berdasarkan ${(_user.followersCount * 0.7).round()} ulasan dari klien & mitra Kreavana',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: Colors.grey.shade600,
-                                height: 1.45,
-                              ),
-                            ),
-                          ],
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            child: const Text(
-                              'Tutup',
-                              style: TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                          ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  behavior: SnackBarBehavior.floating,
-                                  backgroundColor: _roleAccentColor,
-                                  content: const Text(
-                                    'Melihat halaman reputasi...',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _roleAccentColor,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text(
-                              'Lihat Reputasi',
-                              style: TextStyle(fontWeight: FontWeight.w800),
-                            ),
-                          ),
-                        ],
                       ),
                     );
                   },
@@ -3481,21 +3584,22 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     required String? label,
     VoidCallback? onTap,
     bool hasBadge = false,
+    String? tooltip,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isStar = label != null;
-    return Padding(
+    final chip = Padding(
       padding: const EdgeInsets.only(right: 8),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           HoverLiftButton(
             onTap: onTap,
-            scale: 1.03,
+            scale: 1.04,
             child: Container(
               height: 40,
               padding: EdgeInsets.symmetric(
-                horizontal: label != null ? 12 : 10,
+                horizontal: label != null ? 12 : 11,
               ),
               decoration: BoxDecoration(
                 color: isDark ? AppTheme.cardDark2 : Colors.white,
@@ -3521,8 +3625,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                       Text(
                         label,
                         style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
                         ),
                       ),
                     ],
@@ -3533,16 +3638,26 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
           ),
           if (hasBadge)
             Positioned(
-              top: 4,
-              right: 4,
-              child: Container(
-                width: 9,
-                height: 9,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFEF4444),
-                  shape: BoxShape.circle,
-                  border: Border.fromBorderSide(
-                    BorderSide(color: Colors.white, width: 1.5),
+              top: 5,
+              right: 5,
+              child: IgnorePointer(
+                child: Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.5),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -3550,6 +3665,15 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
         ],
       ),
     );
+
+    if (tooltip != null && tooltip.isNotEmpty) {
+      return Tooltip(
+        message: tooltip,
+        waitDuration: const Duration(milliseconds: 300),
+        child: chip,
+      );
+    }
+    return chip;
   }
 
   Future<void> _refreshData() async {
@@ -3590,192 +3714,420 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     );
   }
 
+  static String _getServiceHeroImage(String key, String? subRole) {
+    const Map<String, String> keyImageMap = {
+      // ── Talent & Model ──
+      'talent_profil': 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=80',
+      'talent_jadwal': 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1200&q=80',
+      'talent_kategori': 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=80',
+      'talent_tarif': 'https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1200&q=80',
+
+      // ── Fotografer ──
+      'foto_galeri': 'https://images.unsplash.com/photo-1554048612-b6a482bc67e5?auto=format&fit=crop&w=1200&q=80',
+      'foto_booking': 'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=1200&q=80',
+      'foto_paket': 'https://images.unsplash.com/photo-1502982720700-bfff97f2ecac?auto=format&fit=crop&w=1200&q=80',
+      'foto_area': 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?auto=format&fit=crop&w=1200&q=80',
+
+      // ── Videografer ──
+      'video_galeri': 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1200&q=80',
+      'video_booking': 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=1200&q=80',
+      'video_paket': 'https://images.unsplash.com/photo-1579632652768-6cb9dcf85912?auto=format&fit=crop&w=1200&q=80',
+      'video_equipment': 'https://images.unsplash.com/photo-1533750349088-cd871a92f312?auto=format&fit=crop&w=1200&q=80',
+
+      // ── Editor ──
+      'edit_portofolio': 'https://images.unsplash.com/photo-1574717024453-354056aafa98?auto=format&fit=crop&w=1200&q=80',
+      'edit_antrian': 'https://images.unsplash.com/photo-1536240478700-b869070f9279?auto=format&fit=crop&w=1200&q=80',
+      'edit_harga': 'https://images.unsplash.com/photo-1542744094-3a31f272c490?auto=format&fit=crop&w=1200&q=80',
+      'edit_spesialisasi': 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
+
+      // ── Desainer ──
+      'desain_portofolio': 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?auto=format&fit=crop&w=1200&q=80',
+      'desain_proyek': 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=1200&q=80',
+      'desain_paket': 'https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&w=1200&q=80',
+      'desain_spesialisasi': 'https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&w=1200&q=80',
+
+      // ── Animator ──
+      'animasi_showreel': 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
+      'animasi_proyek': 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&w=1200&q=80',
+      'animasi_paket': 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1200&q=80',
+      'animasi_software': 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
+
+      // ── MC / Presenter ──
+      'mc_profil': 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&w=1200&q=80',
+      'mc_booking': 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1200&q=80',
+      'mc_kategori': 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=80',
+      'mc_tarif': 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=80',
+
+      // ── Penyanyi (Singer) ──
+      'singer_portofolio': 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=80',
+      'singer_booking': 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=1200&q=80',
+      'singer_genre': 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=1200&q=80',
+      'singer_tarif': 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=1200&q=80',
+
+      // ── MUA (Makeup Artist) ──
+      'mua_portofolio': 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=1200&q=80',
+      'mua_booking': 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1200&q=80',
+      'mua_paket': 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=1200&q=80',
+      'mua_spesialisasi': 'https://images.unsplash.com/photo-1526045612212-70caf35c14df?auto=format&fit=crop&w=1200&q=80',
+
+      // ── WO (Wedding Organizer) ──
+      'wo_paket': 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80',
+      'wo_jadwal': 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1200&q=80',
+      'wo_vendor': 'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?auto=format&fit=crop&w=1200&q=80',
+      'wo_timeline': 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1200&q=80',
+
+      // ── EO (Event Organizer) ──
+      'eo_paket': 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1200&q=80',
+      'eo_jadwal': 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
+      'eo_vendor': 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1200&q=80',
+      'eo_timeline': 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1200&q=80',
+
+      // ── Drone Pilot ──
+      'drone_galeri': 'https://images.unsplash.com/photo-1473968512647-3e447244af8f?auto=format&fit=crop&w=1200&q=80',
+      'drone_booking': 'https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&w=1200&q=80',
+      'drone_paket': 'https://images.unsplash.com/photo-1527977966376-1c8408f9f108?auto=format&fit=crop&w=1200&q=80',
+      'drone_equipment': 'https://images.unsplash.com/photo-1507582020474-9a35b7d455d9?auto=format&fit=crop&w=1200&q=80',
+
+      // ── Musisi ──
+      'musik_karya': 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=1200&q=80',
+      'musik_booking': 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=1200&q=80',
+      'musik_paket': 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80',
+      'musik_genre': 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=1200&q=80',
+
+      // ── Content Creator ──
+      'konten_portofolio': 'https://images.unsplash.com/photo-1616469829941-c7200edec809?auto=format&fit=crop&w=1200&q=80',
+      'konten_campaign': 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80',
+      'konten_paket': 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1200&q=80',
+      'konten_channel': 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=1200&q=80',
+
+      // ── Komunitas ──
+      'komunitas_anggota': 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80',
+      'komunitas_kegiatan': 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1200&q=80',
+      'komunitas_pengumuman': 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&w=1200&q=80',
+      'komunitas_kolaborasi': 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1200&q=80',
+    };
+
+    if (keyImageMap.containsKey(key)) {
+      return keyImageMap[key]!;
+    }
+
+    final s = (subRole ?? '').toLowerCase().trim();
+    if (s.contains('talent') || s.contains('model')) {
+      return 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=80';
+    } else if (s.contains('foto')) {
+      return 'https://images.unsplash.com/photo-1554048612-b6a482bc67e5?auto=format&fit=crop&w=1200&q=80';
+    } else if (s.contains('video')) {
+      return 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1200&q=80';
+    } else if (s.contains('edit')) {
+      return 'https://images.unsplash.com/photo-1574717024453-354056aafa98?auto=format&fit=crop&w=1200&q=80';
+    } else if (s.contains('desain')) {
+      return 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?auto=format&fit=crop&w=1200&q=80';
+    } else if (s.contains('anim')) {
+      return 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80';
+    } else if (s.contains('mua') || s.contains('makeup')) {
+      return 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=1200&q=80';
+    } else if (s.contains('wo') || s.contains('wedding')) {
+      return 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80';
+    } else if (s.contains('eo') || s.contains('event')) {
+      return 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1200&q=80';
+    } else if (s.contains('drone')) {
+      return 'https://images.unsplash.com/photo-1473968512647-3e447244af8f?auto=format&fit=crop&w=1200&q=80';
+    } else if (s.contains('musik') || s.contains('singer') || s.contains('kendang')) {
+      return 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=80';
+    } else if (s.contains('komunitas') || s.contains('community')) {
+      return 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80';
+    }
+    return 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1200&q=80';
+  }
+
   Widget _buildHeader(BuildContext context, CreatorServiceData data) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark
-        ? const Color(0xFF1E293B)
-        : (_roleGradient.isNotEmpty ? _roleGradient.first : const Color(0xFF4338CA));
-    final borderColor = isDark
-        ? const Color(0xFF334155)
-        : bgColor.withValues(alpha: 0.85);
+    final bgImageUrl = _getServiceHeroImage(data.key, widget.user.subRole);
 
     final rawAction = data.actionLabel.isNotEmpty ? data.actionLabel : 'Tambah Baru';
     final actionText = rawAction.startsWith('+') ? rawAction : '+ $rawAction';
+    final baseDark = const Color(0xFF07050E);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: bgColor,
-        gradient: isDark
-            ? null
-            : LinearGradient(
-                colors: _roleGradient,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+        color: baseDark,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderColor),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: isDark ? 0.12 : 0.22),
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: (isDark ? Colors.black : _roleAccentColor).withValues(alpha: 0.18),
-            blurRadius: 16,
-            offset: const Offset(0, 5),
+            color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.20),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: _roleAccentColor.withValues(alpha: isDark ? 0.28 : 0.20),
+            blurRadius: 36,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
+      clipBehavior: Clip.antiAlias,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isCompact = constraints.maxWidth < 650;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Image width: on wide screens, anchor to right ~56% of the banner width so the photo has a natural ~16:9 aspect ratio and people/gear aren't vertically cropped
+          final imageWidth = isCompact ? constraints.maxWidth * 0.72 : (constraints.maxWidth * 0.58).clamp(380.0, 750.0);
+
+          return Stack(
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.18),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.white24),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    _roleThemeConfig.icon,
-                                    color: Colors.amberAccent,
-                                    size: 14,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '#${_roleThemeConfig.label.replaceAll(' ', '')}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                '${data.items.length} Item Terverifikasi',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          data.title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          data.subtitle,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.88),
-                            fontSize: 13,
-                            height: 1.4,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (!isCompact) ...[
-                    const SizedBox(width: 20),
-                    ElevatedButton.icon(
-                      onPressed: () => _showDetail(context, data, null),
-                      icon: Icon(
-                        Icons.add_circle_outline,
-                        size: 18,
-                        color: _roleAccentColor,
-                      ),
-                      label: Text(
-                        actionText,
-                        style: TextStyle(
-                          color: _roleAccentColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 14,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 4,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              if (isCompact) ...[
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _showDetail(context, data, null),
-                    icon: Icon(
-                      Icons.add_circle_outline,
-                      size: 18,
-                      color: _roleAccentColor,
-                    ),
-                    label: Text(
-                      actionText,
-                      style: TextStyle(
-                        color: _roleAccentColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+              // ── Layer 1: Contextual High-Resolution Photo (Anchored to Right) ──
+              Positioned(
+                top: 0,
+                bottom: 0,
+                right: 0,
+                width: imageWidth,
+                child: Image.network(
+                  bgImageUrl,
+                  fit: BoxFit.cover,
+                  alignment: const Alignment(0.15, -0.22),
+                  errorBuilder: (_, _, _) => Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: _roleGradient,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
                     ),
                   ),
                 ),
-              ],
+              ),
+
+              // ── Layer 2: Seamless Horizontal Fade Gradient (Solid Dark Left, 100% Crystal-Clear Right) ──
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        baseDark,
+                        baseDark,
+                        baseDark.withValues(alpha: 0.94),
+                        baseDark.withValues(alpha: 0.55),
+                        baseDark.withValues(alpha: 0.12),
+                        Colors.transparent,
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.35, 0.48, 0.62, 0.74, 0.84, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Layer 3: Vibrant Role Color Ambient Glow on Left ──
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(-0.85, -0.5),
+                      radius: 1.15,
+                      colors: [
+                        _roleAccentColor.withValues(alpha: isDark ? 0.35 : 0.42),
+                        _roleAccentColor.withValues(alpha: 0.10),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.55, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Layer 4: Foreground Content ──
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.22),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: Colors.white.withValues(alpha: 0.35),
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.15),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          _roleThemeConfig.icon,
+                                          color: Colors.amberAccent,
+                                          size: 14,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          '#${_roleThemeConfig.label.replaceAll(' ', '')}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.4,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 9,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.14),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: Colors.white.withValues(alpha: 0.20),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      '${data.items.length} Item Terverifikasi',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                data.title,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: -0.5,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black87,
+                                      offset: Offset(0, 2),
+                                      blurRadius: 8,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                data.subtitle,
+                                style: const TextStyle(
+                                  color: Color(0xFFF1F5F9),
+                                  fontSize: 13.5,
+                                  height: 1.45,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black54,
+                                      offset: Offset(0, 1),
+                                      blurRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (!isCompact) ...[
+                          const SizedBox(width: 20),
+                          ElevatedButton.icon(
+                            onPressed: () => _showDetail(context, data, null),
+                            icon: Icon(
+                              Icons.add_circle_outline,
+                              size: 18,
+                              color: _roleAccentColor,
+                            ),
+                            label: Text(
+                              actionText,
+                              style: TextStyle(
+                                color: _roleAccentColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: _roleAccentColor,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 15,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              elevation: 6,
+                              shadowColor: Colors.black.withValues(alpha: 0.35),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    if (isCompact) ...[
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _showDetail(context, data, null),
+                          icon: Icon(
+                            Icons.add_circle_outline,
+                            size: 18,
+                            color: _roleAccentColor,
+                          ),
+                          label: Text(
+                            actionText,
+                            style: TextStyle(
+                              color: _roleAccentColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: _roleAccentColor,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ],
           );
         },
@@ -7354,10 +7706,10 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    gradient: AppTheme.primaryGradient,
+                    gradient: _roleGradient,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.edit_outlined,
                     size: 17,
                     color: Colors.white,
@@ -7382,8 +7734,8 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                 autofocus: true,
                 decoration: InputDecoration(
                   prefixText: prefix.isEmpty ? null : prefix,
-                  prefixStyle: const TextStyle(
-                    color: AppTheme.primaryPurple,
+                  prefixStyle: TextStyle(
+                    color: _roleAccentColor,
                     fontWeight: FontWeight.w800,
                     fontSize: 14,
                   ),
@@ -7406,8 +7758,8 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: AppTheme.primaryPurple,
+                    borderSide: BorderSide(
+                      color: _roleAccentColor,
                       width: 2,
                     ),
                   ),
@@ -7429,7 +7781,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
               ElevatedButton(
                 onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryPurple,
+                  backgroundColor: _roleAccentColor,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -7512,7 +7864,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            gradient: AppTheme.primaryGradient,
+                            gradient: _roleGradient,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
@@ -7546,7 +7898,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                               vertical: 9,
                             ),
                             decoration: BoxDecoration(
-                              gradient: sel ? AppTheme.primaryGradient : null,
+                              gradient: sel ? _roleGradient : null,
                               color: sel
                                   ? null
                                   : (dark
@@ -7623,7 +7975,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                               );
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryPurple,
+                              backgroundColor: _roleAccentColor,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
@@ -7690,7 +8042,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            gradient: AppTheme.primaryGradient,
+                            gradient: _roleGradient,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
@@ -7725,7 +8077,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                             duration: const Duration(milliseconds: 200),
                             curve: Curves.easeOutBack,
                             decoration: BoxDecoration(
-                              gradient: sel ? AppTheme.primaryGradient : null,
+                              gradient: sel ? _roleGradient : null,
                               color: sel
                                   ? null
                                   : (dark
@@ -7749,7 +8101,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                   size: 20,
                                   color: sel
                                       ? Colors.white
-                                      : AppTheme.primaryPurple,
+                                      : _roleAccentColor,
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -7798,7 +8150,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                               );
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryPurple,
+                              backgroundColor: _roleAccentColor,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
@@ -7870,11 +8222,11 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
         return AlertDialog(
           backgroundColor: dark ? AppTheme.cardDark2 : Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.link_rounded, color: AppTheme.primaryPurple),
-              SizedBox(width: 8),
-              Text(
+              Icon(Icons.link_rounded, color: _roleAccentColor),
+              const SizedBox(width: 8),
+              const Text(
                 'Masukkan URL Gambar',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
               ),
@@ -7899,7 +8251,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryPurple,
+                backgroundColor: _roleAccentColor,
                 foregroundColor: Colors.white,
               ),
               child: const Text('Gunakan'),
@@ -7968,12 +8320,12 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryPurple.withValues(alpha: 0.12),
+                    color: _roleAccentColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.photo_library_outlined,
-                    color: AppTheme.primaryPurple,
+                    color: _roleAccentColor,
                   ),
                 ),
                 title: const Text(
@@ -8079,11 +8431,11 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
         return Theme(
           data: Theme.of(ctx).copyWith(
             colorScheme: dark
-                ? const ColorScheme.dark(
-                    primary: AppTheme.primaryPurple,
+                ? ColorScheme.dark(
+                    primary: _roleAccentColor,
                     surface: AppTheme.cardDark2,
                   )
-                : const ColorScheme.light(primary: AppTheme.primaryPurple),
+                : ColorScheme.light(primary: _roleAccentColor),
             dialogTheme: DialogThemeData(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(22),
@@ -8103,11 +8455,11 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
           return Theme(
             data: Theme.of(ctx).copyWith(
               colorScheme: dark
-                  ? const ColorScheme.dark(
-                      primary: AppTheme.primaryPurple,
+                  ? ColorScheme.dark(
+                      primary: _roleAccentColor,
                       surface: AppTheme.cardDark2,
                     )
-                  : const ColorScheme.light(primary: AppTheme.primaryPurple),
+                  : ColorScheme.light(primary: _roleAccentColor),
             ),
             child: child!,
           );
@@ -8240,7 +8592,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            gradient: AppTheme.primaryGradient,
+                            gradient: _roleGradient,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
@@ -8277,7 +8629,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                         children: [
                           CircleAvatar(
                             radius: 18,
-                            backgroundColor: AppTheme.primaryPurple,
+                            backgroundColor: _roleAccentColor,
                             child: Text(
                               firstLetter,
                               style: const TextStyle(
@@ -8434,8 +8786,8 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: AppTheme.primaryPurple,
+                          borderSide: BorderSide(
+                            color: _roleAccentColor,
                             width: 2,
                           ),
                         ),
@@ -8555,7 +8907,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                               );
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryPurple,
+                              backgroundColor: _roleAccentColor,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
@@ -8670,6 +9022,29 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
     final hasSecondaryAction =
         isRejected || isVendor || isTimelineNotDone || isJadwalPending;
 
+    final rawTag = (item?.tag ?? '').toLowerCase().trim();
+    final isPendingReview = rawTag.contains('menunggu') || rawTag.contains('pending') || _itemSubmitted;
+    final isRejectedItem = rawTag.contains('ditolak') || rawTag.contains('reject');
+    final isPublishedItem = !isPendingReview &&
+        !isRejectedItem &&
+        ((item?.active ?? true) &&
+            (rawTag.contains('tayang') ||
+                rawTag.contains('publish') ||
+                rawTag.contains('tersedia') ||
+                rawTag.contains('aktif') ||
+                rawTag.contains('selesai') ||
+                rawTag.isEmpty));
+    final canShare = !isNew && isPublishedItem;
+    final isCreatorPackage = _reviewableCreatorPackageKeys.contains(widget.data.key);
+
+    final statusTagGradient = isPendingReview
+        ? const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFD97706)])
+        : (isRejectedItem
+            ? const LinearGradient(colors: [Color(0xFFEF4444), Color(0xFFDC2626)])
+            : (isPublishedItem
+                ? const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)])
+                : _roleGradient));
+
     return GestureDetector(
       onTap: () => Navigator.pop(context),
       child: Container(
@@ -8715,7 +9090,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                 height: 44,
                                 decoration: BoxDecoration(
                                   color: _isEo
-                                      ? AppTheme.primaryPurple.withValues(alpha: 0.1)
+                                      ? _roleAccentColor.withValues(alpha: 0.1)
                                       : null,
                                   gradient: _isEo
                                       ? null
@@ -8727,7 +9102,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                       ? null
                                       : [
                                           BoxShadow(
-                                            color: AppTheme.primaryPurple.withValues(
+                                            color: _roleAccentColor.withValues(
                                               alpha: 0.28,
                                             ),
                                             blurRadius: 12,
@@ -8756,8 +9131,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                           Icons.add_rounded,
                                                       color:
                                                           _isEo
-                                                              ? AppTheme
-                                                                  .primaryPurple
+                                                              ? _roleAccentColor
                                                               : Colors.white,
                                                       size: 20,
                                                     ),
@@ -8766,7 +9140,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                 _formIcon ?? Icons.add_rounded,
                                                 color:
                                                     _isEo
-                                                        ? AppTheme.primaryPurple
+                                                        ? _roleAccentColor
                                                         : Colors.white,
                                                 size: 20,
                                               )))
@@ -8788,8 +9162,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                       item.icon,
                                                       color:
                                                           _isEo
-                                                              ? AppTheme
-                                                                  .primaryPurple
+                                                              ? _roleAccentColor
                                                               : Colors.white,
                                                       size: 20,
                                                     ),
@@ -8806,8 +9179,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                       item.icon,
                                                       color:
                                                           _isEo
-                                                              ? AppTheme
-                                                                  .primaryPurple
+                                                              ? _roleAccentColor
                                                               : Colors.white,
                                                       size: 20,
                                                     ),
@@ -8816,7 +9188,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                             item?.icon ?? widget.data.icon,
                                             color:
                                                 _isEo
-                                                    ? AppTheme.primaryPurple
+                                                    ? _roleAccentColor
                                                     : Colors.white,
                                             size: 20,
                                           )),
@@ -8903,7 +9275,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                               width: 38,
                                               height: 38,
                                               decoration: BoxDecoration(
-                                                color: AppTheme.primaryPurple
+                                                color: _roleAccentColor
                                                     .withValues(alpha: 0.1),
                                                 borderRadius:
                                                     BorderRadius.circular(10),
@@ -8922,7 +9294,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                             : Icons
                                                                 .festival_outlined,
                                                 size: 19,
-                                                color: AppTheme.primaryPurple,
+                                                color: _roleAccentColor,
                                               ),
                                             ),
                                             const SizedBox(width: 12),
@@ -8976,17 +9348,13 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                   vertical: 5,
                                                 ),
                                                 decoration: BoxDecoration(
-                                                  color: (item.tag?.toLowerCase().contains('ditolak') ?? false)
+                                                  color: isRejectedItem
                                                       ? const Color(0xFFEF4444).withValues(alpha: 0.12)
-                                                      : (item.tag == 'Selesai'
-                                                          ? const Color(0xFF10B981)
-                                                              .withValues(
-                                                                alpha: 0.12,
-                                                              )
-                                                          : AppTheme.primaryPurple
-                                                              .withValues(
-                                                                alpha: 0.1,
-                                                              )),
+                                                      : (isPendingReview
+                                                          ? const Color(0xFFF59E0B).withValues(alpha: 0.12)
+                                                          : (isPublishedItem
+                                                              ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                                                              : _roleAccentColor.withValues(alpha: 0.1))),
                                                   borderRadius:
                                                       BorderRadius.circular(20),
                                                 ),
@@ -8995,14 +9363,13 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                   style: TextStyle(
                                                     fontSize: 11,
                                                     fontWeight: FontWeight.w700,
-                                                    color: (item.tag?.toLowerCase().contains('ditolak') ?? false)
+                                                    color: isRejectedItem
                                                         ? const Color(0xFFEF4444)
-                                                        : (item.tag == 'Selesai'
-                                                            ? const Color(
-                                                                0xFF10B981,
-                                                              )
-                                                            : AppTheme
-                                                                .primaryPurple),
+                                                        : (isPendingReview
+                                                            ? const Color(0xFFF59E0B)
+                                                            : (isPublishedItem
+                                                                ? const Color(0xFF10B981)
+                                                                : _roleAccentColor)),
                                                   ),
                                                 ),
                                               ),
@@ -9029,8 +9396,8 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                   ? Colors.white12
                                                   : Colors.grey.shade200,
                                               valueColor:
-                                                  const AlwaysStoppedAnimation(
-                                                AppTheme.primaryPurple,
+                                                  AlwaysStoppedAnimation(
+                                                _roleAccentColor,
                                               ),
                                               minHeight: 6,
                                             ),
@@ -9044,18 +9411,14 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                     decoration: BoxDecoration(
                                       gradient: LinearGradient(
                                         colors: [
-                                          AppTheme.deepPurple.withValues(
-                                            alpha: 0.08,
-                                          ),
-                                          AppTheme.lightPurple.withValues(
-                                            alpha: 0.08,
-                                          ),
+                                          _roleAccentColor.withValues(alpha: 0.10),
+                                          _roleAccentColor.withValues(alpha: 0.04),
                                         ],
                                       ),
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(
-                                        color: AppTheme.primaryPurple
-                                            .withValues(alpha: 0.15),
+                                        color: _roleAccentColor
+                                            .withValues(alpha: 0.18),
                                       ),
                                     ),
                                     child: Row(
@@ -9064,7 +9427,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                           width: 44,
                                           height: 44,
                                           decoration: BoxDecoration(
-                                            gradient: AppTheme.primaryGradient,
+                                            gradient: _roleGradient,
                                             borderRadius:
                                                 BorderRadius.circular(14),
                                           ),
@@ -9079,21 +9442,21 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            const Text(
+                                            Text(
                                               'Nilai / Harga',
                                               style: TextStyle(
                                                 fontSize: 10.5,
                                                 fontWeight: FontWeight.w600,
-                                                color: AppTheme.primaryPurple,
+                                                color: _roleAccentColor,
                                               ),
                                             ),
                                             const SizedBox(height: 3),
                                             Text(
                                               item.value!,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 20,
                                                 fontWeight: FontWeight.w900,
-                                                color: AppTheme.primaryPurple,
+                                                color: _roleAccentColor,
                                                 letterSpacing: -0.2,
                                               ),
                                             ),
@@ -9107,11 +9470,21 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                               vertical: 6,
                                             ),
                                             decoration: BoxDecoration(
-                                              gradient: AppTheme.primaryGradient,
+                                              gradient: statusTagGradient,
                                               borderRadius:
                                                   BorderRadius.circular(12),
-                                              boxShadow:
-                                                  AppTheme.cardShadowLight,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: (isPendingReview
+                                                          ? const Color(0xFFF59E0B)
+                                                          : (isRejectedItem
+                                                              ? const Color(0xFFEF4444)
+                                                              : _roleAccentColor))
+                                                      .withValues(alpha: 0.3),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 3),
+                                                ),
+                                              ],
                                             ),
                                             child: Text(
                                               item.tag!,
@@ -9142,7 +9515,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                 controller: _tabCtrl,
                                 dividerColor: Colors.transparent,
                                 indicator: BoxDecoration(
-                                  gradient: AppTheme.primaryGradient,
+                                  gradient: _roleGradient,
                                   borderRadius: BorderRadius.circular(12),
                                   boxShadow: AppTheme.cardShadowLight,
                                 ),
@@ -9238,7 +9611,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                             _handleEoSubmit(isNew: true),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor:
-                                              AppTheme.primaryPurple,
+                                              _roleAccentColor,
                                           foregroundColor: Colors.white,
                                           padding: const EdgeInsets.symmetric(
                                             vertical: 14,
@@ -9360,7 +9733,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: isRejected
                                                 ? const Color(0xFFEF4444)
-                                                : AppTheme.primaryPurple,
+                                                : _roleAccentColor,
                                             foregroundColor: Colors.white,
                                             padding: const EdgeInsets.symmetric(
                                               vertical: 14,
@@ -9421,7 +9794,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                           SnackBar(
                                             behavior: SnackBarBehavior.floating,
                                             backgroundColor:
-                                                AppTheme.primaryPurple,
+                                                _roleAccentColor,
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
                                                   BorderRadius.circular(14),
@@ -9508,15 +9881,15 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                       ),
                                       side: BorderSide(
                                         color: _itemSaved
-                                            ? AppTheme.primaryPurple
+                                            ? _roleAccentColor
                                             : (isDark
                                                   ? AppTheme.inputBorder
                                                   : Colors.grey.shade300),
                                         width: _itemSaved ? 1.5 : 1.0,
                                       ),
                                       backgroundColor: _itemSaved
-                                          ? AppTheme.primaryPurple.withValues(
-                                              alpha: 0.06,
+                                          ? _roleAccentColor.withValues(
+                                              alpha: 0.08,
                                             )
                                           : null,
                                       shape: RoundedRectangleBorder(
@@ -9529,7 +9902,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                           : Icons.bookmark_border_rounded,
                                       size: 16,
                                       color: _itemSaved
-                                          ? AppTheme.primaryPurple
+                                          ? _roleAccentColor
                                           : null,
                                     ),
                                     label: Text(
@@ -9538,7 +9911,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                         fontWeight: FontWeight.w800,
                                         fontSize: 12,
                                         color: _itemSaved
-                                            ? AppTheme.primaryPurple
+                                            ? _roleAccentColor
                                             : null,
                                       ),
                                     ),
@@ -9549,6 +9922,34 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                   flex: 1,
                                   child: OutlinedButton.icon(
                                     onPressed: () {
+                                      if (!canShare) {
+                                        if (isNew) {
+                                          AppSnackbar.warning(
+                                            context,
+                                            'Item baru harus disimpan atau disetujui terlebih dahulu sebelum dibagikan.',
+                                            title: 'Belum Tersedia',
+                                          );
+                                        } else if (isPendingReview) {
+                                          AppSnackbar.warning(
+                                            context,
+                                            'Item masih menunggu review admin dan belum dapat dibagikan ke publik.',
+                                            title: 'Menunggu Review',
+                                          );
+                                        } else if (isRejectedItem) {
+                                          AppSnackbar.error(
+                                            context,
+                                            'Item yang ditolak tidak dapat dibagikan.',
+                                            title: 'Tidak Dapat Dibagikan',
+                                          );
+                                        } else {
+                                          AppSnackbar.info(
+                                            context,
+                                            'Item belum dipublikasikan sehingga belum dapat dibagikan.',
+                                            title: 'Belum Publik',
+                                          );
+                                        }
+                                        return;
+                                      }
                                       final item = widget.item;
                                       final shareTitle =
                                           item?.title ?? widget.data.title;
@@ -9640,7 +10041,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                   _buildShareTile(
                                                     Icons.link_rounded,
                                                     'Salin Link',
-                                                    AppTheme.primaryPurple,
+                                                    _roleAccentColor,
                                                     () {
                                                       Navigator.pop(context);
                                                       ScaffoldMessenger.of(
@@ -9661,8 +10062,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                             ),
                                                           ),
                                                           backgroundColor:
-                                                              AppTheme
-                                                                  .primaryPurple,
+                                                              _roleAccentColor,
                                                           shape: RoundedRectangleBorder(
                                                             borderRadius:
                                                                 BorderRadius.circular(
@@ -9686,23 +10086,33 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                         vertical: 15,
                                       ),
                                       side: BorderSide(
-                                        color: AppTheme.primaryPurple
-                                            .withValues(alpha: 0.4),
+                                        color: canShare
+                                            ? _roleAccentColor.withValues(alpha: 0.45)
+                                            : (isDark ? Colors.white12 : Colors.grey.shade300),
+                                        width: canShare ? 1.2 : 1.0,
                                       ),
+                                      backgroundColor: canShare
+                                          ? _roleAccentColor.withValues(alpha: 0.06)
+                                          : (isDark ? Colors.white.withValues(alpha: 0.02) : Colors.grey.shade100),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                     ),
-                                    icon: const Icon(
+                                    icon: Icon(
                                       Icons.share_outlined,
                                       size: 16,
+                                      color: canShare
+                                          ? _roleAccentColor
+                                          : (isDark ? Colors.white38 : Colors.grey.shade400),
                                     ),
                                     label: Text(
                                       'Bagikan',
                                       style: TextStyle(
                                         fontWeight: FontWeight.w800,
                                         fontSize: 12,
-                                        color: AppTheme.primaryPurple,
+                                        color: canShare
+                                            ? _roleAccentColor
+                                            : (isDark ? Colors.white38 : Colors.grey.shade400),
                                       ),
                                     ),
                                   ),
@@ -9714,23 +10124,33 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                   flex: 2,
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      gradient: _itemSubmitted && !isNew
-                                          ? LinearGradient(
-                                              colors: [
-                                                Color(0xFF0EA5E9),
-                                                Color(0xFF3B82F6),
-                                              ],
-                                            )
-                                          : AppTheme.primaryGradient,
+                                      gradient: isNew
+                                          ? _roleGradient
+                                          : (isPendingReview
+                                              ? const LinearGradient(
+                                                  colors: [
+                                                    Color(0xFFF59E0B),
+                                                    Color(0xFFD97706),
+                                                  ],
+                                                )
+                                              : (isRejectedItem
+                                                  ? const LinearGradient(
+                                                      colors: [
+                                                        Color(0xFFEF4444),
+                                                        Color(0xFFDC2626),
+                                                      ],
+                                                    )
+                                                  : _roleGradient)),
                                       borderRadius: BorderRadius.circular(16),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: _itemSubmitted && !isNew
-                                              ? Colors.blue.withValues(
-                                                  alpha: 0.35,
-                                                )
-                                              : AppTheme.primaryPurple
-                                                    .withValues(alpha: 0.4),
+                                          color: isNew
+                                              ? _roleAccentColor.withValues(alpha: 0.35)
+                                              : (isPendingReview
+                                                  ? const Color(0xFFF59E0B).withValues(alpha: 0.35)
+                                                  : (isRejectedItem
+                                                      ? const Color(0xFFEF4444).withValues(alpha: 0.35)
+                                                      : _roleAccentColor.withValues(alpha: 0.35))),
                                           blurRadius: 16,
                                           offset: const Offset(0, 6),
                                         ),
@@ -9740,31 +10160,73 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                       color: Colors.transparent,
                                       child: InkWell(
                                         borderRadius: BorderRadius.circular(16),
-                                        onTap: () {
+                                        onTap: () async {
                                           final item = widget.item;
                                           final isCreatorPackage =
                                               _reviewableCreatorPackageKeys
                                                   .contains(widget.data.key);
+                                          final targetName =
+                                              item?.title ?? widget.data.title;
                                           final actionName = isNew
                                               ? (isCreatorPackage
                                                     ? 'Ajukan untuk Review'
-                                                    : 'Buat Baru')
-                                              : (isCreatorPackage
-                                                    ? item?.tag ??
-                                                          'Status Paket'
-                                                    : widget.actionLabel);
-                                          final targetName =
-                                              item?.title ?? widget.data.title;
-                                          if (isCreatorPackage && !isNew) {
+                                                    : (widget.actionLabel.isNotEmpty
+                                                        ? widget.actionLabel
+                                                        : 'Buat Baru'))
+                                              : (isPendingReview
+                                                    ? 'Menunggu Review'
+                                                    : (isRejectedItem
+                                                        ? 'Ajukan Ulang'
+                                                        : (isPublishedItem
+                                                            ? (item?.tag != null &&
+                                                                    item!.tag!.isNotEmpty
+                                                                ? item.tag!
+                                                                : 'Tayang Publik')
+                                                            : 'Layanan Aktif')));
+
+                                          if (!isNew) {
+                                            if (isPendingReview) {
+                                              AppSnackbar.info(
+                                                context,
+                                                'Item "$targetName" saat ini sedang menunggu review admin sebelum dapat dipublikasikan.',
+                                                title: 'Menunggu Review',
+                                              );
+                                              return;
+                                            }
+                                            if (isRejectedItem) {
+                                              if (widget.onResubmitPackage != null && item != null) {
+                                                await widget.onResubmitPackage!(item);
+                                                if (mounted) {
+                                                  setState(() {
+                                                    _itemSubmitted = true;
+                                                  });
+                                                }
+                                                AppSnackbar.success(
+                                                  context,
+                                                  'Pengajuan ulang untuk "$targetName" berhasil dikirim ke antrean review.',
+                                                  title: 'Pengajuan Ulang Terkirim',
+                                                );
+                                              } else {
+                                                AppSnackbar.info(
+                                                  context,
+                                                  'Silakan periksa catatan admin pada rincian item untuk memperbaiki pengajuan.',
+                                                  title: 'Pengajuan Ditolak',
+                                                );
+                                              }
+                                              return;
+                                            }
+                                            if (isPublishedItem) {
+                                              AppSnackbar.success(
+                                                context,
+                                                'Item "$targetName" sudah aktif dan tayang di profil publik Anda.',
+                                                title: 'Tayang Publik',
+                                              );
+                                              return;
+                                            }
                                             AppSnackbar.info(
                                               context,
-                                              item?.tag == 'Tayang Publik'
-                                                  ? 'Paket ini sudah tampil di publik.'
-                                                  : item?.tag == 'Ditolak'
-                                                  ? 'Lihat catatan admin pada detail paket untuk memperbaiki pengajuan.'
-                                                  : 'Paket ini sedang menunggu review admin.',
-                                              title:
-                                                  item?.tag ?? 'Status Paket',
+                                              'Status item "$targetName" saat ini aktif.',
+                                              title: 'Status Layanan',
                                             );
                                             return;
                                           }
@@ -9869,8 +10331,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                       width: 40,
                                                       height: 40,
                                                       decoration: BoxDecoration(
-                                                        gradient: AppTheme
-                                                            .primaryGradient,
+                                                        gradient: _roleGradient,
                                                         borderRadius:
                                                             BorderRadius.circular(
                                                               12,
@@ -9942,8 +10403,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                                 width: 30,
                                                                 height: 30,
                                                                 decoration: BoxDecoration(
-                                                                  gradient: AppTheme
-                                                                      .primaryGradient,
+                                                                  gradient: _roleGradient,
                                                                   borderRadius:
                                                                       BorderRadius.circular(
                                                                         10,
@@ -9999,11 +10459,10 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                                             3,
                                                                       ),
                                                                   decoration: BoxDecoration(
-                                                                    color: AppTheme
-                                                                        .primaryPurple
+                                                                    color: _roleAccentColor
                                                                         .withValues(
                                                                           alpha:
-                                                                              0.1,
+                                                                              0.12,
                                                                         ),
                                                                     borderRadius:
                                                                         BorderRadius.circular(
@@ -10015,8 +10474,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                                     style: TextStyle(
                                                                       fontSize:
                                                                           9.5,
-                                                                      color: AppTheme
-                                                                          .primaryPurple,
+                                                                      color: _roleAccentColor,
                                                                       fontWeight:
                                                                           FontWeight
                                                                               .w800,
@@ -10259,8 +10717,8 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                       );
                                                     },
                                                     style: ElevatedButton.styleFrom(
-                                                      backgroundColor: AppTheme
-                                                          .primaryPurple,
+                                                      backgroundColor:
+                                                          _roleAccentColor,
                                                       foregroundColor:
                                                           Colors.white,
                                                       shape: RoundedRectangleBorder(
@@ -10311,8 +10769,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                       width: 40,
                                                       height: 40,
                                                       decoration: BoxDecoration(
-                                                        gradient: AppTheme
-                                                            .primaryGradient,
+                                                        gradient: _roleGradient,
                                                         borderRadius:
                                                             BorderRadius.circular(
                                                               12,
@@ -10581,22 +11038,34 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                   isNew
                                                       ? Icons
                                                             .add_circle_outline_rounded
-                                                      : (_itemSubmitted
-                                                            ? Icons
-                                                                  .schedule_send_rounded
-                                                            : Icons
-                                                                  .rocket_launch_rounded),
+                                                      : (isPendingReview
+                                                            ? Icons.hourglass_top_rounded
+                                                            : (isRejectedItem
+                                                                  ? Icons.refresh_rounded
+                                                                  : (isPublishedItem
+                                                                        ? Icons.verified_rounded
+                                                                        : Icons.check_circle_rounded))),
                                                   size: 16,
                                                   color: Colors.white,
                                                 ),
                                                 const SizedBox(width: 6),
                                                 Text(
                                                   isNew
-                                                      ? 'Buat Baru'
-                                                      : (_itemSubmitted
+                                                      ? (isCreatorPackage
+                                                            ? 'Ajukan untuk Review'
+                                                            : (widget.actionLabel.isNotEmpty
+                                                                  ? widget.actionLabel
+                                                                  : 'Buat Baru'))
+                                                      : (isPendingReview
                                                             ? 'Menunggu Review'
-                                                            : widget
-                                                                  .actionLabel),
+                                                            : (isRejectedItem
+                                                                  ? 'Ajukan Ulang'
+                                                                  : (isPublishedItem
+                                                                        ? (item?.tag != null &&
+                                                                                item!.tag!.isNotEmpty
+                                                                            ? item.tag!
+                                                                            : 'Tayang Publik')
+                                                                        : 'Layanan Aktif'))),
                                                   style: const TextStyle(
                                                     color: Colors.white,
                                                     fontSize: 12.5,
@@ -11401,13 +11870,13 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                AppTheme.deepPurple.withValues(alpha: 0.08),
-                AppTheme.lightPurple.withValues(alpha: 0.08),
+                _roleAccentColor.withValues(alpha: 0.10),
+                _roleAccentColor.withValues(alpha: 0.04),
               ],
             ),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: AppTheme.primaryPurple.withValues(alpha: 0.15),
+              color: _roleAccentColor.withValues(alpha: 0.18),
             ),
           ),
           child: Row(
@@ -11421,21 +11890,21 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                       children: [
                         Text(
                           rating,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 36,
                             fontWeight: FontWeight.w900,
-                            color: AppTheme.primaryPurple,
+                            color: _roleAccentColor,
                             letterSpacing: -1,
                           ),
                         ),
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 6),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
                           child: Text(
                             '/5.0',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: AppTheme.primaryPurple,
+                              color: _roleAccentColor,
                             ),
                           ),
                         ),
@@ -11514,7 +11983,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                     child: Container(
                                       height: 6,
                                       decoration: BoxDecoration(
-                                        gradient: AppTheme.primaryGradient,
+                                        gradient: _roleGradient,
                                         borderRadius: BorderRadius.circular(3),
                                       ),
                                     ),
@@ -11561,7 +12030,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                 ),
                 decoration: BoxDecoration(
                   gradient: _selectedFilterReview == i
-                      ? AppTheme.primaryGradient
+                      ? _roleGradient
                       : null,
                   color: _selectedFilterReview == i
                       ? null
@@ -11615,7 +12084,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                 style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800),
               ),
               style: TextButton.styleFrom(
-                foregroundColor: AppTheme.primaryPurple,
+                foregroundColor: _roleAccentColor,
                 padding: EdgeInsets.zero,
                 visualDensity: VisualDensity.compact,
               ),
@@ -11822,7 +12291,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                   : Icons.thumb_up_outlined,
                               size: 13,
                               color: liked
-                                  ? AppTheme.primaryPurple
+                                  ? _roleAccentColor
                                   : (isDark
                                         ? AppTheme.textMuted
                                         : Colors.grey.shade500),
@@ -11834,7 +12303,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
                                 color: liked
-                                    ? AppTheme.primaryPurple
+                                    ? _roleAccentColor
                                     : (isDark
                                           ? AppTheme.textMuted
                                           : Colors.grey.shade500),
@@ -11851,7 +12320,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             behavior: SnackBarBehavior.floating,
-                            backgroundColor: AppTheme.primaryPurple,
+                            backgroundColor: _roleAccentColor,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),

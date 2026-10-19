@@ -28,6 +28,7 @@ import 'creator_sidebar_menus.dart';
 import 'kreavana_ai_floating_widget.dart';
 import 'app_sweet_alert.dart';
 import '../services/system_settings_service.dart';
+import 'sidebar_hover_tile.dart';
 
 class DesktopSidebarLayout extends StatefulWidget {
   final Widget child;
@@ -142,6 +143,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         route.startsWith('eo_') ||
         route.startsWith('drone_') ||
         route.startsWith('konten_') ||
+        route.startsWith('animator_') ||
+        route.startsWith('vendor_') ||
+        route.startsWith('mitra_') ||
         route.startsWith('komunitas_');
   }
 
@@ -398,6 +402,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
       );
       return;
     }
+    if (widget.activeRoute.toLowerCase().trim() == serviceKey.toLowerCase().trim()) {
+      return;
+    }
     if (serviceKey.startsWith('komunitas_')) {
       _pushNoAnimation(
         CommunityDashboardScreen(
@@ -429,6 +436,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         'proyek_saya': 'mengakses proyek',
         'agenda': 'mengakses agenda',
         'explore': 'melihat rekomendasi peluang kerja',
+        'marketplace': 'mencari kreator & vendor',
         'kapasitas_jadwal': 'mengatur kapasitas & jadwal kerja',
         'tender_kolaborasi': 'mengakses tender dan vendor',
         'mitra_komunitas': 'mengakses mitra komunitas',
@@ -495,6 +503,10 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
 
     // Routes that are in MainNavigation's IndexedStack — go to index instead
     switch (route) {
+      case 'notifikasi':
+      case 'notifications':
+        _goToMain(10);
+        return;
       case 'pesan':
       case 'chat':
       case 'direct_message':
@@ -673,89 +685,20 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     required bool isDark,
     bool isCollapsed = false,
     Color? activeColor,
+    Widget? trailing,
   }) {
     final effectiveActiveColor =
       activeColor ?? SubRoleThemeEngine.getAccentColorForUser(widget.user);
 
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: isCollapsed ? 8 : 12,
-        vertical: 2,
-      ),
-      child: Tooltip(
-        message: isCollapsed ? label : '',
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          hoverColor: isDark
-              ? Colors.white.withValues(alpha: 0.04)
-              : Colors.black.withValues(alpha: 0.03),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: EdgeInsets.symmetric(
-              horizontal: isCollapsed ? 0 : 12,
-              vertical: 10,
-            ),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? effectiveActiveColor.withValues(alpha: isDark ? 0.16 : 0.09)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-              border: isSelected
-                  ? Border.all(
-                      color: effectiveActiveColor.withValues(alpha: isDark ? 0.3 : 0.2),
-                      width: 1,
-                    )
-                  : null,
-            ),
-            child: Row(
-              mainAxisAlignment: isCollapsed
-                  ? MainAxisAlignment.center
-                  : MainAxisAlignment.start,
-              children: [
-                if (!isCollapsed && isSelected) ...[
-                  Container(
-                    width: 3.5,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: effectiveActiveColor,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                Icon(
-                  icon,
-                  color: isSelected
-                      ? effectiveActiveColor
-                      : (isDark ? AppTheme.textMuted : AppTheme.textSecondary),
-                  size: 20,
-                ),
-                if (!isCollapsed) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontWeight: isSelected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        fontSize: 13.5,
-                        color: isSelected
-                            ? (isDark ? Colors.white : effectiveActiveColor)
-                            : (isDark ? Colors.white70 : AppTheme.textPrimary),
-                        letterSpacing: isSelected ? 0.1 : 0,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
+    return SidebarHoverTile(
+      icon: icon,
+      label: label,
+      onTap: onTap,
+      isSelected: isSelected,
+      isDark: isDark,
+      isCollapsed: isCollapsed,
+      activeColor: effectiveActiveColor,
+      trailing: trailing,
     );
   }
 
