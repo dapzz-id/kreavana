@@ -1,0 +1,8 @@
+/vendor
+/.idea
+/.vscode
+/.phpunit.result.cache
+.env
+.env.backup
+.env.production
+dump.rdb
