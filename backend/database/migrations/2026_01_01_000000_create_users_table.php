@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('username')->unique();
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
+            $table->string('password')->nullable(); // Managed by users_api
             $table->string('avatar_url', 500)->nullable();
             $table->string('phone', 20)->nullable();
             $table->enum('role', ['user', 'creator', 'admin'])->default('user');
