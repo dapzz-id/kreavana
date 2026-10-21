@@ -13,8 +13,8 @@ use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-#[Fillable(['id', 'name', 'username', 'email', 'password', 'avatar_url', 'phone', 'role', 'sub_role', 'is_creator_approved', 'is_verified', 'verification_type', 'verified_at', 'nik', 'full_name_ktp', 'ktp_photo_url', 'selfie_photo_url', 'nib_number', 'nib_file_url', 'max_work_capacity', 'balance', 'last_online', 'used_storage_bytes', 'public_key', 'performance_boost', 'email_verified_at', 'email_verification_code_hash', 'email_verification_expires_at', 'email_verification_attempts'])]
-#[Hidden(['password', 'remember_token', 'wallet_pin'])]
+#[Fillable(['id', 'name', 'username', 'email', 'avatar_url', 'phone', 'role', 'sub_role', 'is_creator_approved', 'is_suspended', 'suspended_until', 'suspend_reason', 'is_verified', 'verification_type', 'verified_at', 'nik', 'full_name_ktp', 'ktp_photo_url', 'selfie_photo_url', 'nib_number', 'nib_file_url', 'max_work_capacity', 'balance', 'last_online', 'used_storage_bytes', 'public_key', 'performance_boost', 'email_verified_at', 'email_verification_code_hash', 'email_verification_expires_at', 'email_verification_attempts'])]
+#[Hidden(['remember_token', 'wallet_pin'])]
 class User extends Authenticatable implements JWTSubject
 {
     /** @use HasFactory<UserFactory> */
@@ -32,12 +32,29 @@ class User extends Authenticatable implements JWTSubject
             'email_verification_expires_at' => 'datetime',
             'verified_at' => 'datetime',
             'last_online' => 'datetime',
-            'password' => 'hashed',
             'max_work_capacity' => 'integer',
             'role' => \App\Enums\RoleType::class,
             'is_verified' => 'boolean',
             'is_creator_approved' => 'boolean',
+            'is_suspended' => 'boolean',
+            'suspended_until' => 'datetime',
         ];
+    }
+
+    /**
+     * Check if user is currently suspended in Kreavana.
+     */
+    public function isSuspended(): bool
+    {
+        if ($this->is_suspended) {
+            return true;
+        }
+
+        if ($this->suspended_until && $this->suspended_until->isFuture()) {
+            return true;
+        }
+
+        return false;
     }
 
     protected function castAttribute($key, $value)

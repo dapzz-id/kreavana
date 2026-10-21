@@ -83,7 +83,7 @@ Route::prefix('auth')->withoutMiddleware(\App\Http\Middleware\ValidateJti::class
 });
 
 // Auth & Protected Routes
-Route::middleware('auth:api')->group(function () {
+Route::middleware(['auth:api', 'user.not_suspended'])->group(function () {
 
     // Auth
     Route::prefix('auth')->group(function () {

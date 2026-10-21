@@ -95,7 +95,6 @@ class GroupService extends BaseService
                     'name' => ucwords(str_replace(['.', '_', '-'], ' ', explode('@', $rawEmail)[0])),
                     'username' => $username,
                     'email' => $rawEmail,
-                    'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(16)),
                     'role' => 'user',
                 ]);
             }

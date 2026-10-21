@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'permission' => \App\Http\Middleware\PermissionMiddleware::class,
             'module' => \App\Http\Middleware\CheckModuleEnabled::class,
+            'user.not_suspended' => \App\Http\Middleware\CheckUserSuspended::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

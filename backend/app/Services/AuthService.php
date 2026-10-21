@@ -78,6 +78,16 @@ class AuthService implements AuthServiceInterface
             $userApiData = $proxyResult['data']['user'] ?? [];
             $user = UsersApiClient::syncShadowUser($userApiData);
 
+            if ($user->isSuspended()) {
+                AuthLog::create([
+                    'user_id' => $user->id,
+                    'action' => 'login_suspended',
+                    'ip_address' => $ip,
+                    'user_agent' => substr($userAgent, 0, 255),
+                ]);
+                return 'suspended';
+            }
+
             if ($requiredRole && $user->role !== $requiredRole) {
                 AuthLog::create([
                     'user_id' => $user->id,

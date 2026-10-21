@@ -15,7 +15,9 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             // Password is now managed by users_api, making it nullable in backend
-            $table->string('password')->nullable()->change();
+            if (Schema::hasColumn('users', 'password')) {
+                $table->string('password')->nullable()->change();
+            }
 
             // Remember token is obsolete for microservice JWT auth
             if (Schema::hasColumn('users', 'remember_token')) {

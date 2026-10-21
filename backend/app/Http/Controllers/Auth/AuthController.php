@@ -116,6 +116,17 @@ class AuthController extends Controller
             return response()->json(['status' => false, 'message' => 'Forbidden'], 403);
         }
 
+        if ($token === 'suspended') {
+            $user = User::where('email', $request->email)->orWhere('username', $request->email)->first();
+            $until = $user?->suspended_until ? ' hingga ' . $user->suspended_until->format('d M Y H:i') : '';
+            return response()->json([
+                'status' => false,
+                'message' => 'Akun Anda di Kreavana sedang ditangguhkan' . $until . '.',
+                'reason' => $user?->suspend_reason,
+                'suspended_until' => $user?->suspended_until?->toIso8601String(),
+            ], 403);
+        }
+
         return $this->respondWithToken($token, Auth::guard('api')->user());
     }
 
@@ -217,12 +228,6 @@ class AuthController extends Controller
                     'status' => false,
                     'message' => $proxyResult['message'] ?? 'Gagal memperbarui kata sandi.',
                 ], $proxyResult['status'] ?? 422);
-            }
-
-            if ($user->password !== null) {
-                $user->update([
-                    'password' => Hash::make($request->new_password),
-                ]);
             }
 
             AuthLog::create([

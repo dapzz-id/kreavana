@@ -19,7 +19,6 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Admin Kreavana',
                 'username' => 'admin',
-                'password' => Hash::make('password123'),
                 'role' => RoleType::Admin,
                 'is_creator_approved' => 0,
                 'email_verified_at' => now(),
@@ -32,7 +31,6 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Kreavana Demo Client',
                 'username' => 'client_demo',
-                'password' => Hash::make('password123'),
                 'role' => RoleType::User,
                 'is_creator_approved' => 0,
                 'email_verified_at' => now(),
@@ -45,7 +43,6 @@ class UserSeeder extends Seeder
             [
                 'name' => 'PT Kreavana Nusantara Korporat',
                 'username' => 'corporate_demo',
-                'password' => Hash::make('password123'),
                 'role' => RoleType::User,
                 'sub_role' => 'corporate',
                 'is_creator_approved' => 0,
@@ -69,7 +66,6 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Kreavana Demo Creator',
                 'username' => 'creator_demo',
-                'password' => Hash::make('password123'),
                 'role' => RoleType::Creator,
                 'sub_role' => null,
                 'is_creator_approved' => 1,
@@ -223,7 +219,6 @@ class UserSeeder extends Seeder
                 [
                     'name' => $data['name'],
                     'username' => $data['username'],
-                    'password' => Hash::make('password123'),
                     'role' => RoleType::Creator,
                     'sub_role' => $data['sub_role']->value,
                     'is_creator_approved' => 1,
