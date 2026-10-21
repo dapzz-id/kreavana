@@ -31,6 +31,7 @@ Microservice `users_api` memisahkan entitas **Global Identity** dari domain apli
 | `GET` | `/.well-known/jwks.json` | Public key endpoint |
 | `POST` | `/api/v1/auth/register` | Registrasi akun universal baru |
 | `POST` | `/api/v1/auth/login` | Login universal (mengembalikan Access & Refresh Token) |
+| `POST` | `/api/v1/auth/social` | Login / auto-register via Google OAuth2 |
 | `POST` | `/api/v1/auth/refresh` | Perpanjangan sesi tanpa logout |
 
 ### Authenticated Endpoints (Bearer Token):
@@ -51,6 +52,7 @@ Microservice `users_api` memisahkan entitas **Global Identity** dari domain apli
 ---
 
 ## 4. Cara Menjalankan Secara Lokal
+
 ```bash
 # 1. Pindah ke direktori users_api
 cd users_api
@@ -61,12 +63,27 @@ composer install
 # 3. Siapkan environment file
 cp .env.example .env
 
-# 4. Generate application key
-php artisan key:generate
+# Sesuaikan konfigurasi database lokal (DB_CONNECTION, DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD)
 
-# 5. Jalankan migrasi dan seeder aplikasi klien
+# 4. Generate Application Key dan JWT Secret
+php artisan key:generate
+php artisan jwt:secret --force
+
+# 5. Jalankan migrasi dan seeder akun universal serta client app
 php artisan migrate --seed
 
 # 6. Jalankan server lokal pada port 8001 (port 8000 dialokasikan untuk Kreavana Backend)
-php artisan serve --port=8001
+php artisan serve --host=0.0.0.0 --port=8001
 ```
+
+---
+
+## 5. Akun Pengujian Default (Seeder)
+Semua akun hasil `php artisan migrate --seed` memiliki password default:
+- **Password:** `password123`
+- **Contoh Akun:**
+  - `alvin@example.com`
+  - `superadmin@kreavana.com`
+  - `client@example.com`
+  - `creator@example.com`
+
