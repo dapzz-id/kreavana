@@ -15,6 +15,24 @@ class AuthService implements AuthServiceInterface
 {
     public function register(array $data): User
     {
+        if (UsersApiClient::isEnabled()) {
+            $regResult = UsersApiClient::register($data);
+            if ($regResult['success']) {
+                $userApiData = $regResult['data']['user'] ?? [
+                    'username' => $data['username'],
+                    'email' => $data['email'],
+                    'full_name' => $data['name'],
+                ];
+                return UsersApiClient::syncShadowUser($userApiData);
+            }
+
+            if (!empty($regResult['errors'])) {
+                throw \Illuminate\Validation\ValidationException::withMessages($regResult['errors']);
+            }
+
+            throw new \Exception($regResult['message'] ?? 'Pendaftaran pada Universal Identity gagal.');
+        }
+
         return DB::transaction(function () use ($data) {
             $otp = $this->generateOtp();
 
@@ -38,6 +56,50 @@ class AuthService implements AuthServiceInterface
 
     public function attemptLogin(array $credentials, string $ip, string $userAgent, ?\App\Enums\RoleType $requiredRole = null): ?string
     {
+        if (UsersApiClient::isEnabled()) {
+            $identifier = $credentials['email'] ?? $credentials['username'] ?? '';
+            $password = $credentials['password'] ?? '';
+
+            $proxyResult = UsersApiClient::login($identifier, $password, [
+                'ip' => $ip,
+                'user_agent' => $userAgent,
+            ]);
+
+            if (!$proxyResult['success']) {
+                AuthLog::create([
+                    'user_id' => null,
+                    'action' => 'login_failed',
+                    'ip_address' => $ip,
+                    'user_agent' => substr($userAgent, 0, 255),
+                ]);
+                return null;
+            }
+
+            $userApiData = $proxyResult['data']['user'] ?? [];
+            $user = UsersApiClient::syncShadowUser($userApiData);
+
+            if ($requiredRole && $user->role !== $requiredRole) {
+                AuthLog::create([
+                    'user_id' => $user->id,
+                    'action' => 'login_forbidden',
+                    'ip_address' => $ip,
+                    'user_agent' => substr($userAgent, 0, 255),
+                ]);
+                return 'forbidden';
+            }
+
+            $token = Auth::guard('api')->login($user);
+
+            AuthLog::create([
+                'user_id' => $user->id,
+                'action' => 'login_via_users_api',
+                'ip_address' => $ip,
+                'user_agent' => substr($userAgent, 0, 255),
+            ]);
+
+            return $token;
+        }
+
         if (! $token = Auth::guard('api')->attempt($credentials)) {
             AuthLog::create([
                 'user_id' => null,

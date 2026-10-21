@@ -39,4 +39,11 @@ return [
         'maps_api_key' => env('GOOGLE_MAPS_API_KEY'),
     ],
 
+    'users_api' => [
+        'url' => env('USERS_API_URL', 'https://auth-dev.kreavana.com'),
+        'client_id' => env('USERS_API_CLIENT_ID', 'kreavana_app'),
+        'timeout' => (int) env('USERS_API_TIMEOUT', 10),
+    ],
+
 ];
+

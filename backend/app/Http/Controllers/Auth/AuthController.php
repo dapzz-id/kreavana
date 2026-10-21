@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use App\Jobs\SendSocialLoginPasswordJob;
 use App\Contracts\AuthServiceInterface;
+use App\Services\UsersApiClient;
 use Illuminate\Support\Facades\Http;
 
 class AuthController extends Controller
@@ -209,6 +210,34 @@ class AuthController extends Controller
 
         $user = Auth::guard('api')->user();
 
+        if (UsersApiClient::isEnabled()) {
+            $proxyResult = UsersApiClient::changePassword($user, $request->current_password, $request->new_password);
+            if (!$proxyResult['success']) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $proxyResult['message'] ?? 'Gagal memperbarui kata sandi.',
+                ], $proxyResult['status'] ?? 422);
+            }
+
+            if ($user->password !== null) {
+                $user->update([
+                    'password' => Hash::make($request->new_password),
+                ]);
+            }
+
+            AuthLog::create([
+                'user_id' => $user->id,
+                'action' => 'password_changed_via_users_api',
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 255),
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Kata sandi berhasil diperbarui.',
+            ]);
+        }
+
         if (! Hash::check($request->current_password, $user->password)) {
             return response()->json([
                 'status' => false,
@@ -304,6 +333,20 @@ class AuthController extends Controller
 
         $provider = $request->provider;
         $idToken = $request->id_token;
+
+        if ($provider === 'google' && UsersApiClient::isEnabled()) {
+            $proxyResult = UsersApiClient::socialLogin($idToken, 'google');
+            if ($proxyResult['success']) {
+                $userApiData = $proxyResult['data']['user'] ?? [];
+                $user = UsersApiClient::syncShadowUser($userApiData);
+                $token = Auth::guard('api')->login($user);
+                return $this->respondWithToken($token, $user);
+            }
+            return response()->json([
+                'status' => false,
+                'message' => $proxyResult['message'] ?? 'Login Google gagal.',
+            ], $proxyResult['status'] >= 400 && $proxyResult['status'] < 500 ? $proxyResult['status'] : 401);
+        }
 
         try {
             // Verify token based on provider

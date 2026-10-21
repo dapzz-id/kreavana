@@ -13,7 +13,7 @@ use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-#[Fillable(['name', 'username', 'email', 'password', 'avatar_url', 'phone', 'role', 'sub_role', 'is_creator_approved', 'is_verified', 'verification_type', 'verified_at', 'nik', 'full_name_ktp', 'ktp_photo_url', 'selfie_photo_url', 'nib_number', 'nib_file_url', 'max_work_capacity', 'balance', 'last_online', 'used_storage_bytes', 'public_key', 'performance_boost', 'email_verified_at', 'email_verification_code_hash', 'email_verification_expires_at', 'email_verification_attempts'])]
+#[Fillable(['id', 'name', 'username', 'email', 'password', 'avatar_url', 'phone', 'role', 'sub_role', 'is_creator_approved', 'is_verified', 'verification_type', 'verified_at', 'nik', 'full_name_ktp', 'ktp_photo_url', 'selfie_photo_url', 'nib_number', 'nib_file_url', 'max_work_capacity', 'balance', 'last_online', 'used_storage_bytes', 'public_key', 'performance_boost', 'email_verified_at', 'email_verification_code_hash', 'email_verification_expires_at', 'email_verification_attempts'])]
 #[Hidden(['password', 'remember_token', 'wallet_pin'])]
 class User extends Authenticatable implements JWTSubject
 {
