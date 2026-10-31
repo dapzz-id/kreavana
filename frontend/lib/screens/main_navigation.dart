@@ -97,9 +97,11 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   void _onUserNotifierChanged() {
-    if (mounted && currentUserNotifier.value != null) {
+    final newUser = currentUserNotifier.value;
+    if (newUser != null && mounted && newUser != _currentUser) {
       setState(() {
-        _currentUser = currentUserNotifier.value!;
+        _currentUser = newUser;
+        _screenCache.clear();
       });
     }
   }
@@ -119,6 +121,7 @@ class _MainNavigationState extends State<MainNavigation> {
         if (result.success == true && result.user != null) {
           _currentUser = result.user!;
           _screenCache.clear();
+          currentUserNotifier.value = result.user!;
         }
       });
     }
@@ -129,6 +132,7 @@ class _MainNavigationState extends State<MainNavigation> {
       _currentUser = updatedUser;
       _screenCache.clear();
     });
+    currentUserNotifier.value = updatedUser;
   }
 
   void _onLogout() async {

@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import '../services/app_router.dart';
 import '../screens/explore_screen.dart';
 import '../services/user_store.dart';
+import '../services/profile_service.dart';
 
 /// Floating Assistant Widget that opens the Kreavana.AI Dedicated Screen.
 /// Supports both Light and Dark themes, draggable across Mobile & Desktop viewports.
@@ -897,32 +898,50 @@ class _KreavanaAiPanelState extends State<KreavanaAiPanel> {
   }
 
   /// Ensures the user is logged in and has an active designated subscription (Plus, Pro, or Super).
-  bool _ensureAccess() {
-    final user = currentUserNotifier.value;
+  Future<bool> _ensureAccessAsync() async {
+    var user = currentUserNotifier.value;
     // 1. Guest check
     if (user == null || user.isGuest) {
-      AuthGuardDialog.show(context, actionName: 'menggunakan Kreavana AI');
+      if (mounted) {
+        AuthGuardDialog.show(context, actionName: 'menggunakan Kreavana AI');
+      }
       return false;
     }
 
     // 2. Subscription check (Plus, Pro, Super)
-    final tier = user.subscriptionTier.toLowerCase();
-    final isAllowed = ['plus', 'pro', 'super'].contains(tier);
+    var tier = user.subscriptionTier.toLowerCase();
+    var isAllowed = ['plus', 'pro', 'super'].contains(tier);
+
+    // If local tier is not yet allowed, verify with backend before blocking
+    if (!isAllowed && user.id != null) {
+      try {
+        final profileRes = await ProfileService.getProfile(user.id!);
+        if (profileRes.success && profileRes.user != null) {
+          user = profileRes.user!;
+          tier = user.subscriptionTier.toLowerCase();
+          isAllowed = ['plus', 'pro', 'super'].contains(tier);
+        }
+      } catch (_) {}
+    }
+
     if (!isAllowed) {
-      UpgradePlanModal.show(context, user: user);
-      AppSweetAlert.warning(
-        context,
-        'Fitur Kreavana AI Assistant hanya tersedia untuk pengguna Paket Plus, Pro, dan Super.',
-        title: 'Paket Berlangganan Diperlukan',
-      );
+      if (mounted) {
+        UpgradePlanModal.show(context, user: user);
+        AppSweetAlert.warning(
+          context,
+          'Fitur Kreavana AI Assistant hanya tersedia untuk pengguna Paket Plus, Pro, dan Super.',
+          title: 'Paket Berlangganan Diperlukan',
+        );
+      }
       return false;
     }
 
     return true;
   }
 
-  void _handleUpload() {
-    if (!_ensureAccess()) return;
+  void _handleUpload() async {
+    final hasAccess = await _ensureAccessAsync();
+    if (!hasAccess || !mounted) return;
 
     setState(() {
       _attachedFileName = 'brief_kebutuhan_kreatif.pdf';
@@ -934,15 +953,17 @@ class _KreavanaAiPanelState extends State<KreavanaAiPanel> {
     );
   }
 
-  void _sendPrompt(String prompt, {String? category}) {
-    if (!_ensureAccess()) return;
+  void _sendPrompt(String prompt, {String? category}) async {
+    final hasAccess = await _ensureAccessAsync();
+    if (!hasAccess || !mounted) return;
 
     _inputController.text = prompt;
     _sendMessage(category: category);
   }
 
   Future<void> _sendMessage({String? category}) async {
-    if (!_ensureAccess()) return;
+    final hasAccess = await _ensureAccessAsync();
+    if (!hasAccess || !mounted) return;
 
     final text = _inputController.text.trim();
     if (text.isEmpty && _attachedFileName == null) return;

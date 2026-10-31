@@ -9,6 +9,7 @@ class SubscriptionPlan {
   final List<String> features;
   final bool isPopular;
   final bool isFree;
+  final bool isCurrent;
 
   const SubscriptionPlan({
     required this.tier,
@@ -18,6 +19,7 @@ class SubscriptionPlan {
     required this.features,
     required this.isPopular,
     this.isFree = false,
+    this.isCurrent = false,
   });
 
   factory SubscriptionPlan.fromJson(Map<String, dynamic> json) {
@@ -31,6 +33,7 @@ class SubscriptionPlan {
           .toList(),
       isPopular: json['is_popular'] == true,
       isFree: ((json['price'] as num?)?.toInt() ?? 0) == 0,
+      isCurrent: json['is_current'] == true,
     );
   }
   SubscriptionPlan copyWith({
@@ -41,6 +44,7 @@ class SubscriptionPlan {
     List<String>? features,
     bool? isPopular,
     bool? isFree,
+    bool? isCurrent,
   }) {
     return SubscriptionPlan(
       tier: tier ?? this.tier,
@@ -50,6 +54,7 @@ class SubscriptionPlan {
       features: features ?? this.features,
       isPopular: isPopular ?? this.isPopular,
       isFree: isFree ?? this.isFree,
+      isCurrent: isCurrent ?? this.isCurrent,
     );
   }
 }

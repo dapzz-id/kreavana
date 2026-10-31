@@ -34,6 +34,21 @@ class PresentationDemoSeeder extends Seeder
         // Target pemilik proyek (prioritaskan event_organizer_demo jika ada)
         $owners = array_filter([$eventOrganizer, $clientDemo, $institution]);
 
+        if ($clientDemo) {
+            if ($clientDemo->balance < 1000000) {
+                $clientDemo->balance = 5000000.0;
+            }
+            if (empty($clientDemo->wallet_pin)) {
+                $clientDemo->wallet_pin = \Illuminate\Support\Facades\Hash::make('123456');
+            }
+            $clientDemo->save();
+
+            \App\Models\Subscription::updateOrCreate(
+                ['user_id' => $clientDemo->id, 'tier' => 'pro'],
+                ['price_paid' => 199999, 'auto_renew' => true, 'expires_at' => now()->addYear()]
+            );
+        }
+
         foreach ($owners as $owner) {
             $this->seedForOwner($owner, $photographer, $videographer, $mc);
         }

@@ -90,13 +90,22 @@ class SubscriptionController extends Controller
 
         $isCreator = in_array(strtolower((string) $role), ['creator', 'kreator']);
 
-        $plans = array_values(array_map(function ($plan) use ($isCreator) {
+        $authUser = auth('api')->user();
+        $currentTier = $authUser ? strtolower($authUser->subscription_tier ?? 'basic') : null;
+
+        $plans = array_values(array_map(function ($plan) use ($isCreator, $currentTier) {
             if (!$isCreator) {
                 // Boost akun hanya untuk role creator; hilangkan fitur boost untuk user dan client
                 $plan['features'] = array_values(array_filter($plan['features'], function ($feature) {
                     return !preg_match('/boost/i', $feature);
                 }));
             }
+
+            $isCurrent = ($currentTier === $plan['tier']) 
+                || (empty($currentTier) && $plan['tier'] === 'basic')
+                || ($currentTier === 'free' && $plan['tier'] === 'basic');
+            $plan['is_current'] = $isCurrent;
+
             return $plan;
         }, $this->plans));
 
