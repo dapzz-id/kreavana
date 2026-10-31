@@ -402,4 +402,38 @@ class OpportunityApplicationWorkflowTest extends TestCase
             'title' => 'Lamaran Proyek Disetujui!',
         ]);
     }
+
+    public function test_owner_cannot_negotiate_again_if_applicant_already_accepted()
+    {
+        $app = OpportunityApplication::create([
+            'opportunity_id' => $this->opportunity->id,
+            'creator_id' => $this->creator1->id,
+            'sub_role_slug' => 'wedding_organizer',
+            'pitch_message' => 'Proposal WO.',
+            'status' => 'under_consideration',
+            'counter_offer_price' => 500000,
+            'counter_offer_status' => 'accepted',
+            'counter_offer_by' => 'client',
+        ]);
+
+        // Attempting to negotiate/consider again should fail with 422
+        $response = $this->actingAsApi($this->owner)
+            ->postJson("/api/opportunities/applications/{$app->id}/consider", [
+                'counter_offer_price' => 450000,
+                'notes' => 'Mau nego lagi',
+            ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonFragment([
+            'message' => 'Pelamar telah menyetujui tawaran negosiasi dana. Anda tidak dapat melakukan negosiasi ulang, silakan pilih Setujui Lamaran (Deal) atau Tolak.',
+        ]);
+
+        // Owner can still reject or approve
+        $approveResponse = $this->actingAsApi($this->owner)
+            ->postJson("/api/opportunities/applications/{$app->id}/approve");
+
+        $approveResponse->assertStatus(200);
+        $app->refresh();
+        $this->assertEquals('approved', $app->status);
+    }
 }

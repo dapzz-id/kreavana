@@ -171,6 +171,15 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
   }
 
   Future<void> _handleConsiderDialog(OpportunityApplicationModel app) async {
+    if (app.counterOfferStatus == 'accepted') {
+      AppSweetAlert.info(
+        context,
+        'Pelamar telah menyetujui tawaran negosiasi sebelumnya. Anda tidak dapat melakukan negosiasi lagi, silakan klik Setujui (Deal) atau Tolak lamaran.',
+        title: 'Negosiasi Telah Disepakati',
+      );
+      return;
+    }
+
     final currencyFmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
     final initialPriceText = app.counterOfferPrice != null
         ? app.counterOfferPrice!.toStringAsFixed(0)
@@ -2599,6 +2608,33 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
               ),
             ),
           ],
+          if (_isOwner && app.isConsideration && app.counterOfferStatus == 'accepted') ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF059669)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Pelamar telah menyetujui tawaran negosiasi dana. Anda tinggal menyetujui (Setuju / Deal) atau menolak lamaran ini.',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF047857),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
 
           // Bid Price & Action Buttons Row
@@ -2727,18 +2763,20 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                         ),
                         child: const Text('Tolak'),
                       ),
-                      const SizedBox(width: 8),
-                      OutlinedButton.icon(
-                        onPressed: _actionLoading ? null : () => _handleConsiderDialog(app),
-                        icon: const Icon(Icons.edit_note_rounded, size: 14),
-                        label: const Text('Ubah Nego'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFD97706),
-                          side: BorderSide(color: const Color(0xFFF59E0B).withValues(alpha: 0.6)),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      if (app.counterOfferStatus != 'accepted') ...[
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          onPressed: _actionLoading ? null : () => _handleConsiderDialog(app),
+                          icon: const Icon(Icons.edit_note_rounded, size: 14),
+                          label: const Text('Ubah Nego'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFD97706),
+                            side: BorderSide(color: const Color(0xFFF59E0B).withValues(alpha: 0.6)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
                         ),
-                      ),
+                      ],
                       const SizedBox(width: 8),
                       ElevatedButton.icon(
                         onPressed: _actionLoading ? null : () => _handleReview(app, 'approve'),

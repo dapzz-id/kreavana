@@ -528,6 +528,10 @@ class OpportunityService extends BaseService
                     'created_at' => now(),
                 ]);
             } elseif ($decision === 'consider') {
+                if ($application->counter_offer_status === 'accepted') {
+                    abort(422, 'Pelamar telah menyetujui tawaran negosiasi dana. Anda tidak dapat melakukan negosiasi ulang, silakan pilih Setujui Lamaran (Deal) atau Tolak.');
+                }
+
                 if (!$counterOfferPrice || $counterOfferPrice <= 0) {
                     abort(422, 'Nominal tawaran dana pertimbangan harus diisi dan lebih dari 0.');
                 }
