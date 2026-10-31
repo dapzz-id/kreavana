@@ -94,3 +94,16 @@ git push -u origin <nama-branch>
 2. ❌ **Dilarang push ke `main` tanpa melakukan `git pull origin main` terlebih dahulu.**
 3. ❌ **Dilarang melakukan Force Push (`git push -f` / `git push --force`)** pada branch `main` karena dapat menimpa dan menghilangkan commit anggota tim lain.
 4. ❌ **Dilarang membiarkan branch kerja tertinggal (*outdated*)** dari `main` remote saat mengajukan perubahan.
+5. ❌ **Dilarang otomatisasi `git push` jika menggunakan Claude:** Jika pengerjaan atau sesi dibantu oleh model Claude (Anthropic / Claude Code / Claude Desktop), **JANGAN LAKUKAN OTOMATISASI PUSH** ke remote origin (baik ke branch baru maupun branch `main`). Hal ini untuk menjaga agar Claude tidak tercatat berkontribusi/push ke repositori GitHub. Pushing harus dilakukan secara manual oleh pemilik repositori atau melalui agen resmi yang ditunjuk (Antigravity).
+
+---
+
+## 🤖 Aturan Khusus Penggunaan Asisten AI
+
+### Jika Menggunakan Claude (Anthropic):
+* Claude hanya diizinkan untuk: membaca kode, melakukan analisis, membuat branch lokal, dan mengedit file secara lokal.
+* **TIDAK BOLEH** menjalankan perintah `git push origin <branch>` atau `git push origin main`.
+* Berikan instruksi git push kepada pengguna agar dieksekusi secara manual, atau serahkan kepada workflow agen non-Claude.
+
+### Jika Menggunakan Antigravity:
+* Wajib menjalankan alur 6 langkah di atas: selalu `git pull origin main` sebelum membuat branch baru atau merge ke `main`, merge lokal, push branch baru, lalu merge dan push ke `main`.

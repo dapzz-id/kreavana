@@ -48,3 +48,4 @@ Setiap kali melakukan pembaruan kode:
 * Dilarang push langsung ke branch baru tanpa pull `main` terbaru dan merge lokal.
 * Dilarang push ke `main` tanpa melakukan pull `main` terlebih dahulu.
 * Dilarang melakukan force-push (`git push -f`) ke `main`.
+* **Dilarang otomatisasi `git push` jika menggunakan Claude (Anthropic):** Agar Claude tidak tercatat berkontribusi di repositori GitHub, otomatisasi push dilarang keras saat sesi menggunakan Claude. Pushing harus dilakukan manual oleh pengguna atau melalui agen Antigravity.

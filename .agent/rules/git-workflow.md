@@ -30,3 +30,9 @@ Before pushing any changes or merging to main, you MUST follow this sequence str
    git merge <branch-name>
    git push origin main
    ```
+
+## Special AI Rules:
+- **IF USING CLAUDE (Anthropic / Claude Code / Claude Desktop)**:
+  - NEVER execute automated `git push` to any branch or to `main` so Claude is never recorded as a GitHub contributor.
+  - Claude may only modify files, create branches, and make local commits.
+  - Pushing must be handled manually by the user or performed through Antigravity.

@@ -23,3 +23,4 @@ Setiap pengembang maupun AI Assistant yang membuat, mengubah, atau memperbarui k
 - Jangan langsung push ke remote sebelum melakukan pull `main` terbaru dan merge lokal.
 - Jangan push ke branch `main` tanpa melakukan pull `main` terlebih dahulu.
 - Jangan pernah force-push (`git push -f`) ke `main`.
+- **ATURAN KHUSUS CLAUDE:** Jika menggunakan Claude (Anthropic / Claude Code), **JANGAN LAKUKAN OTOMATISASI PUSH KE BRANCH ATAU MAIN** agar Claude tidak tercatat berkontribusi di GitHub. Claude hanya boleh mengedit lokal; biarkan push dieksekusi secara manual oleh pengguna atau agen Antigravity.
