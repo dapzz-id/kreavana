@@ -55,6 +55,7 @@ class OpportunityApplicationModel {
   final double? counterOfferPrice;
   final String? counterOfferNotes;
   final String? counterOfferStatus; // 'pending', 'accepted', 'declined'
+  final String? counterOfferBy; // 'client' or 'creator'
   final String status;
   final String? rejectionReason;
   final String? reviewedAt;
@@ -73,6 +74,7 @@ class OpportunityApplicationModel {
     this.counterOfferPrice,
     this.counterOfferNotes,
     this.counterOfferStatus,
+    this.counterOfferBy,
     this.status = 'pending',
     this.rejectionReason,
     this.reviewedAt,
@@ -84,6 +86,8 @@ class OpportunityApplicationModel {
   bool get isApproved => status == 'approved';
   bool get isRejected => status == 'rejected';
   bool get isConsideration => status == 'under_consideration';
+  bool get isCounterOfferByCreator => counterOfferBy == 'creator';
+  bool get isCounterOfferByClient => counterOfferBy != 'creator';
   String get creatorId => (rawCreatorId != null && rawCreatorId!.isNotEmpty) ? rawCreatorId! : (creator?.id ?? '');
 
   String get subRoleLabel {
@@ -139,6 +143,7 @@ class OpportunityApplicationModel {
       counterOfferPrice: json['counter_offer_price'] != null ? double.tryParse(json['counter_offer_price'].toString()) : null,
       counterOfferNotes: json['counter_offer_notes']?.toString(),
       counterOfferStatus: json['counter_offer_status']?.toString(),
+      counterOfferBy: json['counter_offer_by']?.toString() ?? 'client',
       status: json['status'] ?? 'pending',
       rejectionReason: json['rejection_reason'],
       reviewedAt: json['reviewed_at']?.toString(),

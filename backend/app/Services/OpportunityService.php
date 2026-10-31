@@ -256,6 +256,7 @@ class OpportunityService extends BaseService
                 'counter_offer_price' => $app->counter_offer_price ? (float) $app->counter_offer_price : null,
                 'counter_offer_notes' => $app->counter_offer_notes,
                 'counter_offer_status' => $app->counter_offer_status,
+                'counter_offer_by' => $app->counter_offer_by ?? 'client',
                 'status' => $app->status,
                 'rejection_reason' => $app->rejection_reason,
                 'reviewed_at' => $app->reviewed_at?->toIso8601String(),
@@ -477,7 +478,6 @@ class OpportunityService extends BaseService
                 $approvedCount = OpportunityApplication::where('opportunity_id', $opp->id)
                     ->where('sub_role_slug', $application->sub_role_slug)
                     ->where('status', 'approved')
-                    ->lockForUpdate()
                     ->count();
 
                 if ($approvedCount >= $maxCapacity) {
@@ -485,6 +485,9 @@ class OpportunityService extends BaseService
                 }
 
                 $application->status = 'approved';
+                if ($application->counter_offer_price && $application->counter_offer_status !== 'declined') {
+                    $application->counter_offer_status = 'accepted';
+                }
                 $application->reviewed_at = now();
                 $application->save();
 
@@ -533,6 +536,9 @@ class OpportunityService extends BaseService
                 $application->counter_offer_price = $counterOfferPrice;
                 $application->counter_offer_notes = $counterOfferNotes ?? $reason;
                 $application->counter_offer_status = 'pending';
+                if (\Illuminate\Support\Facades\Schema::hasColumn('opportunity_applications', 'counter_offer_by')) {
+                    $application->counter_offer_by = 'client';
+                }
                 $application->reviewed_at = now();
                 $application->save();
 
@@ -540,7 +546,7 @@ class OpportunityService extends BaseService
                 $this->notificationRepo->create([
                     'user_id' => $application->creator_id,
                     'title' => 'Tawaran Nego Dana dari Pemilik Proyek',
-                    'message' => 'Pemilik proyek "' . $opp->title . '" mempertimbangkan lamaran Anda dengan tawaran dana Rp ' . number_format($counterOfferPrice, 0, ',', '.') . '. Silakan buka aplikasi untuk merespons persetujuan ini.',
+                    'message' => 'Pemilik proyek "' . $opp->title . '" memperbarui tawaran dana menjadi Rp ' . number_format($counterOfferPrice, 0, ',', '.') . '. Silakan tinjau dan respon tawaran ini.',
                     'type' => 'project',
                     'data' => [
                         'opportunity_id' => $opp->id,
@@ -560,15 +566,21 @@ class OpportunityService extends BaseService
                 'counter_offer_price' => $application->counter_offer_price ? (float) $application->counter_offer_price : null,
                 'counter_offer_notes' => $application->counter_offer_notes,
                 'counter_offer_status' => $application->counter_offer_status,
+                'counter_offer_by' => $application->counter_offer_by ?? 'client',
                 'reviewed_at' => $application->reviewed_at?->toIso8601String(),
                 'rejection_reason' => $application->rejection_reason,
             ];
         });
     }
 
-    public function respondCounterOffer(string $applicationId, string $userId, string $action): array
-    {
-        return DB::transaction(function () use ($applicationId, $userId, $action) {
+    public function respondCounterOffer(
+        string $applicationId,
+        string $userId,
+        string $action,
+        ?float $counterOfferPrice = null,
+        ?string $counterOfferNotes = null
+    ): array {
+        return DB::transaction(function () use ($applicationId, $userId, $action, $counterOfferPrice, $counterOfferNotes) {
             $application = OpportunityApplication::where('id', $applicationId)->lockForUpdate()->firstOrFail();
             $opp = Opportunity::where('id', $application->opportunity_id)->lockForUpdate()->firstOrFail();
 
@@ -580,15 +592,45 @@ class OpportunityService extends BaseService
                 abort(400, 'Lamaran ini tidak sedang dalam status pertimbangan tawaran.');
             }
 
-            if (!in_array($action, ['accept', 'decline'])) {
-                abort(422, 'Tindakan tidak valid. Pilihan: accept atau decline.');
+            if (!in_array($action, ['accept', 'decline', 'counter'])) {
+                abort(422, 'Tindakan tidak valid. Pilihan: accept, decline, atau counter.');
             }
 
-            $application->counter_offer_status = ($action === 'accept') ? 'accepted' : 'declined';
-            $application->save();
+            if ($action === 'counter') {
+                if (!$counterOfferPrice || $counterOfferPrice <= 0) {
+                    abort(422, 'Nominal tawaran balik harus diisi dan lebih dari 0.');
+                }
 
-            // Notify project owner
-            if ($action === 'accept') {
+                $application->counter_offer_price = $counterOfferPrice;
+                $application->counter_offer_notes = $counterOfferNotes;
+                $application->counter_offer_status = 'pending';
+                if (\Illuminate\Support\Facades\Schema::hasColumn('opportunity_applications', 'counter_offer_by')) {
+                    $application->counter_offer_by = 'creator';
+                }
+                $application->save();
+
+                // Notify project owner
+                $creator = User::find($userId);
+                $creatorName = $creator ? $creator->name : 'Pelamar';
+
+                $this->notificationRepo->create([
+                    'user_id' => $opp->posted_by,
+                    'title' => 'Pelamar Mengajukan Tawaran Nego Baru!',
+                    'message' => "{$creatorName} mengajukan tawaran nego balik Rp " . number_format($counterOfferPrice, 0, ',', '.') . " untuk proyek \"{$opp->title}\". Silakan buka detail proyek untuk meninjau atau menyetujui.",
+                    'type' => 'project',
+                    'data' => [
+                        'opportunity_id' => $opp->id,
+                        'application_id' => $application->id,
+                        'counter_offer_price' => $counterOfferPrice,
+                    ],
+                    'is_read' => false,
+                    'created_at' => now(),
+                ]);
+            } elseif ($action === 'accept') {
+                $application->counter_offer_status = 'accepted';
+                $application->save();
+
+                // Notify project owner
                 $this->notificationRepo->create([
                     'user_id' => $opp->posted_by,
                     'title' => 'Pelamar Menyetujui Tawaran Dana!',
@@ -602,11 +644,14 @@ class OpportunityService extends BaseService
                     'is_read' => false,
                     'created_at' => now(),
                 ]);
-            } else {
+            } else { // decline
+                $application->counter_offer_status = 'declined';
+                $application->save();
+
                 $this->notificationRepo->create([
                     'user_id' => $opp->posted_by,
                     'title' => 'Pelamar Belum Menyetujui Tawaran Dana',
-                    'message' => 'Pelamar menolak tawaran dana Rp ' . number_format($application->counter_offer_price, 0, ',', '.') . ' untuk proyek "' . $opp->title . '".',
+                    'message' => 'Pelamar menolak tawaran dana Rp ' . number_format($application->counter_offer_price, 0, ',', '.') . ' untuk proyek "' . $opp->title . '". Anda masih dapat memperbarui tawaran nego.',
                     'type' => 'project',
                     'data' => [
                         'opportunity_id' => $opp->id,
@@ -623,6 +668,7 @@ class OpportunityService extends BaseService
                 'counter_offer_price' => (float) $application->counter_offer_price,
                 'counter_offer_status' => $application->counter_offer_status,
                 'counter_offer_notes' => $application->counter_offer_notes,
+                'counter_offer_by' => $application->counter_offer_by ?? ($action === 'counter' ? 'creator' : 'client'),
             ];
         });
     }

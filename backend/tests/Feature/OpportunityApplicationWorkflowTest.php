@@ -340,4 +340,66 @@ class OpportunityApplicationWorkflowTest extends TestCase
         $response->assertJsonCount(1, 'data');
         $response->assertJsonPath('data.0.id', $this->opportunity->id);
     }
+
+    public function test_applicant_can_counter_offer_with_new_price()
+    {
+        $app = OpportunityApplication::create([
+            'opportunity_id' => $this->opportunity->id,
+            'creator_id' => $this->creator1->id,
+            'sub_role_slug' => 'wedding_organizer',
+            'pitch_message' => 'Proposal WO.',
+            'status' => 'under_consideration',
+            'counter_offer_price' => 500000,
+            'counter_offer_status' => 'pending',
+            'counter_offer_by' => 'client',
+        ]);
+
+        $response = $this->actingAsApi($this->creator1)
+            ->postJson("/api/opportunities/applications/{$app->id}/respond-counter-offer", [
+                'action' => 'counter',
+                'counter_offer_price' => 750000,
+                'counter_offer_notes' => 'Gimana kalau 750rb sudah all-in?',
+            ]);
+
+        $response->assertStatus(200);
+        $app->refresh();
+        $this->assertEquals(750000, (float) $app->counter_offer_price);
+        $this->assertEquals('Gimana kalau 750rb sudah all-in?', $app->counter_offer_notes);
+        $this->assertEquals('pending', $app->counter_offer_status);
+        $this->assertEquals('creator', $app->counter_offer_by);
+
+        // Owner gets notification
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $this->owner->id,
+            'title' => 'Pelamar Mengajukan Tawaran Nego Baru!',
+        ]);
+    }
+
+    public function test_owner_can_deal_and_approve_application_after_negotiation()
+    {
+        $app = OpportunityApplication::create([
+            'opportunity_id' => $this->opportunity->id,
+            'creator_id' => $this->creator1->id,
+            'sub_role_slug' => 'wedding_organizer',
+            'pitch_message' => 'Proposal WO.',
+            'status' => 'under_consideration',
+            'counter_offer_price' => 750000,
+            'counter_offer_status' => 'pending',
+            'counter_offer_by' => 'creator',
+        ]);
+
+        $response = $this->actingAsApi($this->owner)
+            ->postJson("/api/opportunities/applications/{$app->id}/approve");
+
+        $response->assertStatus(200);
+        $app->refresh();
+        $this->assertEquals('approved', $app->status);
+        $this->assertEquals('accepted', $app->counter_offer_status);
+
+        // Creator gets notification
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $this->creator1->id,
+            'title' => 'Lamaran Proyek Disetujui!',
+        ]);
+    }
 }

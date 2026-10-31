@@ -179,15 +179,26 @@ class OpportunityController extends Controller
         $user = Auth::guard('api')->user();
         $action = $request->input('action');
 
-        if (!in_array($action, ['accept', 'decline'])) {
-            return $this->errorResponse('Tindakan tidak valid. Pilihan: accept atau decline.', 422);
+        if (!in_array($action, ['accept', 'decline', 'counter'])) {
+            return $this->errorResponse('Tindakan tidak valid. Pilihan: accept, decline, atau counter.', 422);
         }
 
+        $counterOfferPrice = $request->has('counter_offer_price') ? (float) $request->input('counter_offer_price') : null;
+        $counterOfferNotes = $request->input('counter_offer_notes');
+
         try {
-            $result = $this->opportunityService->respondCounterOffer($applicationId, $user->id, $action);
-            $msg = $action === 'accept'
-                ? 'Tawaran dana berhasil diterima. Lamaran kini siap difinalisasi oleh pemilik proyek.'
-                : 'Tawaran dana telah ditolak.';
+            $result = $this->opportunityService->respondCounterOffer(
+                $applicationId,
+                $user->id,
+                $action,
+                $counterOfferPrice,
+                $counterOfferNotes
+            );
+            $msg = match ($action) {
+                'accept' => 'Tawaran dana berhasil diterima. Lamaran kini siap difinalisasi oleh pemilik proyek.',
+                'counter' => 'Penawaran balik berhasil diajukan kepada pemilik proyek.',
+                'decline' => 'Tawaran dana telah ditolak.',
+            };
             return $this->successResponse($msg, $result);
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             return $this->errorResponse($e->getMessage(), $e->getStatusCode());

@@ -21,6 +21,7 @@ class OpportunityApplication extends Model
         'counter_offer_price',
         'counter_offer_notes',
         'counter_offer_status',
+        'counter_offer_by',
         'status',
         'rejection_reason',
         'reviewed_at',

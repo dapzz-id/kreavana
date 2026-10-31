@@ -262,12 +262,22 @@ class OpportunityService {
 
   static Future<Map<String, dynamic>> respondCounterOffer({
     required String applicationId,
-    required String action, // 'accept' or 'decline'
+    required String action, // 'accept', 'decline', or 'counter'
+    double? counterOfferPrice,
+    String? counterOfferNotes,
   }) async {
     try {
+      final Map<String, dynamic> body = {'action': action};
+      if (counterOfferPrice != null && counterOfferPrice > 0) {
+        body['counter_offer_price'] = counterOfferPrice;
+      }
+      if (counterOfferNotes != null && counterOfferNotes.isNotEmpty) {
+        body['counter_offer_notes'] = counterOfferNotes;
+      }
+
       final response = await ApiService.post(
         'opportunities/applications/$applicationId/respond-counter-offer',
-        {'action': action},
+        body,
       );
       return {
         'status': response['status'] == true,

@@ -199,6 +199,194 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
     }
   }
 
+  Future<void> _handleCreatorCounterDialog() async {
+    final app = _myApplication;
+    if (app == null) return;
+    final priceController = TextEditingController(
+      text: app.counterOfferPrice != null
+          ? app.counterOfferPrice!.toInt().toString()
+          : (app.bidPrice != null ? app.bidPrice!.toInt().toString() : ''),
+    );
+    final notesController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final currencyFmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final isDarkDialog = Theme.of(ctx).brightness == Brightness.dark;
+        return AlertDialog(
+          backgroundColor: isDarkDialog ? const Color(0xFF1E1B33) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.handshake_rounded, color: Color(0xFFD97706), size: 22),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Tawar Balik / Nego Ulang',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Berikan nominal penawaran baru Anda kepada pemilik proyek "${widget.opportunity.title}". Anda dan pemilik proyek dapat bernegosiasi berkali-kali hingga tercapai kesepakatan bersama.',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: isDarkDialog ? AppTheme.textMuted : Colors.grey.shade700,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  if (app.counterOfferPrice != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isDarkDialog ? const Color(0xFF13111E) : Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.amber.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFFD97706)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Tawaran Nego Terakhir: ${currencyFmt.format(app.counterOfferPrice)}',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFD97706)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Nominal Tawaran Baru Anda (Rp)*',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: priceController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: 'Contoh: 1500000',
+                      prefixText: 'Rp ',
+                      isDense: true,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Nominal tawaran wajib diisi';
+                      }
+                      final n = double.tryParse(v.trim().replaceAll('.', '').replaceAll(',', ''));
+                      if (n == null || n <= 0) {
+                        return 'Masukkan nominal yang valid (> 0)';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Catatan / Alasan Tawaran',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: notesController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText: 'Misal: Harga tersebut sudah mencakup transport dan revisi.',
+                      isDense: true,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFD97706),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () {
+                if (formKey.currentState?.validate() == true) {
+                  Navigator.pop(ctx, true);
+                }
+              },
+              child: const Text(
+                'Kirim Penawaran',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    final parsedPrice = double.tryParse(priceController.text.trim().replaceAll('.', '').replaceAll(',', '')) ?? 0.0;
+    final notes = notesController.text.trim();
+
+    setState(() => _isRespondingCounterOffer = true);
+    try {
+      final res = await OpportunityService.respondCounterOffer(
+        applicationId: app.id,
+        action: 'counter',
+        counterOfferPrice: parsedPrice,
+        counterOfferNotes: notes.isNotEmpty ? notes : null,
+      );
+
+      if (mounted) {
+        setState(() => _isRespondingCounterOffer = false);
+        if (res['status'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Penawaran balik berhasil dikirim ke pemilik proyek.'),
+              backgroundColor: Color(0xFF10B981),
+            ),
+          );
+          _loadMyApplication();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(res['message'] ?? 'Gagal mengajukan penawaran.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isRespondingCounterOffer = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Terjadi kesalahan: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   Future<void> _loadReviews() async {
     final oppId = widget.opportunity.id;
     if (oppId == null || oppId.isEmpty) return;
@@ -1301,50 +1489,94 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
           ],
           if (_myApplication != null) ...[
             if (_myApplication!.counterOfferPrice != null && _myApplication!.counterOfferStatus == 'pending') ...[
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: ElevatedButton.icon(
-                      onPressed: _isRespondingCounterOffer ? null : () => _handleRespondCounterOffer('accept'),
-                      icon: const Icon(Icons.check_circle_rounded, size: 16, color: Colors.white),
-                      label: const Text('Terima Nego', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF10B981),
-                        minimumSize: const Size(double.infinity, 48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              if (_myApplication!.counterOfferBy == 'creator') ...[
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.amber.shade400),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.hourglass_top_rounded, size: 16, color: Colors.amber.shade800),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Menunggu Klien',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.amber.shade900),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: OutlinedButton.icon(
-                      onPressed: _isRespondingCounterOffer ? null : () => _handleRespondCounterOffer('decline'),
-                      icon: const Icon(Icons.cancel_outlined, size: 16, color: Colors.red),
-                      label: const Text('Tolak', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.red),
-                        minimumSize: const Size(double.infinity, 48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                  if (opp.postedBy != null && opp.postedBy != _effectiveUserId) ...[
                     const SizedBox(width: 8),
-                    IconButton(
-                      onPressed: () => _openChat(context, userId: opp.postedBy!, name: opp.poster?.name),
-                      icon: const Icon(Icons.chat_bubble_outline),
-                      tooltip: 'Chat Klien',
-                      style: IconButton.styleFrom(
-                        side: BorderSide(color: isDark ? AppTheme.inputBorder : Colors.grey.shade300),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.all(12),
+                    Expanded(
+                      flex: 2,
+                      child: OutlinedButton.icon(
+                        onPressed: _isRespondingCounterOffer ? null : _handleCreatorCounterDialog,
+                        icon: const Icon(Icons.edit_note_rounded, size: 16, color: Color(0xFFD97706)),
+                        label: const Text('Ubah Tawaran', style: TextStyle(color: Color(0xFFD97706), fontWeight: FontWeight.bold)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFFD97706)),
+                          minimumSize: const Size(double.infinity, 48),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
                       ),
                     ),
                   ],
-                ],
-              ),
+                ),
+              ] else ...[
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: ElevatedButton.icon(
+                        onPressed: _isRespondingCounterOffer ? null : () => _handleRespondCounterOffer('accept'),
+                        icon: const Icon(Icons.check_circle_rounded, size: 16, color: Colors.white),
+                        label: const Text('Terima Nego', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          minimumSize: const Size(double.infinity, 48),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 3,
+                      child: OutlinedButton.icon(
+                        onPressed: _isRespondingCounterOffer ? null : _handleCreatorCounterDialog,
+                        icon: const Icon(Icons.handshake_rounded, size: 16, color: Color(0xFFD97706)),
+                        label: const Text('Tawar Balik', style: TextStyle(color: Color(0xFFD97706), fontWeight: FontWeight.bold)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFFD97706)),
+                          minimumSize: const Size(double.infinity, 48),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: OutlinedButton.icon(
+                        onPressed: _isRespondingCounterOffer ? null : () => _handleRespondCounterOffer('decline'),
+                        icon: const Icon(Icons.cancel_outlined, size: 16, color: Colors.red),
+                        label: const Text('Tolak', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.red),
+                          minimumSize: const Size(double.infinity, 48),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ] else ...[
               Row(
                 children: [
@@ -1698,52 +1930,93 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
             const SizedBox(height: 12),
 
             if (app.counterOfferStatus == 'pending') ...[
-              Text(
-                'Silakan beri tanggapan atas tawaran nego ini:',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
+              if (app.counterOfferBy == 'creator') ...[
+                Text(
+                  'Tawaran baru Anda sedang menunggu tanggapan pemilik proyek:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _isRespondingCounterOffer ? null : () => _handleRespondCounterOffer('accept'),
-                      icon: const Icon(Icons.check_circle_rounded, size: 15, color: Colors.white),
-                      label: const Text(
-                        'Terima Nego',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF10B981),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        elevation: 0,
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _isRespondingCounterOffer ? null : _handleCreatorCounterDialog,
+                  icon: const Icon(Icons.edit_note_rounded, size: 15, color: Color(0xFFD97706)),
+                  label: const Text(
+                    'Ubah Tawaran Nego',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Color(0xFFD97706)),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFFD97706)),
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ] else ...[
+                Text(
+                  'Silakan beri tanggapan atas tawaran nego ini:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _isRespondingCounterOffer ? null : () => _handleRespondCounterOffer('accept'),
+                        icon: const Icon(Icons.check_circle_rounded, size: 15, color: Colors.white),
+                        label: const Text(
+                          'Terima Nego',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          elevation: 0,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _isRespondingCounterOffer ? null : () => _handleRespondCounterOffer('decline'),
-                      icon: const Icon(Icons.cancel_outlined, size: 15, color: Colors.red),
-                      label: const Text(
-                        'Tolak Nego',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Colors.red),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.red),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _isRespondingCounterOffer ? null : _handleCreatorCounterDialog,
+                        icon: const Icon(Icons.handshake_rounded, size: 15, color: Color(0xFFD97706)),
+                        label: const Text(
+                          'Tawar Balik',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Color(0xFFD97706)),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFFD97706)),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _isRespondingCounterOffer ? null : () => _handleRespondCounterOffer('decline'),
+                        icon: const Icon(Icons.cancel_outlined, size: 15, color: Colors.red),
+                        label: const Text(
+                          'Tolak',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Colors.red),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.red),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ] else if (app.counterOfferStatus == 'accepted') ...[
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -1779,8 +2052,18 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Anda menolak tawaran nego ini. Anda dapat mendiskusikan penawaran baru melalui chat.',
+                        'Tawaran nego ini belum disepakati.',
                         style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.red.shade800),
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _isRespondingCounterOffer ? null : _handleCreatorCounterDialog,
+                      icon: const Icon(Icons.handshake_rounded, size: 14, color: Color(0xFFD97706)),
+                      label: const Text('Tawar Ulang', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFFD97706))),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFF59E0B)),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                     ),
                   ],
