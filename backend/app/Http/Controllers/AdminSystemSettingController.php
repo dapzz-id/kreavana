@@ -212,8 +212,8 @@ class AdminSystemSettingController extends Controller
             'custom_endpoint' => SystemSetting::get('ai_custom_endpoint', ''),
             'available_models' => [
                 'gemini' => [
-                    ['id' => 'gemini-3.5-flash-lite', 'name' => 'Google Gemini 3.5 Flash Lite (Direkomendasikan - Cepat & Stabil)'],
-                    ['id' => 'gemini-3.8-flash', 'name' => 'Google Gemini 3.8 Flash (Next-Gen Flagship)'],
+                    ['id' => 'gemini-3.5-flash-lite', 'name' => 'Google Gemini 3.5 Flash Lite (Direkomendasikan - Paling Cepat & Stabil)'],
+                    ['id' => 'gemini-3.8-flash', 'name' => 'Google Gemini 3.8 Flash (Next-Gen Flagship - Respon Kadang Lambat/Antrean)'],
                     ['id' => 'gemini-flash-latest', 'name' => 'Google Gemini Flash Latest'],
                     ['id' => 'gemini-2.5-pro', 'name' => 'Google Gemini 2.5 Pro (Analisis Kompleks)'],
                 ],
@@ -315,7 +315,7 @@ class AdminSystemSettingController extends Controller
                 $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
                 $response = Http::withHeaders([
                     'x-goog-api-key' => $apiKey,
-                ])->timeout(10)->post($endpoint, [
+                ])->timeout(25)->post($endpoint, [
                     'contents' => [
                         [
                             'parts' => [
@@ -423,9 +423,14 @@ class AdminSystemSettingController extends Controller
                 ]);
             }
         } catch (Exception $e) {
+            $msg = $e->getMessage();
+            if (str_contains($msg, 'Operation timed out') || str_contains($msg, 'cURL error 28')) {
+                $msg = "Waktu koneksi habis (Timeout setelah 25 detik). Server model '{$model}' sedang mengalami antrean/beban tinggi dari Google. Disarankan memilih model 'Google Gemini 3.5 Flash Lite' yang jauh lebih cepat dan stabil.";
+            }
+
             return response()->json([
                 'status' => false,
-                'message' => 'Gagal terhubung ke server AI: ' . $e->getMessage(),
+                'message' => 'Gagal terhubung ke server AI: ' . $msg,
             ], 500);
         }
     }

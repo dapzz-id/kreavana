@@ -35,34 +35,47 @@ class AiService extends BaseService implements AiServiceInterface
                 $model = 'gemini-3.5-flash-lite';
             }
 
-            $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
-            $response = Http::withHeaders([
-                'x-goog-api-key' => $apiKey,
-            ])->timeout(25)->post($url, [
-                'system_instruction' => [
-                    'parts' => [
-                        ['text' => $systemPrompt]
-                    ]
-                ],
-                'contents' => [
-                    [
-                        'parts' => [
-                            ['text' => $prompt]
-                        ]
-                    ]
-                ],
-                'generationConfig' => [
-                    'temperature' => $temperature,
-                ],
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                return $data['candidates'][0]['content']['parts'][0]['text'] ?? 'Tidak ada respons dari AI.';
+            $modelsToTry = [$model];
+            if ($model !== 'gemini-3.5-flash-lite') {
+                $modelsToTry[] = 'gemini-3.5-flash-lite';
             }
 
-            $err = $response->json()['error']['message'] ?? $response->body();
-            throw new Exception("Google Gemini Error: " . substr($err, 0, 200));
+            $lastError = null;
+            foreach ($modelsToTry as $currentModelToTry) {
+                try {
+                    $url = "https://generativelanguage.googleapis.com/v1beta/models/{$currentModelToTry}:generateContent?key={$apiKey}";
+                    $response = Http::withHeaders([
+                        'x-goog-api-key' => $apiKey,
+                    ])->timeout(25)->post($url, [
+                        'system_instruction' => [
+                            'parts' => [
+                                ['text' => $systemPrompt]
+                            ]
+                        ],
+                        'contents' => [
+                            [
+                                'parts' => [
+                                    ['text' => $prompt]
+                                ]
+                            ]
+                        ],
+                        'generationConfig' => [
+                            'temperature' => $temperature,
+                        ],
+                    ]);
+
+                    if ($response->successful()) {
+                        $data = $response->json();
+                        return $data['candidates'][0]['content']['parts'][0]['text'] ?? 'Tidak ada respons dari AI.';
+                    }
+
+                    $lastError = $response->json()['error']['message'] ?? $response->body();
+                } catch (\Throwable $e) {
+                    $lastError = $e->getMessage();
+                }
+            }
+
+            throw new Exception("Google Gemini Error: " . substr($lastError ?? 'Layanan tidak merespons.', 0, 200));
 
         } elseif ($provider === 'openai') {
             if (empty($apiKey)) {
