@@ -2629,6 +2629,71 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
   }
 
   // ── Requirements Chips ──────────────────────────────────────────────────────
+  bool _isSubRoleMatch(String slugA, String slugB) {
+    final a = slugA.toLowerCase().replaceAll('-', '_').trim();
+    final b = slugB.toLowerCase().replaceAll('-', '_').trim();
+    if (a.isEmpty || b.isEmpty) return false;
+    if (a == b) return true;
+
+    final isPhotoA = a.contains('foto') || a.contains('photo');
+    final isPhotoB = b.contains('foto') || b.contains('photo');
+    if (isPhotoA && isPhotoB) return true;
+
+    final isVideoA = a.contains('video');
+    final isVideoB = b.contains('video');
+    if (isVideoA && isVideoB) return true;
+
+    final isDesignA = a.contains('desain') || a.contains('design');
+    final isDesignB = b.contains('desain') || b.contains('design');
+    if (isDesignA && isDesignB) return true;
+
+    final isEditA = a.contains('edit');
+    final isEditB = b.contains('edit');
+    if (isEditA && isEditB) return true;
+
+    final isMca = a == 'mc' || a.contains('host');
+    final isMcb = b == 'mc' || b.contains('host');
+    if (isMca && isMcb) return true;
+
+    return false;
+  }
+
+  IconData _getSubRoleIcon(String slug) {
+    final s = slug.toLowerCase().replaceAll('-', '_');
+    if (s.contains('foto') || s.contains('photo')) return Icons.camera_alt_outlined;
+    if (s.contains('video') || s.contains('movie')) return Icons.videocam_outlined;
+    if (s.contains('edit')) return Icons.content_cut_outlined;
+    if (s.contains('desain') || s.contains('design')) return Icons.palette_outlined;
+    if (s.contains('animat')) return Icons.animation_outlined;
+    if (s.contains('drone')) return Icons.flight_takeoff_outlined;
+    if (s.contains('mc') || s.contains('host')) return Icons.mic_none_outlined;
+    if (s.contains('sing') || s.contains('musis') || s.contains('kendang') || s.contains('musik')) {
+      return Icons.music_note_outlined;
+    }
+    if (s.contains('organizer') || s.contains('event')) return Icons.event_available_outlined;
+    if (s.contains('model') || s.contains('talent')) return Icons.face_retouching_natural_outlined;
+    return Icons.badge_outlined;
+  }
+
+  int _getApprovedCountForRequirement(OpportunityRequirementModel r) {
+    final approvedInApps = _applications.where((a) =>
+      a.isApproved && _isSubRoleMatch(a.subRoleSlug, r.subRoleSlug)
+    ).length;
+
+    final approvedInOpp = _opp.approvedCreators.where((c) {
+      final cap = c.capability ?? c.subRole ?? '';
+      return _isSubRoleMatch(cap, r.subRoleSlug);
+    }).length;
+
+    return approvedInApps > approvedInOpp ? approvedInApps : approvedInOpp;
+  }
+
+  int _getApplicantCountForRequirement(OpportunityRequirementModel r) {
+    return _applications.where((a) =>
+      _isSubRoleMatch(a.subRoleSlug, r.subRoleSlug)
+    ).length;
+  }
+
   Widget _buildRequirementsSection(bool isDark) {
     return Container(
       width: double.infinity,
@@ -2643,38 +2708,167 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Peran & Spesialisasi yang Dibutuhkan',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              const Text(
+                'Peran & Spesialisasi yang Dibutuhkan',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              if (_opp.requirements.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryPurple.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${_opp.requirements.length} Posisi',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primaryPurple,
+                    ),
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           if (_opp.requirements.isNotEmpty)
             Column(
               children: _opp.requirements.map((r) {
+                final approvedCount = _getApprovedCountForRequirement(r);
+                final applicantCount = _getApplicantCountForRequirement(r);
+                final isFulfilled = r.quantity > 0 && approvedCount >= r.quantity;
+
+                final roleIcon = isFulfilled
+                    ? Icons.check_circle_rounded
+                    : _getSubRoleIcon(r.subRoleSlug);
+                final iconColor = isFulfilled ? Colors.green.shade600 : AppTheme.primaryPurple;
+
                 return Container(
                   width: double.infinity,
-                  margin: const EdgeInsets.only(bottom: 10),
+                  margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1B192A) : const Color(0xFFF8FAFC),
+                    color: isDark
+                        ? (isFulfilled ? const Color(0xFF14241C) : const Color(0xFF1B192A))
+                        : (isFulfilled ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC)),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+                      color: isFulfilled
+                          ? (isDark ? Colors.green.shade900 : const Color(0xFFBBF7D0))
+                          : (isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0)),
                     ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          const Icon(Icons.check_circle_rounded, size: 18, color: AppTheme.primaryPurple),
-                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              color: isFulfilled
+                                  ? Colors.green.withValues(alpha: 0.12)
+                                  : AppTheme.primaryPurple.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(roleIcon, size: 18, color: iconColor),
+                          ),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               r.label,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: isFulfilled && !isDark ? Colors.green.shade900 : null,
+                              ),
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          if (isFulfilled)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.check_circle_rounded, size: 13, color: Colors.green.shade700),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Terpenuhi ($approvedCount/${r.quantity})',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else if (_isOwner && applicantCount > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryPurple.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: AppTheme.primaryPurple.withValues(alpha: 0.25)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.people_alt_outlined, size: 13, color: AppTheme.primaryPurple),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$applicantCount Pelamar',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.primaryPurple,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.05)
+                                    : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isDark ? Colors.white12 : const Color(0xFFCBD5E1),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.person_search_outlined,
+                                    size: 13,
+                                    color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Mencari ${r.quantity - approvedCount} orang',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
                       if (r.tags.isNotEmpty) ...[
@@ -2686,15 +2880,17 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                             return Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: AppTheme.primaryPurple.withValues(alpha: 0.1),
+                                color: isFulfilled
+                                    ? Colors.green.withValues(alpha: 0.08)
+                                    : AppTheme.primaryPurple.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
                                 '#$tag',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: AppTheme.primaryPurple,
+                                  color: isFulfilled ? Colors.green.shade700 : AppTheme.primaryPurple,
                                 ),
                               ),
                             );
@@ -2708,7 +2904,11 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
             )
           else
             Chip(
-              avatar: const Icon(Icons.check_circle_rounded, size: 16, color: AppTheme.primaryPurple),
+              avatar: Icon(
+                _getSubRoleIcon(_opp.subRoleSlug),
+                size: 16,
+                color: AppTheme.primaryPurple,
+              ),
               label: Text(_opp.subRoleLabel),
               backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.08),
             ),

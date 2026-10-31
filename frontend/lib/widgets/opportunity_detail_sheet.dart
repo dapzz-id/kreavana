@@ -845,22 +845,55 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
         const SizedBox(height: 16),
 
         // 4. Required Capabilities (Multi-Role Breakdown)
-        const Text(
-          'Peran & Spesialisasi yang Dibutuhkan:',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        Row(
+          children: [
+            const Text(
+              'Peran & Spesialisasi yang Dibutuhkan:',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            const Spacer(),
+            if (opp.requirements.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryPurple.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${opp.requirements.length} Posisi',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.primaryPurple,
+                  ),
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 8),
         if (opp.requirements.isNotEmpty)
           Column(
             children: opp.requirements.map((r) {
+              final approvedCount = opp.approvedCreators.where((c) {
+                final cap = c.capability ?? c.subRole ?? '';
+                return _isSubRoleMatch(cap, r.subRoleSlug);
+              }).length;
+              final isFulfilled = r.quantity > 0 && approvedCount >= r.quantity;
+              final roleIcon = isFulfilled ? Icons.check_circle_rounded : _getSubRoleIcon(r.subRoleSlug);
+              final iconColor = isFulfilled ? Colors.green.shade600 : AppTheme.primaryPurple;
+
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E1B2E) : const Color(0xFFF8FAFC),
+                  color: isDark
+                      ? (isFulfilled ? const Color(0xFF14241C) : const Color(0xFF1E1B2E))
+                      : (isFulfilled ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC)),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+                    color: isFulfilled
+                        ? (isDark ? Colors.green.shade900 : const Color(0xFFBBF7D0))
+                        : (isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0)),
                   ),
                 ),
                 child: Column(
@@ -868,14 +901,81 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.check_circle_rounded, size: 16, color: Colors.teal),
+                        Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: isFulfilled
+                                ? Colors.green.withValues(alpha: 0.12)
+                                : AppTheme.primaryPurple.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(roleIcon, size: 15, color: iconColor),
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             r.label,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: isFulfilled && !isDark ? Colors.green.shade900 : null,
+                            ),
                           ),
                         ),
+                        if (isFulfilled)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.check_circle_rounded, size: 11, color: Colors.green.shade700),
+                                const SizedBox(width: 3),
+                                Text(
+                                  'Terpenuhi ($approvedCount/${r.quantity})',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isDark ? Colors.white12 : const Color(0xFFCBD5E1),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.person_search_outlined,
+                                  size: 11,
+                                  color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  'Mencari ${r.quantity - approvedCount} orang',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
                     if (r.tags.isNotEmpty) ...[
@@ -887,15 +987,17 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
                           return Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryPurple.withValues(alpha: 0.1),
+                              color: isFulfilled
+                                  ? Colors.green.withValues(alpha: 0.08)
+                                  : AppTheme.primaryPurple.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               '#$tag',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
-                                color: AppTheme.primaryPurple,
+                                color: isFulfilled ? Colors.green.shade700 : AppTheme.primaryPurple,
                               ),
                             ),
                           );
@@ -909,8 +1011,13 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
           )
         else
           Chip(
+            avatar: Icon(
+              _getSubRoleIcon(opp.subRoleSlug),
+              size: 14,
+              color: AppTheme.primaryPurple,
+            ),
             label: Text(opp.subRoleLabel),
-            backgroundColor: Colors.teal.shade50,
+            backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.08),
           ),
         const SizedBox(height: 16),
 
@@ -1119,6 +1226,52 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
         ],
       ],
     );
+  }
+
+  bool _isSubRoleMatch(String slugA, String slugB) {
+    final a = slugA.toLowerCase().replaceAll('-', '_').trim();
+    final b = slugB.toLowerCase().replaceAll('-', '_').trim();
+    if (a.isEmpty || b.isEmpty) return false;
+    if (a == b) return true;
+
+    final isPhotoA = a.contains('foto') || a.contains('photo');
+    final isPhotoB = b.contains('foto') || b.contains('photo');
+    if (isPhotoA && isPhotoB) return true;
+
+    final isVideoA = a.contains('video');
+    final isVideoB = b.contains('video');
+    if (isVideoA && isVideoB) return true;
+
+    final isDesignA = a.contains('desain') || a.contains('design');
+    final isDesignB = b.contains('desain') || b.contains('design');
+    if (isDesignA && isDesignB) return true;
+
+    final isEditA = a.contains('edit');
+    final isEditB = b.contains('edit');
+    if (isEditA && isEditB) return true;
+
+    final isMca = a == 'mc' || a.contains('host');
+    final isMcb = b == 'mc' || b.contains('host');
+    if (isMca && isMcb) return true;
+
+    return false;
+  }
+
+  IconData _getSubRoleIcon(String slug) {
+    final s = slug.toLowerCase().replaceAll('-', '_');
+    if (s.contains('foto') || s.contains('photo')) return Icons.camera_alt_outlined;
+    if (s.contains('video') || s.contains('movie')) return Icons.videocam_outlined;
+    if (s.contains('edit')) return Icons.content_cut_outlined;
+    if (s.contains('desain') || s.contains('design')) return Icons.palette_outlined;
+    if (s.contains('animat')) return Icons.animation_outlined;
+    if (s.contains('drone')) return Icons.flight_takeoff_outlined;
+    if (s.contains('mc') || s.contains('host')) return Icons.mic_none_outlined;
+    if (s.contains('sing') || s.contains('musis') || s.contains('kendang') || s.contains('musik')) {
+      return Icons.music_note_outlined;
+    }
+    if (s.contains('organizer') || s.contains('event')) return Icons.event_available_outlined;
+    if (s.contains('model') || s.contains('talent')) return Icons.face_retouching_natural_outlined;
+    return Icons.badge_outlined;
   }
 
   Widget _buildReviewsSection(bool isDark) {
