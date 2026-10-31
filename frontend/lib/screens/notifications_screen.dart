@@ -339,6 +339,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     }
 
     if (oppId != null && oppId.isNotEmpty) {
+      final effectiveUser = widget.user ?? currentUserNotifier.value;
       OpportunityService.getOpportunityById(oppId).then((opp) {
         if (opp != null && mounted) {
           Navigator.push(
@@ -346,7 +347,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
             MaterialPageRoute(
               builder: (_) => DetailKebutuhanScreen(
                 opportunity: opp,
-                user: widget.user,
+                user: effectiveUser,
               ),
             ),
           );
@@ -357,7 +358,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
             context,
             MaterialPageRoute(
               builder: (_) => ProyekSayaScreen(
-                user: widget.user,
+                user: effectiveUser,
                 initialOpportunityId: oppId,
                 initialContractId: contractId,
               ),

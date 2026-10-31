@@ -236,6 +236,7 @@ class OpportunityService extends BaseService
             return [
                 'id' => $app->id,
                 'opportunity_id' => $app->opportunity_id,
+                'creator_id' => $app->creator_id,
                 'creator' => $app->creator ? [
                     'id' => $app->creator->id,
                     'name' => $app->creator->name,
