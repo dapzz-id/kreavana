@@ -196,21 +196,26 @@ class AdminSystemSettingController extends Controller
             }
         }
 
+        $currentModel = SystemSetting::get('ai_model', 'gemini-3.5-flash-lite');
+        if (in_array($currentModel, ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'])) {
+            $currentModel = 'gemini-3.5-flash-lite';
+        }
+
         $config = [
             'provider' => SystemSetting::get('ai_provider', 'gemini'),
             'api_key_masked' => $maskedKey,
             'has_api_key' => !empty($apiKey),
-            'model' => SystemSetting::get('ai_model', 'gemini-1.5-flash'),
+            'model' => $currentModel,
             'temperature' => (float) SystemSetting::get('ai_temperature', 0.7),
             'max_tokens' => (int) SystemSetting::get('ai_max_tokens', 2048),
             'system_prompt' => SystemSetting::get('ai_system_prompt', 'Anda adalah Kreavana AI, asisten intelijen kreatif resmi untuk platform Kreavana. Bantu kreator dan klien mengoptimalkan ide, peluang proyek, dan strategi bisnis kreatif di Indonesia.'),
             'custom_endpoint' => SystemSetting::get('ai_custom_endpoint', ''),
             'available_models' => [
                 'gemini' => [
-                    ['id' => 'gemini-1.5-flash', 'name' => 'Google Gemini 1.5 Flash (Cepat & Hemat Kuota)'],
-                    ['id' => 'gemini-1.5-pro', 'name' => 'Google Gemini 1.5 Pro (Kemampuan Analisis Tinggi)'],
-                    ['id' => 'gemini-2.0-flash', 'name' => 'Google Gemini 2.0 Flash (Next-Gen Ultrafast)'],
-                    ['id' => 'gemini-2.5-flash', 'name' => 'Google Gemini 2.5 Flash'],
+                    ['id' => 'gemini-3.5-flash-lite', 'name' => 'Google Gemini 3.5 Flash Lite (Direkomendasikan - Cepat & Stabil)'],
+                    ['id' => 'gemini-3.8-flash', 'name' => 'Google Gemini 3.8 Flash (Next-Gen Flagship)'],
+                    ['id' => 'gemini-flash-latest', 'name' => 'Google Gemini Flash Latest'],
+                    ['id' => 'gemini-2.5-pro', 'name' => 'Google Gemini 2.5 Pro (Analisis Kompleks)'],
                 ],
                 'openai' => [
                     ['id' => 'gpt-4o-mini', 'name' => 'OpenAI GPT-4o Mini (Efisiensi Tinggi)'],
@@ -253,14 +258,7 @@ class AdminSystemSettingController extends Controller
         SystemSetting::set('ai_model', $request->input('model'), 'ai');
 
         if ($request->filled('api_key') && !str_contains($request->input('api_key'), '•')) {
-            $key = trim($request->input('api_key'));
-            if ($request->input('provider') === 'gemini' && !str_starts_with($key, 'AIza')) {
-                return response()->json([
-                    'status' => false,
-                    'message' => "Format API Key Google Gemini tidak valid. API Key resmi dari Google AI Studio selalu diawali dengan 'AIzaSy...'. Pastikan Anda menyalin API Key dari https://aistudio.google.com.",
-                ], 422);
-            }
-            SystemSetting::set('ai_api_key', $key, 'ai');
+            SystemSetting::set('ai_api_key', trim($request->input('api_key')), 'ai');
         }
 
         if ($request->has('temperature')) {
@@ -310,15 +308,14 @@ class AdminSystemSettingController extends Controller
 
         try {
             if ($provider === 'gemini') {
-                if (!empty($apiKey) && !str_starts_with($apiKey, 'AIza')) {
-                    return response()->json([
-                        'status' => false,
-                        'message' => "Format API Key Google Gemini tidak valid. API Key resmi dari Google AI Studio selalu diawali dengan 'AIzaSy...'. Key yang dicek saat ini diawali dengan '" . substr($apiKey, 0, 4) . "...'. Dapatkan key resmi di https://aistudio.google.com.",
-                    ], 422);
+                if (empty($model) || in_array($model, ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'])) {
+                    $model = 'gemini-3.5-flash-lite';
                 }
 
                 $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
-                $response = Http::timeout(10)->post($endpoint, [
+                $response = Http::withHeaders([
+                    'x-goog-api-key' => $apiKey,
+                ])->timeout(10)->post($endpoint, [
                     'contents' => [
                         [
                             'parts' => [

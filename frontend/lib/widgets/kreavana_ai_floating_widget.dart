@@ -1019,7 +1019,7 @@ class _KreavanaAiPanelState extends State<KreavanaAiPanel> {
     } else {
       final errorMsg = res?['message']?.toString();
       if (errorMsg != null && errorMsg.isNotEmpty) {
-        aiResponse = "⚠️ Gagal mendapatkan respons dari AI:\n\n$errorMsg\n\n💡 Catatan: Jika Anda adalah Administrator, pastikan API Key Google Gemini di Dasbor Admin > Pengaturan Sistem telah terisi dengan benar (selalu diawali dengan 'AIzaSy...').";
+        aiResponse = "⚠️ Gagal mendapatkan respons dari AI:\n\n$errorMsg\n\n💡 Catatan: Jika Anda adalah Administrator, silakan periksa konfigurasi API Key dan Model di Dasbor Admin > Pengaturan Sistem > Konfigurasi AI Engine.";
       } else {
         aiResponse = "⚠️ Terjadi kendala saat menghubungkan ke layanan AI. Silakan periksa koneksi internet Anda atau hubungi Administrator.";
       }

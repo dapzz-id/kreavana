@@ -30,12 +30,15 @@ class AiService extends BaseService implements AiServiceInterface
                 return "Kreavana AI siap membantu! (Catatan: Admin belum memasukkan Gemini API Key di Pengaturan Sistem).";
             }
 
-            if (!str_starts_with($apiKey, 'AIza')) {
-                throw new Exception("Google Gemini Error: Format API Key tidak valid. API Key Google AI Studio wajib diawali dengan 'AIzaSy...'. Pastikan mengambil API Key dari https://aistudio.google.com.");
+            // Map deprecated or legacy Gemini model IDs to active Gemini 3.5 Flash Lite
+            if (empty($model) || in_array($model, ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'])) {
+                $model = 'gemini-3.5-flash-lite';
             }
 
             $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
-            $response = Http::timeout(25)->post($url, [
+            $response = Http::withHeaders([
+                'x-goog-api-key' => $apiKey,
+            ])->timeout(25)->post($url, [
                 'system_instruction' => [
                     'parts' => [
                         ['text' => $systemPrompt]
