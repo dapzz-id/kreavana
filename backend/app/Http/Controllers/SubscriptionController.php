@@ -144,26 +144,18 @@ class SubscriptionController extends Controller
 
         DB::beginTransaction();
         try {
+            // 1. Potong saldo user
             $user->balance -= $price;
-            $user->subscription_tier = $tier;
             $user->save();
 
-            // Update performance boost hanya jika role adalah creator
-            if ($user->role === \App\Enums\RoleType::Creator) {
-                $user->updatePerformanceBoost();
-            }
+            // 2. Kadaluarsakan langganan aktif sebelumnya jika ada
+            Subscription::where('user_id', $user->id)
+                ->where(function ($q) {
+                    $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                })
+                ->update(['expires_at' => now(), 'auto_renew' => false]);
 
-            WalletTransaction::create([
-                'user_id' => $user->id,
-                'type' => 'subscription_payment',
-                'amount' => -$price,
-                'fee' => 0,
-                'payment_method' => 'wallet',
-                'status' => 'completed',
-                'reference_number' => 'SUB-' . Str::upper(Str::random(10)),
-                'description' => 'Pembelian Paket ' . ucfirst($tier) . ' (1 Bulan)',
-            ]);
-
+            // 3. Buat data langganan baru
             $subscription = Subscription::create([
                 'user_id' => $user->id,
                 'tier' => $tier,
@@ -171,6 +163,24 @@ class SubscriptionController extends Controller
                 'auto_renew' => $autoRenew,
                 'expires_at' => now()->addMonth(),
             ]);
+
+            // 4. Catat riwayat transaksi wallet
+            WalletTransaction::create([
+                'user_id' => $user->id,
+                'type' => 'subscription_payment',
+                'amount' => $price,
+                'fee' => 0,
+                'payment_method' => 'wallet',
+                'status' => 'completed',
+                'reference_number' => 'SUB-' . Str::upper(Str::random(10)),
+                'description' => 'Pembelian Paket ' . ucfirst($tier) . ' (1 Bulan)',
+            ]);
+
+            // 5. Update performance boost jika kreator (setelah langganan aktif tercatat di DB)
+            $userRole = is_object($user->role) ? $user->role->value : (string) $user->role;
+            if (in_array(strtolower($userRole), ['creator', 'kreator'])) {
+                $user->updatePerformanceBoost();
+            }
 
             DB::commit();
 
@@ -181,6 +191,11 @@ class SubscriptionController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+            \Illuminate\Support\Facades\Log::error('Gagal memproses langganan: ' . $e->getMessage(), [
+                'user_id' => $user->id ?? null,
+                'tier' => $tier ?? null,
+                'trace' => $e->getTraceAsString(),
+            ]);
             return response()->json(['message' => 'Gagal memproses langganan.', 'error' => $e->getMessage()], 500);
         }
     }

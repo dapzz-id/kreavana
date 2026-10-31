@@ -355,6 +355,17 @@ class _ModalBodyState extends State<_ModalBody> {
       Navigator.pop(context); // close loading
 
       if (result != null && result['subscription'] != null) {
+        // Update user state di frontend agar UI langsung merefleksikan paket baru
+        final current = currentUserNotifier.value;
+        if (current != null) {
+          final newBalance = (result['new_balance'] as num?)?.toDouble() ??
+              (current.balance - plan.price);
+          currentUserNotifier.value = current.copyWith(
+            subscriptionTier: plan.tier,
+            balance: newBalance,
+          );
+        }
+
         Navigator.pop(context); // close upgrade modal
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -367,7 +378,9 @@ class _ModalBodyState extends State<_ModalBody> {
         );
       } else {
         // Backend returned an error (wrong PIN, insufficient balance, etc.)
-        final msg = result?['message'] ?? 'Pembelian gagal. Coba lagi.';
+        final msg = result?['message'] ??
+            result?['error'] ??
+            'Pembelian gagal. Coba lagi.';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(msg),

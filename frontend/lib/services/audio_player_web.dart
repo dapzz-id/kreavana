@@ -86,7 +86,7 @@ class WebAudioPlayer implements BaseAudioPlayer {
       el.preload = 'metadata';
       await el.onLoadedMetadata.first.timeout(const Duration(seconds: 4));
       final sec = el.duration;
-      if (sec != null && !sec.isNaN && sec > 0) {
+      if (!sec.isNaN && sec > 0) {
         return Duration(milliseconds: (sec * 1000).round());
       }
     } catch (_) {}

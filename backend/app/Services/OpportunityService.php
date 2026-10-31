@@ -217,7 +217,7 @@ class OpportunityService extends BaseService
         }
 
         $applications = OpportunityApplication::with([
-            'creator:id,name,username,avatar_url,sub_role,rating,subscription_tier,is_verified,completed_projects_count'
+            'creator.activeSubscription'
         ])
             ->where('opportunity_id', $opportunityId)
             ->orderBy('created_at', 'desc')

@@ -4267,7 +4267,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
                 ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  value: selectedType,
+                  initialValue: selectedType,
                   decoration: const InputDecoration(labelText: 'Tipe Pengumuman'),
                   items: const [
                     DropdownMenuItem(value: 'general', child: Text('Umum')),
@@ -4279,7 +4279,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
                 ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  value: selectedPriority,
+                  initialValue: selectedPriority,
                   decoration: const InputDecoration(labelText: 'Prioritas'),
                   items: const [
                     DropdownMenuItem(value: 'normal', child: Text('Normal')),
@@ -4478,7 +4478,7 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
               builder: (_) => DirectMessageScreen(
                 currentUser: widget.user,
                 initialChat: chatData,
-                chatId: chatData['id']?.toString(),
+                chatId: chatData['id'],
                 targetUserId: cleanId,
               ),
             ),
