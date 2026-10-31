@@ -211,17 +211,26 @@ class OpportunityService extends BaseService
         $opp = Opportunity::where('id', $opportunityId)->firstOrFail();
         $user = User::where('id', $userId)->firstOrFail();
 
-        // Only owner, admin, or marketing can view all applicants
-        if ($opp->posted_by !== $userId && $user->role !== RoleType::Admin && $user->role !== RoleType::Marketing) {
-            abort(403, 'Akses ditolak. Anda bukan pemilik proyek ini.');
+        $isOwnerOrStaff = ($opp->posted_by === $userId || $user->role === RoleType::Admin || $user->role === RoleType::Marketing);
+
+        $query = OpportunityApplication::with([
+            'creator.activeSubscription'
+        ])->where('opportunity_id', $opportunityId);
+
+        // Jika bukan pemilik proyek atau staf, pelamar hanya dapat melihat lamarannya sendiri
+        if (!$isOwnerOrStaff) {
+            $hasApplication = OpportunityApplication::where('opportunity_id', $opportunityId)
+                ->where('creator_id', $userId)
+                ->exists();
+
+            if (!$hasApplication) {
+                abort(403, 'Akses ditolak. Anda bukan pemilik proyek atau pelamar pada proyek ini.');
+            }
+
+            $query->where('creator_id', $userId);
         }
 
-        $applications = OpportunityApplication::with([
-            'creator.activeSubscription'
-        ])
-            ->where('opportunity_id', $opportunityId)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $applications = $query->orderBy('created_at', 'desc')->get();
 
         return $applications->map(function ($app) {
             return [
