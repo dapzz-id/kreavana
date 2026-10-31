@@ -26,18 +26,29 @@ class UserSeeder extends Seeder
         );
 
         // 2. Client Kreavana (UMKM)
-        $client = User::updateOrCreate(
-            ['email' => 'client@kreavana.id'],
-            [
+        $client = User::where('email', 'client@kreavana.id')->first();
+        if (!$client) {
+            $client = User::create([
                 'name' => 'Kreavana Demo Client',
                 'username' => 'client_demo',
+                'email' => 'client@kreavana.id',
                 'role' => RoleType::User,
                 'is_creator_approved' => 0,
                 'email_verified_at' => now(),
                 'balance' => 5000000.0,
                 'wallet_pin' => \Illuminate\Support\Facades\Hash::make('123456'),
-            ]
-        );
+            ]);
+        } else {
+            $client->update([
+                'name' => 'Kreavana Demo Client',
+                'username' => 'client_demo',
+                'role' => RoleType::User,
+                'is_creator_approved' => 0,
+                'email_verified_at' => now(),
+                'balance' => $client->balance !== null ? $client->balance : 5000000.0,
+                'wallet_pin' => $client->wallet_pin ?: \Illuminate\Support\Facades\Hash::make('123456'),
+            ]);
+        }
 
         \App\Models\Subscription::updateOrCreate(
             [
