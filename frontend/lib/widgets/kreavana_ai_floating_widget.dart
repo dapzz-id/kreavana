@@ -2589,8 +2589,12 @@ class _KreavanaAiPanelState extends State<KreavanaAiPanel> {
   ) {
     final isEvent = card['type'] == 'event';
     final name = (isEvent ? card['title'] : card['name']) ?? 'Rekomendasi AI';
-    final subRole =
-        (isEvent ? card['category'] : card['sub_role']) ?? 'Kreator';
+    final subRole = (isEvent
+            ? card['category']
+            : (card['sub_role_label'] ?? card['sub_role']))
+        ?.toString()
+        .replaceAll('_', ' ') ??
+        'Kreator';
     final location = card['location'] ?? 'Bandung';
     final boostBadge = card['performance_boost']?.toString() ?? '⚡ Booster';
     final ratingVal = card['rating'] != null
