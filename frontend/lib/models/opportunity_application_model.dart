@@ -115,9 +115,13 @@ class OpportunityApplicationModel {
   factory OpportunityApplicationModel.fromJson(Map<String, dynamic> json) {
     List<Map<String, dynamic>> docs = [];
     if (json['submitted_documents'] is List) {
-      docs = (json['submitted_documents'] as List)
-          .map((e) => Map<String, dynamic>.from(e as Map))
-          .toList();
+      for (final e in (json['submitted_documents'] as List)) {
+        if (e is Map) {
+          docs.add(Map<String, dynamic>.from(e));
+        } else if (e is String && e.isNotEmpty) {
+          docs.add({'name': e.split('/').last, 'url': e});
+        }
+      }
     }
 
     return OpportunityApplicationModel(

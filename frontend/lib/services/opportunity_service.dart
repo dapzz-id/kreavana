@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/opportunity_model.dart';
 import '../models/opportunity_application_model.dart';
@@ -212,7 +213,9 @@ class OpportunityService {
             .map((item) => OpportunityApplicationModel.fromJson(item))
             .toList();
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error getOpportunityApplications: $e');
+    }
     return [];
   }
 
