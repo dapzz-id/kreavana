@@ -253,7 +253,14 @@ class AdminSystemSettingController extends Controller
         SystemSetting::set('ai_model', $request->input('model'), 'ai');
 
         if ($request->filled('api_key') && !str_contains($request->input('api_key'), '•')) {
-            SystemSetting::set('ai_api_key', trim($request->input('api_key')), 'ai');
+            $key = trim($request->input('api_key'));
+            if ($request->input('provider') === 'gemini' && !str_starts_with($key, 'AIza')) {
+                return response()->json([
+                    'status' => false,
+                    'message' => "Format API Key Google Gemini tidak valid. API Key resmi dari Google AI Studio selalu diawali dengan 'AIzaSy...'. Pastikan Anda menyalin API Key dari https://aistudio.google.com.",
+                ], 422);
+            }
+            SystemSetting::set('ai_api_key', $key, 'ai');
         }
 
         if ($request->has('temperature')) {
@@ -303,6 +310,13 @@ class AdminSystemSettingController extends Controller
 
         try {
             if ($provider === 'gemini') {
+                if (!empty($apiKey) && !str_starts_with($apiKey, 'AIza')) {
+                    return response()->json([
+                        'status' => false,
+                        'message' => "Format API Key Google Gemini tidak valid. API Key resmi dari Google AI Studio selalu diawali dengan 'AIzaSy...'. Key yang dicek saat ini diawali dengan '" . substr($apiKey, 0, 4) . "...'. Dapatkan key resmi di https://aistudio.google.com.",
+                    ], 422);
+                }
+
                 $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
                 $response = Http::timeout(10)->post($endpoint, [
                     'contents' => [

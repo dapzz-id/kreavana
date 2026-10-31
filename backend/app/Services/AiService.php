@@ -30,6 +30,10 @@ class AiService extends BaseService implements AiServiceInterface
                 return "Kreavana AI siap membantu! (Catatan: Admin belum memasukkan Gemini API Key di Pengaturan Sistem).";
             }
 
+            if (!str_starts_with($apiKey, 'AIza')) {
+                throw new Exception("Google Gemini Error: Format API Key tidak valid. API Key Google AI Studio wajib diawali dengan 'AIzaSy...'. Pastikan mengambil API Key dari https://aistudio.google.com.");
+            }
+
             $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
             $response = Http::timeout(25)->post($url, [
                 'system_instruction' => [
@@ -55,7 +59,7 @@ class AiService extends BaseService implements AiServiceInterface
             }
 
             $err = $response->json()['error']['message'] ?? $response->body();
-            throw new Exception("Google Gemini Error: " . substr($err, 0, 150));
+            throw new Exception("Google Gemini Error: " . substr($err, 0, 200));
 
         } elseif ($provider === 'openai') {
             if (empty($apiKey)) {
@@ -124,6 +128,9 @@ class AiService extends BaseService implements AiServiceInterface
     {
         $message = $payload['message'] ?? '';
         $mode = $payload['mode'] ?? 'chat';
+        $includeData = !empty($payload['include_data_kreavana']);
+
+        $recommendationCards = [];
 
         if ($mode === 'polish') {
             $prompt = "Perhalus pesan berikut agar terdengar lebih ramah, profesional, dan persuasif untuk komunikasi bisnis kreatif:\n\"{$message}\"";
@@ -131,6 +138,39 @@ class AiService extends BaseService implements AiServiceInterface
             $prompt = "Berikan 2 alternatif balasan cepat yang sopan dan profesional untuk pesan berikut:\n\"{$message}\"";
         } else {
             $prompt = $message;
+
+            if ($includeData) {
+                try {
+                    $creators = \App\Models\User::where('role', 'creator')
+                        ->where('is_creator_approved', true)
+                        ->select(['id', 'name', 'username', 'sub_role', 'avatar_url', 'performance_boost'])
+                        ->limit(6)
+                        ->get();
+
+                    if ($creators->isNotEmpty()) {
+                        $creatorsContext = "\n\n[DATA PLATFORM KREAVANA TERKAIT]:\nBerikut adalah beberapa kreator terverifikasi di Kreavana yang dapat Anda referensikan jika relevan dengan pertanyaan:\n";
+                        foreach ($creators as $c) {
+                            $subRoleName = $c->sub_role ?? 'Kreator';
+                            $creatorsContext .= "- {$c->name} (@{$c->username}) - Bidang/Keahlian: {$subRoleName}\n";
+                            $recommendationCards[] = [
+                                'type' => 'creator',
+                                'id' => $c->id,
+                                'name' => $c->name,
+                                'sub_role' => $subRoleName,
+                                'location' => 'Indonesia',
+                                'performance_boost' => $c->performance_boost ? "⚡ {$c->performance_boost}x Booster" : '⭐ Terverifikasi',
+                                'rating' => 4.9,
+                                'review_count' => 'Kreator Terverifikasi',
+                                'avatar_url' => $c->avatar_url,
+                                'action_label' => 'Lihat Profil',
+                            ];
+                        }
+                        $prompt = $message . $creatorsContext . "\nSilakan berikan jawaban dan rekomendasi cerdas, terstruktur, serta informatif untuk pengguna berdasarkan pertanyaan di atas.";
+                    }
+                } catch (\Throwable $e) {
+                    // Fallback to original prompt if query fails
+                }
+            }
         }
 
         $answer = $this->generateContent($prompt);
@@ -138,6 +178,7 @@ class AiService extends BaseService implements AiServiceInterface
         return [
             'answer' => $answer,
             'polished_message' => $answer,
+            'recommendation_cards' => $recommendationCards,
             'ai_provider' => SystemSetting::get('ai_provider', 'gemini'),
         ];
     }

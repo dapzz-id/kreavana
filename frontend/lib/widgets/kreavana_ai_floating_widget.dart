@@ -1000,15 +1000,13 @@ class _KreavanaAiPanelState extends State<KreavanaAiPanel> {
       return;
     }
 
-    String aiResponse =
-        "Halo! Saya Kreavana AI. Saya siap membantu mengoptimalkan proyek, konten, dan riset kreatif Anda.";
-
+    String aiResponse;
     List<Map<String, dynamic>> recommendationCards = [];
 
-    if (res != null && res['data'] != null) {
+    if (res != null && res['status'] == true && res['data'] != null) {
       aiResponse =
           res['data']['answer'] ??
-          (res['data']['polished_message'] ?? aiResponse);
+          (res['data']['polished_message'] ?? "Tidak ada jawaban yang dihasilkan.");
 
       if (res['data']['recommendation_cards'] != null &&
           res['data']['recommendation_cards'] is List) {
@@ -1017,6 +1015,13 @@ class _KreavanaAiPanelState extends State<KreavanaAiPanel> {
             (c) => Map<String, dynamic>.from(c),
           ),
         );
+      }
+    } else {
+      final errorMsg = res?['message']?.toString();
+      if (errorMsg != null && errorMsg.isNotEmpty) {
+        aiResponse = "⚠️ Gagal mendapatkan respons dari AI:\n\n$errorMsg\n\n💡 Catatan: Jika Anda adalah Administrator, pastikan API Key Google Gemini di Dasbor Admin > Pengaturan Sistem telah terisi dengan benar (selalu diawali dengan 'AIzaSy...').";
+      } else {
+        aiResponse = "⚠️ Terjadi kendala saat menghubungkan ke layanan AI. Silakan periksa koneksi internet Anda atau hubungi Administrator.";
       }
     }
 

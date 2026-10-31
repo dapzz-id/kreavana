@@ -162,10 +162,19 @@ class _AdminSystemSettingsScreenState extends State<AdminSystemSettingsScreen>
   }
 
   Future<void> _saveAiSettings() async {
-    setState(() => _isSavingAi = true);
-
     final rawKey = _apiKeyController.text.trim();
     final isMasked = rawKey.contains('•');
+
+    if (_aiProvider == 'gemini' && !isMasked && rawKey.isNotEmpty && !rawKey.startsWith('AIza')) {
+      AppSweetAlert.error(
+        context,
+        "Format API Key Google Gemini tidak valid. API Key resmi dari Google AI Studio selalu diawali dengan 'AIzaSy...'. Pastikan Anda menyalin API Key dari https://aistudio.google.com.",
+        title: 'Format API Key Tidak Sesuai',
+      );
+      return;
+    }
+
+    setState(() => _isSavingAi = true);
 
     final res = await AdminService.updateAiConfig(
       provider: _aiProvider,
@@ -879,7 +888,7 @@ class _AdminSystemSettingsScreenState extends State<AdminSystemSettingsScreen>
                     const SizedBox(height: 8),
                     Text(
                       _aiProvider == 'gemini'
-                          ? 'Dapatkan API key gratis di Google AI Studio (aistudio.google.com).'
+                          ? 'Dapatkan API key gratis di Google AI Studio (aistudio.google.com). Format API Key resmi Gemini selalu diawali dengan "AIzaSy...".'
                           : (_aiProvider == 'openai'
                               ? 'Dapatkan API key di OpenAI Developer Platform (platform.openai.com).'
                               : 'Masukkan kredensial otorisasi sesuai provider.'),
