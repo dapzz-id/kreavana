@@ -412,6 +412,9 @@ class ChatListSectionState extends State<ChatListSection> {
     super.initState();
     _loadPinnedChats();
     loadChats();
+    if (_currentUserId.isNotEmpty && _currentUserId != 'default') {
+      ChatService.subscribeToUser(_currentUserId);
+    }
     _messageSubscription = ChatService.messageStream.listen((msg) {
       if (mounted) loadChats();
     });
@@ -1692,18 +1695,24 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
   void initState() {
     super.initState();
     _record = record.AudioRecorder();
-    ChatService.markAsRead(widget.chat['id'].toString());
+    final chatId = widget.chat['id'].toString();
+    ChatService.subscribeToChat(chatId);
+    ChatService.markAsRead(chatId);
     _loadPinnedMessages();
     _loadMessages();
     _messageSubscription = ChatService.messageStream.listen((msg) {
       if (msg['chat_id'] == widget.chat['id'].toString()) {
         if (mounted) {
           ChatService.markAsRead(widget.chat['id'].toString());
+          final processed = _processMessage(Map<String, dynamic>.from(msg));
+          if (processed['_decrypt_failed'] == true) {
+            _loadMessages();
+            return;
+          }
           setState(() {
             final existingIndex = _messages.indexWhere(
               (m) => m['id'].toString() == msg['id'].toString(),
             );
-            final processed = _processMessage(Map<String, dynamic>.from(msg));
             if (existingIndex >= 0) {
               if (_messages[existingIndex]['isMe'] == true) {
                 processed['isMe'] = true;
@@ -1786,8 +1795,12 @@ class _ChatDetailSectionState extends State<ChatDetailSection> {
   @override
   void didUpdateWidget(ChatDetailSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.chat['id']?.toString() != widget.chat['id']?.toString()) {
-      ChatService.markAsRead(widget.chat['id'].toString());
+    final chatId = widget.chat['id']?.toString() ?? '';
+    if (oldWidget.chat['id']?.toString() != chatId) {
+      if (chatId.isNotEmpty) {
+        ChatService.subscribeToChat(chatId);
+      }
+      ChatService.markAsRead(chatId);
       _loadMessages();
     }
   }

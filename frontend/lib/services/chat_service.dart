@@ -13,6 +13,8 @@ class ChatService {
   static bool _isConnected = false;
   static final Set<String> _subscribedChatIds = {};
   static final Set<String> _pendingChatIds = {};
+  static final Set<String> _subscribedUserIds = {};
+  static final Set<String> _pendingUserIds = {};
   static final StreamController<Map<String, dynamic>> _messageStreamController =
       StreamController.broadcast();
   static final StreamController<Map<String, dynamic>>
@@ -66,6 +68,12 @@ class ChatService {
       _pendingChatIds.clear();
       for (final chatId in pending) {
         _bindChannel(chatId);
+      }
+
+      final pendingUsers = Set<String>.from(_pendingUserIds);
+      _pendingUserIds.clear();
+      for (final uid in pendingUsers) {
+        _bindUserChannel(uid);
       }
     });
 
@@ -149,6 +157,63 @@ class ChatService {
     }
   }
 
+  /// Subscribe to personal user channel so newly created chats and direct messages
+  /// are received instantly even before the specific chat room is discovered.
+  static Future<void> subscribeToUser(String userId) async {
+    if (userId.isEmpty || userId == 'default') return;
+    try {
+      _ensureConnected();
+
+      if (_subscribedUserIds.contains(userId)) return;
+
+      if (_isConnected) {
+        _bindUserChannel(userId);
+      } else {
+        _pendingUserIds.add(userId);
+        debugPrint(
+          '⏳ Queued subscription for user.$userId (waiting for connection)',
+        );
+      }
+    } catch (e) {
+      debugPrint('Pusher user channel error: $e');
+    }
+  }
+
+  static void _bindUserChannel(String userId) {
+    if (_subscribedUserIds.contains(userId) || _pusher == null) return;
+    _subscribedUserIds.add(userId);
+
+    final channel = _pusher!.publicChannel('user.$userId');
+    channel.subscribe();
+    debugPrint('📡 Subscribed to user.$userId (connected: $_isConnected)');
+
+    channel.bind('message.sent').listen((event) {
+      debugPrint('📨 Received message.sent event on user.$userId');
+      if (event.data != null) {
+        try {
+          final data = event.data is String
+              ? jsonDecode(event.data)
+              : event.data;
+          final msg = data['message'];
+          if (msg != null) {
+            final chatId = msg['chat_id']?.toString() ?? data['chatId']?.toString() ?? '';
+            if (chatId.isNotEmpty) {
+              msg['chat_id'] = chatId;
+              // Subscribe to the chat channel as well for subsequent messages
+              subscribeToChat(chatId);
+            }
+            _messageStreamController.add(Map<String, dynamic>.from(msg));
+            try {
+              BadgeService().fetchCounts();
+            } catch (_) {}
+          }
+        } catch (e) {
+          debugPrint('Error parsing user channel message event: $e');
+        }
+      }
+    });
+  }
+
   static Future<void> unsubscribeFromChat(String chatId) async {
     if (_pusher != null && _subscribedChatIds.contains(chatId)) {
       final channel = _pusher!.publicChannel('chat.$chatId');
@@ -166,6 +231,8 @@ class ChatService {
     _isConnected = false;
     _subscribedChatIds.clear();
     _pendingChatIds.clear();
+    _subscribedUserIds.clear();
+    _pendingUserIds.clear();
   }
 
   static Future<List<dynamic>> fetchChats() async {
