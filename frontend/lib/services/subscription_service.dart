@@ -163,4 +163,15 @@ class SubscriptionService {
       'auto_renew': autoRenew,
     });
   }
+
+  /// Get active subscription info for current user
+  static Future<String?> getCurrentTier() async {
+    try {
+      final response = await ApiService.get('subscription/current');
+      if (response['tier'] != null) {
+        return response['tier'].toString();
+      }
+    } catch (_) {}
+    return null;
+  }
 }

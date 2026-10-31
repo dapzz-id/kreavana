@@ -77,6 +77,7 @@ class _MainNavigationState extends State<MainNavigation> {
     _currentIndex = widget.initialIndex;
     _loadedScreenIndices.add(widget.initialIndex);
     SystemSettingsService.moduleStatuses.addListener(_onModuleStatusesChanged);
+    currentUserNotifier.addListener(_onUserNotifierChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _refreshProfile();
@@ -89,9 +90,18 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   void dispose() {
+    currentUserNotifier.removeListener(_onUserNotifierChanged);
     SystemSettingsService.moduleStatuses.removeListener(_onModuleStatusesChanged);
     _sidebarScrollController.dispose();
     super.dispose();
+  }
+
+  void _onUserNotifierChanged() {
+    if (mounted && currentUserNotifier.value != null) {
+      setState(() {
+        _currentUser = currentUserNotifier.value!;
+      });
+    }
   }
 
   void _onModuleStatusesChanged() {
@@ -394,35 +404,60 @@ class _MainNavigationState extends State<MainNavigation> {
 
   Widget _buildUpgradePromoCard(bool isDark, {bool isCollapsed = false}) {
     if (isCollapsed) return const SizedBox.shrink();
+    final effectiveUser = currentUserNotifier.value ?? _currentUser;
+    final currentTier = effectiveUser.subscriptionTier.toLowerCase();
+    final isSuper = currentTier == 'super';
+    final isPro = currentTier == 'pro';
+    final isPlus = currentTier == 'plus';
+
     final isGov = _isGovernment;
     final isSchool = _isSchool;
-    final isCorporate = _currentUser.role == 'corporate' ||
-        _currentUser.role == 'company' ||
+    final isCorporate = effectiveUser.role == 'corporate' ||
+        effectiveUser.role == 'company' ||
         _isCompany;
-    final isCreator = _currentUser.role == 'creator' || _isCreatorUser;
+    final isCreator = effectiveUser.role == 'creator' || _isCreatorUser;
 
     final String promoTitle;
     final String promoDesc;
-    if (isGov) {
+    final String buttonLabel;
+
+    if (isSuper) {
+      promoTitle = 'Paket Super Aktif';
+      promoDesc = 'Semua fitur & kuota premium tertinggi telah aktif.';
+      buttonLabel = 'Lihat Detail Paket';
+    } else if (isPro) {
+      promoTitle = 'Paket Pro Aktif';
+      promoDesc = 'Tingkatkan ke Super untuk kuota call & storage maksimal.';
+      buttonLabel = 'Upgrade ke Super';
+    } else if (isPlus) {
+      promoTitle = 'Paket Plus Aktif';
+      promoDesc = 'Tingkatkan ke Pro/Super untuk fitur AI & boost lebih tinggi.';
+      buttonLabel = 'Tingkatkan Paket';
+    } else if (isGov) {
       promoTitle = 'Upgrade Akun Pemerintah';
       promoDesc = 'Tingkatkan peluang & fitur premium untuk instansi pemerintah.';
+      buttonLabel = 'Upgrade Sekarang';
     } else if (isSchool) {
       promoTitle = 'Upgrade Akun Institusi';
       promoDesc = 'Tingkatkan peluang & fitur premium untuk institusi sekolah.';
+      buttonLabel = 'Upgrade Sekarang';
     } else if (isCorporate) {
       promoTitle = 'Upgrade Akun Corporate';
       promoDesc = 'Tingkatkan peluang & fitur premium untuk corporate.';
+      buttonLabel = 'Upgrade Sekarang';
     } else if (isCreator) {
       promoTitle = 'Upgrade Akun Kreator';
       promoDesc = 'Tingkatkan peluang & fitur premium untuk kreator.';
+      buttonLabel = 'Upgrade Sekarang';
     } else {
       promoTitle = 'Upgrade Akun';
       promoDesc = 'Tingkatkan peluang & fitur premium akun Anda.';
+      buttonLabel = 'Upgrade Sekarang';
     }
 
     final accentColor = SubRoleThemeEngine.getAccentColor(
-      _currentUser.role,
-      _currentUser.subRole,
+      effectiveUser.role,
+      effectiveUser.subRole,
     );
 
     return Column(
@@ -434,8 +469,8 @@ class _MainNavigationState extends State<MainNavigation> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: SubRoleThemeEngine.getGradient(
-                _currentUser.role,
-                _currentUser.subRole,
+                effectiveUser.role,
+                effectiveUser.subRole,
               ),
               borderRadius: BorderRadius.circular(16),
             ),
@@ -468,7 +503,7 @@ class _MainNavigationState extends State<MainNavigation> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => UpgradePlanModal.show(context, user: _currentUser),
+                    onPressed: () => UpgradePlanModal.show(context, user: effectiveUser),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: accentColor,
@@ -478,9 +513,9 @@ class _MainNavigationState extends State<MainNavigation> {
                       ),
                       elevation: 0,
                     ),
-                    child: const Text(
-                      'Upgrade Sekarang',
-                      style: TextStyle(
+                    child: Text(
+                      buttonLabel,
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),

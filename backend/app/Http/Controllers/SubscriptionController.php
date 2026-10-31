@@ -131,6 +131,31 @@ class SubscriptionController extends Controller
         $tier = $request->tier;
         $price = $this->plans[$tier]['price'];
 
+        // ── Guard: Cegah pembelian paket yang sama atau lebih rendah (downgrade) ──
+        $tierRanks = [
+            'free'  => 0,
+            'basic' => 0,
+            'plus'  => 1,
+            'pro'   => 2,
+            'super' => 3,
+        ];
+        $currentTier = strtolower($user->subscription_tier ?? 'free');
+        $currentRank = $tierRanks[$currentTier] ?? 0;
+        $requestedRank = $tierRanks[$tier] ?? 0;
+
+        if ($requestedRank <= $currentRank) {
+            if ($requestedRank === $currentRank) {
+                return response()->json([
+                    'message' => 'Anda sudah berlangganan paket ' . ucfirst($tier) . ' saat ini.',
+                    'error_code' => 'already_active_tier',
+                ], 400);
+            }
+            return response()->json([
+                'message' => 'Tidak dapat memilih paket yang lebih rendah dari paket aktif Anda.',
+                'error_code' => 'downgrade_not_allowed',
+            ], 400);
+        }
+
         if ($user->balance < $price) {
             return response()->json([
                 'message' => 'Saldo dompet tidak mencukupi untuk berlangganan paket ini.',
@@ -187,6 +212,7 @@ class SubscriptionController extends Controller
             return response()->json([
                 'message' => 'Berhasil berlangganan paket ' . ucfirst($tier),
                 'subscription' => $subscription,
+                'tier' => $subscription->tier,
                 'new_balance' => $user->balance
             ]);
         } catch (\Exception $e) {

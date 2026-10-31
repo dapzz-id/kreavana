@@ -47,6 +47,7 @@ trait AuthResponder
                 'is_verified' => (bool) $user->is_verified,
                 'verification_type' => $user->verification_type,
                 'balance' => $user->balance,
+                'subscription_tier' => $user->subscription_tier,
             ] : null,
         ];
 

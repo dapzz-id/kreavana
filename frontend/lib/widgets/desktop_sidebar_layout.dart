@@ -23,6 +23,7 @@ import '../screens/buat_kebutuhan_screen.dart';
 import '../features/dashboard/screens/community_dashboard_screen.dart';
 import 'package:go_router/go_router.dart';
 import '../services/app_router.dart';
+import '../services/user_store.dart';
 import 'auth_guard_dialog.dart';
 import 'creator_sidebar_menus.dart';
 import 'kreavana_ai_floating_widget.dart';
@@ -59,6 +60,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   void initState() {
     super.initState();
     SystemSettingsService.moduleStatuses.addListener(_onModuleStatusesChanged);
+    currentUserNotifier.addListener(_onUserChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _sidebarScrollController.hasClients) {
         _sidebarScrollController.jumpTo(_savedSidebarScrollOffset);
@@ -68,9 +70,14 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
 
   @override
   void dispose() {
+    currentUserNotifier.removeListener(_onUserChanged);
     SystemSettingsService.moduleStatuses.removeListener(_onModuleStatusesChanged);
     _sidebarScrollController.dispose();
     super.dispose();
+  }
+
+  void _onUserChanged() {
+    if (mounted) setState(() {});
   }
 
   void _onModuleStatusesChanged() {
@@ -718,35 +725,60 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   }
 
   Widget _buildUpgradePromoCard(bool isDark) {
+    final effectiveUser = currentUserNotifier.value ?? widget.user;
+    final currentTier = effectiveUser.subscriptionTier.toLowerCase();
+    final isSuper = currentTier == 'super';
+    final isPro = currentTier == 'pro';
+    final isPlus = currentTier == 'plus';
+
     final isGov = _isGovernment;
     final isSchool = _isSchool;
-    final isCorporate = widget.user.role == 'corporate' ||
-        widget.user.role == 'company' ||
+    final isCorporate = effectiveUser.role == 'corporate' ||
+        effectiveUser.role == 'company' ||
         _isCompany;
-    final isCreator = widget.user.role == 'creator' || _isCreatorUser;
+    final isCreator = effectiveUser.role == 'creator' || _isCreatorUser;
 
     final String promoTitle;
     final String promoDesc;
-    if (isGov) {
+    final String buttonLabel;
+
+    if (isSuper) {
+      promoTitle = 'Paket Super Aktif';
+      promoDesc = 'Semua fitur & kuota premium tertinggi telah aktif.';
+      buttonLabel = 'Lihat Detail Paket';
+    } else if (isPro) {
+      promoTitle = 'Paket Pro Aktif';
+      promoDesc = 'Tingkatkan ke Super untuk kuota call & storage maksimal.';
+      buttonLabel = 'Upgrade ke Super';
+    } else if (isPlus) {
+      promoTitle = 'Paket Plus Aktif';
+      promoDesc = 'Tingkatkan ke Pro/Super untuk fitur AI & boost lebih tinggi.';
+      buttonLabel = 'Tingkatkan Paket';
+    } else if (isGov) {
       promoTitle = 'Upgrade Akun Pemerintah';
       promoDesc = 'Tingkatkan peluang & fitur premium untuk instansi pemerintah.';
+      buttonLabel = 'Upgrade Sekarang';
     } else if (isSchool) {
       promoTitle = 'Upgrade Akun Institusi';
       promoDesc = 'Tingkatkan peluang & fitur premium untuk institusi sekolah.';
+      buttonLabel = 'Upgrade Sekarang';
     } else if (isCorporate) {
       promoTitle = 'Upgrade Akun Corporate';
       promoDesc = 'Tingkatkan peluang & fitur premium untuk corporate.';
+      buttonLabel = 'Upgrade Sekarang';
     } else if (isCreator) {
       promoTitle = 'Upgrade Akun Kreator';
       promoDesc = 'Tingkatkan peluang & fitur premium untuk kreator.';
+      buttonLabel = 'Upgrade Sekarang';
     } else {
       promoTitle = 'Upgrade Akun';
       promoDesc = 'Tingkatkan peluang & fitur premium akun Anda.';
+      buttonLabel = 'Upgrade Sekarang';
     }
 
     final accentColor = SubRoleThemeEngine.getAccentColor(
-      widget.user.role,
-      widget.user.subRole,
+      effectiveUser.role,
+      effectiveUser.subRole,
     );
 
     return Column(
@@ -758,8 +790,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: SubRoleThemeEngine.getGradient(
-                widget.user.role,
-                widget.user.subRole,
+                effectiveUser.role,
+                effectiveUser.subRole,
               ),
               borderRadius: BorderRadius.circular(16),
             ),
@@ -792,7 +824,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => UpgradePlanModal.show(context, user: widget.user),
+                    onPressed: () => UpgradePlanModal.show(context, user: effectiveUser),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: accentColor,
@@ -802,9 +834,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                       ),
                       elevation: 0,
                     ),
-                    child: const Text(
-                      'Upgrade Sekarang',
-                      style: TextStyle(
+                    child: Text(
+                      buttonLabel,
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),

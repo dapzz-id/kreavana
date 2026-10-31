@@ -99,5 +99,68 @@ class SubscriptionPurchaseTest extends TestCase
             'message' => 'PIN Dompet salah.',
         ]);
     }
+
+    public function test_cannot_purchase_same_or_lower_tier()
+    {
+        $user = User::factory()->create([
+            'role' => \App\Enums\RoleType::Creator,
+            'balance' => 500000,
+            'wallet_pin' => Hash::make('123456'),
+        ]);
+
+        Subscription::create([
+            'user_id' => $user->id,
+            'tier' => 'pro',
+            'price_paid' => 199999,
+            'expires_at' => now()->addMonth(),
+        ]);
+
+        // Attempt to purchase same tier 'pro'
+        $responseSame = $this->withHeaders($this->getAuthHeaders($user))->postJson('/api/subscription/purchase', [
+            'tier' => 'pro',
+            'pin' => '123456',
+        ]);
+        $responseSame->assertStatus(400);
+        $responseSame->assertJson([
+            'error_code' => 'already_active_tier',
+        ]);
+
+        // Attempt to downgrade to 'plus'
+        $responseLower = $this->withHeaders($this->getAuthHeaders($user))->postJson('/api/subscription/purchase', [
+            'tier' => 'plus',
+            'pin' => '123456',
+        ]);
+        $responseLower->assertStatus(400);
+        $responseLower->assertJson([
+            'error_code' => 'downgrade_not_allowed',
+        ]);
+
+        // Attempt to upgrade to higher tier 'super' should succeed
+        $responseHigher = $this->withHeaders($this->getAuthHeaders($user))->postJson('/api/subscription/purchase', [
+            'tier' => 'super',
+            'pin' => '123456',
+        ]);
+        $responseHigher->assertStatus(200);
+        $this->assertEquals('super', $user->fresh()->subscription_tier);
+    }
+
+    public function test_profile_identity_returns_subscription_tier()
+    {
+        $user = User::factory()->create([
+            'role' => \App\Enums\RoleType::Creator,
+        ]);
+
+        Subscription::create([
+            'user_id' => $user->id,
+            'tier' => 'pro',
+            'price_paid' => 199999,
+            'expires_at' => now()->addMonth(),
+        ]);
+
+        $response = $this->withHeaders($this->getAuthHeaders($user))->getJson('/api/profile/identity');
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.subscription_tier', 'pro');
+    }
 }
+
 

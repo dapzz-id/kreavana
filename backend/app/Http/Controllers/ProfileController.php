@@ -54,6 +54,7 @@ class ProfileController extends Controller
                 'balance' => $user->balance,
                 'followers_count' => $followRepo->getFollowersCount($user->id),
                 'following_count' => $followRepo->getFollowingCount($user->id),
+                'subscription_tier' => $user->subscription_tier,
             ],
         ]);
     }
