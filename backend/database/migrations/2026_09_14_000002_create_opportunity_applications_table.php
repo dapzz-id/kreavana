@@ -16,7 +16,7 @@ return new class extends Migration
             $table->text('pitch_message');
             $table->text('questions_notes')->nullable();
             $table->decimal('bid_price', 15, 2)->nullable();
-            $table->enum('status', ['pending', 'approved', 'rejected', 'withdrawn', 'cancelled'])->default('pending');
+            $table->enum('status', ['pending', 'approved', 'rejected', 'withdrawn', 'cancelled', 'under_consideration'])->default('pending');
             $table->string('rejection_reason', 500)->nullable();
             $table->timestamp('reviewed_at')->nullable();
             $table->timestamps();

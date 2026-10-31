@@ -12,6 +12,8 @@ import '../widgets/desktop_sidebar_layout.dart';
 import '../widgets/skeleton/skeleton_list.dart';
 import 'direct_message_screen.dart';
 import 'proyek_saya_screen.dart';
+import 'detail_kebutuhan_screen.dart';
+import '../services/opportunity_service.dart';
 
 class NotificationsScreen extends StatefulWidget {
   final String userId;
@@ -333,18 +335,49 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         context,
         MaterialPageRoute(builder: (_) => const DirectMessageScreen()),
       );
-    } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ProyekSayaScreen(
-            user: widget.user,
-            initialOpportunityId: oppId,
-            initialContractId: contractId,
-          ),
-        ),
-      );
+      return;
     }
+
+    if (oppId != null && oppId.isNotEmpty) {
+      OpportunityService.getOpportunityById(oppId).then((opp) {
+        if (opp != null && mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DetailKebutuhanScreen(
+                opportunity: opp,
+                user: widget.user,
+              ),
+            ),
+          );
+          return;
+        }
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ProyekSayaScreen(
+                user: widget.user,
+                initialOpportunityId: oppId,
+                initialContractId: contractId,
+              ),
+            ),
+          );
+        }
+      });
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProyekSayaScreen(
+          user: widget.user,
+          initialOpportunityId: oppId,
+          initialContractId: contractId,
+        ),
+      ),
+    );
   }
 
   // ── EXECUTIVE HERO BANNER ──────────────────────────────────────────────────

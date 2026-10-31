@@ -256,4 +256,88 @@ class OpportunityApplicationWorkflowTest extends TestCase
             'client_id' => $this->owner->id,
         ]);
     }
+
+    public function test_applicant_can_view_own_application_and_counter_offer()
+    {
+        $app = OpportunityApplication::create([
+            'opportunity_id' => $this->opportunity->id,
+            'creator_id' => $this->creator1->id,
+            'sub_role_slug' => 'wedding_organizer',
+            'pitch_message' => 'Proposal WO.',
+            'bid_price' => 700000,
+            'status' => 'under_consideration',
+            'counter_offer_price' => 500000,
+            'counter_offer_notes' => 'Bisa nego 500rb ya?',
+            'counter_offer_status' => 'pending',
+        ]);
+
+        // Applicant can view their own application
+        $response = $this->actingAsApi($this->creator1)
+            ->getJson("/api/opportunities/{$this->opportunity->id}/applications");
+
+        $response->assertStatus(200);
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.id', $app->id);
+        $response->assertJsonPath('data.0.counter_offer_price', 500000);
+        $response->assertJsonPath('data.0.counter_offer_notes', 'Bisa nego 500rb ya?');
+
+        // Other non-applicant user gets 403
+        $responseOther = $this->actingAsApi($this->creator2)
+            ->getJson("/api/opportunities/{$this->opportunity->id}/applications");
+        $responseOther->assertStatus(403);
+    }
+
+    public function test_applicant_can_respond_to_counter_offer()
+    {
+        $app = OpportunityApplication::create([
+            'opportunity_id' => $this->opportunity->id,
+            'creator_id' => $this->creator1->id,
+            'sub_role_slug' => 'wedding_organizer',
+            'pitch_message' => 'Proposal WO.',
+            'status' => 'under_consideration',
+            'counter_offer_price' => 500000,
+            'counter_offer_status' => 'pending',
+        ]);
+
+        // Non-applicant cannot respond
+        $this->actingAsApi($this->creator2)
+            ->postJson("/api/opportunities/applications/{$app->id}/respond-counter-offer", [
+                'action' => 'accept',
+            ])
+            ->assertStatus(403);
+
+        // Applicant accepts counter offer
+        $response = $this->actingAsApi($this->creator1)
+            ->postJson("/api/opportunities/applications/{$app->id}/respond-counter-offer", [
+                'action' => 'accept',
+            ]);
+
+        $response->assertStatus(200);
+        $app->refresh();
+        $this->assertEquals('accepted', $app->counter_offer_status);
+
+        // Owner gets notification
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $this->owner->id,
+            'title' => 'Pelamar Menyetujui Tawaran Dana!',
+        ]);
+    }
+
+    public function test_applied_opportunity_appears_in_my_opportunities()
+    {
+        OpportunityApplication::create([
+            'opportunity_id' => $this->opportunity->id,
+            'creator_id' => $this->creator1->id,
+            'sub_role_slug' => 'wedding_organizer',
+            'pitch_message' => 'Proposal WO.',
+            'status' => 'under_consideration',
+        ]);
+
+        $response = $this->actingAsApi($this->creator1)
+            ->getJson('/api/opportunities/my');
+
+        $response->assertStatus(200);
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.id', $this->opportunity->id);
+    }
 }

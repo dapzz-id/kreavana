@@ -114,7 +114,12 @@ class OpportunityRepository extends BaseRepository
             'user:id,name,username,avatar_url,sub_role',
         ])
         ->withCount('applications')
-        ->where('posted_by', $userId)
+        ->where(function ($query) use ($userId) {
+            $query->where('posted_by', $userId)
+                  ->orWhereHas('applications', function ($sub) use ($userId) {
+                      $sub->where('creator_id', $userId);
+                  });
+        })
         ->orderBy('created_at', 'desc')
         ->limit($limit)
         ->get();
