@@ -19,9 +19,10 @@ import '../widgets/subrole_right_sidebar.dart';
 import '../features/dashboard/screens/community_dashboard_screen.dart';
 import '../app/subrole_theme_engine.dart';
 import '../app/app_animations.dart';
-import 'notifications_screen.dart';
 import 'ulasan_reputasi_screen.dart';
 import '../services/badge_service.dart';
+import 'package:go_router/go_router.dart';
+import '../services/app_router.dart';
 
 const _reviewableCreatorPackageKeys = {
   'foto_paket',
@@ -2131,15 +2132,10 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                           ? 'Notifikasi ($unreadCount belum dibaca)'
                           : 'Notifikasi',
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => NotificationsScreen(
-                              userId: _user.id ?? '',
-                              user: _user,
-                            ),
-                          ),
-                        );
+                        if (Navigator.of(context).canPop()) {
+                          Navigator.of(context).popUntil((route) => route.isFirst);
+                        }
+                        context.go(AppRoutes.notifikasi);
                       },
                       hasBadge: unreadCount > 0,
                     );

@@ -391,14 +391,14 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     if (_sidebarScrollController.hasClients) {
       _savedSidebarScrollOffset = _sidebarScrollController.offset;
     }
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(
-        builder: (_) =>
-            MainNavigation(initialUser: widget.user, initialIndex: index),
-      ),
-      (route) => false,
+    final targetRoute = AppRoutes.getRouteForIndex(
+      index,
+      isAdmin: widget.user.isAdmin,
     );
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+    context.go(targetRoute);
   }
 
   void _pushService(String serviceKey) {

@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
+import '../services/app_router.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/badge_service.dart';
 import '../services/api_service.dart';
 import '../services/theme_transition_service.dart';
-import '../services/user_store.dart';
-import '../screens/notifications_screen.dart';
-import '../screens/direct_message_screen.dart';
 import '../screens/global_search_screen.dart';
 
 // ── BADGE NOTIFIKASI & PESAN INTERAKTIF ──────────────────────────────────────────
@@ -66,16 +65,13 @@ class _AppBarBadgeWidgetState extends State<AppBarBadgeWidget> {
             child: GestureDetector(
               onTap: widget.onTap ??
                   () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => isNotification
-                            ? NotificationsScreen(
-                                userId: currentUserNotifier.value?.id ?? '',
-                                user: currentUserNotifier.value,
-                              )
-                            : const DirectMessageScreen(),
-                      ),
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                    }
+                    context.go(
+                      isNotification
+                          ? AppRoutes.notifikasi
+                          : AppRoutes.pesan,
                     );
                   },
               child: AnimatedContainer(

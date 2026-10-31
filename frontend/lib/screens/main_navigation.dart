@@ -89,6 +89,29 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   @override
+  void didUpdateWidget(MainNavigation oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialIndex != _currentIndex) {
+      setState(() {
+        _currentIndex = widget.initialIndex;
+        if (widget.initialIndex == 11) {
+          _messageScreenVersion++;
+          _screenCache.remove(widget.initialIndex);
+        }
+        _loadedScreenIndices.add(widget.initialIndex);
+        _activeGovRoute = null;
+      });
+    }
+    if (widget.initialUser != oldWidget.initialUser &&
+        widget.initialUser != _currentUser) {
+      setState(() {
+        _currentUser = widget.initialUser;
+        _screenCache.clear();
+      });
+    }
+  }
+
+  @override
   void dispose() {
     currentUserNotifier.removeListener(_onUserNotifierChanged);
     SystemSettingsService.moduleStatuses.removeListener(_onModuleStatusesChanged);
@@ -261,34 +284,6 @@ class _MainNavigationState extends State<MainNavigation> {
             _currentUser.email.startsWith('corporate@'));
   }
 
-  /// Index → URL mapping (kebalikan dari _routeIndexMap di app_router.dart)
-  static const _indexRouteMap = {
-    0: AppRoutes.beranda,
-    1: AppRoutes.explore,
-    2: AppRoutes.proyek,
-    3: AppRoutes.marketplaceKarya,
-    4: AppRoutes.agenda,
-    5: AppRoutes.kolaborasi,
-    6: AppRoutes.reputasi,
-    7: AppRoutes.wallet,
-    8: AppRoutes.pengaturan,
-    9: AppRoutes.profil,
-    10: AppRoutes.notifikasi,
-    11: AppRoutes.pesan,
-    12: AppRoutes.peluangProyek,
-    13: AppRoutes.kapasitasJadwal,
-    14: AppRoutes.aiAssistant,
-  };
-
-  static const _adminIndexRouteMap = {
-    0: AppRoutes.adminDashboard,
-    1: AppRoutes.adminVerification,
-    2: AppRoutes.adminResolution,
-    3: AppRoutes.adminSystemSettings,
-    4: AppRoutes.notifikasi,
-    5: AppRoutes.profil,
-  };
-
   static const _protectedIndexActionMap = {
     2: 'mengakses Manajemen Proyek',
     4: 'mengakses Agenda & Jadwal',
@@ -378,10 +373,11 @@ class _MainNavigationState extends State<MainNavigation> {
       _activeGovRoute = null;
     });
     // Sync URL di web
-    final route = _currentUser.isAdmin
-        ? _adminIndexRouteMap[index]
-        : _indexRouteMap[index];
-    if (route != null && mounted) {
+    final route = AppRoutes.getRouteForIndex(
+      index,
+      isAdmin: _currentUser.isAdmin,
+    );
+    if (mounted) {
       context.go(route);
     }
   }
