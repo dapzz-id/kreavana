@@ -26,7 +26,7 @@ class UserSeeder extends Seeder
         );
 
         // 2. Client Kreavana (UMKM)
-        User::updateOrCreate(
+        $client = User::updateOrCreate(
             ['email' => 'client@kreavana.id'],
             [
                 'name' => 'Kreavana Demo Client',
@@ -34,6 +34,20 @@ class UserSeeder extends Seeder
                 'role' => RoleType::User,
                 'is_creator_approved' => 0,
                 'email_verified_at' => now(),
+                'balance' => 5000000.0,
+                'wallet_pin' => \Illuminate\Support\Facades\Hash::make('123456'),
+            ]
+        );
+
+        \App\Models\Subscription::updateOrCreate(
+            [
+                'user_id' => $client->id,
+                'tier' => 'pro',
+            ],
+            [
+                'price_paid' => 199999,
+                'auto_renew' => true,
+                'expires_at' => now()->addYear(),
             ]
         );
 

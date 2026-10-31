@@ -77,6 +77,7 @@ class _MainNavigationState extends State<MainNavigation> {
     _currentIndex = widget.initialIndex;
     _loadedScreenIndices.add(widget.initialIndex);
     SystemSettingsService.moduleStatuses.addListener(_onModuleStatusesChanged);
+    currentUserNotifier.addListener(_onGlobalUserChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _refreshProfile();
@@ -89,9 +90,20 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   void dispose() {
+    currentUserNotifier.removeListener(_onGlobalUserChanged);
     SystemSettingsService.moduleStatuses.removeListener(_onModuleStatusesChanged);
     _sidebarScrollController.dispose();
     super.dispose();
+  }
+
+  void _onGlobalUserChanged() {
+    final newUser = currentUserNotifier.value;
+    if (newUser != null && mounted && newUser != _currentUser) {
+      setState(() {
+        _currentUser = newUser;
+        _screenCache.clear();
+      });
+    }
   }
 
   void _onModuleStatusesChanged() {
@@ -109,6 +121,7 @@ class _MainNavigationState extends State<MainNavigation> {
         if (result.success == true && result.user != null) {
           _currentUser = result.user!;
           _screenCache.clear();
+          currentUserNotifier.value = result.user!;
         }
       });
     }
@@ -119,6 +132,7 @@ class _MainNavigationState extends State<MainNavigation> {
       _currentUser = updatedUser;
       _screenCache.clear();
     });
+    currentUserNotifier.value = updatedUser;
   }
 
   void _onLogout() async {

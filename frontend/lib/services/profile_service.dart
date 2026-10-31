@@ -1,6 +1,7 @@
 import '../models/user_model.dart';
 import 'api_service.dart';
 import '../features/auth/services/auth_service.dart';
+import 'user_store.dart';
 
 class ProfileFetchResult {
   final bool success;
@@ -44,6 +45,12 @@ class ProfileService {
 
       // Update session lokal jika data profil user berubah
       await AuthService.saveUserData(userData);
+
+      // Sync ke global currentUserNotifier agar seluruh UI langsung reaktif
+      final activeUser = currentUserNotifier.value;
+      if (activeUser == null || activeUser.id == user.id || activeUser.username == user.username) {
+        currentUserNotifier.value = user;
+      }
 
       CreatorApplication? app;
       if (applicationResponse['status'] == true &&

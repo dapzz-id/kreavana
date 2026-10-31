@@ -54,6 +54,12 @@ class ProfileController extends Controller
                 'balance' => $user->balance,
                 'followers_count' => $followRepo->getFollowersCount($user->id),
                 'following_count' => $followRepo->getFollowingCount($user->id),
+                'subscription_tier' => $user->subscription_tier,
+                'storage_limit_bytes' => $user->storage_limit_bytes,
+                'max_voice_call_duration_seconds' => $user->max_voice_call_duration_seconds,
+                'max_video_call_duration_seconds' => $user->max_video_call_duration_seconds,
+                'performance_boost' => $user->performance_boost,
+                'created_at' => $user->created_at?->toISOString(),
             ],
         ]);
     }
