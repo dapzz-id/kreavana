@@ -5,6 +5,7 @@ import '../models/user_model.dart';
 import '../services/badge_service.dart';
 import '../services/api_service.dart';
 import '../services/theme_transition_service.dart';
+import '../services/user_store.dart';
 import '../screens/notifications_screen.dart';
 import '../screens/direct_message_screen.dart';
 import '../screens/global_search_screen.dart';
@@ -69,7 +70,10 @@ class _AppBarBadgeWidgetState extends State<AppBarBadgeWidget> {
                       context,
                       MaterialPageRoute(
                         builder: (_) => isNotification
-                            ? const NotificationsScreen(userId: '')
+                            ? NotificationsScreen(
+                                userId: currentUserNotifier.value?.id ?? '',
+                                user: currentUserNotifier.value,
+                              )
                             : const DirectMessageScreen(),
                       ),
                     );

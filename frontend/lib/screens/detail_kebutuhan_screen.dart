@@ -20,6 +20,7 @@ import '../widgets/user_profile_modal.dart';
 import '../widgets/verification_badge.dart';
 import '../widgets/upgrade_plan_modal.dart';
 import '../widgets/app_sweet_alert.dart';
+import '../services/user_store.dart';
 import 'proyek_saya_screen.dart';
 
 class DetailKebutuhanScreen extends StatefulWidget {
@@ -44,23 +45,25 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
   String _aiFilterSubRole = 'Semua';
   bool _actionLoading = false;
 
+  UserModel? get _effectiveUser => widget.user ?? currentUserNotifier.value;
+
   bool get _isOwner {
-    final myId = widget.user?.id ?? '';
+    final myId = _effectiveUser?.id ?? '';
     return myId.isNotEmpty && _opp.postedBy != null && _opp.postedBy == myId;
   }
 
   bool get _isSubscriber {
-    final t = (widget.user?.subscriptionTier ?? '').toLowerCase();
+    final t = (_effectiveUser?.subscriptionTier ?? '').toLowerCase();
     return t == 'plus' || t == 'pro' || t == 'super';
   }
 
   bool get _isMarketingOrAdmin {
-    final role = (widget.user?.role ?? '').toLowerCase();
+    final role = (_effectiveUser?.role ?? '').toLowerCase();
     return role == 'marketing' || role == 'admin';
   }
 
   OpportunityApplicationModel? get _myApplication {
-    final myId = widget.user?.id ?? '';
+    final myId = _effectiveUser?.id ?? '';
     if (myId.isNotEmpty) {
       for (final app in _applications) {
         if (app.creatorId == myId || app.creator?.id == myId) {
@@ -1069,6 +1072,9 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                               const SizedBox(height: 24),
                               _buildApplicationsSection(filteredApps, isDark),
                               const SizedBox(height: 24),
+                            ] else if (_loadingApps) ...[
+                              _buildMyApplicationLoadingCard(isDark),
+                              const SizedBox(height: 24),
                             ] else if (_myApplication != null) ...[
                               _buildMyApplicationStatusSection(_myApplication!, isDark),
                               const SizedBox(height: 24),
@@ -1104,6 +1110,9 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                     _buildAiRecommendationsSection(isDark),
                     const SizedBox(height: 20),
                     _buildApplicationsSection(filteredApps, isDark),
+                    const SizedBox(height: 20),
+                  ] else if (_loadingApps) ...[
+                    _buildMyApplicationLoadingCard(isDark),
                     const SizedBox(height: 20),
                   ] else if (_myApplication != null) ...[
                     _buildMyApplicationStatusSection(_myApplication!, isDark),
@@ -1729,6 +1738,39 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMyApplicationLoadingCard(bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF161426) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              'Memuat status lamaran & tawaran negosiasi...',
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -2390,7 +2432,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                   ],
 
                   // Action buttons if pending
-                  if (app.isPending) ...[
+                  if (app.isPending && _isOwner) ...[
                     OutlinedButton(
                       onPressed: _actionLoading ? null : () => _handleReview(app, 'reject'),
                       style: OutlinedButton.styleFrom(
@@ -2430,42 +2472,108 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
 
                   // Action buttons if under_consideration
                   if (app.isConsideration) ...[
-                    OutlinedButton(
-                      onPressed: _actionLoading ? null : () => _handleReview(app, 'reject'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red.shade700,
-                        side: BorderSide(color: Colors.red.shade300),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    if (_isOwner) ...[
+                      OutlinedButton(
+                        onPressed: _actionLoading ? null : () => _handleReview(app, 'reject'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red.shade700,
+                          side: BorderSide(color: Colors.red.shade300),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: const Text('Tolak'),
                       ),
-                      child: const Text('Tolak'),
-                    ),
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      onPressed: _actionLoading ? null : () => _handleConsiderDialog(app),
-                      icon: const Icon(Icons.edit_note_rounded, size: 14),
-                      label: const Text('Ubah Nego'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFD97706),
-                        side: BorderSide(color: const Color(0xFFF59E0B).withValues(alpha: 0.6)),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: _actionLoading ? null : () => _handleConsiderDialog(app),
+                        icon: const Icon(Icons.edit_note_rounded, size: 14),
+                        label: const Text('Ubah Nego'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFD97706),
+                          side: BorderSide(color: const Color(0xFFF59E0B).withValues(alpha: 0.6)),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      onPressed: _actionLoading ? null : () => _handleReview(app, 'approve'),
-                      icon: const Icon(Icons.check_rounded, size: 14, color: Colors.white),
-                      label: Text(
-                        app.counterOfferStatus == 'accepted' ? 'Setujui (Deal)' : 'Setujui',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: _actionLoading ? null : () => _handleReview(app, 'approve'),
+                        icon: const Icon(Icons.check_rounded, size: 14, color: Colors.white),
+                        label: Text(
+                          app.counterOfferStatus == 'accepted' ? 'Setujui (Deal)' : 'Setujui',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF059669),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF059669),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                    ),
+                    ] else if (_effectiveUser?.id == app.creatorId || _effectiveUser?.id == app.creator?.id || !_isOwner) ...[
+                      if (app.counterOfferStatus == 'pending') ...[
+                        OutlinedButton.icon(
+                          onPressed: _actionLoading ? null : () => _handleRespondCounterOffer(app, 'decline'),
+                          icon: const Icon(Icons.cancel_outlined, size: 14, color: Colors.red),
+                          label: const Text('Tolak Nego', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.red),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: _actionLoading ? null : () => _handleRespondCounterOffer(app, 'accept'),
+                          icon: const Icon(Icons.check_circle_rounded, size: 14, color: Colors.white),
+                          label: const Text('Terima Nego', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ] else if (app.counterOfferStatus == 'accepted') ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.green.shade400),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.check_circle_rounded, size: 14, color: Colors.green.shade700),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Nego Disetujui',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green.shade800),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else if (app.counterOfferStatus == 'declined') ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.red.shade400),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.cancel_outlined, size: 14, color: Colors.red.shade700),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Nego Ditolak',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.red.shade800),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ],
                 ],
               ),

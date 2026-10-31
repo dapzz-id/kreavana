@@ -558,7 +558,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
       MaterialPageRoute(
         builder: (_) => DetailKebutuhanScreen(
           opportunity: opp,
-          user: widget.user,
+          user: widget.user ?? currentUserNotifier.value,
         ),
       ),
     ).then((_) => _fetchRealtimeProjects());

@@ -47,6 +47,7 @@ class OpportunityApplicationModel {
   final String id;
   final String opportunityId;
   final OpportunityApplicantModel? creator;
+  final String? rawCreatorId;
   final String subRoleSlug;
   final String pitchMessage;
   final String? questionsNotes;
@@ -64,6 +65,7 @@ class OpportunityApplicationModel {
     required this.id,
     required this.opportunityId,
     this.creator,
+    this.rawCreatorId,
     required this.subRoleSlug,
     required this.pitchMessage,
     this.questionsNotes,
@@ -82,7 +84,7 @@ class OpportunityApplicationModel {
   bool get isApproved => status == 'approved';
   bool get isRejected => status == 'rejected';
   bool get isConsideration => status == 'under_consideration';
-  String get creatorId => creator?.id ?? '';
+  String get creatorId => (rawCreatorId != null && rawCreatorId!.isNotEmpty) ? rawCreatorId! : (creator?.id ?? '');
 
   String get subRoleLabel {
     switch (subRoleSlug) {
@@ -128,6 +130,8 @@ class OpportunityApplicationModel {
       id: json['id']?.toString() ?? '',
       opportunityId: json['opportunity_id']?.toString() ?? '',
       creator: json['creator'] != null ? OpportunityApplicantModel.fromJson(json['creator']) : null,
+      rawCreatorId: json['creator_id']?.toString() ??
+          (json['creator'] is Map ? json['creator']['id']?.toString() : null),
       subRoleSlug: json['sub_role_slug'] ?? '',
       pitchMessage: json['pitch_message'] ?? '',
       questionsNotes: json['questions_notes'],
