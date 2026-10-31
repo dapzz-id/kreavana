@@ -98,7 +98,9 @@ class _ModalBody extends StatefulWidget {
 
 class _ModalBodyState extends State<_ModalBody> {
   late List<SubscriptionPlan> _plans;
+  Map<String, dynamic>? _subscriptionDetails;
   bool _isLoading = false;
+  bool _isTogglingAutoRenew = false;
   String? _error;
 
   @override
@@ -116,15 +118,21 @@ class _ModalBodyState extends State<_ModalBody> {
       final role = currentUser?.role.toLowerCase();
       final isCreator = role == 'creator' || (currentUser?.isCreator ?? false);
 
-      // Sinkronkan tier terbaru dari backend jika sudah login
+      // Sinkronkan tier terbaru dan rincian langganan dari backend jika sudah login
       if (currentUser != null && !currentUser.isGuest) {
-        SubscriptionService.getCurrentTier().then((remoteTier) async {
-          if (remoteTier != null && mounted) {
-            final live = currentUserNotifier.value ?? currentUser;
-            if (live.subscriptionTier.toLowerCase() != remoteTier.toLowerCase()) {
-              final updated = live.copyWith(subscriptionTier: remoteTier);
-              currentUserNotifier.value = updated;
-              await AuthService.updateLocalUser(updated);
+        SubscriptionService.getCurrentSubscriptionDetails().then((details) async {
+          if (details != null && mounted) {
+            setState(() {
+              _subscriptionDetails = details;
+            });
+            final remoteTier = details['tier']?.toString();
+            if (remoteTier != null) {
+              final live = currentUserNotifier.value ?? currentUser;
+              if (live.subscriptionTier.toLowerCase() != remoteTier.toLowerCase()) {
+                final updated = live.copyWith(subscriptionTier: remoteTier);
+                currentUserNotifier.value = updated;
+                await AuthService.updateLocalUser(updated);
+              }
             }
           }
         }).catchError((_) {});
@@ -162,6 +170,108 @@ class _ModalBodyState extends State<_ModalBody> {
     }
   }
 
+  Widget _buildActiveSubscriptionBanner(bool isDark, String currentTier) {
+    if (_tierRank(currentTier) == 0) return const SizedBox.shrink();
+
+    final formattedDate = _subscriptionDetails?['expires_at_formatted'] ?? '1 Bulan';
+    final daysLeft = _subscriptionDetails?['days_remaining'];
+    final autoRenew = _subscriptionDetails?['auto_renew'] == true;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1B2E) : const Color(0xFFF3F0FF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primaryPurple.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryPurple.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.workspace_premium_rounded, size: 20, color: AppTheme.primaryPurple),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Paket ${currentTier.toUpperCase()} Aktif',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Masa aktif: $formattedDate${daysLeft != null ? ' ($daysLeft hari lagi)' : ''}',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: isDark ? Colors.white70 : Colors.grey.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Auto-Renew',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white70 : Colors.grey.shade800,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  SizedBox(
+                    height: 24,
+                    width: 38,
+                    child: Switch(
+                      value: autoRenew,
+                      activeTrackColor: AppTheme.primaryPurple.withValues(alpha: 0.5),
+                      activeThumbColor: AppTheme.primaryPurple,
+                      onChanged: _isTogglingAutoRenew
+                          ? null
+                          : (val) async {
+                              setState(() => _isTogglingAutoRenew = true);
+                              final res = await SubscriptionService.toggleAutoRenew(autoRenew: val);
+                              if (mounted) {
+                                setState(() {
+                                  _isTogglingAutoRenew = false;
+                                  if (res != null) {
+                                    _subscriptionDetails = {
+                                      ...?_subscriptionDetails,
+                                      'auto_renew': res['auto_renew'] ?? val,
+                                    };
+                                  }
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(res?['message'] ?? 'Pengaturan perpanjangan otomatis disimpan.'),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -170,6 +280,7 @@ class _ModalBodyState extends State<_ModalBody> {
       valueListenable: currentUserNotifier,
       builder: (context, liveUser, _) {
         final effectiveUser = liveUser ?? widget.user;
+        final currentTier = effectiveUser?.subscriptionTier.toLowerCase() ?? 'free';
         return Container(
           decoration: BoxDecoration(
             color: isDark ? AppTheme.cardBg : Colors.white,
@@ -180,6 +291,7 @@ class _ModalBodyState extends State<_ModalBody> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _Header(),
+              _buildActiveSubscriptionBanner(isDark, currentTier),
               Flexible(child: _buildBody(effectiveUser)),
             ],
           ),
@@ -286,6 +398,7 @@ class _ModalBodyState extends State<_ModalBody> {
           _PlanCard(
             plan: _plans[i],
             currentUser: effectiveUser,
+            subscriptionDetails: _subscriptionDetails,
             onPurchase: _handlePurchase,
           ),
         ],
@@ -305,6 +418,7 @@ class _ModalBodyState extends State<_ModalBody> {
                 child: _PlanCard(
                   plan: _plans[0],
                   currentUser: effectiveUser,
+                  subscriptionDetails: _subscriptionDetails,
                   onPurchase: _handlePurchase,
                 ),
               ),
@@ -313,6 +427,7 @@ class _ModalBodyState extends State<_ModalBody> {
                 child: _PlanCard(
                   plan: _plans[1],
                   currentUser: effectiveUser,
+                  subscriptionDetails: _subscriptionDetails,
                   onPurchase: _handlePurchase,
                 ),
               ),
@@ -328,6 +443,7 @@ class _ModalBodyState extends State<_ModalBody> {
                 child: _PlanCard(
                   plan: _plans[2],
                   currentUser: effectiveUser,
+                  subscriptionDetails: _subscriptionDetails,
                   onPurchase: _handlePurchase,
                 ),
               ),
@@ -336,6 +452,7 @@ class _ModalBodyState extends State<_ModalBody> {
                 child: _PlanCard(
                   plan: _plans[3],
                   currentUser: effectiveUser,
+                  subscriptionDetails: _subscriptionDetails,
                   onPurchase: _handlePurchase,
                 ),
               ),
@@ -357,6 +474,7 @@ class _ModalBodyState extends State<_ModalBody> {
               child: _PlanCard(
                 plan: _plans[i],
                 currentUser: effectiveUser,
+                subscriptionDetails: _subscriptionDetails,
                 onPurchase: _handlePurchase,
               ),
             ),
@@ -366,7 +484,7 @@ class _ModalBodyState extends State<_ModalBody> {
     );
   }
 
-  // ── Purchase handler ───────────────────────────────────────────────────────
+  // ── Purchase / Renewal handler ─────────────────────────────────────────────
   Future<void> _handlePurchase(SubscriptionPlan plan) async {
     final currentUser = widget.user ?? currentUserNotifier.value;
     if (currentUser == null || currentUser.isGuest) {
@@ -384,19 +502,17 @@ class _ModalBodyState extends State<_ModalBody> {
 
     final userRank = _tierRank(currentUser.subscriptionTier);
     final planRank = _tierRank(plan.tier);
-    if (planRank <= userRank) {
+    if (planRank < userRank) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            planRank == userRank
-                ? 'Anda sudah menggunakan Paket ${plan.name}.'
-                : 'Tidak dapat memilih paket yang lebih rendah dari paket aktif Anda.',
-          ),
+        const SnackBar(
+          content: Text('Tidak dapat memilih paket yang lebih rendah dari paket aktif Anda.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
       return;
     }
+
+    final isRenewal = (planRank == userRank && planRank > 0);
 
     // Step 1: Show wallet PIN dialog.
     // - If wallet not activated → shows activation prompt → returns null.
@@ -404,9 +520,10 @@ class _ModalBodyState extends State<_ModalBody> {
     // - If PIN entered → returns the 6-digit PIN string.
     final pin = await WalletPinDialog.show(
       context,
-      title: 'Konfirmasi Pembelian',
-      subtitle:
-          'Masukkan PIN wallet untuk membeli Paket ${plan.name} (${plan.label}).',
+      title: isRenewal ? 'Konfirmasi Perpanjangan' : 'Konfirmasi Pembelian',
+      subtitle: isRenewal
+          ? 'Masukkan PIN wallet untuk memperpanjang Paket ${plan.name} (+1 Bulan) seharga ${plan.label}.'
+          : 'Masukkan PIN wallet untuk membeli Paket ${plan.name} (${plan.label}).',
     );
 
     if (pin == 'GO_WALLET') {
@@ -450,7 +567,9 @@ class _ModalBodyState extends State<_ModalBody> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              result['message'] ?? 'Paket ${plan.name} berhasil diaktifkan!',
+              result['message'] ?? (isRenewal
+                  ? 'Paket ${plan.name} berhasil diperpanjang 1 bulan!'
+                  : 'Paket ${plan.name} berhasil diaktifkan!'),
             ),
             backgroundColor: Colors.green.shade700,
             behavior: SnackBarBehavior.floating,
@@ -544,11 +663,13 @@ class _Header extends StatelessWidget {
 class _PlanCard extends StatelessWidget {
   final SubscriptionPlan plan;
   final UserModel? currentUser;
+  final Map<String, dynamic>? subscriptionDetails;
   final Future<void> Function(SubscriptionPlan) onPurchase;
 
   const _PlanCard({
     required this.plan,
     required this.currentUser,
+    this.subscriptionDetails,
     required this.onPurchase,
   });
 
@@ -571,12 +692,13 @@ class _PlanCard extends StatelessWidget {
     final bool isLowerPlan = (planRank < userRank);
     final bool isHigherPlan = (planRank > userRank);
 
-    // Can only purchase if strictly higher plan
-    final bool canPurchase = isHigherPlan;
+    // Can renew current plan if paid tier (rank > 0), or upgrade to higher plan
+    final bool canRenew = isCurrentPlan && planRank > 0;
+    final bool canPurchase = isHigherPlan || canRenew;
 
     final String buttonText;
     if (isCurrentPlan) {
-      buttonText = 'Paket Aktif';
+      buttonText = planRank > 0 ? 'Perpanjang (+1 Bln)' : 'Paket Aktif';
     } else if (isLowerPlan) {
       buttonText = 'Paket Sebelumnya';
     } else {
@@ -632,7 +754,9 @@ class _PlanCard extends StatelessWidget {
                   Icon(Icons.check_circle_rounded, size: 12, color: Colors.green.shade600),
                   const SizedBox(width: 4),
                   Text(
-                    'Paket Aktif',
+                    planRank > 0 && subscriptionDetails?['expires_at_formatted'] != null
+                        ? 'Paket Aktif (s/d ${subscriptionDetails!['expires_at_formatted']})'
+                        : 'Paket Aktif',
                     style: TextStyle(
                       color: Colors.green.shade700,
                       fontSize: 10,
@@ -725,21 +849,21 @@ class _PlanCard extends StatelessWidget {
             child: ElevatedButton(
               onPressed: canPurchase ? () => onPurchase(plan) : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: canPurchase && plan.isPopular
-                    ? AppTheme.primaryPurple
-                    : (isDark ? Colors.grey.shade800 : Colors.grey.shade200),
-                foregroundColor: canPurchase && plan.isPopular
-                    ? Colors.white
-                    : (isDark ? Colors.white : Colors.black87),
-                disabledBackgroundColor: isCurrentPlan
-                    ? (isDark ? Colors.green.shade900.withValues(alpha: 0.3) : Colors.green.shade50)
+                backgroundColor: canPurchase
+                    ? (isCurrentPlan
+                        ? const Color(0xFF059669) // Emerald green for renewal
+                        : (plan.isPopular ? AppTheme.primaryPurple : (isDark ? Colors.grey.shade800 : Colors.grey.shade200)))
                     : (isDark ? Colors.grey.shade900 : Colors.grey.shade200),
-                disabledForegroundColor: isCurrentPlan
-                    ? (isDark ? Colors.green.shade300 : Colors.green.shade800)
+                foregroundColor: canPurchase
+                    ? (isCurrentPlan || plan.isPopular ? Colors.white : (isDark ? Colors.white : Colors.black87))
                     : (isDark ? Colors.grey.shade600 : Colors.grey.shade500),
-                elevation: canPurchase && plan.isPopular ? 4 : 0,
-                shadowColor: canPurchase && plan.isPopular
-                    ? AppTheme.primaryPurple.withValues(alpha: 0.4)
+                disabledBackgroundColor: isDark ? Colors.grey.shade900 : Colors.grey.shade200,
+                disabledForegroundColor: isDark ? Colors.grey.shade600 : Colors.grey.shade500,
+                elevation: canPurchase ? 3 : 0,
+                shadowColor: canPurchase
+                    ? (isCurrentPlan
+                        ? Colors.green.withValues(alpha: 0.4)
+                        : (plan.isPopular ? AppTheme.primaryPurple.withValues(alpha: 0.4) : null))
                     : null,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

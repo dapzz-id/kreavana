@@ -49,6 +49,21 @@ class PresentationDemoSeeder extends Seeder
             );
         }
 
+        if ($eventOrganizer) {
+            if ($eventOrganizer->balance < 1000000) {
+                $eventOrganizer->balance = 5000000.0;
+            }
+            if (empty($eventOrganizer->wallet_pin)) {
+                $eventOrganizer->wallet_pin = \Illuminate\Support\Facades\Hash::make('123456');
+            }
+            $eventOrganizer->save();
+
+            \App\Models\Subscription::updateOrCreate(
+                ['user_id' => $eventOrganizer->id, 'tier' => 'pro'],
+                ['price_paid' => 199999, 'auto_renew' => true, 'expires_at' => now()->addYear()]
+            );
+        }
+
         foreach ($owners as $owner) {
             $this->seedForOwner($owner, $photographer, $videographer, $mc);
         }

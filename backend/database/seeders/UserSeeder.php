@@ -251,6 +251,24 @@ class UserSeeder extends Seeder
                     'is_active' => true,
                 ]
             );
+
+            if ($creator->username === 'event_organizer_demo') {
+                $creator->balance = 5000000.00;
+                $creator->wallet_pin = Hash::make('123456');
+                $creator->save();
+
+                \App\Models\Subscription::updateOrCreate(
+                    [
+                        'user_id' => $creator->id,
+                        'tier' => 'pro',
+                    ],
+                    [
+                        'price_paid' => 199999,
+                        'auto_renew' => true,
+                        'expires_at' => now()->addYear(),
+                    ]
+                );
+            }
         }
     }
 }

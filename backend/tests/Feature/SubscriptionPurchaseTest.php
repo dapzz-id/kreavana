@@ -104,7 +104,7 @@ class SubscriptionPurchaseTest extends TestCase
     {
         $user = User::factory()->create([
             'role' => \App\Enums\RoleType::Creator,
-            'balance' => 500000,
+            'balance' => 1000000,
             'wallet_pin' => Hash::make('123456'),
         ]);
 
@@ -115,14 +115,15 @@ class SubscriptionPurchaseTest extends TestCase
             'expires_at' => now()->addMonth(),
         ]);
 
-        // Attempt to purchase same tier 'pro'
+        // Attempt to purchase same tier 'pro' now acts as renewal (+1 month)
         $responseSame = $this->withHeaders($this->getAuthHeaders($user))->postJson('/api/subscription/purchase', [
             'tier' => 'pro',
             'pin' => '123456',
         ]);
-        $responseSame->assertStatus(400);
+        $responseSame->assertStatus(200);
         $responseSame->assertJson([
-            'error_code' => 'already_active_tier',
+            'is_renewal' => true,
+            'tier' => 'pro',
         ]);
 
         // Attempt to downgrade to 'plus'

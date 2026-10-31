@@ -179,4 +179,29 @@ class SubscriptionService {
     } catch (_) {}
     return null;
   }
+
+  /// Get detailed subscription information including expiry date and auto-renew status
+  static Future<Map<String, dynamic>?> getCurrentSubscriptionDetails() async {
+    try {
+      final response = await ApiService.get('subscription/current');
+      if (response.containsKey('tier') || response['status'] == true) {
+        return response;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Toggle or set auto-renew status for active subscription
+  static Future<Map<String, dynamic>?> toggleAutoRenew({bool? autoRenew}) async {
+    try {
+      final body = <String, dynamic>{};
+      if (autoRenew != null) {
+        body['auto_renew'] = autoRenew;
+      }
+      final response = await ApiService.post('subscription/toggle-auto-renew', body);
+      return response;
+    } catch (_) {
+      return null;
+    }
+  }
 }

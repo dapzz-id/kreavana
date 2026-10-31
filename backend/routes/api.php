@@ -413,6 +413,7 @@ Route::middleware(['auth:api', 'user.not_suspended'])->group(function () {
     // Subscription (authenticated)
     Route::prefix('subscription')->group(function () {
         Route::post('purchase', [SubscriptionController::class, 'purchase']);
+        Route::post('toggle-auto-renew', [SubscriptionController::class, 'toggleAutoRenew']);
         Route::get('current', [SubscriptionController::class, 'getCurrent']);
     });
 
