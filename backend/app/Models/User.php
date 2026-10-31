@@ -209,6 +209,11 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(UserAddress::class);
     }
 
+    public function userSubRoles()
+    {
+        return $this->hasMany(\App\Models\UserSubRole::class, 'user_id');
+    }
+
     public function marketplaceItems()
     {
         return $this->hasMany(MarketplaceItem::class);

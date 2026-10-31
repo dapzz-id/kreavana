@@ -252,6 +252,33 @@ class UserSeeder extends Seeder
                 ]
             );
 
+            $defaultCity = match($data['sub_role']) {
+                CreatorSubRole::WEDDING_ORGANIZER => 'Kota Bekasi',
+                CreatorSubRole::MAKEUP_ARTIST => 'Kota Bekasi',
+                CreatorSubRole::SINGER => 'Kota Bekasi',
+                CreatorSubRole::VIDEOGRAPHER => 'Kota Bekasi',
+                CreatorSubRole::PHOTOGRAPHER => 'Jakarta Pusat',
+                CreatorSubRole::EVENT_ORGANIZER => 'Jakarta Selatan',
+                CreatorSubRole::MC => 'Jakarta Selatan',
+                CreatorSubRole::EDITOR => 'Jakarta Selatan',
+                CreatorSubRole::COMMUNITY => 'Jakarta Pusat',
+                default => 'Kota Bekasi',
+            };
+            $defaultProvince = ($defaultCity === 'Kota Bekasi') ? 'Jawa Barat' : 'DKI Jakarta';
+
+            \App\Models\UserAddress::updateOrCreate(
+                ['user_id' => $creator->id, 'is_default' => true],
+                [
+                    'label' => 'Kantor / Studio Utama',
+                    'recipient_name' => $creator->name,
+                    'phone' => '0812' . rand(10000000, 99999999),
+                    'address' => 'Jl. Kreatif No. ' . rand(1, 99),
+                    'city' => $defaultCity,
+                    'province' => $defaultProvince,
+                    'postal_code' => '17144',
+                ]
+            );
+
             if ($creator->username === 'event_organizer_demo') {
                 $creator->balance = 5000000.00;
                 $creator->wallet_pin = Hash::make('123456');
