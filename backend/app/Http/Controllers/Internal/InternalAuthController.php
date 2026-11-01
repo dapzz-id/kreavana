@@ -124,3 +124,4 @@ class InternalAuthController extends Controller
         ]);
     }
 }
+
