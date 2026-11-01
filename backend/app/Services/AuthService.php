@@ -72,6 +72,11 @@ class AuthService implements AuthServiceInterface
                     'ip_address' => $ip,
                     'user_agent' => substr($userAgent, 0, 255),
                 ]);
+
+                if (($proxyResult['status'] ?? 0) === 503) {
+                    return 'service_unavailable';
+                }
+
                 return null;
             }
 

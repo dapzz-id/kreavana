@@ -39,7 +39,7 @@ class RepeatOrderDialog extends StatefulWidget {
   }) {
     return showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true,
       builder: (_) => RepeatOrderDialog(
         contractId: contractId,
         creatorId: creatorId,
@@ -111,11 +111,23 @@ class _RepeatOrderDialogState extends State<RepeatOrderDialog> {
     super.dispose();
   }
 
+  String _formatDate(DateTime dt) {
+    try {
+      return DateFormat('dd MMM yyyy', 'id_ID').format(dt);
+    } catch (_) {
+      return DateFormat('dd MMM yyyy').format(dt);
+    }
+  }
+
   Future<void> _pickStartDate() async {
+    final now = DateTime.now();
+    final firstDate = now.isBefore(_startDate)
+        ? now.subtract(const Duration(days: 1))
+        : _startDate.subtract(const Duration(days: 1));
     final picked = await showDatePicker(
       context: context,
       initialDate: _startDate,
-      firstDate: DateTime.now(),
+      firstDate: firstDate,
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (picked != null) {
@@ -129,9 +141,10 @@ class _RepeatOrderDialogState extends State<RepeatOrderDialog> {
   }
 
   Future<void> _pickEndDate() async {
+    final initialDate = _endDate.isAfter(_startDate) ? _endDate : _startDate;
     final picked = await showDatePicker(
       context: context,
-      initialDate: _endDate.isAfter(_startDate) ? _endDate : _startDate,
+      initialDate: initialDate,
       firstDate: _startDate,
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
@@ -210,7 +223,6 @@ class _RepeatOrderDialogState extends State<RepeatOrderDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final dateFmt = DateFormat('dd MMM yyyy', 'id_ID');
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -300,15 +312,20 @@ class _RepeatOrderDialogState extends State<RepeatOrderDialog> {
                       CircleAvatar(
                         radius: 20,
                         backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.2),
-                        child: Text(
-                          widget.creatorName.isNotEmpty
-                              ? widget.creatorName[0].toUpperCase()
-                              : 'K',
-                          style: const TextStyle(
-                            color: AppTheme.primaryPurple,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        backgroundImage: (widget.creatorAvatar != null && widget.creatorAvatar!.trim().isNotEmpty)
+                            ? NetworkImage(widget.creatorAvatar!)
+                            : null,
+                        child: (widget.creatorAvatar == null || widget.creatorAvatar!.trim().isEmpty)
+                            ? Text(
+                                widget.creatorName.trim().isNotEmpty
+                                    ? widget.creatorName.trim()[0].toUpperCase()
+                                    : 'K',
+                                style: const TextStyle(
+                                  color: AppTheme.primaryPurple,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                            : null,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -406,7 +423,7 @@ class _RepeatOrderDialogState extends State<RepeatOrderDialog> {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      dateFmt.format(_startDate),
+                                      _formatDate(_startDate),
                                       style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                                     ),
                                   ),
@@ -444,7 +461,7 @@ class _RepeatOrderDialogState extends State<RepeatOrderDialog> {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      dateFmt.format(_endDate),
+                                      _formatDate(_endDate),
                                       style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                                     ),
                                   ),

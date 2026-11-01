@@ -42,6 +42,43 @@ class UsersApiClient
     }
 
     /**
+     * Check whether SSL verification should be enabled.
+     */
+    public static function shouldVerifySsl(): bool
+    {
+        $configured = config('services.users_api.verify_ssl');
+        if ($configured !== null) {
+            return filter_var($configured, FILTER_VALIDATE_BOOLEAN);
+        }
+
+        // Default to true in production, false in local/testing environments (to support Windows/Laragon development)
+        return app()->environment('production');
+    }
+
+    /**
+     * Build base pending HTTP request with default headers and SSL options.
+     */
+    protected static function httpClient(?string $token = null): \Illuminate\Http\Client\PendingRequest
+    {
+        $headers = [
+            'Accept' => 'application/json',
+            'X-Client-Id' => self::getClientId(),
+        ];
+
+        if ($token) {
+            $headers['Authorization'] = 'Bearer ' . $token;
+        }
+
+        $request = Http::withHeaders($headers)->timeout(self::getTimeout());
+
+        if (!self::shouldVerifySsl()) {
+            $request = $request->withoutVerifying();
+        }
+
+        return $request;
+    }
+
+    /**
      * Proxy Universal Login to users_api.
      *
      * @param string $identifier Email or Username
@@ -62,12 +99,7 @@ class UsersApiClient
                 'platform' => $deviceInfo['platform'] ?? 'web',
             ], $deviceInfo);
 
-            $response = Http::withHeaders([
-                'Accept' => 'application/json',
-                'X-Client-Id' => self::getClientId(),
-            ])
-            ->timeout(self::getTimeout())
-            ->post($url, $payload);
+            $response = self::httpClient()->post($url, $payload);
 
             $statusCode = $response->status();
             $json = $response->json() ?? [];
@@ -117,12 +149,7 @@ class UsersApiClient
                 'platform' => $deviceInfo['platform'] ?? 'web',
             ], $deviceInfo);
 
-            $response = Http::withHeaders([
-                'Accept' => 'application/json',
-                'X-Client-Id' => self::getClientId(),
-            ])
-            ->timeout(self::getTimeout())
-            ->post($url, $payload);
+            $response = self::httpClient()->post($url, $payload);
 
             $statusCode = $response->status();
             $json = $response->json() ?? [];
@@ -170,12 +197,7 @@ class UsersApiClient
                 'platform' => $deviceInfo['platform'] ?? 'web',
             ], $deviceInfo);
 
-            $response = Http::withHeaders([
-                'Accept' => 'application/json',
-                'X-Client-Id' => self::getClientId(),
-            ])
-            ->timeout(self::getTimeout())
-            ->post($url, $payload);
+            $response = self::httpClient()->post($url, $payload);
 
             $statusCode = $response->status();
             $json = $response->json() ?? [];
@@ -233,13 +255,7 @@ class UsersApiClient
         $url = self::getBaseUrl() . '/api/v1/profile/change-password';
 
         try {
-            $response = Http::withHeaders([
-                'Accept' => 'application/json',
-                'Authorization' => 'Bearer ' . $token,
-                'X-Client-Id' => self::getClientId(),
-            ])
-            ->timeout(self::getTimeout())
-            ->post($url, [
+            $response = self::httpClient($token)->post($url, [
                 'current_password' => $currentPassword,
                 'new_password' => $newPassword,
             ]);

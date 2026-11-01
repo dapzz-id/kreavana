@@ -101,6 +101,13 @@ class AuthController extends Controller
             return response()->json(['status' => false, 'message' => 'Email atau kata sandi salah.'], 401);
         }
 
+        if ($token === 'service_unavailable') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Layanan autentikasi sedang tidak dapat dijangkau. Silakan coba beberapa saat lagi.',
+            ], 503);
+        }
+
         if ($token === 'email_not_verified') {
             return response()->json([
                 'status' => false,

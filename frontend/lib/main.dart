@@ -22,6 +22,7 @@ import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 import 'widgets/global_call_overlay.dart';
 import 'services/url_strategy.dart';
@@ -33,6 +34,11 @@ final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   ServicesBinding.instance.channelBuffers.resize('flutter/lifecycle', 64);
+
+  // Inisialisasi locale formatting untuk Bahasa Indonesia (id_ID)
+  try {
+    await initializeDateFormatting('id_ID', null);
+  } catch (_) {}
 
   // Optimasi Image Cache untuk mencegah OOM / GPU Context Lost di Web & Mobile
   PaintingBinding.instance.imageCache.maximumSize = 80;

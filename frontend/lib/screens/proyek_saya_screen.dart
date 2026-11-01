@@ -1273,16 +1273,25 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   ) {
     if (isDesktop) {
       // 2-column responsive layout for clean desktop readability
-      return Wrap(
-        spacing: 16,
-        runSpacing: 16,
-        children: items.map((item) {
-          final cardWidth = (screenWidth > 1260 ? 1260 : screenWidth) / 2 - 40;
-          return SizedBox(
-            width: cardWidth > 450 ? cardWidth : double.infinity,
-            child: _buildUnifiedCard(item, isDark, accentColor),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          const double spacing = 16.0;
+          final bool isTwoCol = constraints.maxWidth >= 680;
+          final double cardWidth = isTwoCol
+              ? (constraints.maxWidth - spacing) / 2 - 0.5
+              : constraints.maxWidth;
+
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: items.map((item) {
+              return SizedBox(
+                width: cardWidth,
+                child: _buildUnifiedCard(item, isDark, accentColor),
+              );
+            }).toList(),
           );
-        }).toList(),
+        },
       );
     }
 
@@ -1778,6 +1787,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               contractId: c.id,
               creatorId: c.creatorId,
               creatorName: c.creatorName.isNotEmpty ? c.creatorName : 'Kreator',
+              creatorAvatar: c.creator?['avatar_url'] ?? c.creator?['profile_photo_url'],
               originalTitle: item.title,
               originalPrice: c.agreedPrice,
               defaultTerms: c.terms,
@@ -1951,6 +1961,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                     contractId: c.id,
                     creatorId: c.creatorId,
                     creatorName: c.creatorName.isNotEmpty ? c.creatorName : 'Kreator',
+                    creatorAvatar: c.creator?['avatar_url'] ?? c.creator?['profile_photo_url'],
                     originalTitle: item.title,
                     originalPrice: c.agreedPrice,
                     defaultTerms: c.terms,

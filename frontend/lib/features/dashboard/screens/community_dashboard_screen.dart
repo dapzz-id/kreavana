@@ -1469,16 +1469,25 @@ class _CommunityDashboardScreenState extends State<CommunityDashboardScreen> {
     required double screenWidth,
   }) {
     if (isDesktop) {
-      return Wrap(
-        spacing: 16,
-        runSpacing: 16,
-        children: items.map((cardWidget) {
-          final cardWidth = (screenWidth > 1260 ? 1260 : screenWidth) / 2 - 40;
-          return SizedBox(
-            width: cardWidth > 450 ? cardWidth : double.infinity,
-            child: cardWidget,
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          const double spacing = 16.0;
+          final bool isTwoCol = constraints.maxWidth >= 680;
+          final double cardWidth = isTwoCol
+              ? (constraints.maxWidth - spacing) / 2 - 0.5
+              : constraints.maxWidth;
+
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: items.map((cardWidget) {
+              return SizedBox(
+                width: cardWidth,
+                child: cardWidget,
+              );
+            }).toList(),
           );
-        }).toList(),
+        },
       );
     }
 
