@@ -35,7 +35,7 @@ class UserSeeder extends Seeder
                 'role' => RoleType::User,
                 'is_creator_approved' => 0,
                 'email_verified_at' => now(),
-                'balance' => 5000000.0,
+                'balance' => 0.00,
                 'wallet_pin' => \Illuminate\Support\Facades\Hash::make('123456'),
             ]);
         } else {
@@ -45,7 +45,6 @@ class UserSeeder extends Seeder
                 'role' => RoleType::User,
                 'is_creator_approved' => 0,
                 'email_verified_at' => now(),
-                'balance' => $client->balance !== null ? $client->balance : 5000000.0,
                 'wallet_pin' => $client->wallet_pin ?: \Illuminate\Support\Facades\Hash::make('123456'),
             ]);
         }
@@ -98,7 +97,7 @@ class UserSeeder extends Seeder
                 'is_verified' => 1,
                 'verification_type' => 'creator',
                 'max_work_capacity' => 3,
-                'balance' => 500000.00,
+                'balance' => 0.00,
                 'email_verified_at' => now(),
             ]);
         } else {
@@ -111,7 +110,6 @@ class UserSeeder extends Seeder
                 'is_verified' => 1,
                 'verification_type' => 'creator',
                 'max_work_capacity' => 3,
-                'balance' => $creatorDemo->balance !== null ? $creatorDemo->balance : 500000.00,
                 'email_verified_at' => now(),
             ]);
         }
@@ -322,13 +320,10 @@ class UserSeeder extends Seeder
                 ]
             );
             if ($creator->username === 'event_organizer_demo' || $creator->username === 'eo_demo') {
-                if ($creator->balance === null || (float) $creator->balance == 0.0) {
-                    $creator->balance = 5000000.00;
-                }
                 if (empty($creator->wallet_pin)) {
                     $creator->wallet_pin = Hash::make('123456');
+                    $creator->save();
                 }
-                $creator->save();
 
                 \App\Models\Subscription::updateOrCreate(
                     [

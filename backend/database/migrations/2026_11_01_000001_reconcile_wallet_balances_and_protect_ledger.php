@@ -35,12 +35,7 @@ return new class extends Migration
                     ->sum('amount');
 
                 $netMovement = $completedCredits - $completedDebits;
-
-                $baseBalance = in_array($user->username, ['client_demo', 'event_organizer_demo', 'eo_demo'])
-                    ? 5000000.0
-                    : 0.0;
-
-                $expectedBalance = $baseBalance + $netMovement;
+                $expectedBalance = max(0.0, $netMovement);
 
                 // Jika saldo pengguna saat ini di bawah kalkulasi ledger (tertimpa seeder), pulihkan nilainya
                 if ($completedCredits > 0 && (float) $user->balance < $expectedBalance) {

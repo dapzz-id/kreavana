@@ -27,7 +27,7 @@ class DashboardMockSeeder extends Seeder
                 'role' => \App\Enums\RoleType::User,
                 'sub_role' => null,
                 'is_creator_approved' => false,
-                'balance' => 2500000,
+                'balance' => 0.00,
             ]);
         }
 
@@ -230,7 +230,7 @@ class DashboardMockSeeder extends Seeder
                     'sub_role' => $data['sub_role'],
                     'is_creator_approved' => true,
                     'avatar_url' => $data['avatar_url'],
-                    'balance' => fake()->randomFloat(2, 100000, 5000000),
+                    'balance' => 0.00,
                 ]);
             } else {
                 $user->update([

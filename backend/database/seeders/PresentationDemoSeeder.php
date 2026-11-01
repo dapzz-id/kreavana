@@ -35,13 +35,10 @@ class PresentationDemoSeeder extends Seeder
         $owners = array_filter([$eventOrganizer, $clientDemo, $institution]);
 
         if ($clientDemo) {
-            if ($clientDemo->balance === null) {
-                $clientDemo->balance = 5000000.0;
-            }
             if (empty($clientDemo->wallet_pin)) {
                 $clientDemo->wallet_pin = \Illuminate\Support\Facades\Hash::make('123456');
+                $clientDemo->save();
             }
-            $clientDemo->save();
 
             \App\Models\Subscription::updateOrCreate(
                 ['user_id' => $clientDemo->id, 'tier' => 'pro'],
@@ -50,13 +47,10 @@ class PresentationDemoSeeder extends Seeder
         }
 
         if ($eventOrganizer) {
-            if ($eventOrganizer->balance === null) {
-                $eventOrganizer->balance = 5000000.0;
-            }
             if (empty($eventOrganizer->wallet_pin)) {
                 $eventOrganizer->wallet_pin = \Illuminate\Support\Facades\Hash::make('123456');
+                $eventOrganizer->save();
             }
-            $eventOrganizer->save();
 
             \App\Models\Subscription::updateOrCreate(
                 ['user_id' => $eventOrganizer->id, 'tier' => 'pro'],

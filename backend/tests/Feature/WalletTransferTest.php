@@ -104,14 +104,15 @@ class WalletTransferTest extends TestCase
 
     public function test_user_seeder_does_not_wipe_out_client_demo_balance_if_already_present(): void
     {
-        // 1. Run seeder first time
+        // 1. Run seeder first time - initial balance must be 0
         $this->seed(UserSeeder::class);
 
         $client = User::where('email', 'client@kreavana.id')->first();
         $this->assertNotNull($client);
+        $this->assertEquals(0.0, (float) $client->balance);
 
         // 2. Client receives 95M transfer
-        $client->balance = 99015002.0;
+        $client->balance = 95000000.0;
         $client->save();
 
         // 3. Re-run UserSeeder (e.g. during updates or tests)
@@ -119,8 +120,8 @@ class WalletTransferTest extends TestCase
 
         $client->refresh();
 
-        // 4. Balance must NOT be clobbered back to 5.000.000
-        $this->assertEquals(99015002.0, $client->balance);
+        // 4. Balance must NOT be altered or overwritten if account already exists
+        $this->assertEquals(95000000.0, (float) $client->balance);
     }
 
     public function test_event_organizer_demo_balance_preserved_across_seeders(): void
@@ -129,23 +130,24 @@ class WalletTransferTest extends TestCase
 
         $eo = User::where('username', 'event_organizer_demo')->first();
         $this->assertNotNull($eo);
+        $this->assertEquals(0.0, (float) $eo->balance);
 
-        // User topped up 95M -> balance becomes 100M
-        $eo->balance = 100000000.0;
+        // User topped up 95M -> balance becomes 95M
+        $eo->balance = 95000000.0;
         $eo->save();
 
         // Re-run seeder (simulating CI/CD deployment)
         $this->seed(UserSeeder::class);
 
         $eo->refresh();
-        $this->assertEquals(100000000.0, $eo->balance);
+        $this->assertEquals(95000000.0, (float) $eo->balance);
     }
 
     public function test_reconcile_balance_restores_95m_topup_if_balance_was_wiped(): void
     {
         $user = User::factory()->create([
             'username' => 'event_organizer_demo',
-            'balance' => 4970000.0, // Wiped by seeder & transfer
+            'balance' => 0.0, // Wiped by seeder & transfer
         ]);
 
         // Recorded completed topup of 95M in ledger
@@ -167,8 +169,8 @@ class WalletTransferTest extends TestCase
         $this->walletService->reconcileBalanceWithLedger($user);
 
         $user->refresh();
-        // Base 5.000.000 + (95.000.000 - 50.000) = 99.950.000
-        $this->assertEquals(99950000.0, $user->balance);
+        // 95.000.000 - 50.000 = 94.950.000
+        $this->assertEquals(94950000.0, (float) $user->balance);
     }
 
     public function test_wallet_transaction_generates_valid_cryptographic_ledger_hash(): void
