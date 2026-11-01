@@ -493,5 +493,11 @@ Route::prefix('opportunities')->group(function () {
 Route::get('client-dashboard/overview', [DashboardController::class, 'overview']);
 Route::get('collaborations', [CollaborationController::class, 'index']);
 
+// Internal Machine-to-Machine (S2S) Endpoints from users_api / IAM
+Route::prefix('internal/v1')->middleware([\App\Http\Middleware\VerifyInternalServiceSignature::class])->group(function () {
+    Route::post('sessions/revoke', [\App\Http\Controllers\Internal\InternalAuthController::class, 'revokeSession']);
+    Route::post('users/suspend', [\App\Http\Controllers\Internal\InternalAuthController::class, 'syncSuspension']);
+});
+
 
 

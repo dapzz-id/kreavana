@@ -42,6 +42,7 @@ return [
     'users_api' => [
         'url' => env('USERS_API_URL', 'https://auth-dev.kreavana.com'),
         'client_id' => env('USERS_API_CLIENT_ID', 'kreavana_app'),
+        'client_secret' => env('USERS_API_CLIENT_SECRET', hash('sha256', 'kreavana_ecosystem_secret_key_2026')),
         'timeout' => (int) env('USERS_API_TIMEOUT', 10),
         'verify_ssl' => env('USERS_API_VERIFY_SSL', null),
     ],

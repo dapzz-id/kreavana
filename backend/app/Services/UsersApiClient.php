@@ -34,6 +34,14 @@ class UsersApiClient
     }
 
     /**
+     * Get the configured Client Secret for this application.
+     */
+    public static function getClientSecret(): string
+    {
+        return (string) config('services.users_api.client_secret', hash('sha256', 'kreavana_ecosystem_secret_key_2026'));
+    }
+
+    /**
      * Get timeout in seconds.
      */
     public static function getTimeout(): int
@@ -56,13 +64,23 @@ class UsersApiClient
     }
 
     /**
-     * Build base pending HTTP request with default headers and SSL options.
+     * Build base pending HTTP request with default headers, HMAC signature, and SSL options.
      */
-    protected static function httpClient(?string $token = null): \Illuminate\Http\Client\PendingRequest
+    protected static function httpClient(?string $token = null, array $payload = [], ?string $correlationId = null): \Illuminate\Http\Client\PendingRequest
     {
+        $clientId = self::getClientId();
+        $secret = self::getClientSecret();
+        $timestamp = (string) time();
+        $traceId = $correlationId ?: (string) \Illuminate\Support\Str::uuid();
+        $rawPayload = !empty($payload) ? json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : '';
+        $signature = hash_hmac('sha256', $clientId . '.' . $timestamp . '.' . $rawPayload, $secret);
+
         $headers = [
             'Accept' => 'application/json',
-            'X-Client-Id' => self::getClientId(),
+            'X-Client-Id' => $clientId,
+            'X-Timestamp' => $timestamp,
+            'X-Correlation-Id' => $traceId,
+            'X-Signature' => $signature,
         ];
 
         if ($token) {
@@ -89,6 +107,7 @@ class UsersApiClient
     public static function login(string $identifier, string $password, array $deviceInfo = []): array
     {
         $url = self::getBaseUrl() . '/api/v1/auth/login';
+        $correlationId = (string) \Illuminate\Support\Str::uuid();
 
         try {
             $payload = array_merge([
@@ -99,7 +118,7 @@ class UsersApiClient
                 'platform' => $deviceInfo['platform'] ?? 'web',
             ], $deviceInfo);
 
-            $response = self::httpClient()->post($url, $payload);
+            $response = self::httpClient(null, $payload, $correlationId)->post($url, $payload);
 
             $statusCode = $response->status();
             $json = $response->json() ?? [];
@@ -120,7 +139,10 @@ class UsersApiClient
                 'errors' => $json['errors'] ?? null,
             ];
         } catch (\Throwable $e) {
-            Log::error('UsersApiClient::login failed: ' . $e->getMessage(), ['url' => $url]);
+            Log::error('UsersApiClient::login failed: ' . $e->getMessage(), [
+                'url' => $url,
+                'correlation_id' => $correlationId,
+            ]);
 
             return [
                 'success' => false,
@@ -137,6 +159,7 @@ class UsersApiClient
     public static function register(array $data, array $deviceInfo = []): array
     {
         $url = self::getBaseUrl() . '/api/v1/auth/register';
+        $correlationId = (string) \Illuminate\Support\Str::uuid();
 
         try {
             $payload = array_merge([
@@ -149,7 +172,7 @@ class UsersApiClient
                 'platform' => $deviceInfo['platform'] ?? 'web',
             ], $deviceInfo);
 
-            $response = self::httpClient()->post($url, $payload);
+            $response = self::httpClient(null, $payload, $correlationId)->post($url, $payload);
 
             $statusCode = $response->status();
             $json = $response->json() ?? [];
@@ -170,7 +193,10 @@ class UsersApiClient
                 'errors' => $json['errors'] ?? null,
             ];
         } catch (\Throwable $e) {
-            Log::error('UsersApiClient::register failed: ' . $e->getMessage(), ['url' => $url]);
+            Log::error('UsersApiClient::register failed: ' . $e->getMessage(), [
+                'url' => $url,
+                'correlation_id' => $correlationId,
+            ]);
 
             return [
                 'success' => false,
@@ -187,6 +213,7 @@ class UsersApiClient
     public static function socialLogin(string $idToken, string $provider = 'google', array $deviceInfo = []): array
     {
         $url = self::getBaseUrl() . '/api/v1/auth/social';
+        $correlationId = (string) \Illuminate\Support\Str::uuid();
 
         try {
             $payload = array_merge([
@@ -197,7 +224,7 @@ class UsersApiClient
                 'platform' => $deviceInfo['platform'] ?? 'web',
             ], $deviceInfo);
 
-            $response = self::httpClient()->post($url, $payload);
+            $response = self::httpClient(null, $payload, $correlationId)->post($url, $payload);
 
             $statusCode = $response->status();
             $json = $response->json() ?? [];
@@ -218,7 +245,10 @@ class UsersApiClient
                 'errors' => $json['errors'] ?? null,
             ];
         } catch (\Throwable $e) {
-            Log::error('UsersApiClient::socialLogin failed: ' . $e->getMessage(), ['url' => $url]);
+            Log::error('UsersApiClient::socialLogin failed: ' . $e->getMessage(), [
+                'url' => $url,
+                'correlation_id' => $correlationId,
+            ]);
 
             return [
                 'success' => false,
@@ -253,12 +283,14 @@ class UsersApiClient
         }
 
         $url = self::getBaseUrl() . '/api/v1/profile/change-password';
+        $payload = [
+            'current_password' => $currentPassword,
+            'new_password' => $newPassword,
+        ];
+        $correlationId = (string) \Illuminate\Support\Str::uuid();
 
         try {
-            $response = self::httpClient($token)->post($url, [
-                'current_password' => $currentPassword,
-                'new_password' => $newPassword,
-            ]);
+            $response = self::httpClient($token, $payload, $correlationId)->post($url, $payload);
 
             $json = $response->json() ?? [];
             if ($response->successful()) {
@@ -276,7 +308,10 @@ class UsersApiClient
                 'errors' => $json['errors'] ?? null,
             ];
         } catch (\Throwable $e) {
-            Log::error('UsersApiClient::changePassword failed: ' . $e->getMessage(), ['url' => $url]);
+            Log::error('UsersApiClient::changePassword failed: ' . $e->getMessage(), [
+                'url' => $url,
+                'correlation_id' => $correlationId,
+            ]);
 
             return [
                 'success' => false,

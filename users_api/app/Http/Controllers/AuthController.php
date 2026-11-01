@@ -299,6 +299,9 @@ class AuthController
 
         $count = $this->tokenService->revokeAllSessionsForUser($userId);
 
+        $user = User::find($userId);
+        \App\Services\BackchannelService::notifySessionRevocation($userId, $user?->email, 'logout_all_devices');
+
         return response()->json([
             'status' => true,
             'message' => "Berhasil logout dari semua perangkat ($count sesi dicabut).",
