@@ -87,3 +87,4 @@ Sebelum mengakhiri sesi pengerjaan, Claude wajib memverifikasi:
 - [ ] Tidak ada mekanisme fallback auth lokal yang merusak prinsip *Fail-Closed*.
 - [ ] Header keamanan HMAC (`X-Client-Id`, `X-Timestamp`, `X-Signature`, `X-Correlation-Id`) tetap aktif pada `UsersApiClient`.
 - [ ] Syntax PHP lolos `php -l` tanpa error.
+
