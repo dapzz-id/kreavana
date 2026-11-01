@@ -46,8 +46,20 @@ class UserSeeder extends Seeder
             [
                 'email' => 'institution@kreavana.id',
                 'username' => 'institution_demo',
-                'full_name' => 'Kreavana Demo Institution',
-                'display_name' => 'Demo Institution',
+                'full_name' => 'Institut Seni & Rekayasa Kreatif Nusantara (ISRK)',
+                'display_name' => 'Demo Institusi / Kampus',
+            ],
+            [
+                'email' => 'smk@kreavana.id',
+                'username' => 'smk_demo',
+                'full_name' => 'SMK Negeri 1 Kreasi Nusantara',
+                'display_name' => 'Demo SMK',
+            ],
+            [
+                'email' => 'sekolah@kreavana.id',
+                'username' => 'sekolah_demo',
+                'full_name' => 'SMK Kreatif Nusantara',
+                'display_name' => 'Demo Sekolah',
             ],
             [
                 'email' => 'government@kreavana.id',
@@ -84,6 +96,18 @@ class UserSeeder extends Seeder
                 'username' => 'event_organizer_demo',
                 'full_name' => 'Kreavana Demo Event Organizer',
                 'display_name' => 'Demo EO',
+            ],
+            [
+                'email' => 'eo@kreavana.id',
+                'username' => 'eo_demo',
+                'full_name' => 'Kreavana Demo Event Organizer',
+                'display_name' => 'Demo EO',
+            ],
+            [
+                'email' => 'sari@test.com',
+                'username' => 'sarieo',
+                'full_name' => 'Sari Event Organizer',
+                'display_name' => 'Sari EO',
             ],
             [
                 'email' => 'community@kreavana.id',

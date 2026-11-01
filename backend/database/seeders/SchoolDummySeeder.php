@@ -16,26 +16,36 @@ class SchoolDummySeeder extends Seeder
 {
     public function run(): void
     {
-        $school = User::where('username', 'institution_demo')->first();
-        if (!$school) {
-            $school = User::where('email', 'institution@kreavana.id')->first();
-        }
-        if (!$school) {
-            $school = User::where('sub_role', 'institution')->first();
+        $usernames = ['institution_demo', 'smk_demo', 'sekolah_demo'];
+        $seeded = 0;
+
+        foreach ($usernames as $uname) {
+            $school = User::where('username', $uname)->first();
+            if ($school) {
+                self::seedForUser($school);
+                $seeded++;
+            }
         }
 
-        if (!$school) {
-            return;
+        if ($seeded === 0) {
+            $fallback = User::where('sub_role', 'institution')->first();
+            if ($fallback) {
+                self::seedForUser($fallback);
+            }
         }
-
-        self::seedForUser($school);
     }
 
     public static function seedForUser(User $school): void
     {
+        $schoolName = match ($school->username) {
+            'smk_demo' => 'SMK Negeri 1 Kreasi Nusantara',
+            'sekolah_demo' => 'SMK Kreatif Nusantara',
+            default => $school->name ?: 'Institut Seni & Rekayasa Kreatif Nusantara (ISRK)',
+        };
+
         // 1. Update Profile Sekolah / Perguruan Tinggi
         $school->update([
-            'name' => 'Institut Seni & Rekayasa Kreatif Nusantara (ISRK)',
+            'name' => $schoolName,
             'role' => RoleType::Creator,
             'sub_role' => 'institution',
             'is_verified' => 1,

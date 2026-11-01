@@ -111,6 +111,18 @@ class UserSeeder extends Seeder
                 'username' => 'institution_demo',
             ],
             [
+                'sub_role' => CreatorSubRole::INSTITUTION,
+                'name' => 'SMK Negeri 1 Kreasi Nusantara',
+                'email' => 'smk@kreavana.id',
+                'username' => 'smk_demo',
+            ],
+            [
+                'sub_role' => CreatorSubRole::INSTITUTION,
+                'name' => 'SMK Kreatif Nusantara',
+                'email' => 'sekolah@kreavana.id',
+                'username' => 'sekolah_demo',
+            ],
+            [
                 'sub_role' => CreatorSubRole::GOVERNMENT,
                 'name' => 'Kreavana Demo Government',
                 'email' => 'government@kreavana.id',
@@ -145,6 +157,12 @@ class UserSeeder extends Seeder
                 'name' => 'Kreavana Demo Event Organizer',
                 'email' => 'event.organizer@kreavana.id',
                 'username' => 'event_organizer_demo',
+            ],
+            [
+                'sub_role' => CreatorSubRole::EVENT_ORGANIZER,
+                'name' => 'Kreavana Demo Event Organizer',
+                'email' => 'eo@kreavana.id',
+                'username' => 'eo_demo',
             ],
             [
                 'sub_role' => CreatorSubRole::COMMUNITY,
@@ -289,8 +307,7 @@ class UserSeeder extends Seeder
                     'postal_code' => '17144',
                 ]
             );
-
-            if ($creator->username === 'event_organizer_demo') {
+            if ($creator->username === 'event_organizer_demo' || $creator->username === 'eo_demo') {
                 $creator->balance = 5000000.00;
                 $creator->wallet_pin = Hash::make('123456');
                 $creator->save();
