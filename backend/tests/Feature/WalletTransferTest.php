@@ -122,4 +122,74 @@ class WalletTransferTest extends TestCase
         // 4. Balance must NOT be clobbered back to 5.000.000
         $this->assertEquals(99015002.0, $client->balance);
     }
+
+    public function test_event_organizer_demo_balance_preserved_across_seeders(): void
+    {
+        $this->seed(UserSeeder::class);
+
+        $eo = User::where('username', 'event_organizer_demo')->first();
+        $this->assertNotNull($eo);
+
+        // User topped up 95M -> balance becomes 100M
+        $eo->balance = 100000000.0;
+        $eo->save();
+
+        // Re-run seeder (simulating CI/CD deployment)
+        $this->seed(UserSeeder::class);
+
+        $eo->refresh();
+        $this->assertEquals(100000000.0, $eo->balance);
+    }
+
+    public function test_reconcile_balance_restores_95m_topup_if_balance_was_wiped(): void
+    {
+        $user = User::factory()->create([
+            'username' => 'event_organizer_demo',
+            'balance' => 4970000.0, // Wiped by seeder & transfer
+        ]);
+
+        // Recorded completed topup of 95M in ledger
+        WalletTransaction::factory()->create([
+            'user_id' => $user->id,
+            'type' => 'topup',
+            'amount' => 95000000.0,
+            'status' => 'completed',
+        ]);
+
+        // Recorded completed transfer out of 50K
+        WalletTransaction::factory()->create([
+            'user_id' => $user->id,
+            'type' => 'transfer_send',
+            'amount' => 50000.0,
+            'status' => 'completed',
+        ]);
+
+        $this->walletService->reconcileBalanceWithLedger($user);
+
+        $user->refresh();
+        // Base 5.000.000 + (95.000.000 - 50.000) = 99.950.000
+        $this->assertEquals(99950000.0, $user->balance);
+    }
+
+    public function test_wallet_transaction_generates_valid_cryptographic_ledger_hash(): void
+    {
+        $tx = WalletTransaction::factory()->create([
+            'type' => 'topup',
+            'amount' => 95000000.0,
+            'status' => 'completed',
+        ]);
+
+        $hash = $tx->generateLedgerHash();
+        $this->assertNotEmpty($hash);
+        $this->assertEquals(64, strlen($hash)); // SHA-256 hex length
+
+        $tx->ledger_hash = $hash;
+        $tx->save();
+
+        $this->assertTrue($tx->isLedgerHashValid());
+
+        // Test tamper detection: if amount is tampered, hash is invalid
+        $tx->amount = 1000.0;
+        $this->assertFalse($tx->isLedgerHashValid());
+    }
 }

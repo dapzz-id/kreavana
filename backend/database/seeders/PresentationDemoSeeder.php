@@ -35,7 +35,7 @@ class PresentationDemoSeeder extends Seeder
         $owners = array_filter([$eventOrganizer, $clientDemo, $institution]);
 
         if ($clientDemo) {
-            if ($clientDemo->balance < 1000000) {
+            if ($clientDemo->balance === null) {
                 $clientDemo->balance = 5000000.0;
             }
             if (empty($clientDemo->wallet_pin)) {
@@ -50,7 +50,7 @@ class PresentationDemoSeeder extends Seeder
         }
 
         if ($eventOrganizer) {
-            if ($eventOrganizer->balance < 1000000) {
+            if ($eventOrganizer->balance === null) {
                 $eventOrganizer->balance = 5000000.0;
             }
             if (empty($eventOrganizer->wallet_pin)) {

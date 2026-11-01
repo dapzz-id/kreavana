@@ -27,12 +27,45 @@ class WalletService extends BaseService
     public function getInfo(string $userId): array
     {
         $user = $this->userRepo->find($userId);
+        if ($user) {
+            $this->reconcileBalanceWithLedger($user);
+        }
         $transactions = $this->walletRepo->getHistoryByUser($userId, null, 100);
 
         return [
             'balance' => (double) $user->balance,
             'transactions' => $transactions->items(),
         ];
+    }
+
+    /**
+     * Rekonsiliasi integritas saldo pengguna dengan buku kas ledger (wallet_transactions).
+     * Mencegah kehilangan saldo akibat seeder overwrite di lingkungan deployment.
+     */
+    public function reconcileBalanceWithLedger(User $user): void
+    {
+        $completedCredits = (float) \App\Models\WalletTransaction::where('user_id', $user->id)
+            ->where('status', 'completed')
+            ->whereIn('type', ['topup', 'transfer_receive', 'refund', 'escrow_refund'])
+            ->sum('amount');
+
+        $completedDebits = (float) \App\Models\WalletTransaction::where('user_id', $user->id)
+            ->where('status', 'completed')
+            ->whereIn('type', ['transfer_send', 'withdrawal', 'payment', 'contract_payment'])
+            ->sum('amount');
+
+        $netMovement = $completedCredits - $completedDebits;
+
+        $baseBalance = in_array($user->username, ['client_demo', 'event_organizer_demo', 'eo_demo'])
+            ? 5000000.0
+            : 0.0;
+
+        $expectedBalance = $baseBalance + $netMovement;
+
+        if ($completedCredits > 0 && (float) $user->balance < $expectedBalance) {
+            $user->balance = $expectedBalance;
+            $user->save();
+        }
     }
 
     public function createTopup(string $userId, array $data): array
@@ -98,7 +131,10 @@ class WalletService extends BaseService
         try {
             DB::beginTransaction();
 
-            $this->walletRepo->update($transaction->id, ['status' => 'completed']);
+            $transaction->status = 'completed';
+            $transaction->ledger_hash = $transaction->generateLedgerHash();
+            $transaction->save();
+
             $user = User::where('id', $userId)->lockForUpdate()->first();
             if (!$user) {
                 throw new Exception('Pengguna tidak ditemukan.', 404);
@@ -185,8 +221,10 @@ class WalletService extends BaseService
                 'reference_number' => $refNumber . '-SEND',
                 'description' => "Kirim saldo ke @{$receiver->username}. " . ($data['description'] ?? ''),
             ]);
+            $senderTx->ledger_hash = $senderTx->generateLedgerHash();
+            $senderTx->save();
 
-            $this->walletRepo->create([
+            $receiverTx = $this->walletRepo->create([
                 'user_id' => $receiver->id,
                 'type' => 'transfer_receive',
                 'amount' => $netAmount,
@@ -197,6 +235,8 @@ class WalletService extends BaseService
                 'reference_number' => $refNumber . '-RCV',
                 'description' => "Terima saldo dari @{$sender->username}. " . ($data['description'] ?? ''),
             ]);
+            $receiverTx->ledger_hash = $receiverTx->generateLedgerHash();
+            $receiverTx->save();
 
             $this->notificationRepo->create([
                 'user_id' => $receiver->id,

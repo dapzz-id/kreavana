@@ -232,12 +232,12 @@ jobs:
           echo "Composer install completed."
 
           echo "============================================================"
-          echo "RUN DATABASE MIGRATIONS & SEEDERS"
+          echo "RUN DATABASE MIGRATIONS"
           echo "============================================================"
 
-          php8.4 artisan migrate --seed --force
+          php8.4 artisan migrate --force
 
-          echo "Database migrations and seeders completed."
+          echo "Database migrations completed."
 
           echo "============================================================"
           echo "CLEAR LARAVEL CACHE"
