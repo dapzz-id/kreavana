@@ -123,7 +123,16 @@ class StorageController extends Controller
 
         $files->getCollection()->transform(function ($file) {
             $isPublic = ($file->visibility ?? 'private') === 'public';
-            $fileUrl = $isPublic ? url('storage/' . $file->path) : url('api/storage/' . $file->id . '/view');
+            $disk = $file->disk ?? 'public';
+            if ($isPublic) {
+                if (in_array($disk, ['minio', 's3'], true)) {
+                    $fileUrl = Storage::disk($disk)->url($file->path);
+                } else {
+                    $fileUrl = Storage::disk('public')->url($file->path);
+                }
+            } else {
+                $fileUrl = url('api/storage/' . $file->id . '/view');
+            }
             $downloadUrl = url('api/storage/' . $file->id . '/download');
             return [
                 'id' => $file->id,

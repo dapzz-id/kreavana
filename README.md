@@ -81,6 +81,11 @@ Setiap komunikasi antara `backend` dan `users_api` diotentikasi secara kriptogra
 - Jika pengguna melakukan *Logout All Devices* atau disuspend pada `users_api`, IAM mem-broadcast notifikasi pembatalan sesi secara *real-time* ke endpoint internal backend (`/api/internal/v1/sessions/revoke`).
 - Token pengguna langsung dibatalkan melalui `JtiService::revoke()` dan middleware `CheckUserSuspended`.
 
+### 6. Cloud Object Storage (MinIO & S3-Compatible Storage)
+- File media (poster event, aset marketplace, avatar, dokumen KYC, lampiran chat, deliverable) didukung penuh menggunakan **MinIO Object Storage** maupun AWS S3.
+- Menggunakan driver Flysystem AWS S3 v3 (`league/flysystem-aws-s3-v3`), kuota storage per-user diisolasi, serta endpoint direct streaming dan signed URLs yang aman.
+- Panduan instalasi dan konfigurasi MinIO di VPS Linux Ubuntu tersedia lengkap di [`docs/MINIO_SETUP_GUIDE.md`](docs/MINIO_SETUP_GUIDE.md).
+
 ---
 
 ## ⚙️ Panduan Menjalankan Sistem Secara Lokal (Quickstart)

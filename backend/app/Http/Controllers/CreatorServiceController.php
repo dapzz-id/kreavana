@@ -138,6 +138,16 @@ class CreatorServiceController extends Controller
         $path = 'creator_service_thumbnails/' . basename($filename);
         $disk = Storage::disk('public');
         if (!$disk->exists($path)) {
+            $defaultDisk = config('filesystems.default');
+            $cloudDisks = array_unique(array_filter([$defaultDisk, 'minio', 's3']));
+            foreach ($cloudDisks as $d) {
+                if (Storage::disk($d)->exists($path)) {
+                    return Storage::disk($d)->response($path, basename($filename), [
+                        'Content-Type' => Storage::disk($d)->mimeType($path) ?? 'application/octet-stream',
+                        'Cache-Control' => 'public, max-age=86400',
+                    ]);
+                }
+            }
             return $this->errorResponse('Thumbnail tidak ditemukan.', 404);
         }
 

@@ -68,6 +68,19 @@ return [
             'report' => false,
         ],
 
+        'minio' => [
+            'driver' => 's3',
+            'key' => env('MINIO_KEY') ?: (env('AWS_ACCESS_KEY_ID') ?: 'minioadmin'),
+            'secret' => env('MINIO_SECRET') ?: (env('AWS_SECRET_ACCESS_KEY') ?: 'minioadmin'),
+            'region' => env('MINIO_REGION') ?: (env('AWS_DEFAULT_REGION') ?: 'us-east-1'),
+            'bucket' => env('MINIO_BUCKET') ?: (env('AWS_BUCKET') ?: 'kreavana'),
+            'url' => env('MINIO_URL') ?: env('AWS_URL'),
+            'endpoint' => env('MINIO_ENDPOINT') ?: (env('AWS_ENDPOINT') ?: 'http://127.0.0.1:9000'),
+            'use_path_style_endpoint' => env('MINIO_USE_PATH_STYLE_ENDPOINT', true),
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
 
     /*

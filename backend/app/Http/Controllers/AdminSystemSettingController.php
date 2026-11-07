@@ -467,11 +467,13 @@ class AdminSystemSettingController extends Controller
             SystemSetting::set('admin_contract_signer_title', $validated['admin_title'], 'contracts');
         }
 
+        $diskName = in_array(config('filesystems.default'), ['minio', 's3'], true) ? config('filesystems.default') : 'public';
+
         if ($request->hasFile('signature_image')) {
             $file = $request->file('signature_image');
             $filename = 'admin_sig_' . time() . '.' . $file->getClientOriginalExtension();
-            $path = $file->storeAs('signatures', $filename, 'public');
-            $signatureUrl = '/storage/' . $path;
+            $path = $file->storeAs('signatures', $filename, $diskName);
+            $signatureUrl = \Illuminate\Support\Facades\Storage::disk($diskName)->url('signatures/' . $filename);
             SystemSetting::set('admin_contract_signature_image', $signatureUrl, 'contracts');
         } elseif ($request->filled('signature_image_base64')) {
             $raw = $request->input('signature_image_base64');
@@ -481,8 +483,8 @@ class AdminSystemSettingController extends Controller
                 $image = base64_decode($raw);
                 if ($image !== false) {
                     $filename = 'admin_sig_' . time() . '.' . $type;
-                    \Illuminate\Support\Facades\Storage::disk('public')->put('signatures/' . $filename, $image);
-                    $signatureUrl = '/storage/signatures/' . $filename;
+                    \Illuminate\Support\Facades\Storage::disk($diskName)->put('signatures/' . $filename, $image);
+                    $signatureUrl = \Illuminate\Support\Facades\Storage::disk($diskName)->url('signatures/' . $filename);
                     SystemSetting::set('admin_contract_signature_image', $signatureUrl, 'contracts');
                 }
             }

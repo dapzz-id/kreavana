@@ -84,7 +84,7 @@ class ProfileService extends BaseService
                         $storageService = app(\App\Services\StorageService::class);
                         $storageFile = $storageService->store($user, $uploadedFile, 'avatar', 'public');
                         
-                        $user->avatar_url = url('storage/' . $storageFile->path);
+                        $user->avatar_url = $storageFile->url;
                         @unlink($tempPath);
                     }
                 }
@@ -415,7 +415,7 @@ class ProfileService extends BaseService
                     $storageFile = $storageService->store($user, $uploadedFile, $prefix, 'public');
                     
                     @unlink($tempPath);
-                    return url('storage/' . $storageFile->path);
+                    return $storageFile->url;
                 }
             }
         }

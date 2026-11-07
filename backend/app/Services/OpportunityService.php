@@ -79,7 +79,7 @@ class OpportunityService extends BaseService
                 /** @var \App\Services\StorageService $storageService */
                 $storageService = app(\App\Services\StorageService::class);
                 $storageFile = $storageService->store($user, $posterFile, 'posters', 'public');
-                $data['poster_url'] = '/storage/' . $storageFile->path;
+                $data['poster_url'] = $storageFile->url;
             }
 
             // Extract requirements if provided
@@ -1102,7 +1102,7 @@ class OpportunityService extends BaseService
             /** @var \App\Services\StorageService $storageService */
             $storageService = app(\App\Services\StorageService::class);
             $storageFile = $storageService->store($user, $file, 'deliverables', 'public');
-            $url = '/storage/' . $storageFile->path;
+            $url = $storageFile->url;
         }
 
         if (empty($url)) {

@@ -158,7 +158,7 @@ class GroupService extends BaseService
                         $storageService = app(\App\Services\StorageService::class);
                         $storageFile = $storageService->store($user, $uploadedFile, 'avatar', 'public');
                         
-                        $payload['avatar_url'] = url('storage/' . $storageFile->path);
+                        $payload['avatar_url'] = $storageFile->url;
                         @unlink($tempPath);
                     }
                 }
