@@ -398,15 +398,51 @@ class OpportunityController extends Controller
     {
         $user = Auth::guard('api')->user();
         $validated = $request->validate([
-            'decision' => 'required|in:approve,reject',
+            'decision' => 'required|in:approve,counter,reject',
             'notes' => 'nullable|string|max:1000',
+            'counter_date' => 'nullable|date',
+            'counter_time' => 'nullable|string|max:50',
+            'counter_location' => 'nullable|string|max:500',
+            'counter_lat' => 'nullable|numeric',
+            'counter_lng' => 'nullable|numeric',
+            'counter_notes' => 'nullable|string|max:1000',
         ]);
 
         try {
-            $opp = $this->opportunityService->reviewMeeting($id, $user->id, $validated['decision'], $validated['notes'] ?? null);
+            $opp = $this->opportunityService->reviewMeeting($id, $user->id, $validated['decision'], $validated['notes'] ?? null, $validated);
             $msg = $validated['decision'] === 'approve'
                 ? 'Jadwal pertemuan fisik disetujui. Status acara: Diproses.'
-                : 'Jadwal pertemuan fisik ditolak.';
+                : ($validated['decision'] === 'counter'
+                    ? 'Tawaran nego jadwal dan lokasi alternatif berhasil dikirim ke pembuat acara.'
+                    : 'Jadwal pertemuan fisik ditolak.');
+            return $this->successResponse($msg, $opp);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function respondMeetingCounter(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        $validated = $request->validate([
+            'action' => 'required|in:accept,counter,decline',
+            'meeting_date' => 'nullable|date',
+            'meeting_time' => 'nullable|string|max:50',
+            'meeting_location' => 'nullable|string|max:500',
+            'meeting_lat' => 'nullable|numeric',
+            'meeting_lng' => 'nullable|numeric',
+            'meeting_notes' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $opp = $this->opportunityService->respondMeetingCounter($id, $user->id, $validated['action'], $validated);
+            $msg = $validated['action'] === 'accept'
+                ? 'Jadwal usulan Admin disetujui. Status pertemuan: Diproses.'
+                : ($validated['action'] === 'counter'
+                    ? 'Tawaran balik jadwal dan lokasi berhasil dikirim ke Admin Kreavana.'
+                    : 'Tawaran jadwal Admin ditolak.');
             return $this->successResponse($msg, $opp);
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             return $this->errorResponse($e->getMessage(), $e->getStatusCode());

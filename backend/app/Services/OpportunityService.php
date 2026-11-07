@@ -693,6 +693,8 @@ class OpportunityService extends BaseService
         $opp->meeting_lng = $data['meeting_lng'] ?? $opp->meeting_lng;
         $opp->meeting_notes = $data['meeting_notes'] ?? $opp->meeting_notes;
         $opp->meeting_status = 'pending'; // Status Pending menunggu review Admin Kreavana
+        $opp->meeting_counter_by = 'client';
+        $opp->meeting_counter_status = 'pending';
         $opp->save();
 
         // Notify approved creators
@@ -726,7 +728,7 @@ class OpportunityService extends BaseService
             $this->notificationRepo->create([
                 'user_id' => $admin->id,
                 'title' => 'Pengajuan Jadwal Tanda Tangan Basah (>= 100 Jt)',
-                'message' => 'Proyek "' . $opp->title . '" mengajukan jadwal temu fisik tanda tangan basah pada ' . $meetingDateStr . ' di ' . $meetingLocStr . '. Silakan tinjau dan setujui.',
+                'message' => 'Proyek "' . $opp->title . '" mengajukan jadwal temu fisik tanda tangan basah pada ' . $meetingDateStr . ' di ' . $meetingLocStr . '. Silakan tinjau dan setujui atau tawarkan jadwal alternatif.',
                 'type' => 'project',
                 'data' => [
                     'opportunity_id' => $opp->id,
@@ -741,10 +743,12 @@ class OpportunityService extends BaseService
     }
 
     /**
-     * Admin menyetujui / menolak jadwal pertemuan fisik.
-     * Jika disetujui, status meeting menjadi 'diproses'.
+     * Admin menyetujui / menolak / menegosiasi jadwal pertemuan fisik.
+     * - approve: status meeting menjadi 'diproses'.
+     * - counter: admin menawarkan tanggal, jam, dan lokasi alternatif (status tetap 'pending', counter_by 'admin').
+     * - reject: status meeting menjadi 'rejected'.
      */
-    public function reviewMeeting(string $opportunityId, string $adminId, string $decision, ?string $notes = null): array
+    public function reviewMeeting(string $opportunityId, string $adminId, string $decision, ?string $notes = null, array $counterData = []): array
     {
         $opp = Opportunity::where('id', $opportunityId)->firstOrFail();
         $admin = User::where('id', $adminId)->firstOrFail();
@@ -755,6 +759,7 @@ class OpportunityService extends BaseService
 
         if ($decision === 'approve') {
             $opp->meeting_status = 'diproses'; // Status menjadi diproses jika disetujui Admin
+            $opp->meeting_counter_status = 'accepted';
             if ($notes) {
                 $opp->meeting_notes = ($opp->meeting_notes ? $opp->meeting_notes . "\n" : '') . "[Persetujuan Admin " . $admin->name . "]: " . $notes;
             }
@@ -793,8 +798,50 @@ class OpportunityService extends BaseService
                     'created_at' => now(),
                 ]);
             }
+        } elseif ($decision === 'counter') {
+            // Admin mengajukan alternatif waktu/tempat (Nego Jadwal & Lokasi)
+            $cDate = $counterData['counter_date'] ?? $counterData['meeting_date'] ?? null;
+            $cTime = $counterData['counter_time'] ?? $counterData['meeting_time'] ?? null;
+            $cLoc = $counterData['counter_location'] ?? $counterData['meeting_location'] ?? null;
+            $cLat = $counterData['counter_lat'] ?? $counterData['meeting_lat'] ?? null;
+            $cLng = $counterData['counter_lng'] ?? $counterData['meeting_lng'] ?? null;
+            $cNotes = $counterData['counter_notes'] ?? $notes;
+
+            if (empty($cDate) && empty($cTime) && empty($cLoc)) {
+                abort(422, 'Mohon tentukan tanggal, waktu, atau lokasi alternatif yang diusulkan.');
+            }
+
+            $opp->meeting_counter_by = 'admin';
+            $opp->meeting_counter_date = $cDate ?: $opp->meeting_date;
+            $opp->meeting_counter_time = $cTime ?: $opp->meeting_time;
+            $opp->meeting_counter_location = $cLoc ?: $opp->meeting_location;
+            $opp->meeting_counter_lat = $cLat ?: $opp->meeting_lat;
+            $opp->meeting_counter_lng = $cLng ?: $opp->meeting_lng;
+            $opp->meeting_counter_notes = $cNotes;
+            $opp->meeting_counter_status = 'pending';
+            $opp->meeting_status = 'pending';
+            $opp->save();
+
+            // Notifikasi ke Penyelenggara bahwa Admin mengajukan tawaran balik jadwal/lokasi
+            $cDateStr = $opp->meeting_counter_date ? \Carbon\Carbon::parse($opp->meeting_counter_date)->format('d M Y') : '';
+            $this->notificationRepo->create([
+                'user_id' => $opp->posted_by,
+                'title' => 'Admin Mengajukan Nego Jadwal & Lokasi Temu',
+                'message' => 'Admin Kreavana (' . $admin->name . ') mengusulkan jadwal / lokasi alternatif untuk proyek "' . $opp->title . '": ' . $cDateStr . ' ' . ($opp->meeting_counter_time ?? '') . ' di ' . ($opp->meeting_counter_location ?? '') . ($cNotes ? " (Catatan: $cNotes)" : '') . '. Silakan setujui atau ajukan tawaran ulang.',
+                'type' => 'project',
+                'data' => [
+                    'opportunity_id' => $opp->id,
+                    'meeting_counter_by' => 'admin',
+                    'meeting_counter_date' => $opp->meeting_counter_date,
+                    'meeting_counter_time' => $opp->meeting_counter_time,
+                    'meeting_counter_location' => $opp->meeting_counter_location,
+                ],
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
         } else {
             $opp->meeting_status = 'rejected';
+            $opp->meeting_counter_status = 'declined';
             if ($notes) {
                 $opp->meeting_notes = ($opp->meeting_notes ? $opp->meeting_notes . "\n" : '') . "[Penolakan Admin " . $admin->name . "]: " . $notes;
             }
@@ -803,7 +850,7 @@ class OpportunityService extends BaseService
             $this->notificationRepo->create([
                 'user_id' => $opp->posted_by,
                 'title' => 'Jadwal Pertemuan Fisik Ditolak Admin',
-                'message' => 'Jadwal pertemuan fisik proyek "' . $opp->title . '" ditolak. Silakan koordinasikan dan ajukan jadwal baru.',
+                'message' => 'Jadwal pertemuan fisik proyek "' . $opp->title . '" ditolak oleh Admin Kreavana. Silakan koordinasikan dan ajukan jadwal baru.',
                 'type' => 'project',
                 'data' => [
                     'opportunity_id' => $opp->id,
@@ -812,6 +859,120 @@ class OpportunityService extends BaseService
                 'is_read' => false,
                 'created_at' => now(),
             ]);
+        }
+
+        return $this->formatOpportunity($opp->fresh(['approvedApplications.creator', 'user']), true);
+    }
+
+    /**
+     * Pembuat acara menanggapi tawaran nego jadwal & lokasi dari Admin.
+     * - accept: Pembuat acara menyetujui usulan admin (jadwal diperbarui dan status menjadi 'diproses').
+     * - counter: Pembuat acara mengajukan tawaran balik (status tetap 'pending', counter_by 'client').
+     * - decline: Pembuat acara menolak usulan.
+     */
+    public function respondMeetingCounter(string $opportunityId, string $userId, string $action, array $data = []): array
+    {
+        $opp = Opportunity::where('id', $opportunityId)->firstOrFail();
+        $user = User::where('id', $userId)->firstOrFail();
+
+        if ($opp->posted_by !== $userId && $user->role !== RoleType::Admin) {
+            abort(403, 'Hanya pembuat proyek yang dapat menanggapi tawaran jadwal pertemuan.');
+        }
+
+        if ($action === 'accept') {
+            // Menerima jadwal usulan Admin
+            if (!empty($opp->meeting_counter_date)) {
+                $opp->meeting_date = $opp->meeting_counter_date;
+            }
+            if (!empty($opp->meeting_counter_time)) {
+                $opp->meeting_time = $opp->meeting_counter_time;
+            }
+            if (!empty($opp->meeting_counter_location)) {
+                $opp->meeting_location = $opp->meeting_counter_location;
+            }
+            if (!empty($opp->meeting_counter_lat)) {
+                $opp->meeting_lat = $opp->meeting_counter_lat;
+            }
+            if (!empty($opp->meeting_counter_lng)) {
+                $opp->meeting_lng = $opp->meeting_counter_lng;
+            }
+            if (!empty($opp->meeting_counter_notes)) {
+                $opp->meeting_notes = ($opp->meeting_notes ? $opp->meeting_notes . "\n" : '') . "[Kesepakatan Nego Jadwal]: " . $opp->meeting_counter_notes;
+            }
+
+            $opp->meeting_status = 'diproses';
+            $opp->meeting_counter_status = 'accepted';
+            $opp->save();
+
+            // Notify Admin Kreavana
+            $admins = User::where('role', RoleType::Admin)->get();
+            foreach ($admins as $admin) {
+                $this->notificationRepo->create([
+                    'user_id' => $admin->id,
+                    'title' => 'Nego Jadwal & Lokasi Disetujui Penyelenggara',
+                    'message' => 'Penyelenggara proyek "' . $opp->title . '" telah menyetujui usulan jadwal temu fisik Anda. Status saat ini: Diproses.',
+                    'type' => 'project',
+                    'data' => [
+                        'opportunity_id' => $opp->id,
+                        'meeting_status' => 'diproses',
+                    ],
+                    'is_read' => false,
+                    'created_at' => now(),
+                ]);
+            }
+
+            // Notify all approved creators
+            $approvedCreators = OpportunityApplication::where('opportunity_id', $opp->id)
+                ->where('status', 'approved')
+                ->pluck('creator_id');
+
+            foreach ($approvedCreators as $creatorId) {
+                $this->notificationRepo->create([
+                    'user_id' => $creatorId,
+                    'title' => 'Jadwal Temu Tanda Tangan Basah Telah Disepakati',
+                    'message' => 'Jadwal pertemuan fisik tanda tangan basah untuk proyek "' . $opp->title . '" telah disepakati antara Penyelenggara dan Admin Kreavana. Status: Diproses.',
+                    'type' => 'project',
+                    'data' => [
+                        'opportunity_id' => $opp->id,
+                        'meeting_status' => 'diproses',
+                    ],
+                    'is_read' => false,
+                    'created_at' => now(),
+                ]);
+            }
+        } elseif ($action === 'counter') {
+            // Pembuat acara tawar balik
+            $opp->meeting_date = $data['meeting_date'] ?? $opp->meeting_date;
+            $opp->meeting_time = $data['meeting_time'] ?? $opp->meeting_time;
+            $opp->meeting_location = $data['meeting_location'] ?? $opp->meeting_location;
+            $opp->meeting_lat = $data['meeting_lat'] ?? $opp->meeting_lat;
+            $opp->meeting_lng = $data['meeting_lng'] ?? $opp->meeting_lng;
+            $opp->meeting_notes = $data['meeting_notes'] ?? $opp->meeting_notes;
+            $opp->meeting_counter_by = 'client';
+            $opp->meeting_counter_status = 'pending';
+            $opp->meeting_status = 'pending';
+            $opp->save();
+
+            // Notify Admin
+            $admins = User::where('role', RoleType::Admin)->get();
+            foreach ($admins as $admin) {
+                $this->notificationRepo->create([
+                    'user_id' => $admin->id,
+                    'title' => 'Penyelenggara Menawar Balik Jadwal & Lokasi Temu',
+                    'message' => 'Penyelenggara proyek "' . $opp->title . '" mengajukan tawaran balik jadwal / lokasi baru. Silakan tinjau kembali.',
+                    'type' => 'project',
+                    'data' => [
+                        'opportunity_id' => $opp->id,
+                        'meeting_status' => 'pending',
+                        'meeting_counter_by' => 'client',
+                    ],
+                    'is_read' => false,
+                    'created_at' => now(),
+                ]);
+            }
+        } else {
+            $opp->meeting_counter_status = 'declined';
+            $opp->save();
         }
 
         return $this->formatOpportunity($opp->fresh(['approvedApplications.creator', 'user']), true);
@@ -1604,6 +1765,14 @@ class OpportunityService extends BaseService
             'meeting_lng' => $opp->meeting_lng ? (float) $opp->meeting_lng : null,
             'meeting_notes' => $opp->meeting_notes,
             'meeting_status' => $opp->meeting_status ?? 'not_required',
+            'meeting_counter_by' => $opp->meeting_counter_by,
+            'meeting_counter_date' => $opp->meeting_counter_date?->format('Y-m-d'),
+            'meeting_counter_time' => $opp->meeting_counter_time,
+            'meeting_counter_location' => $opp->meeting_counter_location,
+            'meeting_counter_lat' => $opp->meeting_counter_lat ? (float) $opp->meeting_counter_lat : null,
+            'meeting_counter_lng' => $opp->meeting_counter_lng ? (float) $opp->meeting_counter_lng : null,
+            'meeting_counter_notes' => $opp->meeting_counter_notes,
+            'meeting_counter_status' => $opp->meeting_counter_status,
             'escrow_status' => $opp->escrow_status ?? 'none',
             'signature_type' => $opp->signature_type ?? ($isAbove100Jt ? 'wet_signature' : 'dynamic_electronic'),
             'client_signature' => $opp->client_signature,

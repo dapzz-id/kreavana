@@ -236,6 +236,14 @@ class OpportunityModel {
   final double? meetingLng;
   final String? meetingNotes;
   final String meetingStatus; // 'not_required', 'pending_marketing_review', 'verified_paid'
+  final String? meetingCounterBy;
+  final String? meetingCounterDate;
+  final String? meetingCounterTime;
+  final String? meetingCounterLocation;
+  final double? meetingCounterLat;
+  final double? meetingCounterLng;
+  final String? meetingCounterNotes;
+  final String? meetingCounterStatus;
   final String escrowStatus; // 'none', 'pending_deposit', 'held_in_escrow', 'released_to_creators'
   final int eventProgress;
   final String? postedBy;
@@ -293,6 +301,14 @@ class OpportunityModel {
     this.meetingLng,
     this.meetingNotes,
     this.meetingStatus = 'not_required',
+    this.meetingCounterBy,
+    this.meetingCounterDate,
+    this.meetingCounterTime,
+    this.meetingCounterLocation,
+    this.meetingCounterLat,
+    this.meetingCounterLng,
+    this.meetingCounterNotes,
+    this.meetingCounterStatus,
     this.escrowStatus = 'none',
     this.eventProgress = 0,
     this.postedBy,
@@ -331,6 +347,9 @@ class OpportunityModel {
   bool get isMeetingPending => meetingStatus.toLowerCase() == 'pending' || meetingStatus.toLowerCase() == 'pending_marketing_review';
   bool get isMeetingInProcess => meetingStatus.toLowerCase() == 'diproses' || meetingStatus.toLowerCase() == 'approved';
   bool get isMeetingVerified => meetingStatus.toLowerCase() == 'verified_completed' || meetingStatus.toLowerCase() == 'verified_paid' || (wetSignatureVerifiedAt != null && wetSignatureVerifiedAt!.isNotEmpty);
+  bool get hasMeetingCounter => meetingCounterStatus == 'pending' && meetingCounterBy != null;
+  bool get isMeetingCounterByAdmin => meetingCounterBy == 'admin' && meetingCounterStatus == 'pending';
+  bool get isMeetingCounterByClient => meetingCounterBy == 'client' && meetingCounterStatus == 'pending';
 
   bool get isEventRunning {
     if (status.toLowerCase() != 'open') return true;
@@ -439,6 +458,14 @@ class OpportunityModel {
     double? meetingLng,
     String? meetingNotes,
     String? meetingStatus,
+    String? meetingCounterBy,
+    String? meetingCounterDate,
+    String? meetingCounterTime,
+    String? meetingCounterLocation,
+    double? meetingCounterLat,
+    double? meetingCounterLng,
+    String? meetingCounterNotes,
+    String? meetingCounterStatus,
     String? escrowStatus,
     int? eventProgress,
     String? postedBy,
@@ -496,6 +523,14 @@ class OpportunityModel {
       meetingLng: meetingLng ?? this.meetingLng,
       meetingNotes: meetingNotes ?? this.meetingNotes,
       meetingStatus: meetingStatus ?? this.meetingStatus,
+      meetingCounterBy: meetingCounterBy ?? this.meetingCounterBy,
+      meetingCounterDate: meetingCounterDate ?? this.meetingCounterDate,
+      meetingCounterTime: meetingCounterTime ?? this.meetingCounterTime,
+      meetingCounterLocation: meetingCounterLocation ?? this.meetingCounterLocation,
+      meetingCounterLat: meetingCounterLat ?? this.meetingCounterLat,
+      meetingCounterLng: meetingCounterLng ?? this.meetingCounterLng,
+      meetingCounterNotes: meetingCounterNotes ?? this.meetingCounterNotes,
+      meetingCounterStatus: meetingCounterStatus ?? this.meetingCounterStatus,
       escrowStatus: escrowStatus ?? this.escrowStatus,
       eventProgress: eventProgress ?? this.eventProgress,
       postedBy: postedBy ?? this.postedBy,
@@ -586,6 +621,22 @@ class OpportunityModel {
           : null,
       meetingNotes: json['meeting_notes']?.toString(),
       meetingStatus: json['meeting_status']?.toString() ?? 'not_required',
+      meetingCounterBy: json['meeting_counter_by']?.toString(),
+      meetingCounterDate: json['meeting_counter_date']?.toString(),
+      meetingCounterTime: json['meeting_counter_time']?.toString(),
+      meetingCounterLocation: json['meeting_counter_location']?.toString(),
+      meetingCounterLat: json['meeting_counter_lat'] != null
+          ? (json['meeting_counter_lat'] is double
+              ? json['meeting_counter_lat']
+              : double.tryParse(json['meeting_counter_lat'].toString()))
+          : null,
+      meetingCounterLng: json['meeting_counter_lng'] != null
+          ? (json['meeting_counter_lng'] is double
+              ? json['meeting_counter_lng']
+              : double.tryParse(json['meeting_counter_lng'].toString()))
+          : null,
+      meetingCounterNotes: json['meeting_counter_notes']?.toString(),
+      meetingCounterStatus: json['meeting_counter_status']?.toString(),
       escrowStatus: json['escrow_status']?.toString() ?? 'none',
       eventProgress: json['event_progress'] != null
           ? int.tryParse(json['event_progress'].toString()) ?? 0
@@ -667,6 +718,14 @@ class OpportunityModel {
       'meeting_lng': meetingLng,
       'meeting_notes': meetingNotes,
       'meeting_status': meetingStatus,
+      'meeting_counter_by': meetingCounterBy,
+      'meeting_counter_date': meetingCounterDate,
+      'meeting_counter_time': meetingCounterTime,
+      'meeting_counter_location': meetingCounterLocation,
+      'meeting_counter_lat': meetingCounterLat,
+      'meeting_counter_lng': meetingCounterLng,
+      'meeting_counter_notes': meetingCounterNotes,
+      'meeting_counter_status': meetingCounterStatus,
       'escrow_status': escrowStatus,
       'event_progress': eventProgress,
       'posted_by': postedBy,

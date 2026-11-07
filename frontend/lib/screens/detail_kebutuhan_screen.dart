@@ -647,6 +647,48 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
           // 1. Muncul form atur tanggal pertemuan fisik 3 pihak
           await _handleScheduleMeeting();
           return;
+        } else if (_opp.isMeetingCounterByAdmin) {
+          // 1b. Admin mengajukan nego tanggal / waktu / lokasi alternatif
+          if (!mounted) return;
+          await showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Row(
+                children: [
+                  Icon(Icons.handshake_rounded, color: Color(0xFF6366F1)),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('Admin Mengajukan Nego Jadwal', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold))),
+                ],
+              ),
+              content: Text(
+                'Admin Kreavana telah meninjau pengajuan jadwal Anda dan mengusulkan penyesuaian waktu/tempat:\n\n'
+                '• Tanggal: ${_opp.meetingCounterDate ?? "-"}\n'
+                '• Waktu: ${_opp.meetingCounterTime ?? "-"}\n'
+                '• Lokasi: ${_opp.meetingCounterLocation ?? "-"}\n'
+                '• Alasan/Catatan: ${_opp.meetingCounterNotes ?? "-"}\n\n'
+                'Silakan terima usulan ini atau tawar balik jadwal pertemuan.',
+                style: const TextStyle(fontSize: 13, height: 1.4),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _handleRespondMeetingCounter('counter');
+                  },
+                  child: const Text('Tawar Balik', style: TextStyle(color: Color(0xFFD97706), fontWeight: FontWeight.bold)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _handleRespondMeetingCounter('accept');
+                  },
+                  child: const Text('Terima Jadwal Admin', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          );
+          return;
         } else if (_opp.isMeetingPending) {
           // 2. Status pending jika sudah submit tanggal
           if (_isMarketingOrAdmin) {
@@ -1892,7 +1934,358 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
     }
   }
 
-  Future<void> _handleAdminReviewMeeting() async {
+  Future<void> _handleAdminCounterMeeting() async {
+    final dateCtrl = TextEditingController(text: _opp.meetingCounterDate ?? _opp.meetingDate ?? '');
+    final timeCtrl = TextEditingController(text: _opp.meetingCounterTime ?? _opp.meetingTime ?? '15:30 WIB');
+    final locCtrl = TextEditingController(text: _opp.meetingCounterLocation ?? _opp.meetingLocation ?? 'Kantor Pusat Kreavana Creative Hub');
+    final notesCtrl = TextEditingController(text: _opp.meetingCounterNotes ?? '');
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.handshake_rounded, color: Color(0xFF6366F1)),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Nego Jadwal & Lokasi Temu (Admin)',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'Sebagai Admin, jika jadwal sedang padat pada jam tersebut atau lokasi pemohon terlalu jauh, '
+                  'Anda dapat mengusulkan tanggal, waktu, dan lokasi alternatif untuk pertemuan fisik.',
+                  style: TextStyle(fontSize: 12, height: 1.4),
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: dateCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Tanggal Alternatif (YYYY-MM-DD) *',
+                  hintText: '2026-11-20',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.calendar_today_rounded, size: 18),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: timeCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Waktu Alternatif *',
+                  hintText: '16:00 WIB',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.access_time_rounded, size: 18),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: locCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Lokasi Alternatif *',
+                  hintText: 'Kantor Pusat Kreavana Creative Hub',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.place_rounded, size: 18),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: notesCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Alasan Nego Jadwal / Lokasi *',
+                  hintText: 'Contoh: Jam 14:00 jadwal padat rapat legal, lokasi sebelumnya kejauhan...',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6366F1)),
+            onPressed: () {
+              if (dateCtrl.text.trim().isEmpty || timeCtrl.text.trim().isEmpty || locCtrl.text.trim().isEmpty) {
+                AppSnackbar.error(ctx, 'Tanggal, waktu, dan lokasi wajib diisi.');
+                return;
+              }
+              Navigator.pop(ctx, true);
+            },
+            child: const Text('Kirim Nego Jadwal', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (result != true) return;
+
+    setState(() => _actionLoading = true);
+    try {
+      final res = await OpportunityService.reviewMeeting(
+        opportunityId: _opp.id ?? '',
+        decision: 'counter',
+        counterDate: dateCtrl.text.trim(),
+        counterTime: timeCtrl.text.trim(),
+        counterLocation: locCtrl.text.trim(),
+        counterNotes: notesCtrl.text.trim().isNotEmpty ? notesCtrl.text.trim() : null,
+      );
+
+      if (mounted) {
+        if (res['status'] == true && res['data'] != null) {
+          setState(() => _opp = res['data'] as OpportunityModel);
+          AppSnackbar.success(context, 'Tawaran alternatif jadwal dan lokasi berhasil dikirim ke pembuat acara!');
+        } else {
+          AppSnackbar.error(context, res['message'] ?? 'Gagal mengirim usulan jadwal.');
+        }
+      }
+    } catch (e) {
+      if (mounted) AppSnackbar.error(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _actionLoading = false);
+    }
+  }
+
+  Future<void> _handleRespondMeetingCounter(String action) async {
+    if (action == 'accept') {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: Color(0xFF10B981)),
+              SizedBox(width: 8),
+              Expanded(child: Text('Terima Jadwal Usulan Admin?', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: Text(
+            'Apakah Anda menyetujui jadwal dan lokasi temu yang diusulkan oleh Admin Kreavana?\n\n'
+            '• Tanggal: ${_opp.meetingCounterDate ?? _opp.meetingDate ?? "-"}\n'
+            '• Waktu: ${_opp.meetingCounterTime ?? _opp.meetingTime ?? "-"}\n'
+            '• Lokasi: ${_opp.meetingCounterLocation ?? _opp.meetingLocation ?? "-"}\n'
+            '• Catatan: ${_opp.meetingCounterNotes ?? "-"}\n\n'
+            'Setelah disetujui, status jadwal pertemuan resmi menjadi DIPROSES.',
+            style: const TextStyle(fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Ya, Setujui Jadwal', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) return;
+
+      setState(() => _actionLoading = true);
+      try {
+        final res = await OpportunityService.respondMeetingCounter(
+          opportunityId: _opp.id ?? '',
+          action: 'accept',
+        );
+
+        if (mounted) {
+          if (res['status'] == true && res['data'] != null) {
+            setState(() => _opp = res['data'] as OpportunityModel);
+            AppSnackbar.success(context, 'Jadwal usulan Admin disetujui! Status: DIPROSES.');
+          } else {
+            AppSnackbar.error(context, res['message'] ?? 'Gagal menerima usulan jadwal.');
+          }
+        }
+      } catch (e) {
+        if (mounted) AppSnackbar.error(context, e.toString());
+      } finally {
+        if (mounted) setState(() => _actionLoading = false);
+      }
+      return;
+    }
+
+    if (action == 'counter') {
+      // Penyelenggara tawar balik
+      final dateCtrl = TextEditingController(text: _opp.meetingDate ?? '');
+      final timeCtrl = TextEditingController(text: _opp.meetingTime ?? '15:00 WIB');
+      final locCtrl = TextEditingController(text: _opp.meetingLocation ?? '');
+      final notesCtrl = TextEditingController();
+
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.handshake_rounded, color: Color(0xFFD97706)),
+              SizedBox(width: 8),
+              Expanded(child: Text('Tawar Balik Jadwal & Lokasi ke Admin', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ajukan waktu atau tempat alternatif yang lebih cocok bagi Anda untuk ditinjau kembali oleh Admin Kreavana:',
+                  style: TextStyle(fontSize: 12, height: 1.4),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: dateCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Tanggal Pertemuan (YYYY-MM-DD) *',
+                    hintText: '2026-11-20',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.calendar_today_rounded, size: 18),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: timeCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Waktu Pertemuan *',
+                    hintText: '15:00 WIB',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.access_time_rounded, size: 18),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: locCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Lokasi Pertemuan *',
+                    hintText: 'Contoh: Kafe X / Kantor Penyelenggara',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.place_rounded, size: 18),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Catatan / Alasan Tawar Balik',
+                    hintText: 'Misal: Lokasi usulan admin kejauhan dari studio kami...',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD97706)),
+              onPressed: () {
+                if (dateCtrl.text.trim().isEmpty || timeCtrl.text.trim().isEmpty || locCtrl.text.trim().isEmpty) {
+                  AppSnackbar.error(ctx, 'Tanggal, waktu, dan lokasi wajib diisi.');
+                  return;
+                }
+                Navigator.pop(ctx, true);
+              },
+              child: const Text('Kirim Tawaran Balik', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+
+      if (result != true) return;
+
+      setState(() => _actionLoading = true);
+      try {
+        final res = await OpportunityService.respondMeetingCounter(
+          opportunityId: _opp.id ?? '',
+          action: 'counter',
+          date: dateCtrl.text.trim(),
+          time: timeCtrl.text.trim(),
+          location: locCtrl.text.trim(),
+          notes: notesCtrl.text.trim().isNotEmpty ? notesCtrl.text.trim() : null,
+        );
+
+        if (mounted) {
+          if (res['status'] == true && res['data'] != null) {
+            setState(() => _opp = res['data'] as OpportunityModel);
+            AppSnackbar.success(context, 'Tawaran balik berhasil dikirim ke Admin Kreavana!');
+          } else {
+            AppSnackbar.error(context, res['message'] ?? 'Gagal mengirim tawaran balik.');
+          }
+        }
+      } catch (e) {
+        if (mounted) AppSnackbar.error(context, e.toString());
+      } finally {
+        if (mounted) setState(() => _actionLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleAdminReviewMeeting({bool approveDirectly = false}) async {
+    if (approveDirectly) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: Color(0xFF10B981)),
+              SizedBox(width: 8),
+              Expanded(child: Text('Setujui Jadwal Temu Fisik?', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: Text(
+            'Apakah Anda menyetujui jadwal dan lokasi temu yang diajukan pembuat acara?\n\n'
+            '• Tanggal: ${_opp.meetingDate ?? "-"}\n'
+            '• Waktu: ${_opp.meetingTime ?? "-"}\n'
+            '• Lokasi: ${_opp.meetingLocation ?? "-"}\n\n'
+            'Setelah disetujui, status jadwal akan resmi berubah menjadi DIPROSES.',
+            style: const TextStyle(fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Ya, Setujui', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+
+      setState(() => _actionLoading = true);
+      try {
+        final res = await OpportunityService.reviewMeeting(
+          opportunityId: _opp.id ?? '',
+          decision: 'approve',
+        );
+        if (mounted) {
+          if (res['status'] == true && res['data'] != null) {
+            setState(() => _opp = res['data'] as OpportunityModel);
+            AppSnackbar.success(context, 'Jadwal pertemuan fisik disetujui! Status: DIPROSES.');
+          } else {
+            AppSnackbar.error(context, res['message'] ?? 'Gagal memperbarui status jadwal.');
+          }
+        }
+      } catch (e) {
+        if (mounted) AppSnackbar.error(context, e.toString());
+      } finally {
+        if (mounted) setState(() => _actionLoading = false);
+      }
+      return;
+    }
+
     final notesCtrl = TextEditingController();
 
     final decision = await showDialog<String>(
@@ -1916,7 +2309,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                 '• Waktu: ${_opp.meetingTime ?? "-"}\n'
                 '• Lokasi: ${_opp.meetingLocation ?? "-"}\n'
                 '• Catatan: ${_opp.meetingNotes ?? "-"}\n\n'
-                'Jika disetujui, status akan berubah menjadi DIPROSES.',
+                'Silakan pilih tindakan berikut:',
                 style: const TextStyle(fontSize: 12.5, height: 1.4),
               ),
               const SizedBox(height: 12),
@@ -1934,18 +2327,29 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, 'reject'),
-            child: const Text('Tolak Jadwal', style: TextStyle(color: Colors.red)),
+            child: const Text('Tolak', style: TextStyle(color: Colors.red)),
+          ),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0xFF6366F1))),
+            onPressed: () => Navigator.pop(ctx, 'counter'),
+            icon: const Icon(Icons.handshake_rounded, size: 14, color: Color(0xFF6366F1)),
+            label: const Text('Nego Jadwal & Tempat', style: TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.bold)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2563EB)),
             onPressed: () => Navigator.pop(ctx, 'approve'),
-            child: const Text('Setujui (Status: Diproses)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text('Setujui', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
 
     if (decision == null) return;
+
+    if (decision == 'counter') {
+      await _handleAdminCounterMeeting();
+      return;
+    }
 
     setState(() => _actionLoading = true);
     try {
@@ -6233,7 +6637,9 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                       ? const Color(0xFF059669)
                       : (_opp.isMeetingInProcess
                           ? const Color(0xFF2563EB)
-                          : (_opp.isMeetingPending ? const Color(0xFFD97706) : Colors.red.shade700)),
+                          : (_opp.isMeetingCounterByAdmin
+                              ? const Color(0xFF6366F1)
+                              : (_opp.isMeetingPending ? const Color(0xFFD97706) : Colors.red.shade700))),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -6241,7 +6647,9 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                       ? 'TTD BASAH SAH'
                       : (_opp.isMeetingInProcess
                           ? 'STATUS: DIPROSES'
-                          : (_opp.isMeetingPending ? 'STATUS: PENDING' : 'PERLU JADWAL')),
+                          : (_opp.isMeetingCounterByAdmin
+                              ? 'NEGO JADWAL ADMIN'
+                              : (_opp.isMeetingPending ? 'STATUS: PENDING' : 'PERLU JADWAL'))),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -6307,7 +6715,9 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                               ? const Color(0xFF10B981).withValues(alpha: 0.15)
                               : (_opp.isMeetingInProcess
                                   ? const Color(0xFF2563EB).withValues(alpha: 0.15)
-                                  : const Color(0xFFD97706).withValues(alpha: 0.15)),
+                                  : (_opp.isMeetingCounterByAdmin
+                                      ? const Color(0xFF6366F1).withValues(alpha: 0.15)
+                                      : const Color(0xFFD97706).withValues(alpha: 0.15))),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -6315,13 +6725,17 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                               ? 'MoU Fisik Terverifikasi'
                               : (_opp.isMeetingInProcess
                                   ? 'Diproses (Disetujui Admin)'
-                                  : 'Menunggu Persetujuan Admin (Pending)'),
+                                  : (_opp.isMeetingCounterByAdmin
+                                      ? 'Nego Jadwal Admin'
+                                      : 'Menunggu Persetujuan Admin (Pending)')),
                           style: TextStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.bold,
                             color: isMoUConfirmed
                                 ? const Color(0xFF059669)
-                                : (_opp.isMeetingInProcess ? const Color(0xFF2563EB) : const Color(0xFFD97706)),
+                                : (_opp.isMeetingInProcess
+                                    ? const Color(0xFF2563EB)
+                                    : (_opp.isMeetingCounterByAdmin ? const Color(0xFF4F46E5) : const Color(0xFFD97706))),
                           ),
                         ),
                       ),
@@ -6360,7 +6774,136 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                   ],
 
                   // Status Meeting Explanations and Admin Actions
-                  if (_opp.isMeetingPending) ...[
+                  if (_opp.isMeetingCounterByAdmin) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.handshake_rounded, size: 16, color: Color(0xFF6366F1)),
+                              const SizedBox(width: 8),
+                              const Expanded(
+                                child: Text(
+                                  'Admin Mengajukan Nego Jadwal & Lokasi Temu',
+                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF6366F1).withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text('NEGO ADMIN', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Admin Kreavana telah meninjau pengajuan jadwal Anda dan mengusulkan alternatif waktu/lokasi pertemuan:',
+                            style: TextStyle(fontSize: 11, color: isDark ? Colors.white70 : Colors.grey.shade800),
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF13111E) : Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.event_available_rounded, size: 14, color: Color(0xFF4F46E5)),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Tanggal Usulan: ${_opp.meetingCounterDate ?? "-"}  •  Waktu: ${_opp.meetingCounterTime ?? "-"}',
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.place_rounded, size: 14, color: Color(0xFF4F46E5)),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        'Lokasi Usulan: ${_opp.meetingCounterLocation ?? "-"}',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (_opp.meetingCounterNotes != null && _opp.meetingCounterNotes!.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Alasan / Catatan Admin: ${_opp.meetingCounterNotes}',
+                                    style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: isDark ? AppTheme.textMuted : Colors.grey.shade700),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          if (_isOwner) ...[
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: _actionLoading ? null : () => _handleRespondMeetingCounter('counter'),
+                                  icon: const Icon(Icons.edit_calendar_rounded, size: 13, color: Color(0xFFD97706)),
+                                  label: const Text('Tawar Balik', style: TextStyle(color: Color(0xFFD97706), fontSize: 11, fontWeight: FontWeight.bold)),
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: Color(0xFFD97706)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                ElevatedButton.icon(
+                                  onPressed: _actionLoading ? null : () => _handleRespondMeetingCounter('accept'),
+                                  icon: const Icon(Icons.check_circle_rounded, size: 13, color: Colors.white),
+                                  label: const Text('Terima Jadwal Admin', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF10B981),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else if (_isMarketingOrAdmin) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Menunggu respon persetujuan / tawar balik dari pembuat acara.',
+                                  style: TextStyle(fontSize: 10.5, fontStyle: FontStyle.italic, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
+                                ),
+                                TextButton.icon(
+                                  onPressed: _actionLoading ? null : _handleAdminCounterMeeting,
+                                  icon: const Icon(Icons.edit_calendar_rounded, size: 12),
+                                  label: const Text('Ubah Usulan', style: TextStyle(fontSize: 11)),
+                                  style: TextButton.styleFrom(foregroundColor: const Color(0xFF4F46E5)),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ] else if (_opp.isMeetingPending) ...[
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.all(10),
@@ -6384,19 +6927,35 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Jadwal pertemuan fisik telah diajukan oleh pembuat acara. Admin Kreavana akan meninjau dan mengonfirmasi tanggal tersebut.',
+                            'Jadwal pertemuan fisik telah diajukan oleh pembuat acara. Admin Kreavana dapat menyetujui langsung atau mengajukan nego waktu & lokasi jika jadwal padat atau lokasi kejauhan.',
                             style: TextStyle(fontSize: 11, color: isDark ? Colors.white70 : Colors.grey.shade800),
                           ),
                           if (_isMarketingOrAdmin) ...[
-                            const SizedBox(height: 8),
-                            ElevatedButton.icon(
-                              onPressed: _actionLoading ? null : _handleAdminReviewMeeting,
-                              icon: const Icon(Icons.rate_review_rounded, size: 14, color: Colors.white),
-                              label: const Text('Tinjau & Setujui Jadwal Temu', style: TextStyle(fontSize: 11, color: Colors.white)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFD97706),
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: _actionLoading ? null : _handleAdminCounterMeeting,
+                                  icon: const Icon(Icons.handshake_rounded, size: 13, color: Color(0xFF6366F1)),
+                                  label: const Text('Nego Waktu / Lokasi', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF6366F1))),
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: Color(0xFF6366F1)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                ElevatedButton.icon(
+                                  onPressed: _actionLoading ? null : () => _handleAdminReviewMeeting(approveDirectly: true),
+                                  icon: const Icon(Icons.check_circle_rounded, size: 13, color: Colors.white),
+                                  label: const Text('Setujui Jadwal', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF10B981),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ],

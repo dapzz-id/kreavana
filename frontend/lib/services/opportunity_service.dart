@@ -587,17 +587,62 @@ class OpportunityService {
 
   static Future<Map<String, dynamic>> reviewMeeting({
     required String opportunityId,
-    required String decision, // 'approve' | 'reject'
+    required String decision, // 'approve' | 'counter' | 'reject'
     String? notes,
+    String? counterDate,
+    String? counterTime,
+    String? counterLocation,
+    double? counterLat,
+    double? counterLng,
+    String? counterNotes,
   }) async {
     try {
       final res = await ApiService.post('opportunities/$opportunityId/review-meeting', {
         'decision': decision,
         if (notes != null) 'notes': notes,
+        if (counterDate != null) 'counter_date': counterDate,
+        if (counterTime != null) 'counter_time': counterTime,
+        if (counterLocation != null) 'counter_location': counterLocation,
+        if (counterLat != null) 'counter_lat': counterLat,
+        if (counterLng != null) 'counter_lng': counterLng,
+        if (counterNotes != null) 'counter_notes': counterNotes,
       });
       return {
         'status': res['status'] == true,
         'message': res['message'] ?? 'Status jadwal pertemuan berhasil diperbarui.',
+        'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> respondMeetingCounter({
+    required String opportunityId,
+    required String action, // 'accept' | 'counter' | 'decline'
+    String? date,
+    String? time,
+    String? location,
+    double? lat,
+    double? lng,
+    String? notes,
+  }) async {
+    try {
+      final res = await ApiService.post('opportunities/$opportunityId/respond-meeting-counter', {
+        'action': action,
+        if (date != null) 'meeting_date': date,
+        if (time != null) 'meeting_time': time,
+        if (location != null) 'meeting_location': location,
+        if (lat != null) 'meeting_lat': lat,
+        if (lng != null) 'meeting_lng': lng,
+        if (notes != null) 'meeting_notes': notes,
+      });
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Respon tawaran jadwal berhasil dikirim.',
         'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
       };
     } catch (e) {
