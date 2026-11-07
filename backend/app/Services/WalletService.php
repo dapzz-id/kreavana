@@ -51,7 +51,7 @@ class WalletService extends BaseService
 
         $completedDebits = (float) \App\Models\WalletTransaction::where('user_id', $user->id)
             ->where('status', 'completed')
-            ->whereIn('type', ['transfer_send', 'withdrawal', 'payment', 'contract_payment'])
+            ->whereIn('type', ['transfer_send', 'withdrawal', 'payment', 'contract_payment', 'escrow_hold'])
             ->sum('amount');
 
         $netMovement = $completedCredits - $completedDebits;

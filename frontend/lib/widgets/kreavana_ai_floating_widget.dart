@@ -2545,7 +2545,7 @@ class _KreavanaAiPanelState extends State<KreavanaAiPanel> {
             ),
             const SizedBox(width: 6),
             Text(
-              'Rekomendasi Terpilih (Sistem Booster Akun):',
+              'Rekomendasi Akun Terpilih (${cards.length} Kreator):',
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.bold,

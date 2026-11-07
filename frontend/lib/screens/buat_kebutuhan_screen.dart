@@ -81,7 +81,10 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   bool get _isLargeBudget {
     final b = _selectedBudget.toLowerCase();
     if (b.contains('5.000.000 - 20.000.000')) return false;
-    return b.startsWith('>=') || b.contains('skala besar');
+    if (b.contains('20.000.000 - 100.000.000')) return false;
+    return b.contains('100.000.000') ||
+        b.contains('tanda tangan basah') ||
+        (b.startsWith('>=') && !b.contains('2.500.000') && !b.contains('20.000.000'));
   }
 
   bool get _isSchool {
@@ -440,7 +443,8 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
     'Rp 500.000 - 1.000.000',
     'Rp 1.000.000 - 5.000.000',
     'Rp 5.000.000 - 20.000.000',
-    '>= Rp 20.000.000 (Skala Besar - MoU Legal Kreavana)',
+    'Rp 20.000.000 - 100.000.000 (Wajib Tanda Tangan Elektronik Dynamic)',
+    '>= Rp 100.000.000 (Skala Besar - Wajib Tanda Tangan Basah & MoU Fisik)',
   ];
 
   static const _schoolBudgetItems = [
@@ -2682,7 +2686,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '⚖️ Prosedur MoU Legal (Anggaran >= Rp 20 Jt)',
+                      '⚖️ Prosedur MoU Legal & Tanda Tangan Basah (Anggaran >= Rp 100 Jt)',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -2691,7 +2695,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Wajib Tanda Tangan Dokumen Kontrak Resmi Kreavana',
+                      'Wajib Tanda Tangan Dokumen Fisik (Tanda Tangan Basah) Resmi Kreavana',
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,
@@ -2705,7 +2709,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Demi kepatuhan regulasi perbankan & hukum, proyek skala besar wajib didahului penandatanganan MoU:',
+            'Demi kepatuhan regulasi perbankan & hukum, proyek bernilai Rp 100 Juta ke atas wajib didahului penandatanganan MoU dokumen fisik (tanda tangan basah):',
             style: TextStyle(
               fontSize: 11.5,
               height: 1.4,
@@ -3015,7 +3019,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  '🛡️ Sistem Escrow Rekber Kreavana Aktif',
+                  '🛡️ Sistem Escrow & Tanda Tangan Elektronik Dynamic',
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.bold,
@@ -3024,7 +3028,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Anggaran < Rp 20 Juta ditampung aman di Rekening Bersama Kreavana. Dana hanya dicairkan kepada kreator setelah hasil kerja diverifikasi.',
+                  'Anggaran < Rp 100 Juta wajib menandatangani Kontrak Elektronik Dynamic saat memulai acara. Saldo akan ditahan aman di Escrow Rekber Kreavana hingga pekerjaan terverifikasi.',
                   style: TextStyle(
                     fontSize: 11.5,
                     height: 1.35,

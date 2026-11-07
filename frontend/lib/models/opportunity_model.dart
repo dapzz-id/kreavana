@@ -231,6 +231,14 @@ class OpportunityModel {
   final double? externalRating;
   final String? externalRatingSource;
   final String? externalProofUrl;
+  final String? signatureType; // 'wet_signature' | 'dynamic_electronic'
+  final String? clientSignature;
+  final String? clientSignedAt;
+  final String? wetSignatureDocumentUrl;
+  final String? wetSignatureVerifiedAt;
+  final double? escrowAmount;
+  final bool isWetSignatureRequired;
+  final bool isDynamicSignatureRequired;
 
   OpportunityModel({
     required this.id,
@@ -271,6 +279,14 @@ class OpportunityModel {
     this.externalRating,
     this.externalRatingSource,
     this.externalProofUrl,
+    this.signatureType,
+    this.clientSignature,
+    this.clientSignedAt,
+    this.wetSignatureDocumentUrl,
+    this.wetSignatureVerifiedAt,
+    this.escrowAmount,
+    this.isWetSignatureRequired = false,
+    this.isDynamicSignatureRequired = true,
   });
 
   bool get isLocation => type == 'location';
@@ -301,15 +317,31 @@ class OpportunityModel {
 
   bool get canApply => status.toLowerCase() == 'open' && !isEventRunning;
 
-  bool get isLargeTransaction {
+  bool get isWetSignatureBudget {
+    if (isWetSignatureRequired) return true;
+    if (signatureType == 'wet_signature') return true;
     final b = (budgetRange ?? '').toLowerCase();
     if (b.contains('5.000.000 - 20.000.000')) return false;
-    return b.startsWith('>=') ||
-        b.contains('>= 20.000.000') ||
-        b.contains('skala besar') ||
-        b.contains('mou') ||
-        (meetingStatus != 'not_required' && meetingStatus.isNotEmpty);
+    if (b.contains('20.000.000 - 100.000.000')) return false;
+    return b.contains('100.000.000') ||
+        b.contains('tanda tangan basah') ||
+        (b.startsWith('>=') && !b.contains('2.500.000') && !b.contains('20.000.000'));
   }
+
+  bool get isDynamicSignatureBudget => !isWetSignatureBudget;
+
+  bool get isContractSigned {
+    if (isWetSignatureBudget) {
+      return (wetSignatureDocumentUrl != null && wetSignatureDocumentUrl!.isNotEmpty) ||
+          (wetSignatureVerifiedAt != null && wetSignatureVerifiedAt!.isNotEmpty) ||
+          meetingStatus == 'verified_paid';
+    } else {
+      return (clientSignature != null && clientSignature!.isNotEmpty) ||
+          (clientSignedAt != null && clientSignedAt!.isNotEmpty);
+    }
+  }
+
+  bool get isLargeTransaction => isWetSignatureBudget;
 
   String get effectiveBannerUrl => (bannerUrl != null && bannerUrl!.isNotEmpty)
       ? bannerUrl!
@@ -381,6 +413,14 @@ class OpportunityModel {
     double? externalRating,
     String? externalRatingSource,
     String? externalProofUrl,
+    String? signatureType,
+    String? clientSignature,
+    String? clientSignedAt,
+    String? wetSignatureDocumentUrl,
+    String? wetSignatureVerifiedAt,
+    double? escrowAmount,
+    bool? isWetSignatureRequired,
+    bool? isDynamicSignatureRequired,
   }) {
     return OpportunityModel(
       id: id ?? this.id,
@@ -421,6 +461,14 @@ class OpportunityModel {
       externalRating: externalRating ?? this.externalRating,
       externalRatingSource: externalRatingSource ?? this.externalRatingSource,
       externalProofUrl: externalProofUrl ?? this.externalProofUrl,
+      signatureType: signatureType ?? this.signatureType,
+      clientSignature: clientSignature ?? this.clientSignature,
+      clientSignedAt: clientSignedAt ?? this.clientSignedAt,
+      wetSignatureDocumentUrl: wetSignatureDocumentUrl ?? this.wetSignatureDocumentUrl,
+      wetSignatureVerifiedAt: wetSignatureVerifiedAt ?? this.wetSignatureVerifiedAt,
+      escrowAmount: escrowAmount ?? this.escrowAmount,
+      isWetSignatureRequired: isWetSignatureRequired ?? this.isWetSignatureRequired,
+      isDynamicSignatureRequired: isDynamicSignatureRequired ?? this.isDynamicSignatureRequired,
     );
   }
 
@@ -506,6 +554,19 @@ class OpportunityModel {
           : null,
       externalRatingSource: json['external_rating_source']?.toString(),
       externalProofUrl: json['external_proof_url']?.toString(),
+      signatureType: json['signature_type']?.toString(),
+      clientSignature: json['client_signature']?.toString(),
+      clientSignedAt: json['client_signed_at']?.toString(),
+      wetSignatureDocumentUrl: json['wet_signature_document_url']?.toString(),
+      wetSignatureVerifiedAt: json['wet_signature_verified_at']?.toString(),
+      escrowAmount: json['escrow_amount'] != null
+          ? (json['escrow_amount'] is num
+              ? (json['escrow_amount'] as num).toDouble()
+              : double.tryParse(json['escrow_amount'].toString()))
+          : null,
+      isWetSignatureRequired: json['is_wet_signature_required'] == true,
+      isDynamicSignatureRequired: json['is_dynamic_signature_required'] == true ||
+          json['signature_type'] == 'dynamic_electronic',
     );
   }
 
@@ -548,6 +609,14 @@ class OpportunityModel {
       'external_rating': externalRating,
       'external_rating_source': externalRatingSource,
       'external_proof_url': externalProofUrl,
+      'signature_type': signatureType,
+      'client_signature': clientSignature,
+      'client_signed_at': clientSignedAt,
+      'wet_signature_document_url': wetSignatureDocumentUrl,
+      'wet_signature_verified_at': wetSignatureVerifiedAt,
+      'escrow_amount': escrowAmount,
+      'is_wet_signature_required': isWetSignatureRequired,
+      'is_dynamic_signature_required': isDynamicSignatureRequired,
     };
   }
 

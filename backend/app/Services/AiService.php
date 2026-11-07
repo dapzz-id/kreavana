@@ -157,16 +157,11 @@ class AiService extends BaseService implements AiServiceInterface
 
             if ($includeData) {
                 try {
-                    $recommendationCards = $this->findRelevantCreators($message, 6);
+                    $recommendationCards = $this->findRelevantCreators($message, 100);
 
                     if (!empty($recommendationCards)) {
-                        $creatorsContext = "\n\n[DATA PLATFORM KREAVANA TERKAIT]:\nBerikut adalah data profil kreator terverifikasi di Kreavana yang paling relevan dengan kebutuhan pengguna:\n";
-                        foreach ($recommendationCards as $c) {
-                            $subRoleName = $c['sub_role_label'] ?? ($c['sub_role'] ?? 'Kreator');
-                            $loc = $c['location'] ?? 'Indonesia';
-                            $creatorsContext .= "- {$c['name']} (@{$c['username']}) | Keahlian: {$subRoleName} | Lokasi: {$loc}\n";
-                        }
-                        $prompt = $message . $creatorsContext . "\nSilakan berikan jawaban rekomendasi yang cerdas, terstruktur, ramah, dan informatif untuk pengguna berdasarkan pertanyaan dan data kreator di atas. Sebutkan keunggulan kreator yang relevan.";
+                        $count = count($recommendationCards);
+                        $prompt = $message . "\n\n[SISTEM PLATFORM KREAVANA]:\nDitemukan {$count} akun kreator terverifikasi yang cocok dengan kriteria pencarian dan telah ditampilkan secara visual pada daftar kartu rekomendasi sistem.\nTUGAS ANDA: Berikan pesan pengantar yang sangat singkat, ramah, dan langsung ke intinya (cukup 1-2 kalimat saja, contoh: 'Berikut adalah rekomendasi {$count} akun kreator terverifikasi di Kreavana yang sesuai dengan kebutuhan Anda:').\nATURAN KETAT: JANGAN menjabarkan atau menjelaskan kelebihan, ulasan, atau profil kreator satu per satu di rangkuman teks ini, karena seluruh akun beserta portofolio dan profil lengkapnya sudah ditampilkan langsung pada kartu rekomendasi sistem.";
                     }
                 } catch (\Throwable $e) {
                     // Fallback to original prompt if query fails
@@ -189,7 +184,7 @@ class AiService extends BaseService implements AiServiceInterface
      * Mendukung deteksi sub-role spesifik (Wedding Organizer, Videografer, Fotografer, dll.),
      * deteksi lokasi geografis (Bekasi, Jakarta, Bandung, dll.), serta perangkingan booster akun.
      */
-    protected function findRelevantCreators(string $message, int $limit = 6): array
+    protected function findRelevantCreators(string $message, int $limit = 100): array
     {
         $normalizedMsg = strtolower($message);
 

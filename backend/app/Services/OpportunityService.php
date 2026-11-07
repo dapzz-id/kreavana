@@ -9,9 +9,14 @@ use App\Models\Opportunity;
 use App\Models\OpportunityRequirement;
 use App\Models\OpportunityApplication;
 use App\Models\User;
+use App\Models\JobContract;
+use App\Models\WalletTransaction;
 use App\Enums\RoleType;
+use App\Enums\ContractStatus;
+use App\Enums\WorkStatus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Exception;
 
 class OpportunityService extends BaseService
@@ -60,6 +65,9 @@ class OpportunityService extends BaseService
     public function createOpportunity(string $userId, array $data, $posterFile = null)
     {
         return DB::transaction(function () use ($userId, $data, $posterFile) {
+            $isAbove100Jt = self::isBudgetAbove100Jt($data['budget_range'] ?? '');
+            $data['signature_type'] = $isAbove100Jt ? 'wet_signature' : 'dynamic_electronic';
+            $data['escrow_status'] = 'none';
             $data['status'] = 'open';
             $data['posted_by'] = $userId;
             $data['created_at'] = now();
@@ -265,11 +273,63 @@ class OpportunityService extends BaseService
         })->toArray();
     }
 
-    public function startEvent(string $opportunityId, string $userId): array
+    /**
+     * Cek apakah budget bernilai Rp 100 Juta ke atas (membutuhkan Tanda Tangan Basah)
+     */
+    public static function isBudgetAbove100Jt(?string $budgetRange, float $calculatedAmount = 0.0): bool
     {
-        return DB::transaction(function () use ($opportunityId, $userId) {
+        if ($calculatedAmount >= 100000000) {
+            return true;
+        }
+
+        if (empty($budgetRange)) {
+            return false;
+        }
+
+        $lower = strtolower($budgetRange);
+        if (str_contains($lower, '100.000.000') || str_contains($lower, '100jt') || str_contains($lower, '100 jt')) {
+            return true;
+        }
+
+        if (preg_match('/100[\s\.\,]*000[\s\.\,]*000/i', $budgetRange)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Tanda tangani kontrak perjanjian acara secara elektronik dinamis.
+     */
+    public function signContract(string $opportunityId, string $userId, array $data): array
+    {
+        return DB::transaction(function () use ($opportunityId, $userId, $data) {
             $opp = Opportunity::where('id', $opportunityId)->lockForUpdate()->firstOrFail();
             $user = User::where('id', $userId)->firstOrFail();
+
+            if ($opp->posted_by !== $userId && $user->role !== RoleType::Admin) {
+                abort(403, 'Hanya pembuat proyek yang dapat menandatangani dokumen ini.');
+            }
+
+            $signature = $data['signature'] ?? $data['electronic_signature'] ?? null;
+            if (empty($signature)) {
+                abort(422, 'Data tanda tangan elektronik dynamic tidak boleh kosong.');
+            }
+
+            $opp->signature_type = 'dynamic_electronic';
+            $opp->client_signature = (string) $signature;
+            $opp->client_signed_at = now();
+            $opp->save();
+
+            return $this->formatOpportunity($opp->fresh(['approvedApplications.creator', 'user']), true);
+        });
+    }
+
+    public function startEvent(string $opportunityId, string $userId, array $data = []): array
+    {
+        return DB::transaction(function () use ($opportunityId, $userId, $data) {
+            $opp = Opportunity::where('id', $opportunityId)->lockForUpdate()->firstOrFail();
+            $user = User::where('id', $userId)->lockForUpdate()->firstOrFail();
 
             if ($opp->posted_by !== $userId && $user->role !== RoleType::Admin) {
                 abort(403, 'Hanya pembuat proyek yang dapat memulai acara.');
@@ -280,30 +340,121 @@ class OpportunityService extends BaseService
             }
 
             // Must have at least 1 approved creator to start event
-            $approvedCount = OpportunityApplication::where('opportunity_id', $opp->id)
+            $approvedApps = OpportunityApplication::where('opportunity_id', $opp->id)
                 ->where('status', 'approved')
-                ->count();
+                ->with('creator')
+                ->get();
 
-            if ($approvedCount === 0) {
+            if ($approvedApps->isEmpty()) {
                 abort(422, 'Tidak dapat memulai acara: Belum ada kreator yang disetujui (minimal 1 kreator).');
             }
 
+            // Hitung total nilai kontrak dari kreator yang disetujui
+            $totalEscrow = 0.0;
+            foreach ($approvedApps as $app) {
+                $price = (float) ($app->counter_offer_price ?: $app->bid_price ?: 0);
+                $totalEscrow += $price;
+            }
+
+            // Fallback parse dari budget range jika tidak ada penawaran nominal khusus
+            if ($totalEscrow <= 0 && !empty($opp->budget_range)) {
+                if (preg_match('/(\d[\d\.\,]*)/', $opp->budget_range, $matches)) {
+                    $cleaned = (float) str_replace(['.', ','], '', $matches[1]);
+                    if ($cleaned > 0) {
+                        $totalEscrow = $cleaned;
+                    }
+                }
+            }
+
+            // Revisi 2: Cek Tanda Tangan (Budget >= 100jt -> Tanda Tangan Basah, < 100jt -> Tanda Tangan Elektronik Dynamic)
+            $isWetSignatureRequired = self::isBudgetAbove100Jt($opp->budget_range, $totalEscrow);
+
+            if ($isWetSignatureRequired) {
+                $hasWetSignature = !empty($opp->wet_signature_document_url) || !empty($opp->wet_signature_verified_at) || $opp->meeting_status === 'verified_paid';
+                if (!$hasWetSignature) {
+                    abort(422, 'Budget acara mencapai Rp 100 Juta ke atas. Sesuai regulasi hukum dan standar keamanan, wajib menandatangani dokumen perjanjian fisik (Tanda Tangan Basah) dan diverifikasi sebelum acara dapat dimulai.');
+                }
+                $opp->signature_type = 'wet_signature';
+            } else {
+                // Budget < 100jt: Wajib tanda tangan elektronik dynamic
+                $dynamicSignature = $data['signature'] ?? $data['electronic_signature'] ?? $opp->client_signature ?? null;
+                if (empty($dynamicSignature) && empty($opp->client_signed_at)) {
+                    abort(422, 'Wajib menandatangani Tanda Tangan Elektronik Dynamic secara sah sebelum memulai acara.');
+                }
+
+                $opp->signature_type = 'dynamic_electronic';
+                if (!empty($dynamicSignature)) {
+                    $opp->client_signature = (string) $dynamicSignature;
+                }
+                if (empty($opp->client_signed_at)) {
+                    $opp->client_signed_at = now();
+                }
+            }
+
+            // Revisi 3: Saldo harus mencukupi dan ditahan menjadi Escrow
+            if ($user->balance < $totalEscrow) {
+                abort(422, 'Saldo dompet Anda tidak mencukupi untuk memulai acara. Saldo saat ini: Rp ' . number_format($user->balance, 0, ',', '.') . ', Saldo Escrow yang dibutuhkan: Rp ' . number_format($totalEscrow, 0, ',', '.') . '. Silakan isi saldo (top up) terlebih dahulu.');
+            }
+
+            if ($totalEscrow > 0) {
+                $user->balance -= $totalEscrow;
+                $user->save();
+
+                $refNumber = 'ESCROW-' . strtoupper(Str::random(8)) . '-' . time();
+                $walletTx = WalletTransaction::create([
+                    'user_id' => $user->id,
+                    'type' => 'escrow_hold',
+                    'amount' => $totalEscrow,
+                    'fee' => 0.00,
+                    'payment_method' => 'wallet',
+                    'payment_provider' => 'Kreavana Escrow',
+                    'status' => 'completed',
+                    'reference_number' => $refNumber,
+                    'description' => "Penahanan saldo escrow untuk acara '{$opp->title}' (" . $approvedApps->count() . " kreator disetujui).",
+                ]);
+                $walletTx->ledger_hash = $walletTx->generateLedgerHash();
+                $walletTx->save();
+            }
+
+            $opp->escrow_status = 'held';
+            $opp->escrow_amount = $totalEscrow;
             $opp->status = 'in_progress';
             if ($opp->event_progress == 0) {
                 $opp->event_progress = 30; // Start at 30% (Persiapan Selesai, Acara Dimulai)
             }
             $opp->save();
 
-            // Notify all approved creators that the event has started!
-            $approvedCreators = OpportunityApplication::where('opportunity_id', $opp->id)
-                ->where('status', 'approved')
-                ->pluck('creator_id');
+            // Sinkronisasi pembuatan / update JobContract resmi untuk setiap kreator yang disetujui
+            foreach ($approvedApps as $app) {
+                $appPrice = (float) ($app->counter_offer_price ?: $app->bid_price ?: ($totalEscrow / max(1, $approvedApps->count())));
+                JobContract::updateOrCreate(
+                    [
+                        'opportunity_id' => $opp->id,
+                        'creator_id' => $app->creator_id,
+                    ],
+                    [
+                        'client_id' => $userId,
+                        'title' => $opp->title,
+                        'description' => $opp->description,
+                        'agreed_price' => $appPrice,
+                        'escrow_amount' => $appPrice,
+                        'contract_status' => ContractStatus::EscrowPaid,
+                        'work_status' => WorkStatus::InProgress,
+                        'started_at' => now(),
+                        'creator_approved' => true,
+                        'client_approved' => true,
+                        'client_approved_at' => now(),
+                        'creator_approved_at' => $app->reviewed_at ?? now(),
+                    ]
+                );
+            }
 
-            foreach ($approvedCreators as $creatorId) {
+            // Notify all approved creators that the event has started and funds are secured in escrow!
+            foreach ($approvedApps as $app) {
                 $this->notificationRepo->create([
-                    'user_id' => $creatorId,
-                    'title' => 'Acara Telah Dimulai!',
-                    'message' => 'Acara "' . $opp->title . '" resmi dimulai. Silakan mulai koordinasi dan serahkan dokumen/hasil karya.',
+                    'user_id' => $app->creator_id,
+                    'title' => 'Acara Telah Dimulai & Dana Escrow Diamankan!',
+                    'message' => 'Acara "' . $opp->title . '" resmi dimulai. Dana kontrak sebesar Rp ' . number_format($totalEscrow, 0, ',', '.') . ' telah diamankan dalam Escrow Kreavana.',
                     'type' => 'project',
                     'data' => ['opportunity_id' => $opp->id],
                     'is_read' => false,
@@ -688,6 +839,8 @@ class OpportunityService extends BaseService
 
     private function formatOpportunity($opp, bool $includeFull = false): array
     {
+        $isAbove100Jt = self::isBudgetAbove100Jt($opp->budget_range, (float) ($opp->escrow_amount ?? 0));
+
         $data = [
             'id' => $opp->id,
             'title' => $opp->title,
@@ -720,6 +873,14 @@ class OpportunityService extends BaseService
             'meeting_notes' => $opp->meeting_notes,
             'meeting_status' => $opp->meeting_status ?? 'not_required',
             'escrow_status' => $opp->escrow_status ?? 'none',
+            'signature_type' => $opp->signature_type ?? ($isAbove100Jt ? 'wet_signature' : 'dynamic_electronic'),
+            'client_signature' => $opp->client_signature,
+            'client_signed_at' => $opp->client_signed_at?->toIso8601String(),
+            'wet_signature_document_url' => $opp->wet_signature_document_url,
+            'wet_signature_verified_at' => $opp->wet_signature_verified_at?->toIso8601String(),
+            'escrow_amount' => (float) ($opp->escrow_amount ?? 0),
+            'is_wet_signature_required' => $isAbove100Jt,
+            'is_dynamic_signature_required' => !$isAbove100Jt,
             'event_progress' => (int) ($opp->event_progress ?? 0),
             'posted_by' => $opp->posted_by,
             'created_at' => $opp->created_at?->toIso8601String(),

@@ -416,12 +416,15 @@ class OpportunityService {
           meetingLat: meetingLat,
           meetingLng: meetingLng,
           meetingNotes: meetingNotes,
-          meetingStatus: (budgetRange != null && (budgetRange.contains('20.000.000') || budgetRange.contains('MoU')))
+          meetingStatus: (budgetRange != null && (budgetRange.contains('100.000.000') || budgetRange.contains('MoU Fisik') || budgetRange.contains('tanda tangan basah')))
               ? 'pending_marketing_review'
               : 'not_required',
-          escrowStatus: (budgetRange != null && (budgetRange.contains('20.000.000') || budgetRange.contains('MoU')))
+          escrowStatus: (budgetRange != null && (budgetRange.contains('100.000.000') || budgetRange.contains('MoU Fisik') || budgetRange.contains('tanda tangan basah')))
               ? 'none'
               : 'pending_deposit',
+          signatureType: (budgetRange != null && (budgetRange.contains('100.000.000') || budgetRange.contains('MoU Fisik') || budgetRange.contains('tanda tangan basah')))
+              ? 'wet_signature'
+              : 'dynamic_electronic',
           status: 'open',
           poster: poster,
           externalRating: externalRating,
@@ -445,12 +448,48 @@ class OpportunityService {
     };
   }
 
-  static Future<Map<String, dynamic>> startEvent(String opportunityId) async {
+  static Future<Map<String, dynamic>> startEvent(
+    String opportunityId, {
+    String? signature,
+    String? signatureType,
+    String? documentUrl,
+  }) async {
     try {
-      final res = await ApiService.post('opportunities/$opportunityId/start-event', {});
+      final body = <String, dynamic>{};
+      if (signature != null && signature.isNotEmpty) body['signature'] = signature;
+      if (signatureType != null && signatureType.isNotEmpty) body['signature_type'] = signatureType;
+      if (documentUrl != null && documentUrl.isNotEmpty) body['document_url'] = documentUrl;
+
+      final res = await ApiService.post('opportunities/$opportunityId/start-event', body);
       return {
         'status': res['status'] == true,
         'message': res['message'] ?? 'Acara resmi dimulai!',
+        'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> signContract({
+    required String opportunityId,
+    String? signature,
+    String? signatureType,
+    String? documentUrl,
+  }) async {
+    try {
+      final body = <String, dynamic>{};
+      if (signature != null && signature.isNotEmpty) body['signature'] = signature;
+      if (signatureType != null && signatureType.isNotEmpty) body['signature_type'] = signatureType;
+      if (documentUrl != null && documentUrl.isNotEmpty) body['document_url'] = documentUrl;
+
+      final res = await ApiService.post('opportunities/$opportunityId/sign-contract', body);
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Kontrak berhasil ditandatangani.',
         'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
       };
     } catch (e) {

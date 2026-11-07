@@ -289,13 +289,31 @@ class OpportunityController extends Controller
         }
     }
 
+    public function signContract(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+
+        $request->validate([
+            'signature' => 'required|string',
+        ]);
+
+        try {
+            $opp = $this->opportunityService->signContract($id, $user->id, $request->all());
+            return $this->successResponse('Tanda tangan elektronik dynamic berhasil disimpan.', $opp);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
     public function startEvent(Request $request, string $id)
     {
         $user = Auth::guard('api')->user();
 
         try {
-            $opp = $this->opportunityService->startEvent($id, $user->id);
-            return $this->successResponse('Acara berhasil dimulai! Status proyek kini berlangsung dan pendaftaran ditutup.', $opp);
+            $opp = $this->opportunityService->startEvent($id, $user->id, $request->all());
+            return $this->successResponse('Acara berhasil dimulai! Status proyek kini berlangsung, tanda tangan telah sah, dan dana escrow telah diamankan.', $opp);
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             return $this->errorResponse($e->getMessage(), $e->getStatusCode());
         } catch (\Exception $e) {

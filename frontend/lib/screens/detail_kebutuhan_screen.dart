@@ -21,6 +21,8 @@ import '../widgets/verification_badge.dart';
 import '../widgets/upgrade_plan_modal.dart';
 import '../widgets/app_sweet_alert.dart';
 import '../services/user_store.dart';
+import '../services/wallet_service.dart';
+import 'wallet_screen.dart';
 import 'proyek_saya_screen.dart';
 
 class DetailKebutuhanScreen extends StatefulWidget {
@@ -614,8 +616,8 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
   }
 
   Future<void> _handleStartEvent() async {
-    final approvedCount = _applications.where((a) => a.isApproved).length;
-    if (approvedCount == 0 && _opp.approvedCreators.isEmpty) {
+    final approvedApps = _applications.where((a) => a.isApproved).toList();
+    if (approvedApps.isEmpty && _opp.approvedCreators.isEmpty) {
       AppSnackbar.warning(
         context,
         'Belum ada kreator yang disetujui! Setujui minimal 1 pelamar sebelum memulai acara.',
@@ -623,49 +625,391 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
       return;
     }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.play_circle_fill_rounded, color: Colors.green),
-            SizedBox(width: 8),
-            Text('Mulai Acara Sekarang?'),
+    // Hitung total escrow yang diperlukan
+    double totalEscrow = 0;
+    for (final a in approvedApps) {
+      final price = (a.counterOfferPrice != null && a.counterOfferPrice! > 0)
+          ? a.counterOfferPrice!
+          : (a.bidPrice ?? 0);
+      totalEscrow += price;
+    }
+    if (totalEscrow <= 0 && _opp.escrowAmount != null && _opp.escrowAmount! > 0) {
+      totalEscrow = _opp.escrowAmount!;
+    }
+
+    final currencyFmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+
+    // KASUS 1: Budget >= 100 Jt -> Wajib Tanda Tangan Basah & MoU Fisik
+    if (_opp.isWetSignatureBudget) {
+      final isWetSigned = _opp.isContractSigned ||
+          (_opp.wetSignatureDocumentUrl != null && _opp.wetSignatureDocumentUrl!.isNotEmpty) ||
+          (_opp.wetSignatureVerifiedAt != null && _opp.wetSignatureVerifiedAt!.isNotEmpty) ||
+          _opp.meetingStatus == 'verified_paid';
+
+      if (!isWetSigned) {
+        await showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.gavel_rounded, color: Color(0xFFD97706)),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Wajib Tanda Tangan Basah',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+                  ),
+                  child: const Text(
+                    'Proyek ini memiliki anggaran skala besar (>= Rp 100.000.000).\n\n'
+                    'Sesuai regulasi hukum & perbankan:\n'
+                    '1. Wajib penandatanganan dokumen fisik (Tanda Tangan Basah) dan MoU resmi tatap muka.\n'
+                    '2. Dokumen fisik harus diverifikasi oleh Tim Legal Kreavana sebelum acara resmi dapat dimulai.',
+                    style: TextStyle(fontSize: 12.5, height: 1.4),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Status saat ini: Menunggu TTD Basah / Verifikasi Dokumen Fisik.',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange.shade800),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Tutup'),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD97706)),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _handleScheduleMeeting();
+                },
+                icon: const Icon(Icons.calendar_month_rounded, size: 16, color: Colors.white),
+                label: const Text('Jadwalkan MoU', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+    }
+
+    // KASUS 2: Cek Saldo Wallet untuk Escrow Hold
+    setState(() => _actionLoading = true);
+    double userBalance = 0;
+    try {
+      final walletInfo = await WalletService.getWalletInfo();
+      if (walletInfo['success'] == true) {
+        userBalance = (walletInfo['balance'] as num).toDouble();
+      }
+    } catch (_) {}
+    setState(() => _actionLoading = false);
+
+    if (totalEscrow > 0 && userBalance < totalEscrow) {
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.account_balance_wallet_rounded, color: Colors.red),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Saldo Tidak Mencukupi', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Untuk memulai acara, saldo Anda harus mencukupi untuk ditahan menjadi Escrow Rekber Kreavana bagi kreator yang telah disetujui.',
+                style: TextStyle(fontSize: 12.5, height: 1.4),
+              ),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Total Escrow Diperlukan:', style: TextStyle(fontSize: 12)),
+                        Text(currencyFmt.format(totalEscrow), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red)),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Saldo Anda Saat Ini:', style: TextStyle(fontSize: 12)),
+                        Text(currencyFmt.format(userBalance), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const Divider(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Kekurangan Dana:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        Text(currencyFmt.format(totalEscrow - userBalance), style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Colors.red)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Batal'),
+            ),
+            if (widget.user != null)
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669)),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => WalletScreen(
+                        user: widget.user!,
+                        onUserUpdated: (_) {},
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.add_card_rounded, size: 16, color: Colors.white),
+                label: const Text('Top Up Saldo Sekarang', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
           ],
         ),
-        content: const Text(
-          'Status proyek akan diubah menjadi "Sedang Berlangsung".\n\n'
-          '• Pendaftaran bagi kreator lain akan ditutup secara otomatis.\n'
-          '• Proyek tetap dapat dilihat oleh kreator lain di feed eksplorasi.\n'
-          '• Nama-nama kreator yang diterima dan berpartisipasi akan ditampilkan secara publik.\n'
-          '• Anda dapat memantau dan memperbarui progress acara.',
-          style: TextStyle(fontSize: 13, height: 1.4),
+      );
+      return;
+    }
+
+    // KASUS 3: Konfirmasi & Tanda Tangan Elektronik Dynamic (< 100 Jt)
+    String dynamicSignaturePayload = '';
+    if (_opp.isDynamicSignatureBudget) {
+      final signerName = widget.user?.name ?? widget.user?.username ?? 'Klien';
+      final signerController = TextEditingController(text: signerName);
+      bool agreeContract = false;
+
+      final signConfirmed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) {
+          return StatefulBuilder(
+            builder: (ctx, setDialogState) {
+              return AlertDialog(
+                title: const Row(
+                  children: [
+                    Icon(Icons.draw_rounded, color: Color(0xFF3B82F6)),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text('Tanda Tangan Elektronik Dynamic', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3B82F6).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.2)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.verified_user_rounded, color: Color(0xFF3B82F6), size: 16),
+                                SizedBox(width: 6),
+                                Text('Ketentuan Mulai Acara & Escrow', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8))),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '• Anggaran: < Rp 100 Jt (Wajib Tanda Tangan Elektronik Dynamic)\n'
+                              '• Total Escrow Ditahan: ${currencyFmt.format(totalEscrow)}\n'
+                              '• Saldo Terpakai: ${currencyFmt.format(totalEscrow)} dari saldo ${currencyFmt.format(userBalance)}\n'
+                              '• Honor kreator diamankan di Rekber hingga pekerjaan selesai.',
+                              style: const TextStyle(fontSize: 11.5, height: 1.4),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      const Text('Nama Lengkap Penandatangan *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: signerController,
+                        decoration: InputDecoration(
+                          hintText: 'Nama lengkap Anda',
+                          prefixIcon: const Icon(Icons.person_outline_rounded, size: 18),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.fingerprint_rounded, size: 16, color: Colors.blueGrey),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Dynamic Hash: SIG-${DateTime.now().millisecondsSinceEpoch}-${widget.user?.id?.substring(0, 6) ?? "0000"}',
+                                style: const TextStyle(fontSize: 10, fontFamily: 'monospace', color: Colors.blueGrey),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      InkWell(
+                        onTap: () {
+                          setDialogState(() {
+                            agreeContract = !agreeContract;
+                          });
+                        },
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Checkbox(
+                              value: agreeContract,
+                              activeColor: const Color(0xFF059669),
+                              onChanged: (v) {
+                                setDialogState(() {
+                                  agreeContract = v ?? false;
+                                });
+                              },
+                            ),
+                            const Expanded(
+                              child: Padding(
+                                padding: EdgeInsets.only(top: 8.0),
+                                child: Text(
+                                  'Saya secara sadar menandatangani kontrak kerja ini secara elektronik dan menyetujui saldo sebesar nilai kontrak ditahan ke Escrow Kreavana.',
+                                  style: TextStyle(fontSize: 11.5, height: 1.3),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Batal'),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: agreeContract ? const Color(0xFF059669) : Colors.grey,
+                    ),
+                    onPressed: agreeContract && signerController.text.trim().isNotEmpty
+                        ? () {
+                            dynamicSignaturePayload = 'DIGITAL_SIGNATURE:${signerController.text.trim()}:${DateTime.now().toIso8601String()}:SECURE_ESCROW';
+                            Navigator.pop(ctx, true);
+                          }
+                        : null,
+                    child: const Text(
+                      'Tandatangani & Mulai Acara',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+
+      if (signConfirmed != true) return;
+    } else {
+      // Untuk budget >= 100jt yang dokumen basahnya sudah verified
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.play_circle_fill_rounded, color: Colors.green),
+              SizedBox(width: 8),
+              Text('Mulai Acara (TTD Basah Terverifikasi)?'),
+            ],
+          ),
+          content: Text(
+            'Dokumen MoU fisik & Tanda Tangan Basah telah terverifikasi.\n\n'
+            'Saldo sebesar ${currencyFmt.format(totalEscrow)} akan dialihkan ke dalam penampungan Escrow resmi.\n'
+            'Pendaftaran ditutup dan acara resmi berjalan.',
+            style: const TextStyle(fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669)),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Ya, Mulai Acara', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669)),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Ya, Mulai Acara', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
+      );
+      if (confirmed != true) return;
+    }
 
-    if (confirmed != true) return;
-
+    // Eksekusi Mulai Acara ke API
     setState(() => _actionLoading = true);
     try {
-      final res = await OpportunityService.startEvent(_opp.id ?? '');
+      final res = await OpportunityService.startEvent(
+        _opp.id ?? '',
+        signature: dynamicSignaturePayload.isNotEmpty ? dynamicSignaturePayload : null,
+        signatureType: _opp.isWetSignatureBudget ? 'wet_signature' : 'dynamic_electronic',
+      );
       if (mounted) {
         if (res['status'] == true && res['data'] != null) {
           setState(() {
             _opp = res['data'] as OpportunityModel;
           });
-          AppSnackbar.success(context, 'Acara resmi dimulai! Pendaftaran pelamar baru ditutup.');
+          AppSnackbar.success(
+            context,
+            'Acara resmi dimulai dan saldo berhasil diamankan ke dalam Escrow Rekber!',
+          );
           await _fetchApplications();
         } else {
           AppSnackbar.error(context, res['message'] ?? 'Gagal memulai acara.');
@@ -4367,9 +4711,13 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
   // ── High-Value MoU & Escrow Protocol Card ──────────────────────────────────
   Widget _buildHighValueMoUCard(bool isDark) {
     final isLarge = _opp.isLargeTransaction;
+    final currencyFmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
     if (!isLarge) {
-      // Standard Escrow Protection Card (< 20 Jt)
+      // Standard Escrow & Dynamic Signature Card (< 100 Jt)
+      final isSigned = _opp.clientSignature != null || _opp.clientSignedAt != null;
+      final isEscrowHeld = _opp.escrowStatus == 'held' || _opp.escrowStatus == 'held_in_escrow' || _opp.status == 'in_progress';
+
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(18),
@@ -4380,56 +4728,111 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
             color: const Color(0xFF06B6D4).withValues(alpha: 0.3),
           ),
         ),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFF06B6D4).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.security_rounded,
-                color: Color(0xFF06B6D4),
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF06B6D4).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.security_rounded,
+                    color: Color(0xFF06B6D4),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Escrow Rekening Bersama Kreavana',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Escrow & Kontrak Elektronik Dynamic (< Rp 100 Jt)',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isSigned
+                                  ? const Color(0xFF059669).withValues(alpha: 0.15)
+                                  : const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              isSigned ? 'TTD DIGITAL SAH' : 'TTD DYNAMIC WAJIB',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.bold,
+                                color: isSigned ? const Color(0xFF059669) : const Color(0xFF2563EB),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(width: 8),
-                      Icon(Icons.verified_user_rounded, size: 14, color: Color(0xFF06B6D4)),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Budget proyek < Rp 100.000.000 dilindungi sistem Escrow Rekber Kreavana dan Kontrak Elektronik Dynamic. Saat event dimulai, saldo diamankan ke Escrow dan baru diteruskan ke kreator setelah hasil kerja Anda setujui.',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                          height: 1.4,
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Budget proyek < Rp 20.000.000 dilindungi sistem transfer escrow otomatis. Dana tersimpan aman di rekening penampung bersama dan hanya diteruskan ke kreator setelah hasil pekerjaan Anda setujui.',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                      height: 1.4,
-                    ),
+                ),
+              ],
+            ),
+            if (isEscrowHeld || isSigned) ...[
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        isEscrowHeld ? Icons.lock_clock_rounded : Icons.check_circle_outline_rounded,
+                        size: 16,
+                        color: const Color(0xFF059669),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        isEscrowHeld
+                            ? 'Escrow Ditahan: ${currencyFmt.format(_opp.escrowAmount ?? 0)}'
+                            : 'Kontrak Terverifikasi',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
+                      ),
+                    ],
                   ),
+                  if (_opp.clientSignedAt != null)
+                    Text(
+                      'Ditandatangani: ${_opp.clientSignedAt!.substring(0, 10)}',
+                      style: TextStyle(fontSize: 11, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
+                    ),
                 ],
               ),
-            ),
+            ],
           ],
         ),
       );
     }
 
-    // High Value MoU Card (>= 20 Jt)
+    // High Value MoU Card (>= 100 Jt)
     final hasMeeting = _opp.meetingDate != null && _opp.meetingDate!.isNotEmpty;
-    final isMoUConfirmed = _opp.escrowStatus == 'completed';
+    final isMoUConfirmed = _opp.escrowStatus == 'completed' ||
+        _opp.wetSignatureVerifiedAt != null ||
+        _opp.meetingStatus == 'verified_paid';
 
     return Container(
       width: double.infinity,
@@ -4473,14 +4876,16 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                   children: [
                     const Row(
                       children: [
-                        Text(
-                          'Protokol Transaksi Skala Besar (>= Rp 20.000.000)',
-                          style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.bold),
+                        Expanded(
+                          child: Text(
+                            'Protokol Skala Besar (>= Rp 100.000.000)',
+                            style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ],
                     ),
                     Text(
-                      'Kepatuhan Regulasi & Perjanjian Kerjasama Legal (MoU Resmi) Kreavana',
+                      'Wajib Tanda Tangan Basah & Perjanjian Kerjasama Legal (MoU Fisik) Kreavana',
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
@@ -4496,7 +4901,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  isMoUConfirmed ? 'MoU & DANA SAH' : 'PERLU TTD KONTRAK MoU',
+                  isMoUConfirmed ? 'TTD BASAH SAH' : 'PERLU TTD BASAH & MoU',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -4524,7 +4929,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Untuk mencegah sengketa hukum dan mematuhi regulasi perbankan, transaksi bernilai Rp 20 Juta ke atas tidak ditransfer langsung ke rekening biasa. Pembuat event dan perwakilan resmi Kreavana wajib menandatangani dokumen perjanjian kerjasama (MoU) formal serta bertemu secara tatap muka.',
+                    'Untuk mencegah sengketa hukum dan mematuhi regulasi perbankan, transaksi bernilai Rp 100 Juta ke atas wajib memiliki dokumen fisik yang telah ditandatangani secara basah (MoU Fisik) dan diverifikasi oleh tim legal sebelum acara dapat dimulai.',
                     style: TextStyle(
                       fontSize: 12,
                       color: isDark ? Colors.white70 : Colors.grey.shade800,
