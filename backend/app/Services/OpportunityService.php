@@ -10,6 +10,7 @@ use App\Models\OpportunityRequirement;
 use App\Models\OpportunityApplication;
 use App\Models\User;
 use App\Models\JobContract;
+use App\Models\SystemSetting;
 use App\Models\WalletTransaction;
 use App\Enums\RoleType;
 use App\Enums\ContractStatus;
@@ -376,7 +377,7 @@ class OpportunityService extends BaseService
                 }
                 $opp->signature_type = 'wet_signature';
             } else {
-                // Budget < 100jt: Wajib tanda tangan elektronik dynamic
+                // Budget < 100jt: Wajib tanda tangan elektronik dynamic (Tripartite 3 Pihak)
                 $dynamicSignature = $data['signature'] ?? $data['electronic_signature'] ?? $opp->client_signature ?? null;
                 if (empty($dynamicSignature) && empty($opp->client_signed_at)) {
                     abort(422, 'Wajib menandatangani Tanda Tangan Elektronik Dynamic secara sah sebelum memulai acara.');
@@ -389,6 +390,29 @@ class OpportunityService extends BaseService
                 if (empty($opp->client_signed_at)) {
                     $opp->client_signed_at = now();
                 }
+
+                // Ketentuan Khusus Dinamis (Dynamic Terms)
+                $rawDynamicTerms = $data['dynamic_terms'] ?? $opp->dynamic_terms ?? [];
+                if (is_string($rawDynamicTerms)) {
+                    $decoded = json_decode($rawDynamicTerms, true);
+                    $rawDynamicTerms = is_array($decoded) ? $decoded : array_filter(array_map('trim', explode("\n", $rawDynamicTerms)));
+                }
+                if (empty($rawDynamicTerms) || !is_array($rawDynamicTerms)) {
+                    $rawDynamicTerms = [
+                        'Penyelenggara (Pihak Pertama) wajib menyediakan akses venue, rundown, dan koordinasi teknis pelaksanaan acara.',
+                        'Penyediaan fasilitas dan alat kerja utama (seperti kamera, lensa, mikrofon, atau perlengkapan pendukung) disepakati tertulis antara pembuat event dan pekerja.',
+                        'Pekerja / Kreator (Pihak Kedua) berkewajiban hadir tepat waktu serta menyerahkan hasil pekerjaan sesuai standar profesional yang disepakati.',
+                        'Honorarium kerja diamankan 100% pada sistem Escrow Rekening Bersama Kreavana (Pihak Ketiga) dan hanya dicairkan setelah hasil pekerjaan disetujui.',
+                    ];
+                }
+                $opp->dynamic_terms = $rawDynamicTerms;
+
+                // Auto-input Pihak Ketiga: Admin Kreavana (Nama & Tanda Tangan Resmi)
+                $adminName = SystemSetting::get('admin_contract_signer_name', 'Tim Legal & Penjamin Escrow Kreavana');
+                $adminSignatureUrl = SystemSetting::get('admin_contract_signature_image', '/assets/images/kreavana_official_signature.png');
+                $opp->admin_name = $adminName;
+                $opp->admin_signature_url = $adminSignatureUrl;
+                $opp->admin_signed_at = now();
             }
 
             // Revisi 3: Saldo harus mencukupi dan ditahan menjadi Escrow
@@ -424,20 +448,46 @@ class OpportunityService extends BaseService
             }
             $opp->save();
 
-            // Sinkronisasi pembuatan / update JobContract resmi untuk setiap kreator yang disetujui
+            // Pihak Ketiga: Data Admin Kreavana untuk auto-input ke kontrak
+            $adminName = $opp->admin_name ?: SystemSetting::get('admin_contract_signer_name', 'Tim Legal & Penjamin Escrow Kreavana');
+            $adminSignatureUrl = $opp->admin_signature_url ?: SystemSetting::get('admin_contract_signature_image', '/assets/images/kreavana_official_signature.png');
+
+            // Sinkronisasi pembuatan / update JobContract resmi 3 Pihak untuk setiap kreator yang disetujui
             foreach ($approvedApps as $app) {
                 $appPrice = (float) ($app->counter_offer_price ?: $app->bid_price ?: ($totalEscrow / max(1, $approvedApps->count())));
+
+                $appDynamicTerms = $opp->dynamic_terms ?? [];
+                if (!empty($app->counter_offer_notes)) {
+                    $appDynamicTerms[] = 'Ketentuan Khusus Kesepakatan: ' . $app->counter_offer_notes;
+                }
+                if (!empty($app->questions_notes)) {
+                    $appDynamicTerms[] = 'Catatan Fasilitas / Permintaan: ' . $app->questions_notes;
+                }
+
+                $contractNumber = 'KVN-CTR/' . date('Ymd') . '/' . strtoupper(substr($opp->id, 0, 4)) . '-' . strtoupper(substr($app->id, 0, 4));
+                $creatorSig = $app->creator_signature ?: ('SIG-CREATOR-' . strtoupper(substr(md5($app->creator_id . $opp->id), 0, 10)));
+                $creatorSignedAt = $app->creator_signed_at ?: ($app->reviewed_at ?: now());
+
                 JobContract::updateOrCreate(
                     [
                         'opportunity_id' => $opp->id,
                         'creator_id' => $app->creator_id,
                     ],
                     [
+                        'contract_number' => $contractNumber,
                         'client_id' => $userId,
                         'title' => $opp->title,
                         'description' => $opp->description,
                         'agreed_price' => $appPrice,
                         'escrow_amount' => $appPrice,
+                        'dynamic_terms' => $appDynamicTerms,
+                        'creator_signature' => $creatorSig,
+                        'creator_signed_at' => $creatorSignedAt,
+                        'client_signature' => $opp->client_signature,
+                        'client_signed_at' => $opp->client_signed_at,
+                        'admin_name' => $adminName,
+                        'admin_signature_url' => $adminSignatureUrl,
+                        'admin_signed_at' => now(),
                         'contract_status' => ContractStatus::EscrowPaid,
                         'work_status' => WorkStatus::InProgress,
                         'started_at' => now(),
@@ -828,6 +878,79 @@ class OpportunityService extends BaseService
         });
     }
 
+    /**
+     * Dapatkan rincian seluruh kontrak digital 3 pihak untuk suatu peluang acara.
+     */
+    public function getOpportunityContracts(string $opportunityId, string $userId): array
+    {
+        $opp = Opportunity::where('id', $opportunityId)->with(['user', 'approvedApplications.creator'])->firstOrFail();
+
+        $contracts = JobContract::where('opportunity_id', $opportunityId)
+            ->with(['client', 'creator'])
+            ->get();
+
+        $defaultTerms = [
+            'Penyelenggara (Pihak Pertama) wajib menyediakan akses lokasi, jadwal rundown yang jelas, dan koordinasi teknis di venue.',
+            'Penyediaan fasilitas dan alat kerja utama (seperti kamera, lensa, instrumen, dll) disepakati tertulis antara pembuat event dan pekerja.',
+            'Pekerja (Pihak Kedua) berkewajiban hadir tepat waktu dan menyerahkan hasil kerja sesuai standar profesional yang disepakati.',
+            'Honorarium kerja diamankan 100% pada sistem Escrow Rekber Kreavana (Pihak Ketiga) dan hanya dicairkan setelah hasil pekerjaan disetujui.',
+        ];
+
+        $adminName = $opp->admin_name ?: SystemSetting::get('admin_contract_signer_name', 'Tim Legal & Penjamin Escrow Kreavana');
+        $adminTitle = SystemSetting::get('admin_contract_signer_title', 'Otoritas Penjamin Transaksi PT Kreavana Digital Indonesia');
+        $adminSignatureUrl = $opp->admin_signature_url ?: SystemSetting::get('admin_contract_signature_image', '/assets/images/kreavana_official_signature.png');
+        $adminSignedAt = $opp->admin_signed_at ?: now();
+
+        return $contracts->map(function ($c) use ($opp, $defaultTerms, $adminName, $adminTitle, $adminSignatureUrl, $adminSignedAt) {
+            $creator = $c->creator;
+            $client = $c->client ?: $opp->user;
+
+            return [
+                'id' => $c->id,
+                'contract_number' => $c->contract_number ?? ('KVN-CTR/' . date('Ymd') . '/' . strtoupper(substr($c->id, 0, 8))),
+                'opportunity_id' => $opp->id,
+                'title' => $c->title,
+                'description' => $c->description,
+                'agreed_price' => (float) $c->agreed_price,
+                'escrow_amount' => (float) $c->escrow_amount,
+                'contract_status' => is_string($c->contract_status) ? $c->contract_status : ($c->contract_status?->value ?? 'escrow_paid'),
+                'work_status' => is_string($c->work_status) ? $c->work_status : ($c->work_status?->value ?? 'in_progress'),
+                'dynamic_terms' => $c->dynamic_terms ?: ($opp->dynamic_terms ?: $defaultTerms),
+                
+                // Pihak Pertama: Pembuat Event (Klien)
+                'party_client' => [
+                    'id' => $client?->id ?? $opp->posted_by,
+                    'name' => $client?->name ?? 'Pembuat Event',
+                    'username' => $client?->username ?? 'client',
+                    'role' => is_string($client?->role) ? $client?->role : ($client?->role?->value ?? 'client'),
+                    'signature' => $c->client_signature ?? $opp->client_signature,
+                    'signed_at' => ($c->client_signed_at ?? $opp->client_signed_at)?->toIso8601String(),
+                ],
+
+                // Pihak Kedua: Pelamar / Pekerja (Kreator)
+                'party_creator' => [
+                    'id' => $creator?->id,
+                    'name' => $creator?->name ?? 'Pekerja Kreator',
+                    'username' => $creator?->username ?? 'creator',
+                    'sub_role' => is_string($creator?->sub_role) ? $creator?->sub_role : ($creator?->sub_role?->value ?? $opp->sub_role_slug),
+                    'signature' => $c->creator_signature ?: ('SIG-CREATOR-' . strtoupper(substr(md5(($creator?->id ?? '') . $opp->id), 0, 10))),
+                    'signed_at' => ($c->creator_signed_at ?? $c->creator_approved_at ?? $opp->client_signed_at ?? now())->toIso8601String(),
+                ],
+
+                // Pihak Ketiga: Admin Kreavana (Penjamin Escrow & Legal Platform)
+                'party_admin' => [
+                    'name' => $c->admin_name ?: $adminName,
+                    'title' => $adminTitle,
+                    'signature_url' => $c->admin_signature_url ?: $adminSignatureUrl,
+                    'signed_at' => ($c->admin_signed_at ?? $adminSignedAt)->toIso8601String(),
+                    'official_stamp' => 'TERVERIFIKASI & TERJAMIN ESCROW KREAVANA',
+                ],
+
+                'created_at' => $c->created_at?->toIso8601String(),
+            ];
+        })->values()->toArray();
+    }
+
     public function submitReport(string $userId, array $data)
     {
         $data['reporter_id'] = $userId;
@@ -879,6 +1002,10 @@ class OpportunityService extends BaseService
             'wet_signature_document_url' => $opp->wet_signature_document_url,
             'wet_signature_verified_at' => $opp->wet_signature_verified_at?->toIso8601String(),
             'escrow_amount' => (float) ($opp->escrow_amount ?? 0),
+            'dynamic_terms' => $opp->dynamic_terms ?? [],
+            'admin_name' => $opp->admin_name,
+            'admin_signature_url' => $opp->admin_signature_url,
+            'admin_signed_at' => $opp->admin_signed_at?->toIso8601String(),
             'is_wet_signature_required' => $isAbove100Jt,
             'is_dynamic_signature_required' => !$isAbove100Jt,
             'event_progress' => (int) ($opp->event_progress ?? 0),

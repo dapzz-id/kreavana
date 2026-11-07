@@ -321,6 +321,20 @@ class OpportunityController extends Controller
         }
     }
 
+    public function getContracts(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+
+        try {
+            $contracts = $this->opportunityService->getOpportunityContracts($id, $user->id);
+            return $this->successResponse('Daftar kontrak digital dynamic 3 pihak berhasil dimuat.', $contracts);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
     public function updateProgress(Request $request, string $id)
     {
         $user = Auth::guard('api')->user();

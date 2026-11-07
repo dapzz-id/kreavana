@@ -56,6 +56,8 @@ Route::get('roles/creator/sub-roles', [RoleController::class, 'getCreatorSubRole
 // Public System Statuses
 Route::get('system/module-statuses', [AdminSystemSettingController::class, 'getPublicModuleStatuses'])
     ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
+Route::get('system/contract-signer-info', [AdminSystemSettingController::class, 'getContractSignature'])
+    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
 
 // Reviews & Reputation (Database driven)
 Route::get('reviews', [OpportunityReviewController::class, 'index'])
@@ -192,6 +194,7 @@ Route::middleware(['auth:api', 'user.not_suspended'])->group(function () {
         Route::post('applications/{id}/respond-counter-offer', [OpportunityController::class, 'respondCounterOffer']);
         Route::post('{id}/start-event', [OpportunityController::class, 'startEvent']);
         Route::post('{id}/sign-contract', [OpportunityController::class, 'signContract']);
+        Route::get('{id}/contracts', [OpportunityController::class, 'getContracts']);
         Route::post('{id}/update-progress', [OpportunityController::class, 'updateProgress']);
         Route::post('{id}/schedule-meeting', [OpportunityController::class, 'scheduleMeeting']);
         Route::post('applications/{id}/submit-documents', [OpportunityController::class, 'submitDocuments']);
@@ -363,6 +366,8 @@ Route::middleware(['auth:api', 'user.not_suspended'])->group(function () {
         Route::get('ai-config', [AdminSystemSettingController::class, 'getAiConfig']);
         Route::post('ai-config', [AdminSystemSettingController::class, 'updateAiConfig']);
         Route::post('ai-config/test', [AdminSystemSettingController::class, 'testAiConnection']);
+        Route::get('contract-signature', [AdminSystemSettingController::class, 'getContractSignature']);
+        Route::post('contract-signature', [AdminSystemSettingController::class, 'updateContractSignature']);
     });
 
 

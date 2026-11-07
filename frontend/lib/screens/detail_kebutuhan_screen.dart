@@ -8,6 +8,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/opportunity_model.dart';
 import '../models/opportunity_application_model.dart';
+import '../models/job_contract.dart';
 import '../models/user_model.dart';
 import '../services/opportunity_service.dart';
 import '../services/chat_service.dart';
@@ -809,13 +810,26 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
       return;
     }
 
-    // KASUS 3: Konfirmasi & Tanda Tangan Elektronik Dynamic (< 100 Jt)
+    // KASUS 3: Konfirmasi & Tanda Tangan Elektronik Dynamic 3 Pihak (< 100 Jt)
     String dynamicSignaturePayload = '';
+    List<String> dynamicTermsToSubmit = [];
+
     if (_opp.isDynamicSignatureBudget) {
-      final signerName = widget.user?.name ?? widget.user?.username ?? 'Klien';
+      final signerName = widget.user?.name ?? widget.user?.username ?? 'Klien Penyelenggara';
       final signerController = TextEditingController(text: signerName);
+      
+      final defaultTermsText = '• Kamera & perlengkapan teknis disiapkan oleh pihak EO/WO sesuai kesepakatan tertulis.\n'
+          '• Penyelenggara menyediakan konsumsi di lokasi dan akses resmi ke venue acara.\n'
+          '• Pekerja hadir tepat waktu dan menyerahkan hasil kerja / file dokumentasi sesuai tenggat waktu.\n'
+          '• Honorarium kerja diamankan 100% pada sistem Escrow Rekber Kreavana dan baru dicairkan setelah hasil pekerjaan disetujui.';
+      
+      final termsController = TextEditingController(
+        text: _opp.dynamicTerms.isNotEmpty ? _opp.dynamicTerms.map((t) => '• $t').join('\n') : defaultTermsText,
+      );
+
       bool agreeContract = false;
 
+      if (!mounted) return;
       final signConfirmed = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
@@ -828,7 +842,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                     Icon(Icons.draw_rounded, color: Color(0xFF3B82F6)),
                     SizedBox(width: 8),
                     Expanded(
-                      child: Text('Tanda Tangan Elektronik Dynamic', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                      child: Text('Kontrak Digital Dynamic (3 Pihak)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -837,6 +851,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Ringkasan Escrow & Anggaran
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -851,22 +866,44 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                               children: [
                                 Icon(Icons.verified_user_rounded, color: Color(0xFF3B82F6), size: 16),
                                 SizedBox(width: 6),
-                                Text('Ketentuan Mulai Acara & Escrow', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8))),
+                                Text('Perjanjian Kerja Digital Mengikat 3 Pihak', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8))),
                               ],
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '• Anggaran: < Rp 100 Jt (Wajib Tanda Tangan Elektronik Dynamic)\n'
-                              '• Total Escrow Ditahan: ${currencyFmt.format(totalEscrow)}\n'
-                              '• Saldo Terpakai: ${currencyFmt.format(totalEscrow)} dari saldo ${currencyFmt.format(userBalance)}\n'
-                              '• Honor kreator diamankan di Rekber hingga pekerjaan selesai.',
+                              '• 1. Pembuat Event (Klien): Menyetujui ketentuan & membayar Escrow\n'
+                              '• 2. Pekerja / Kreator: ${approvedApps.map((a) => a.creator?.name ?? "Kreator").join(", ")}\n'
+                              '• 3. Admin Kreavana: Auto-input sistem (Cap & Tanda Tangan Resmi)\n'
+                              '• Total Escrow Ditahan: ${currencyFmt.format(totalEscrow)} dari saldo ${currencyFmt.format(userBalance)}',
                               style: const TextStyle(fontSize: 11.5, height: 1.4),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 14),
-                      const Text('Nama Lengkap Penandatangan *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+
+                      // Klausul & Ketentuan Dinamis yang Dapat Diedit
+                      const Text('Ketentuan Khusus & Klausul Dinamis *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Dapat disesuaikan (misal: penyediaan kamera oleh EO/WO, konsumsi, akomodasi, dsb):',
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: termsController,
+                        maxLines: 4,
+                        decoration: InputDecoration(
+                          hintText: 'Tuliskan butir-butir ketentuan khusus...',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.all(10),
+                        ),
+                        style: const TextStyle(fontSize: 11.5, height: 1.35),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Nama Lengkap Penandatangan
+                      const Text('Nama Lengkap Penandatangan (Klien) *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 6),
                       TextField(
                         controller: signerController,
@@ -920,7 +957,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                               child: Padding(
                                 padding: EdgeInsets.only(top: 8.0),
                                 child: Text(
-                                  'Saya secara sadar menandatangani kontrak kerja ini secara elektronik dan menyetujui saldo sebesar nilai kontrak ditahan ke Escrow Kreavana.',
+                                  'Saya secara sadar menandatangani surat perjanjian kerja dinamis ini dan menyetujui saldo sebesar nilai kontrak ditahan ke dalam Escrow Kreavana.',
                                   style: TextStyle(fontSize: 11.5, height: 1.3),
                                 ),
                               ),
@@ -943,6 +980,11 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                     onPressed: agreeContract && signerController.text.trim().isNotEmpty
                         ? () {
                             dynamicSignaturePayload = 'DIGITAL_SIGNATURE:${signerController.text.trim()}:${DateTime.now().toIso8601String()}:SECURE_ESCROW';
+                            dynamicTermsToSubmit = termsController.text
+                                .split('\n')
+                                .map((s) => s.replaceAll(RegExp(r'^[•\-\*]\s*'), '').trim())
+                                .where((s) => s.isNotEmpty)
+                                .toList();
                             Navigator.pop(ctx, true);
                           }
                         : null,
@@ -961,6 +1003,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
       if (signConfirmed != true) return;
     } else {
       // Untuk budget >= 100jt yang dokumen basahnya sudah verified
+      if (!mounted) return;
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -1000,6 +1043,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
         _opp.id ?? '',
         signature: dynamicSignaturePayload.isNotEmpty ? dynamicSignaturePayload : null,
         signatureType: _opp.isWetSignatureBudget ? 'wet_signature' : 'dynamic_electronic',
+        dynamicTerms: dynamicTermsToSubmit.isNotEmpty ? dynamicTermsToSubmit : null,
       );
       if (mounted) {
         if (res['status'] == true && res['data'] != null) {
@@ -1020,6 +1064,361 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
     } finally {
       if (mounted) setState(() => _actionLoading = false);
     }
+  }
+
+  Future<void> _showTripartiteContractModal() async {
+    setState(() => _actionLoading = true);
+    List<JobContract> contracts = [];
+    try {
+      contracts = await OpportunityService.getOpportunityContracts(_opp.id ?? '');
+    } catch (_) {}
+    setState(() => _actionLoading = false);
+
+    if (!mounted) return;
+
+    final currencyFmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final defaultDynamicTerms = _opp.dynamicTerms.isNotEmpty
+        ? _opp.dynamicTerms
+        : [
+            'Penyelenggara (Pihak Pertama) wajib menyediakan akses lokasi, jadwal rundown yang jelas, dan koordinasi teknis di venue.',
+            'Penyediaan fasilitas dan alat kerja utama (seperti kamera, lensa, instrumen, dll) disepakati tertulis antara pembuat event dan pekerja.',
+            'Pekerja (Pihak Kedua) berkewajiban hadir tepat waktu dan menyerahkan hasil kerja sesuai standar profesional yang disepakati.',
+            'Honorarium kerja diamankan 100% pada sistem Escrow Rekber Kreavana (Pihak Ketiga) dan hanya dicairkan setelah hasil pekerjaan disetujui.',
+          ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? const Color(0xFF13111E) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.9,
+          maxChildSize: 0.96,
+          minChildSize: 0.5,
+          expand: false,
+          builder: (ctx, scrollController) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: ListView(
+                controller: scrollController,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // KOP SURAT
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isDark
+                            ? [const Color(0xFF1E1B4B), const Color(0xFF0F172A)]
+                            : [const Color(0xFFEFF6FF), const Color(0xFFF8FAFC)],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.3)),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF3B82F6),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.shield_rounded, color: Colors.white, size: 20),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'PT KREAVANA DIGITAL INDONESIA',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'SURAT PERJANJIAN KERJA SAMA ELEKTRONIK DINAMIS (3 PIHAK)',
+                          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13.5),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'No. Kontrak: ${contracts.isNotEmpty ? (contracts.first.contractNumber ?? 'KVN-CTR-${_opp.id?.substring(0, 8)}') : 'KVN-CTR-DRAFT-${_opp.id?.substring(0, 8)}'}',
+                          style: TextStyle(fontSize: 11, fontFamily: 'monospace', color: isDark ? Colors.cyanAccent : const Color(0xFF0369A1)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // PARA PIHAK BERIKATAN (3 PIHAK)
+                  const Text('PARA PIHAK YANG BERSEPAKAT:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  _buildPartyCard(
+                    title: 'PIHAK PERTAMA (Pembuat Event / Penyelenggara)',
+                    name: _opp.poster?.name.isNotEmpty == true ? _opp.poster!.name : (widget.user?.name ?? 'Klien Penyelenggara'),
+                    role: 'Penyelenggara Acara',
+                    statusText: _opp.clientSignedAt != null ? 'Telah Ditandatangani Secara Sah' : 'Menunggu Pengesahan',
+                    isSigned: _opp.clientSignedAt != null,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 8),
+                  _buildPartyCard(
+                    title: 'PIHAK KEDUA (Pekerja Kreatif / Pelamar)',
+                    name: _opp.approvedCreators.isNotEmpty
+                        ? _opp.approvedCreators.map((c) => '${c.name} (${c.subRole ?? _opp.subRoleSlug})').join(', ')
+                        : 'Pekerja / Kreator Terpilih',
+                    role: 'Pekerja Pelaksana Proyek',
+                    statusText: _opp.isOngoing || _opp.clientSignedAt != null ? 'Telah Disetujui & Terikat Kontrak' : 'Menyetujui Penawaran',
+                    isSigned: true,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 8),
+                  _buildPartyCard(
+                    title: 'PIHAK KETIGA (Platform & Penjamin Escrow)',
+                    name: _opp.adminName ?? 'Tim Legal & Penjamin Escrow Kreavana',
+                    role: 'Otoritas Penjamin Escrow & Sistem',
+                    statusText: 'Otomatis Diinput Sistem (Cap & TTD Resmi)',
+                    isSigned: true,
+                    isAdmin: true,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // DANA ESCROW & PEKERJAAN
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF059669).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.lock_rounded, color: Color(0xFF059669), size: 24),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Nilai Kontrak Terproteksi Escrow:', style: TextStyle(fontSize: 11.5, color: Colors.grey)),
+                              Text(
+                                currencyFmt.format(_opp.escrowAmount ?? 0),
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF059669)),
+                              ),
+                              Text(
+                                _opp.escrowStatus == 'held' || _opp.status == 'in_progress'
+                                    ? 'Status: DANA TELAH DITAHAN AMAN DI REKBER'
+                                    : 'Status: Menunggu Penahanan saat Mulai Acara',
+                                style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF047857)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // KLAUSUL DINAMIS
+                  const Text('KETENTUAN KHUSUS & KLAUSUL DINAMIS:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E1B2E) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: defaultDynamicTerms.map((term) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('• ', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF3B82F6))),
+                              Expanded(
+                                child: Text(term, style: const TextStyle(fontSize: 12, height: 1.35)),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // 3 KOLOM TANDA TANGAN DIGITAL BERDAMPINGAN
+                  const Text('PENGESAHAN TANDA TANGAN DIGITAL (3 PIHAK):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 10),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // TTD Klien
+                      Expanded(
+                        child: _buildSignatureBox(
+                          title: 'Pihak Pertama\n(Penyelenggara)',
+                          signer: _opp.poster?.name ?? (widget.user?.name ?? 'Klien'),
+                          signature: _opp.clientSignature ?? 'SIG-CLIENT-VERIFIED',
+                          date: _opp.clientSignedAt?.substring(0, 10) ?? '-',
+                          isDark: isDark,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // TTD Kreator
+                      Expanded(
+                        child: _buildSignatureBox(
+                          title: 'Pihak Kedua\n(Pekerja / Kreator)',
+                          signer: _opp.approvedCreators.isNotEmpty ? _opp.approvedCreators.first.name : 'Pekerja Kreator',
+                          signature: 'SIG-CREATOR-VERIFIED',
+                          date: _opp.clientSignedAt?.substring(0, 10) ?? '-',
+                          isDark: isDark,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // TTD Admin Kreavana
+                      Expanded(
+                        child: _buildSignatureBox(
+                          title: 'Pihak Ketiga\n(Admin Kreavana)',
+                          signer: _opp.adminName ?? 'Admin Legal Kreavana',
+                          signature: 'ADMIN-AUTO-INPUT',
+                          date: _opp.adminSignedAt?.substring(0, 10) ?? DateTime.now().toIso8601String().substring(0, 10),
+                          isAdmin: true,
+                          isDark: isDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3B82F6),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Tutup Dokumen Kontrak', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPartyCard({
+    required String title,
+    required String name,
+    required String role,
+    required String statusText,
+    required bool isSigned,
+    bool isAdmin = false,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: isAdmin ? Colors.blue.withValues(alpha: 0.4) : Colors.grey.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isAdmin ? Icons.verified_user_rounded : (isSigned ? Icons.check_circle_rounded : Icons.pending_rounded),
+            color: isAdmin ? const Color(0xFF2563EB) : (isSigned ? const Color(0xFF059669) : Colors.orange),
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: isAdmin ? const Color(0xFF2563EB) : Colors.grey.shade600)),
+                Text(name, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
+                Text('$role • $statusText', style: TextStyle(fontSize: 10.5, color: isDark ? AppTheme.textMuted : Colors.grey.shade600)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSignatureBox({
+    required String title,
+    required String signer,
+    required String signature,
+    required String date,
+    bool isAdmin = false,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1B2E) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: isAdmin ? const Color(0xFF3B82F6).withValues(alpha: 0.4) : Colors.grey.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        children: [
+          Text(title, style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            decoration: BoxDecoration(
+              color: isAdmin
+                  ? const Color(0xFF3B82F6).withValues(alpha: 0.1)
+                  : const Color(0xFF059669).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  isAdmin ? Icons.verified_rounded : Icons.draw_rounded,
+                  size: 20,
+                  color: isAdmin ? const Color(0xFF2563EB) : const Color(0xFF059669),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  isAdmin ? 'STEMPEL RESMI\nKREAVANA' : 'DIGITAL SIGN',
+                  style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w900,
+                    color: isAdmin ? const Color(0xFF2563EB) : const Color(0xFF059669),
+                    letterSpacing: 0.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(signer, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+          Text('Tgl: $date', style: TextStyle(fontSize: 8.5, color: Colors.grey.shade600), textAlign: TextAlign.center),
+        ],
+      ),
+    );
   }
 
   Future<void> _handleUpdateProgress(int progress) async {
@@ -4823,6 +5222,23 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                 ],
               ),
             ],
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: const Color(0xFF06B6D4).withValues(alpha: 0.5)),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: _showTripartiteContractModal,
+                icon: const Icon(Icons.description_outlined, size: 16, color: Color(0xFF06B6D4)),
+                label: const Text(
+                  'Lihat Dokumen Kontrak Digital (3 Pihak)',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF06B6D4)),
+                ),
+              ),
+            ),
           ],
         ),
       );

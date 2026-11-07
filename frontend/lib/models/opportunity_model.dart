@@ -237,6 +237,10 @@ class OpportunityModel {
   final String? wetSignatureDocumentUrl;
   final String? wetSignatureVerifiedAt;
   final double? escrowAmount;
+  final List<String> dynamicTerms;
+  final String? adminName;
+  final String? adminSignatureUrl;
+  final String? adminSignedAt;
   final bool isWetSignatureRequired;
   final bool isDynamicSignatureRequired;
 
@@ -285,6 +289,10 @@ class OpportunityModel {
     this.wetSignatureDocumentUrl,
     this.wetSignatureVerifiedAt,
     this.escrowAmount,
+    this.dynamicTerms = const [],
+    this.adminName,
+    this.adminSignatureUrl,
+    this.adminSignedAt,
     this.isWetSignatureRequired = false,
     this.isDynamicSignatureRequired = true,
   });
@@ -419,6 +427,10 @@ class OpportunityModel {
     String? wetSignatureDocumentUrl,
     String? wetSignatureVerifiedAt,
     double? escrowAmount,
+    List<String>? dynamicTerms,
+    String? adminName,
+    String? adminSignatureUrl,
+    String? adminSignedAt,
     bool? isWetSignatureRequired,
     bool? isDynamicSignatureRequired,
   }) {
@@ -467,6 +479,10 @@ class OpportunityModel {
       wetSignatureDocumentUrl: wetSignatureDocumentUrl ?? this.wetSignatureDocumentUrl,
       wetSignatureVerifiedAt: wetSignatureVerifiedAt ?? this.wetSignatureVerifiedAt,
       escrowAmount: escrowAmount ?? this.escrowAmount,
+      dynamicTerms: dynamicTerms ?? this.dynamicTerms,
+      adminName: adminName ?? this.adminName,
+      adminSignatureUrl: adminSignatureUrl ?? this.adminSignatureUrl,
+      adminSignedAt: adminSignedAt ?? this.adminSignedAt,
       isWetSignatureRequired: isWetSignatureRequired ?? this.isWetSignatureRequired,
       isDynamicSignatureRequired: isDynamicSignatureRequired ?? this.isDynamicSignatureRequired,
     );
@@ -564,6 +580,12 @@ class OpportunityModel {
               ? (json['escrow_amount'] as num).toDouble()
               : double.tryParse(json['escrow_amount'].toString()))
           : null,
+      dynamicTerms: json['dynamic_terms'] is List
+          ? (json['dynamic_terms'] as List).map((e) => e.toString()).toList()
+          : [],
+      adminName: json['admin_name']?.toString(),
+      adminSignatureUrl: json['admin_signature_url']?.toString(),
+      adminSignedAt: json['admin_signed_at']?.toString(),
       isWetSignatureRequired: json['is_wet_signature_required'] == true,
       isDynamicSignatureRequired: json['is_dynamic_signature_required'] == true ||
           json['signature_type'] == 'dynamic_electronic',
@@ -615,6 +637,10 @@ class OpportunityModel {
       'wet_signature_document_url': wetSignatureDocumentUrl,
       'wet_signature_verified_at': wetSignatureVerifiedAt,
       'escrow_amount': escrowAmount,
+      'dynamic_terms': dynamicTerms,
+      'admin_name': adminName,
+      'admin_signature_url': adminSignatureUrl,
+      'admin_signed_at': adminSignedAt,
       'is_wet_signature_required': isWetSignatureRequired,
       'is_dynamic_signature_required': isDynamicSignatureRequired,
     };

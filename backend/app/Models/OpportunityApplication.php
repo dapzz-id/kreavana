@@ -22,6 +22,9 @@ class OpportunityApplication extends Model
         'counter_offer_notes',
         'counter_offer_status',
         'counter_offer_by',
+        'dynamic_terms',
+        'creator_signature',
+        'creator_signed_at',
         'status',
         'rejection_reason',
         'reviewed_at',
@@ -31,7 +34,9 @@ class OpportunityApplication extends Model
         'bid_price' => 'decimal:2',
         'counter_offer_price' => 'decimal:2',
         'submitted_documents' => 'array',
+        'dynamic_terms' => 'array',
         'reviewed_at' => 'datetime',
+        'creator_signed_at' => 'datetime',
     ];
 
     public function opportunity(): BelongsTo

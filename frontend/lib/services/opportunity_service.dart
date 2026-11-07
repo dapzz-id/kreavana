@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/opportunity_model.dart';
 import '../models/opportunity_application_model.dart';
+import '../models/job_contract.dart';
 import 'api_service.dart';
 
 class OpportunityService {
@@ -453,12 +454,14 @@ class OpportunityService {
     String? signature,
     String? signatureType,
     String? documentUrl,
+    List<String>? dynamicTerms,
   }) async {
     try {
       final body = <String, dynamic>{};
       if (signature != null && signature.isNotEmpty) body['signature'] = signature;
       if (signatureType != null && signatureType.isNotEmpty) body['signature_type'] = signatureType;
       if (documentUrl != null && documentUrl.isNotEmpty) body['document_url'] = documentUrl;
+      if (dynamicTerms != null && dynamicTerms.isNotEmpty) body['dynamic_terms'] = dynamicTerms;
 
       final res = await ApiService.post('opportunities/$opportunityId/start-event', body);
       return {
@@ -472,6 +475,18 @@ class OpportunityService {
         'message': e.toString().replaceAll('Exception: ', ''),
       };
     }
+  }
+
+  static Future<List<JobContract>> getOpportunityContracts(String opportunityId) async {
+    try {
+      final res = await ApiService.get('opportunities/$opportunityId/contracts');
+      if (res['status'] == true && res['data'] is List) {
+        return (res['data'] as List)
+            .map((item) => JobContract.fromJson(item))
+            .toList();
+      }
+    } catch (_) {}
+    return [];
   }
 
   static Future<Map<String, dynamic>> signContract({

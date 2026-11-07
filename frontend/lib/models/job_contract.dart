@@ -7,6 +7,15 @@ class JobContract {
   final String title;
   final String? description;
   final String? terms;
+  final List<String> dynamicTerms;
+  final String? contractNumber;
+  final String? creatorSignature;
+  final DateTime? creatorSignedAt;
+  final String? clientSignature;
+  final DateTime? clientSignedAt;
+  final String? adminName;
+  final String? adminSignatureUrl;
+  final DateTime? adminSignedAt;
   final double agreedPrice;
   final double escrowAmount;
   String contractStatus;
@@ -24,9 +33,12 @@ class JobContract {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
-  // Optional nested relationships
+  // Optional nested relationships & parties
   final Map<String, dynamic>? creator;
   final Map<String, dynamic>? client;
+  final Map<String, dynamic>? partyClient;
+  final Map<String, dynamic>? partyCreator;
+  final Map<String, dynamic>? partyAdmin;
 
   JobContract({
     required this.id,
@@ -37,6 +49,15 @@ class JobContract {
     required this.title,
     this.description,
     this.terms,
+    this.dynamicTerms = const [],
+    this.contractNumber,
+    this.creatorSignature,
+    this.creatorSignedAt,
+    this.clientSignature,
+    this.clientSignedAt,
+    this.adminName,
+    this.adminSignatureUrl,
+    this.adminSignedAt,
     required this.agreedPrice,
     required this.escrowAmount,
     required this.contractStatus,
@@ -55,9 +76,17 @@ class JobContract {
     this.updatedAt,
     this.creator,
     this.client,
+    this.partyClient,
+    this.partyCreator,
+    this.partyAdmin,
   });
 
   factory JobContract.fromJson(Map<String, dynamic> json) {
+    List<String> parsedTerms = [];
+    if (json['dynamic_terms'] is List) {
+      parsedTerms = (json['dynamic_terms'] as List).map((e) => e.toString()).toList();
+    }
+
     return JobContract(
       id: json['id']?.toString() ?? '',
       clientId: json['client_id']?.toString() ?? '',
@@ -67,6 +96,27 @@ class JobContract {
       title: json['title'] ?? '',
       description: json['description'],
       terms: json['terms'],
+      dynamicTerms: parsedTerms,
+      contractNumber: json['contract_number']?.toString(),
+      creatorSignature: json['creator_signature']?.toString() ?? json['party_creator']?['signature']?.toString(),
+      creatorSignedAt: json['creator_signed_at'] != null
+          ? DateTime.tryParse(json['creator_signed_at'].toString())
+          : (json['party_creator']?['signed_at'] != null
+              ? DateTime.tryParse(json['party_creator']['signed_at'].toString())
+              : null),
+      clientSignature: json['client_signature']?.toString() ?? json['party_client']?['signature']?.toString(),
+      clientSignedAt: json['client_signed_at'] != null
+          ? DateTime.tryParse(json['client_signed_at'].toString())
+          : (json['party_client']?['signed_at'] != null
+              ? DateTime.tryParse(json['party_client']['signed_at'].toString())
+              : null),
+      adminName: json['admin_name']?.toString() ?? json['party_admin']?['name']?.toString(),
+      adminSignatureUrl: json['admin_signature_url']?.toString() ?? json['party_admin']?['signature_url']?.toString(),
+      adminSignedAt: json['admin_signed_at'] != null
+          ? DateTime.tryParse(json['admin_signed_at'].toString())
+          : (json['party_admin']?['signed_at'] != null
+              ? DateTime.tryParse(json['party_admin']['signed_at'].toString())
+              : null),
       agreedPrice:
           double.tryParse(json['agreed_price']?.toString() ?? '0') ?? 0.0,
       escrowAmount:
@@ -97,6 +147,9 @@ class JobContract {
           : null,
       creator: json['creator'],
       client: json['client'],
+      partyClient: json['party_client'],
+      partyCreator: json['party_creator'],
+      partyAdmin: json['party_admin'],
     );
   }
 

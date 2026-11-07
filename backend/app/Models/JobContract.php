@@ -12,6 +12,7 @@ class JobContract extends Model
     use HasUuids, HasFactory;
 
     protected $fillable = [
+        'contract_number',
         'client_id',
         'creator_id',
         'opportunity_id',
@@ -19,6 +20,7 @@ class JobContract extends Model
         'title',
         'description',
         'terms',
+        'dynamic_terms',
         'agreed_price',
         'escrow_amount',
         'contract_status',
@@ -28,6 +30,13 @@ class JobContract extends Model
         'deadline',
         'creator_approved',
         'client_approved',
+        'creator_signature',
+        'creator_signed_at',
+        'client_signature',
+        'client_signed_at',
+        'admin_name',
+        'admin_signature_url',
+        'admin_signed_at',
         'dispute_group_id',
         'cancel_reason',
         'scheduled_at',
@@ -44,6 +53,7 @@ class JobContract extends Model
         'work_status' => \App\Enums\WorkStatus::class,
         'agreed_price' => 'decimal:2',
         'escrow_amount' => 'decimal:2',
+        'dynamic_terms' => 'array',
         'deadline' => 'date',
         'scheduled_start_date' => 'date',
         'scheduled_end_date' => 'date',
@@ -56,6 +66,9 @@ class JobContract extends Model
         'cancelled_at' => 'datetime',
         'client_approved_at' => 'datetime',
         'creator_approved_at' => 'datetime',
+        'creator_signed_at' => 'datetime',
+        'client_signed_at' => 'datetime',
+        'admin_signed_at' => 'datetime',
     ];
 
     public function client(): BelongsTo

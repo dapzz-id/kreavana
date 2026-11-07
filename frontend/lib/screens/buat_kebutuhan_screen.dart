@@ -443,7 +443,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
     'Rp 500.000 - 1.000.000',
     'Rp 1.000.000 - 5.000.000',
     'Rp 5.000.000 - 20.000.000',
-    'Rp 20.000.000 - 100.000.000 (Wajib Tanda Tangan Elektronik Dynamic)',
+    'Rp 20.000.000 - 100.000.000',
     '>= Rp 100.000.000 (Skala Besar - Wajib Tanda Tangan Basah & MoU Fisik)',
   ];
 
@@ -3019,7 +3019,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  '🛡️ Sistem Escrow & Tanda Tangan Elektronik Dynamic',
+                  '🛡️ Kontrak Digital Dynamic 3 Pihak & Escrow (0 s/d < Rp 100 Jt)',
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.bold,
@@ -3028,7 +3028,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Anggaran < Rp 100 Juta wajib menandatangani Kontrak Elektronik Dynamic saat memulai acara. Saldo akan ditahan aman di Escrow Rekber Kreavana hingga pekerjaan terverifikasi.',
+                  'Seluruh anggaran dari Rp 0 hingga < Rp 100 Juta wajib menggunakan Dokumen Kontrak Digital Dynamic 3 Pihak (Pembuat Event, Pekerja/Kreator, dan Admin Kreavana). Ketentuan khusus seperti penyediaan alat (kamera disiapkan EO/WO, konsumsi, dll) tercatat resmi, dan tanda tangan Admin Kreavana diinput otomatis oleh sistem.',
                   style: TextStyle(
                     fontSize: 11.5,
                     height: 1.35,

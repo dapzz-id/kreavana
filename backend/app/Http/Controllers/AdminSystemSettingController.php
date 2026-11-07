@@ -434,4 +434,70 @@ class AdminSystemSettingController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * GET /api/admin/system/contract-signature
+     */
+    public function getContractSignature()
+    {
+        return response()->json([
+            'status' => true,
+            'data' => [
+                'admin_name' => SystemSetting::get('admin_contract_signer_name', 'Tim Legal & Penjamin Escrow Kreavana'),
+                'admin_title' => SystemSetting::get('admin_contract_signer_title', 'Otoritas Penjamin Transaksi PT Kreavana Digital Indonesia'),
+                'admin_signature_url' => SystemSetting::get('admin_contract_signature_image', '/assets/images/kreavana_official_signature.png'),
+            ],
+        ]);
+    }
+
+    /**
+     * POST /api/admin/system/contract-signature
+     * Upload foto tanda tangan & nama admin untuk auto-input sistem ke kontrak digital
+     */
+    public function updateContractSignature(Request $request)
+    {
+        $validated = $request->validate([
+            'admin_name' => 'required|string|max:150',
+            'admin_title' => 'nullable|string|max:150',
+            'signature_image' => 'nullable',
+        ]);
+
+        SystemSetting::set('admin_contract_signer_name', $validated['admin_name'], 'contracts');
+        if (!empty($validated['admin_title'])) {
+            SystemSetting::set('admin_contract_signer_title', $validated['admin_title'], 'contracts');
+        }
+
+        if ($request->hasFile('signature_image')) {
+            $file = $request->file('signature_image');
+            $filename = 'admin_sig_' . time() . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('signatures', $filename, 'public');
+            $signatureUrl = '/storage/' . $path;
+            SystemSetting::set('admin_contract_signature_image', $signatureUrl, 'contracts');
+        } elseif ($request->filled('signature_image_base64')) {
+            $raw = $request->input('signature_image_base64');
+            if (preg_match('/^data:image\/(\w+);base64,/', $raw, $type)) {
+                $raw = substr($raw, strpos($raw, ',') + 1);
+                $type = strtolower($type[1]);
+                $image = base64_decode($raw);
+                if ($image !== false) {
+                    $filename = 'admin_sig_' . time() . '.' . $type;
+                    \Illuminate\Support\Facades\Storage::disk('public')->put('signatures/' . $filename, $image);
+                    $signatureUrl = '/storage/signatures/' . $filename;
+                    SystemSetting::set('admin_contract_signature_image', $signatureUrl, 'contracts');
+                }
+            }
+        } elseif ($request->filled('signature_url')) {
+            SystemSetting::set('admin_contract_signature_image', $request->input('signature_url'), 'contracts');
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Tanda tangan dan identitas Admin Kreavana untuk auto-input kontrak digital berhasil diperbarui.',
+            'data' => [
+                'admin_name' => SystemSetting::get('admin_contract_signer_name'),
+                'admin_title' => SystemSetting::get('admin_contract_signer_title'),
+                'admin_signature_url' => SystemSetting::get('admin_contract_signature_image'),
+            ],
+        ]);
+    }
 }
