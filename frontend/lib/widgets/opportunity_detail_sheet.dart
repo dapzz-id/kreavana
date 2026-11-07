@@ -577,8 +577,8 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
                       controller: bidCtrl,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                        labelText: 'Penawaran Tarif (Opsional)',
-                        hintText: 'Kosongkan jika mengikuti anggaran pemilik proyek',
+                        labelText: 'Penawaran Tarif / Nego Fee * (Wajib)',
+                        hintText: 'Masukkan nominal penawaran tarif Anda (misal: 1500000)',
                         prefixText: 'Rp ',
                         border: OutlineInputBorder(),
                       ),
@@ -618,8 +618,15 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
                           return;
                         }
 
+                        final bid = double.tryParse(bidCtrl.text.trim().replaceAll('.', '').replaceAll(',', ''));
+                        if (bid == null || bid <= 0) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Penawaran tarif / nego fee wajib diisi oleh pelamar.')),
+                          );
+                          return;
+                        }
+
                         setModalState(() => isSubmitting = true);
-                        final bid = double.tryParse(bidCtrl.text.trim());
                         final res = await OpportunityService.applyToOpportunity(
                           opportunityId: widget.opportunity.id ?? '',
                           subRoleSlug: selectedSlug,

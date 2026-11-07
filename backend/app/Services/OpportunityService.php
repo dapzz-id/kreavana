@@ -102,6 +102,8 @@ class OpportunityService extends BaseService
                             'sub_role_slug' => $req['sub_role_slug'],
                             'quantity' => (int) ($req['quantity'] ?? 1),
                             'notes' => $req['notes'] ?? null,
+                            'payment_scheme' => $req['payment_scheme'] ?? 'full_at_end',
+                            'payment_terms' => $req['payment_terms'] ?? null,
                         ]);
                     }
                 }
@@ -112,6 +114,8 @@ class OpportunityService extends BaseService
                     'sub_role_slug' => $opp->sub_role_slug,
                     'quantity' => 1,
                     'notes' => null,
+                    'payment_scheme' => 'full_at_end',
+                    'payment_terms' => null,
                 ]);
             }
 
@@ -177,13 +181,32 @@ class OpportunityService extends BaseService
                 }
             }
 
+            // Pelamar kerja WAJIB mengisi pengajuan tarif / nego fee
+            if (empty($data['bid_price']) || (float) $data['bid_price'] <= 0) {
+                abort(422, 'Pengajuan penawaran tarif / nego fee wajib diisi oleh pelamar kerja.');
+            }
+
+            // Dapatkan skema pembayaran dari requirement jika ada
+            $req = OpportunityRequirement::where('opportunity_id', $opportunityId)
+                ->where('sub_role_slug', $subRoleSlug)
+                ->first();
+
+            $paymentScheme = $req?->payment_scheme ?? 'full_at_end';
+            $paymentTerms = $req?->payment_terms;
+
             $application = OpportunityApplication::create([
                 'opportunity_id' => $opportunityId,
                 'creator_id' => $creatorId,
                 'sub_role_slug' => $subRoleSlug,
                 'pitch_message' => $data['pitch_message'],
                 'questions_notes' => $data['questions_notes'] ?? null,
-                'bid_price' => $data['bid_price'] ?? null,
+                'bid_price' => (float) $data['bid_price'],
+                'payment_scheme' => $paymentScheme,
+                'payment_terms' => $paymentTerms,
+                'paid_amount' => 0.00,
+                'payment_status' => 'unpaid',
+                'worker_progress' => 0,
+                'worker_status' => 'assigned',
                 'status' => 'pending',
             ]);
 
@@ -266,6 +289,15 @@ class OpportunityService extends BaseService
                 'counter_offer_notes' => $app->counter_offer_notes,
                 'counter_offer_status' => $app->counter_offer_status,
                 'counter_offer_by' => $app->counter_offer_by ?? 'client',
+                'payment_scheme' => $app->payment_scheme ?? 'full_at_end',
+                'payment_terms' => $app->payment_terms ?? [],
+                'paid_amount' => (float) ($app->paid_amount ?? 0),
+                'payment_status' => $app->payment_status ?? 'unpaid',
+                'worker_progress' => (int) ($app->worker_progress ?? 0),
+                'worker_status' => $app->worker_status ?? 'assigned',
+                'submitted_deliverables' => $app->submitted_deliverables ?? [],
+                'grace_period_deadline' => $app->grace_period_deadline?->toIso8601String(),
+                'auto_released_at' => $app->auto_released_at?->toIso8601String(),
                 'status' => $app->status,
                 'rejection_reason' => $app->rejection_reason,
                 'reviewed_at' => $app->reviewed_at?->toIso8601String(),
@@ -371,11 +403,18 @@ class OpportunityService extends BaseService
             $isWetSignatureRequired = self::isBudgetAbove100Jt($opp->budget_range, $totalEscrow);
 
             if ($isWetSignatureRequired) {
-                $hasWetSignature = !empty($opp->wet_signature_document_url) || !empty($opp->wet_signature_verified_at) || $opp->meeting_status === 'verified_paid';
+                $isAdmin = ($user->role === RoleType::Admin || $user->role === RoleType::Marketing || !empty($data['is_admin_override']));
+                $hasWetSignature = !empty($opp->wet_signature_document_url) || !empty($opp->wet_signature_verified_at) || in_array($opp->meeting_status, ['verified_completed', 'verified_paid']);
                 if (!$hasWetSignature) {
-                    abort(422, 'Budget acara mencapai Rp 100 Juta ke atas. Sesuai regulasi hukum dan standar keamanan, wajib menandatangani dokumen perjanjian fisik (Tanda Tangan Basah) dan diverifikasi sebelum acara dapat dimulai.');
+                    abort(422, 'Budget acara mencapai Rp 100 Juta ke atas. Sesuai regulasi hukum dan standar keamanan, wajib menandatangani dokumen perjanjian fisik (Tanda Tangan Basah) dan diverifikasi oleh Admin sebelum acara dapat dimulai.');
+                }
+                if (!$isAdmin && empty($opp->admin_started_at)) {
+                    abort(422, 'Acara dengan anggaran >= Rp 100 Juta yang telah diverifikasi dokumen fisik basahnya akan dimulai secara resmi oleh Admin Kreavana.');
                 }
                 $opp->signature_type = 'wet_signature';
+                if (empty($opp->admin_started_at)) {
+                    $opp->admin_started_at = now();
+                }
             } else {
                 // Budget < 100jt: Wajib tanda tangan elektronik dynamic (Tripartite 3 Pihak)
                 $dynamicSignature = $data['signature'] ?? $data['electronic_signature'] ?? $opp->client_signature ?? null;
@@ -452,9 +491,39 @@ class OpportunityService extends BaseService
             $adminName = $opp->admin_name ?: SystemSetting::get('admin_contract_signer_name', 'Tim Legal & Penjamin Escrow Kreavana');
             $adminSignatureUrl = $opp->admin_signature_url ?: SystemSetting::get('admin_contract_signature_image', '/assets/images/kreavana_official_signature.png');
 
+            // Tentukan masa tenggang pembayaran: 1 bulan setelah tanggal acara
+            $eventEnd = $opp->event_end_date ?? $opp->event_date ?? now();
+            $graceDeadline = \Carbon\Carbon::parse($eventEnd)->addMonth();
+
             // Sinkronisasi pembuatan / update JobContract resmi 3 Pihak untuk setiap kreator yang disetujui
             foreach ($approvedApps as $app) {
                 $appPrice = (float) ($app->counter_offer_price ?: $app->bid_price ?: ($totalEscrow / max(1, $approvedApps->count())));
+
+                // Bangun skema termin / pembayaran per-pekerja
+                $scheme = $app->payment_scheme ?: 'full_at_end';
+                $terms = $app->payment_terms;
+                if ($scheme === 'term') {
+                    if (empty($terms) || !is_array($terms)) {
+                        $terms = [
+                            ['title' => 'Termin 1 (DP & Persiapan)', 'percentage' => 30, 'amount' => round($appPrice * 0.30, 2), 'status' => 'unpaid', 'paid_at' => null],
+                            ['title' => 'Termin 2 (Hari H Acara / Progres)', 'percentage' => 40, 'amount' => round($appPrice * 0.40, 2), 'status' => 'unpaid', 'paid_at' => null],
+                            ['title' => 'Termin 3 (Pelunasan & Serah Terima)', 'percentage' => 30, 'amount' => round($appPrice * 0.30, 2), 'status' => 'unpaid', 'paid_at' => null],
+                        ];
+                    }
+                } else {
+                    $terms = [
+                        ['title' => 'Pembayaran Sekaligus (Pelunasan Akhir)', 'percentage' => 100, 'amount' => $appPrice, 'status' => 'unpaid', 'paid_at' => null],
+                    ];
+                }
+
+                $app->payment_scheme = $scheme;
+                $app->payment_terms = $terms;
+                $app->paid_amount = $app->paid_amount ?: 0.00;
+                $app->payment_status = $app->paid_amount >= $appPrice ? 'paid' : ($app->paid_amount > 0 ? 'partially_paid' : 'unpaid');
+                $app->worker_progress = $app->worker_progress ?: 0;
+                $app->worker_status = 'in_progress';
+                $app->grace_period_deadline = $graceDeadline;
+                $app->save();
 
                 $appDynamicTerms = $opp->dynamic_terms ?? [];
                 if (!empty($app->counter_offer_notes)) {
@@ -481,6 +550,12 @@ class OpportunityService extends BaseService
                         'agreed_price' => $appPrice,
                         'escrow_amount' => $appPrice,
                         'dynamic_terms' => $appDynamicTerms,
+                        'payment_scheme' => $scheme,
+                        'payment_terms' => $terms,
+                        'paid_amount' => $app->paid_amount,
+                        'payment_status' => $app->payment_status,
+                        'worker_progress' => $app->worker_progress,
+                        'grace_period_deadline' => $graceDeadline,
                         'creator_signature' => $creatorSig,
                         'creator_signed_at' => $creatorSignedAt,
                         'client_signature' => $opp->client_signature,
@@ -617,7 +692,7 @@ class OpportunityService extends BaseService
         $opp->meeting_lat = $data['meeting_lat'] ?? $opp->meeting_lat;
         $opp->meeting_lng = $data['meeting_lng'] ?? $opp->meeting_lng;
         $opp->meeting_notes = $data['meeting_notes'] ?? $opp->meeting_notes;
-        $opp->meeting_status = 'pending_marketing_review';
+        $opp->meeting_status = 'pending'; // Status Pending menunggu review Admin Kreavana
         $opp->save();
 
         // Notify approved creators
@@ -631,13 +706,31 @@ class OpportunityService extends BaseService
         foreach ($approvedCreators as $creatorId) {
             $this->notificationRepo->create([
                 'user_id' => $creatorId,
-                'title' => 'Jadwal Pertemuan Diatur',
-                'message' => 'Pertemuan untuk proyek "' . $opp->title . '" dijadwalkan pada ' . $meetingDateStr . ' ' . ($opp->meeting_time ?? '') . ' di ' . $meetingLocStr . '.',
+                'title' => 'Jadwal Temu Tanda Tangan Basah Diajukan',
+                'message' => 'Penyelenggara proyek "' . $opp->title . '" telah mengajukan jadwal pertemuan tanda tangan basah dokumen fisik 3 Pihak pada ' . $meetingDateStr . ' ' . ($opp->meeting_time ?? '') . ' di ' . $meetingLocStr . '. Menunggu persetujuan Admin Kreavana.',
                 'type' => 'project',
                 'data' => [
                     'opportunity_id' => $opp->id,
                     'meeting_date' => $opp->meeting_date,
                     'meeting_time' => $opp->meeting_time,
+                    'meeting_status' => 'pending',
+                ],
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
+        }
+
+        // Notify Admin Kreavana
+        $admins = User::where('role', RoleType::Admin)->get();
+        foreach ($admins as $admin) {
+            $this->notificationRepo->create([
+                'user_id' => $admin->id,
+                'title' => 'Pengajuan Jadwal Tanda Tangan Basah (>= 100 Jt)',
+                'message' => 'Proyek "' . $opp->title . '" mengajukan jadwal temu fisik tanda tangan basah pada ' . $meetingDateStr . ' di ' . $meetingLocStr . '. Silakan tinjau dan setujui.',
+                'type' => 'project',
+                'data' => [
+                    'opportunity_id' => $opp->id,
+                    'meeting_status' => 'pending',
                 ],
                 'is_read' => false,
                 'created_at' => now(),
@@ -645,6 +738,514 @@ class OpportunityService extends BaseService
         }
 
         return $this->formatOpportunity($opp->fresh(['approvedApplications.creator', 'user']), true);
+    }
+
+    /**
+     * Admin menyetujui / menolak jadwal pertemuan fisik.
+     * Jika disetujui, status meeting menjadi 'diproses'.
+     */
+    public function reviewMeeting(string $opportunityId, string $adminId, string $decision, ?string $notes = null): array
+    {
+        $opp = Opportunity::where('id', $opportunityId)->firstOrFail();
+        $admin = User::where('id', $adminId)->firstOrFail();
+
+        if ($admin->role !== RoleType::Admin && $admin->role !== RoleType::Marketing) {
+            abort(403, 'Akses ditolak. Hanya Admin atau Tim Legal Kreavana yang dapat meninjau jadwal pertemuan.');
+        }
+
+        if ($decision === 'approve') {
+            $opp->meeting_status = 'diproses'; // Status menjadi diproses jika disetujui Admin
+            if ($notes) {
+                $opp->meeting_notes = ($opp->meeting_notes ? $opp->meeting_notes . "\n" : '') . "[Persetujuan Admin " . $admin->name . "]: " . $notes;
+            }
+            $opp->save();
+
+            // Notifikasi ke Penyelenggara
+            $this->notificationRepo->create([
+                'user_id' => $opp->posted_by,
+                'title' => 'Jadwal Tanda Tangan Basah Disetujui Admin!',
+                'message' => 'Admin Kreavana telah menyetujui jadwal temu fisik untuk proyek "' . $opp->title . '". Status saat ini: Diproses. Mohon hadir sesuai tanggal dan lokasi.',
+                'type' => 'project',
+                'data' => [
+                    'opportunity_id' => $opp->id,
+                    'meeting_status' => 'diproses',
+                ],
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
+
+            // Notifikasi ke seluruh pekerja yang disetujui
+            $approvedCreators = OpportunityApplication::where('opportunity_id', $opp->id)
+                ->where('status', 'approved')
+                ->pluck('creator_id');
+
+            foreach ($approvedCreators as $creatorId) {
+                $this->notificationRepo->create([
+                    'user_id' => $creatorId,
+                    'title' => 'Jadwal Tanda Tangan Basah Disetujui Admin!',
+                    'message' => 'Jadwal pertemuan fisik tanda tangan basah dokumen MoU untuk proyek "' . $opp->title . '" telah disetujui Admin Kreavana. Status saat ini: Diproses.',
+                    'type' => 'project',
+                    'data' => [
+                        'opportunity_id' => $opp->id,
+                        'meeting_status' => 'diproses',
+                    ],
+                    'is_read' => false,
+                    'created_at' => now(),
+                ]);
+            }
+        } else {
+            $opp->meeting_status = 'rejected';
+            if ($notes) {
+                $opp->meeting_notes = ($opp->meeting_notes ? $opp->meeting_notes . "\n" : '') . "[Penolakan Admin " . $admin->name . "]: " . $notes;
+            }
+            $opp->save();
+
+            $this->notificationRepo->create([
+                'user_id' => $opp->posted_by,
+                'title' => 'Jadwal Pertemuan Fisik Ditolak Admin',
+                'message' => 'Jadwal pertemuan fisik proyek "' . $opp->title . '" ditolak. Silakan koordinasikan dan ajukan jadwal baru.',
+                'type' => 'project',
+                'data' => [
+                    'opportunity_id' => $opp->id,
+                    'meeting_status' => 'rejected',
+                ],
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
+        }
+
+        return $this->formatOpportunity($opp->fresh(['approvedApplications.creator', 'user']), true);
+    }
+
+    /**
+     * Memulai Acara oleh Admin setelah tanda tangan basah fisik selesai diverifikasi.
+     */
+    public function adminStartEvent(string $opportunityId, string $adminId, array $data = []): array
+    {
+        $admin = User::where('id', $adminId)->firstOrFail();
+        if ($admin->role !== RoleType::Admin && $admin->role !== RoleType::Marketing) {
+            abort(403, 'Akses ditolak. Hanya Admin yang dapat mengaktifkan acara dengan tanda tangan basah.');
+        }
+
+        $opp = Opportunity::where('id', $opportunityId)->firstOrFail();
+
+        if (!empty($data['document_mou_url'])) {
+            $opp->wet_signature_document_url = $data['document_mou_url'];
+        }
+        $opp->wet_signature_verified_at = now();
+        $opp->meeting_status = 'verified_completed';
+        $opp->admin_started_at = now();
+        $opp->signature_type = 'wet_signature';
+        $opp->save();
+
+        // Panggil startEvent resmi
+        return $this->startEvent($opportunityId, $opp->posted_by, array_merge($data, [
+            'is_admin_override' => true,
+        ]));
+    }
+
+    /**
+     * Update progress pekerjaan per-kreator di dalam event yang sedang berlangsung.
+     */
+    public function updateWorkerProgress(string $applicationId, string $userId, int $progress, ?string $notes = null, ?string $workerStatus = null): array
+    {
+        $app = OpportunityApplication::where('id', $applicationId)->firstOrFail();
+        $opp = Opportunity::where('id', $app->opportunity_id)->firstOrFail();
+        $user = User::where('id', $userId)->firstOrFail();
+
+        $isCreator = ($app->creator_id === $userId);
+        $isOwner = ($opp->posted_by === $userId);
+        $isAdmin = ($user->role === RoleType::Admin);
+
+        if (!$isCreator && !$isOwner && !$isAdmin) {
+            abort(403, 'Akses ditolak. Hanya pekerja terkait, pembuat acara, atau Admin yang dapat memperbarui progress pekerjaan ini.');
+        }
+
+        $clamped = max(0, min(100, $progress));
+        $app->worker_progress = $clamped;
+        if ($workerStatus) {
+            $app->worker_status = $workerStatus;
+        } else {
+            if ($clamped >= 100) {
+                $app->worker_status = 'completed';
+            } elseif ($clamped > 0) {
+                $app->worker_status = 'in_progress';
+            }
+        }
+        $app->save();
+
+        // Sinkronisasi dengan JobContract
+        JobContract::where('opportunity_id', $opp->id)
+            ->where('creator_id', $app->creator_id)
+            ->update([
+                'worker_progress' => $clamped,
+                'work_status' => $clamped >= 100 ? WorkStatus::Completed : WorkStatus::InProgress,
+            ]);
+
+        // Hitung rata-rata progress seluruh pekerja untuk event_progress
+        $avgProgress = (int) OpportunityApplication::where('opportunity_id', $opp->id)
+            ->where('status', 'approved')
+            ->avg('worker_progress');
+        $opp->event_progress = max($opp->event_progress, $avgProgress);
+        if ($avgProgress >= 100) {
+            $opp->status = 'completed';
+        }
+        $opp->save();
+
+        // Kirim notifikasi ke lawan pihak
+        $targetUserId = $isCreator ? $opp->posted_by : $app->creator_id;
+        $updaterName = $user->name ?: 'Mitra';
+        $this->notificationRepo->create([
+            'user_id' => $targetUserId,
+            'title' => 'Update Progress Pekerja (' . $clamped . '%)',
+            'message' => $updaterName . ' telah memperbarui progress pengerjaan untuk posisi ' . ucwords(str_replace('_', ' ', $app->sub_role_slug)) . ' menjadi ' . $clamped . '%.' . ($notes ? ' Catatan: ' . $notes : ''),
+            'type' => 'project',
+            'data' => [
+                'opportunity_id' => $opp->id,
+                'application_id' => $app->id,
+                'worker_progress' => $clamped,
+            ],
+            'is_read' => false,
+            'created_at' => now(),
+        ]);
+
+        return [
+            'application_id' => $app->id,
+            'worker_progress' => $app->worker_progress,
+            'worker_status' => $app->worker_status,
+            'event_progress' => $opp->event_progress,
+            'message' => 'Progress pekerja berhasil diperbarui ke ' . $clamped . '%.',
+        ];
+    }
+
+    /**
+     * Unggah hasil kerja / deliverables (Link, Gambar, Video, Dokumen).
+     */
+    public function submitWorkerDeliverable(string $applicationId, string $userId, array $deliverableData, $file = null): array
+    {
+        $app = OpportunityApplication::where('id', $applicationId)->firstOrFail();
+        $opp = Opportunity::where('id', $app->opportunity_id)->firstOrFail();
+        $user = User::where('id', $userId)->firstOrFail();
+
+        if ($app->creator_id !== $userId && $opp->posted_by !== $userId && $user->role !== RoleType::Admin) {
+            abort(403, 'Akses ditolak.');
+        }
+
+        $type = $deliverableData['type'] ?? 'link'; // link, image, video, document
+        $url = $deliverableData['url'] ?? '';
+        $title = $deliverableData['title'] ?? 'Hasil Kerja';
+        $notes = $deliverableData['notes'] ?? null;
+
+        // Tangani unggah file langsung jika ada
+        if ($file && $file->isValid()) {
+            /** @var \App\Services\StorageService $storageService */
+            $storageService = app(\App\Services\StorageService::class);
+            $storageFile = $storageService->store($user, $file, 'deliverables', 'public');
+            $url = '/storage/' . $storageFile->path;
+        }
+
+        if (empty($url)) {
+            abort(422, 'Tautan URL atau file hasil kerja wajib diisi.');
+        }
+
+        $newDeliverable = [
+            'id' => (string) Str::uuid(),
+            'type' => $type,
+            'url' => $url,
+            'title' => $title,
+            'notes' => $notes,
+            'uploaded_by' => $user->name,
+            'uploaded_at' => now()->toIso8601String(),
+        ];
+
+        $deliverables = $app->submitted_deliverables ?? [];
+        $deliverables[] = $newDeliverable;
+        $app->submitted_deliverables = $deliverables;
+        $app->save();
+
+        // Sinkronisasi dengan JobContract
+        JobContract::where('opportunity_id', $opp->id)
+            ->where('creator_id', $app->creator_id)
+            ->update([
+                'deliverables' => $deliverables,
+            ]);
+
+        // Notifikasi ke pembuat acara
+        if ($opp->posted_by && $opp->posted_by !== $userId) {
+            $this->notificationRepo->create([
+                'user_id' => $opp->posted_by,
+                'title' => 'Hasil Kerja Baru Diunggah (' . strtoupper($type) . ')',
+                'message' => $user->name . ' telah mengunggah hasil kerja: "' . $title . '" untuk proyek "' . $opp->title . '".',
+                'type' => 'project',
+                'data' => [
+                    'opportunity_id' => $opp->id,
+                    'application_id' => $app->id,
+                    'deliverable' => $newDeliverable,
+                ],
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
+        }
+
+        return [
+            'application_id' => $app->id,
+            'deliverable' => $newDeliverable,
+            'submitted_deliverables' => $app->submitted_deliverables,
+            'message' => 'Hasil kerja (' . strtoupper($type) . ') berhasil diunggah.',
+        ];
+    }
+
+    /**
+     * Bayar termin / pelunasan honor pekerja dari dana Escrow.
+     */
+    public function payWorkerTerm(string $applicationId, string $userId, ?int $milestoneIndex = null, ?float $customAmount = null): array
+    {
+        return DB::transaction(function () use ($applicationId, $userId, $milestoneIndex, $customAmount) {
+            $app = OpportunityApplication::where('id', $applicationId)->lockForUpdate()->firstOrFail();
+            $opp = Opportunity::where('id', $app->opportunity_id)->lockForUpdate()->firstOrFail();
+            $client = User::where('id', $userId)->firstOrFail();
+
+            if ($opp->posted_by !== $userId && $client->role !== RoleType::Admin) {
+                abort(403, 'Hanya pembuat acara atau Admin yang berwenang melakukan pembayaran honor ke pekerja.');
+            }
+
+            if (!in_array($opp->status, ['in_progress', 'completed'])) {
+                abort(422, 'Pembayaran termin hanya dapat dicairkan saat acara berlangsung atau telah selesai.');
+            }
+
+            $totalAgreed = (float) ($app->counter_offer_price ?: $app->bid_price ?: 0);
+            if ($totalAgreed <= 0) {
+                abort(422, 'Nominal kesepakatan honor pekerja tidak valid.');
+            }
+
+            $alreadyPaid = (float) ($app->paid_amount ?? 0);
+            $terms = $app->payment_terms ?? [];
+            $payoutAmount = 0.0;
+            $milestoneTitle = 'Pembayaran Honor';
+
+            if ($milestoneIndex !== null && isset($terms[$milestoneIndex])) {
+                $milestone = $terms[$milestoneIndex];
+                if (($milestone['status'] ?? 'unpaid') === 'paid') {
+                    abort(422, 'Termin "' . ($milestone['title'] ?? ('Termin ' . ($milestoneIndex + 1))) . '" sudah dibayarkan sebelumnya.');
+                }
+
+                $payoutAmount = (float) ($milestone['amount'] ?? round($totalAgreed * (($milestone['percentage'] ?? 100) / 100), 2));
+                $milestoneTitle = $milestone['title'] ?? ('Termin ' . ($milestoneIndex + 1));
+
+                $terms[$milestoneIndex]['status'] = 'paid';
+                $terms[$milestoneIndex]['paid_at'] = now()->toIso8601String();
+            } else {
+                $payoutAmount = $customAmount ?: max(0, $totalAgreed - $alreadyPaid);
+                $milestoneTitle = 'Pelunasan Penuh';
+
+                if (!empty($terms)) {
+                    foreach ($terms as $idx => $t) {
+                        $terms[$idx]['status'] = 'paid';
+                        if (empty($terms[$idx]['paid_at'])) {
+                            $terms[$idx]['paid_at'] = now()->toIso8601String();
+                        }
+                    }
+                }
+            }
+
+            if ($payoutAmount <= 0) {
+                abort(422, 'Tidak ada sisa nominal honor yang perlu dicairkan.');
+            }
+
+            $newPaidTotal = $alreadyPaid + $payoutAmount;
+            $app->paid_amount = $newPaidTotal;
+            $app->payment_terms = $terms;
+            $app->payment_status = ($newPaidTotal >= ($totalAgreed - 100)) ? 'paid' : 'partially_paid';
+            $app->save();
+
+            // Masukkan dana ke saldo dompet kreator
+            $creator = User::lockForUpdate()->where('id', $app->creator_id)->firstOrFail();
+            $creator->balance += $payoutAmount;
+            $creator->save();
+
+            $refNumber = 'ESCROW-PAY-' . strtoupper(Str::random(8)) . '-' . time();
+            $walletTx = WalletTransaction::create([
+                'user_id' => $creator->id,
+                'type' => 'escrow_release',
+                'amount' => $payoutAmount,
+                'fee' => 0.00,
+                'payment_method' => 'wallet',
+                'payment_provider' => 'Kreavana Escrow',
+                'status' => 'completed',
+                'reference_number' => $refNumber,
+                'description' => "Pencairan dana Escrow untuk acara '{$opp->title}' ({$milestoneTitle}) kepada {$creator->name}.",
+            ]);
+            $walletTx->ledger_hash = $walletTx->generateLedgerHash();
+            $walletTx->save();
+
+            // Sinkronisasi dengan JobContract
+            JobContract::where('opportunity_id', $opp->id)
+                ->where('creator_id', $app->creator_id)
+                ->update([
+                    'paid_amount' => $newPaidTotal,
+                    'payment_status' => $app->payment_status,
+                    'payment_terms' => $terms,
+                    'work_status' => ($app->payment_status === 'paid' && $app->worker_progress >= 100) ? WorkStatus::Completed : WorkStatus::InProgress,
+                ]);
+
+            // Notifikasi ke Kreator
+            $this->notificationRepo->create([
+                'user_id' => $creator->id,
+                'title' => 'Honorarium Pekerjaan Dicairkan!',
+                'message' => 'Pembayaran sebesar Rp ' . number_format($payoutAmount, 0, ',', '.') . ' (' . $milestoneTitle . ') untuk proyek "' . $opp->title . '" telah dicairkan ke saldo dompet Anda.',
+                'type' => 'wallet',
+                'data' => [
+                    'opportunity_id' => $opp->id,
+                    'application_id' => $app->id,
+                    'amount' => $payoutAmount,
+                    'reference_number' => $refNumber,
+                ],
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
+
+            return [
+                'application_id' => $app->id,
+                'paid_amount' => (float) $app->paid_amount,
+                'payment_status' => $app->payment_status,
+                'payment_terms' => $app->payment_terms,
+                'payout_amount' => $payoutAmount,
+                'message' => 'Pembayaran sebesar Rp ' . number_format($payoutAmount, 0, ',', '.') . ' (' . $milestoneTitle . ') berhasil dicairkan ke saldo pekerja.',
+            ];
+        });
+    }
+
+    /**
+     * Auto-release dana Escrow jika melewati batas waktu 1 bulan dari tanggal acara yang ditentukan.
+     */
+    public function checkAndAutoReleaseEscrow(string $opportunityId, ?string $userId = null): array
+    {
+        return DB::transaction(function () use ($opportunityId, $userId) {
+            $opp = Opportunity::where('id', $opportunityId)->lockForUpdate()->firstOrFail();
+
+            $eventEnd = $opp->event_end_date ?? $opp->event_date;
+            if (!$eventEnd) {
+                return ['status' => false, 'message' => 'Tanggal acara belum ditentukan.'];
+            }
+
+            $endDate = \Carbon\Carbon::parse($eventEnd)->endOfDay();
+            $graceDeadline = $endDate->copy()->addMonth();
+
+            if (now()->isBefore($graceDeadline)) {
+                $daysRemaining = max(0, (int) now()->diffInDays($graceDeadline, false));
+                return [
+                    'status' => false,
+                    'is_expired' => false,
+                    'days_remaining' => $daysRemaining,
+                    'grace_period_deadline' => $graceDeadline->toIso8601String(),
+                    'message' => "Masa tenggang 1 bulan belum lewat. Tersisa {$daysRemaining} hari sebelum auto-release dana ke pekerja diaktifkan.",
+                ];
+            }
+
+            // Sudah lewat 1 bulan pasca acara: lepas sisa dana ke seluruh pekerja
+            $approvedApps = OpportunityApplication::where('opportunity_id', $opp->id)
+                ->where('status', 'approved')
+                ->lockForUpdate()
+                ->get();
+
+            $releasedCount = 0;
+            $totalReleased = 0.0;
+
+            foreach ($approvedApps as $app) {
+                $totalAgreed = (float) ($app->counter_offer_price ?: $app->bid_price ?: 0);
+                $paid = (float) ($app->paid_amount ?? 0);
+                $unpaid = max(0, $totalAgreed - $paid);
+
+                if ($unpaid > 0) {
+                    $creator = User::lockForUpdate()->where('id', $app->creator_id)->first();
+                    if ($creator) {
+                        $creator->balance += $unpaid;
+                        $creator->save();
+
+                        $refNumber = 'AUTO-ESCROW-' . strtoupper(Str::random(8)) . '-' . time();
+                        $walletTx = WalletTransaction::create([
+                            'user_id' => $creator->id,
+                            'type' => 'escrow_release',
+                            'amount' => $unpaid,
+                            'fee' => 0.00,
+                            'payment_method' => 'wallet',
+                            'payment_provider' => 'Kreavana Escrow',
+                            'status' => 'completed',
+                            'reference_number' => $refNumber,
+                            'description' => "Pencairan otomatis (Auto-Release) sisa dana Escrow untuk acara '{$opp->title}' karena telah melewati masa tenggang 1 bulan pasca acara.",
+                        ]);
+                        $walletTx->ledger_hash = $walletTx->generateLedgerHash();
+                        $walletTx->save();
+
+                        $app->paid_amount = $totalAgreed;
+                        $app->payment_status = 'paid';
+                        $app->auto_released_at = now();
+
+                        $terms = $app->payment_terms ?? [];
+                        if (!empty($terms)) {
+                            foreach ($terms as $idx => $t) {
+                                $terms[$idx]['status'] = 'paid';
+                                $terms[$idx]['paid_at'] = now()->toIso8601String();
+                            }
+                            $app->payment_terms = $terms;
+                        }
+                        $app->save();
+
+                        JobContract::where('opportunity_id', $opp->id)
+                            ->where('creator_id', $app->creator_id)
+                            ->update([
+                                'paid_amount' => $totalAgreed,
+                                'payment_status' => 'paid',
+                                'auto_released_at' => now(),
+                                'work_status' => WorkStatus::Completed,
+                            ]);
+
+                        $this->notificationRepo->create([
+                            'user_id' => $creator->id,
+                            'title' => 'Dana Escrow Otomatis Dicairkan (Auto-Release)',
+                            'message' => 'Sisa honor sebesar Rp ' . number_format($unpaid, 0, ',', '.') . ' untuk proyek "' . $opp->title . '" telah otomatis dicairkan ke saldo Anda sesuai kesepakatan karena melewati masa tenggang 1 bulan pasca acara.',
+                            'type' => 'wallet',
+                            'data' => [
+                                'opportunity_id' => $opp->id,
+                                'application_id' => $app->id,
+                                'amount' => $unpaid,
+                            ],
+                            'is_read' => false,
+                            'created_at' => now(),
+                        ]);
+
+                        $releasedCount++;
+                        $totalReleased += $unpaid;
+                    }
+                }
+            }
+
+            $opp->auto_release_triggered_at = now();
+            $opp->save();
+
+            if ($opp->posted_by) {
+                $this->notificationRepo->create([
+                    'user_id' => $opp->posted_by,
+                    'title' => 'Dana Escrow Acara Telah Dilepas ke Pekerja',
+                    'message' => 'Karena telah melewati masa tenggang 1 bulan dari tanggal acara, total sisa dana sebesar Rp ' . number_format($totalReleased, 0, ',', '.') . ' telah dilepaskan otomatis ke pekerja proyek "' . $opp->title . '" sesuai kesepakatan nego.',
+                    'type' => 'project',
+                    'data' => [
+                        'opportunity_id' => $opp->id,
+                        'total_released' => $totalReleased,
+                    ],
+                    'is_read' => false,
+                    'created_at' => now(),
+                ]);
+            }
+
+            return [
+                'status' => true,
+                'is_expired' => true,
+                'released_count' => $releasedCount,
+                'total_released' => $totalReleased,
+                'message' => "Auto-release berhasil dijalankan. Dana sebesar Rp " . number_format($totalReleased, 0, ',', '.') . " telah dilepas ke {$releasedCount} pekerja.",
+            ];
+        });
     }
 
     public function reviewApplication(
@@ -916,6 +1517,14 @@ class OpportunityService extends BaseService
                 'contract_status' => is_string($c->contract_status) ? $c->contract_status : ($c->contract_status?->value ?? 'escrow_paid'),
                 'work_status' => is_string($c->work_status) ? $c->work_status : ($c->work_status?->value ?? 'in_progress'),
                 'dynamic_terms' => $c->dynamic_terms ?: ($opp->dynamic_terms ?: $defaultTerms),
+                'payment_scheme' => $c->payment_scheme ?? 'full_at_end',
+                'payment_terms' => $c->payment_terms ?? [],
+                'paid_amount' => (float) ($c->paid_amount ?? 0),
+                'payment_status' => $c->payment_status ?? 'unpaid',
+                'worker_progress' => (int) ($c->worker_progress ?? 0),
+                'deliverables' => $c->deliverables ?? [],
+                'grace_period_deadline' => $c->grace_period_deadline?->toIso8601String(),
+                'auto_released_at' => $c->auto_released_at?->toIso8601String(),
                 
                 // Pihak Pertama: Pembuat Event (Klien)
                 'party_client' => [
@@ -1001,6 +1610,11 @@ class OpportunityService extends BaseService
             'client_signed_at' => $opp->client_signed_at?->toIso8601String(),
             'wet_signature_document_url' => $opp->wet_signature_document_url,
             'wet_signature_verified_at' => $opp->wet_signature_verified_at?->toIso8601String(),
+            'admin_started_at' => $opp->admin_started_at?->toIso8601String(),
+            'auto_release_triggered_at' => $opp->auto_release_triggered_at?->toIso8601String(),
+            'grace_period_deadline' => ($opp->event_end_date ?? $opp->event_date) ? \Carbon\Carbon::parse($opp->event_end_date ?? $opp->event_date)->addMonth()->toIso8601String() : null,
+            'is_grace_period_active' => ($opp->event_end_date ?? $opp->event_date) ? \Carbon\Carbon::parse($opp->event_end_date ?? $opp->event_date)->isPast() && in_array($opp->status, ['in_progress', 'completed']) : false,
+            'grace_period_days_left' => ($opp->event_end_date ?? $opp->event_date) ? max(0, (int) now()->diffInDays(\Carbon\Carbon::parse($opp->event_end_date ?? $opp->event_date)->addMonth(), false)) : 0,
             'escrow_amount' => (float) ($opp->escrow_amount ?? 0),
             'dynamic_terms' => $opp->dynamic_terms ?? [],
             'admin_name' => $opp->admin_name,
@@ -1021,6 +1635,8 @@ class OpportunityService extends BaseService
                 'sub_role_slug' => $r->sub_role_slug,
                 'quantity' => (int) $r->quantity,
                 'notes' => $r->notes,
+                'payment_scheme' => $r->payment_scheme ?? 'full_at_end',
+                'payment_terms' => $r->payment_terms ?? [],
             ])->toArray();
         } else {
             $data['requirements'] = [

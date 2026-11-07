@@ -24,13 +24,22 @@ class RoleRequirementFormItem {
   String slug;
   int quantity;
   List<String> tags;
+  String paymentScheme; // 'full_at_end' | 'term'
+  List<Map<String, dynamic>> paymentTerms;
   final TextEditingController customTagController = TextEditingController();
 
   RoleRequirementFormItem({
     required this.slug,
     this.quantity = 1,
     List<String>? tags,
-  }) : tags = tags ?? [];
+    this.paymentScheme = 'full_at_end',
+    List<Map<String, dynamic>>? paymentTerms,
+  })  : tags = tags ?? [],
+        paymentTerms = paymentTerms ?? [
+          {'title': 'Termin 1 (DP & Persiapan)', 'percentage': 30},
+          {'title': 'Termin 2 (Hari H Acara / Progres)', 'percentage': 40},
+          {'title': 'Termin 3 (Pelunasan & Serah Terima)', 'percentage': 30},
+        ];
 
   void dispose() {
     customTagController.dispose();
@@ -661,6 +670,8 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
           'sub_role_slug': r.slug,
           'quantity': r.quantity,
           'notes': r.tags.isNotEmpty ? r.tags.join(', ') : null,
+          'payment_scheme': r.paymentScheme,
+          'payment_terms': r.paymentTerms,
         };
       }).toList();
 
@@ -1808,6 +1819,111 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                 ),
               ),
             ),
+          const SizedBox(height: 14),
+          const Divider(height: 1),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Icon(Icons.payments_rounded, size: 16, color: AppTheme.primaryPurple),
+              const SizedBox(width: 6),
+              Text(
+                'Skema Pembayaran Pekerja',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.grey.shade900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () => setState(() => item.paymentScheme = 'full_at_end'),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: item.paymentScheme == 'full_at_end'
+                          ? AppTheme.primaryPurple.withValues(alpha: 0.12)
+                          : (isDark ? const Color(0xFF242238) : Colors.grey.shade100),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: item.paymentScheme == 'full_at_end'
+                            ? AppTheme.primaryPurple
+                            : Colors.transparent,
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          item.paymentScheme == 'full_at_end'
+                              ? Icons.radio_button_checked_rounded
+                              : Icons.radio_button_off_rounded,
+                          size: 16,
+                          color: item.paymentScheme == 'full_at_end'
+                              ? AppTheme.primaryPurple
+                              : Colors.grey,
+                        ),
+                        const SizedBox(width: 6),
+                        const Expanded(
+                          child: Text(
+                            'Sekaligus di Akhir\n(100% Acara Selesai)',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: InkWell(
+                  onTap: () => setState(() => item.paymentScheme = 'term'),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: item.paymentScheme == 'term'
+                          ? AppTheme.primaryPurple.withValues(alpha: 0.12)
+                          : (isDark ? const Color(0xFF242238) : Colors.grey.shade100),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: item.paymentScheme == 'term'
+                            ? AppTheme.primaryPurple
+                            : Colors.transparent,
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          item.paymentScheme == 'term'
+                              ? Icons.radio_button_checked_rounded
+                              : Icons.radio_button_off_rounded,
+                          size: 16,
+                          color: item.paymentScheme == 'term'
+                              ? AppTheme.primaryPurple
+                              : Colors.grey,
+                        ),
+                        const SizedBox(width: 6),
+                        const Expanded(
+                          child: Text(
+                            'Per-Termin\n(DP 30% • 40% • 30%)',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

@@ -574,8 +574,145 @@ class OpportunityService {
       });
       return {
         'status': res['status'] == true,
-        'message': res['message'] ?? 'Jadwal pertemuan diajukan ke tim Marketing.',
+        'message': res['message'] ?? 'Jadwal pertemuan fisik tanda tangan basah berhasil diajukan.',
         'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> reviewMeeting({
+    required String opportunityId,
+    required String decision, // 'approve' | 'reject'
+    String? notes,
+  }) async {
+    try {
+      final res = await ApiService.post('opportunities/$opportunityId/review-meeting', {
+        'decision': decision,
+        if (notes != null) 'notes': notes,
+      });
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Status jadwal pertemuan berhasil diperbarui.',
+        'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> adminStartEvent({
+    required String opportunityId,
+    String? documentMouUrl,
+    String? notes,
+  }) async {
+    try {
+      final res = await ApiService.post('opportunities/$opportunityId/admin-start-event', {
+        if (documentMouUrl != null) 'document_mou_url': documentMouUrl,
+        if (notes != null) 'notes': notes,
+      });
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Acara resmi dimulai oleh Admin setelah verifikasi tanda tangan basah fisik!',
+        'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateWorkerProgress({
+    required String applicationId,
+    required int progress,
+    String? notes,
+    String? workerStatus,
+  }) async {
+    try {
+      final res = await ApiService.post('opportunities/applications/$applicationId/progress', {
+        'progress': progress,
+        if (notes != null) 'notes': notes,
+        if (workerStatus != null) 'worker_status': workerStatus,
+      });
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Progress pekerja berhasil diperbarui.',
+        'data': res['data'],
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> uploadDeliverable({
+    required String applicationId,
+    required String type, // 'link' | 'image' | 'video' | 'document'
+    required String title,
+    String? url,
+    String? notes,
+  }) async {
+    try {
+      final res = await ApiService.post('opportunities/applications/$applicationId/deliverables', {
+        'type': type,
+        'title': title,
+        if (url != null) 'url': url,
+        if (notes != null) 'notes': notes,
+      });
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Hasil kerja (deliverable) berhasil diunggah.',
+        'data': res['data'],
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> payWorker({
+    required String applicationId,
+    int? milestoneIndex,
+    double? amount,
+  }) async {
+    try {
+      final res = await ApiService.post('opportunities/applications/$applicationId/pay', {
+        if (milestoneIndex != null) 'milestone_index': milestoneIndex,
+        if (amount != null) 'amount': amount,
+      });
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Pembayaran honor berhasil dicairkan ke pekerja.',
+        'data': res['data'],
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> autoReleaseEscrow(String opportunityId) async {
+    try {
+      final res = await ApiService.post('opportunities/$opportunityId/auto-release-escrow', {});
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Pengecekan auto-release selesai.',
+        'data': res['data'],
       };
     } catch (e) {
       return {

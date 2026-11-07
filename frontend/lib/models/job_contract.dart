@@ -16,6 +16,14 @@ class JobContract {
   final String? adminName;
   final String? adminSignatureUrl;
   final DateTime? adminSignedAt;
+  final String paymentScheme;
+  final List<Map<String, dynamic>> paymentTerms;
+  final double paidAmount;
+  final String paymentStatus;
+  final int workerProgress;
+  final List<Map<String, dynamic>> deliverables;
+  final DateTime? gracePeriodDeadline;
+  final DateTime? autoReleasedAt;
   final double agreedPrice;
   final double escrowAmount;
   String contractStatus;
@@ -58,6 +66,14 @@ class JobContract {
     this.adminName,
     this.adminSignatureUrl,
     this.adminSignedAt,
+    this.paymentScheme = 'full_at_end',
+    this.paymentTerms = const [],
+    this.paidAmount = 0.0,
+    this.paymentStatus = 'unpaid',
+    this.workerProgress = 0,
+    this.deliverables = const [],
+    this.gracePeriodDeadline,
+    this.autoReleasedAt,
     required this.agreedPrice,
     required this.escrowAmount,
     required this.contractStatus,
@@ -117,6 +133,14 @@ class JobContract {
           : (json['party_admin']?['signed_at'] != null
               ? DateTime.tryParse(json['party_admin']['signed_at'].toString())
               : null),
+      paymentScheme: json['payment_scheme']?.toString() ?? 'full_at_end',
+      paymentTerms: json['payment_terms'] is List ? (json['payment_terms'] as List).whereType<Map>().map((m) => Map<String, dynamic>.from(m)).toList() : [],
+      paidAmount: double.tryParse(json['paid_amount']?.toString() ?? '0') ?? 0.0,
+      paymentStatus: json['payment_status']?.toString() ?? 'unpaid',
+      workerProgress: int.tryParse(json['worker_progress']?.toString() ?? '0') ?? 0,
+      deliverables: json['deliverables'] is List ? (json['deliverables'] as List).whereType<Map>().map((m) => Map<String, dynamic>.from(m)).toList() : [],
+      gracePeriodDeadline: json['grace_period_deadline'] != null ? DateTime.tryParse(json['grace_period_deadline'].toString()) : null,
+      autoReleasedAt: json['auto_released_at'] != null ? DateTime.tryParse(json['auto_released_at'].toString()) : null,
       agreedPrice:
           double.tryParse(json['agreed_price']?.toString() ?? '0') ?? 0.0,
       escrowAmount:

@@ -56,6 +56,15 @@ class OpportunityApplicationModel {
   final String? counterOfferNotes;
   final String? counterOfferStatus; // 'pending', 'accepted', 'declined'
   final String? counterOfferBy; // 'client' or 'creator'
+  final String paymentScheme; // 'full_at_end' | 'term'
+  final List<Map<String, dynamic>> paymentTerms;
+  final double paidAmount;
+  final String paymentStatus; // 'unpaid' | 'partially_paid' | 'paid'
+  final int workerProgress; // 0 - 100
+  final String workerStatus; // 'assigned' | 'in_progress' | 'submitted' | 'completed'
+  final List<Map<String, dynamic>> submittedDeliverables;
+  final String? gracePeriodDeadline;
+  final String? autoReleasedAt;
   final String status;
   final String? rejectionReason;
   final String? reviewedAt;
@@ -75,6 +84,15 @@ class OpportunityApplicationModel {
     this.counterOfferNotes,
     this.counterOfferStatus,
     this.counterOfferBy,
+    this.paymentScheme = 'full_at_end',
+    this.paymentTerms = const [],
+    this.paidAmount = 0.0,
+    this.paymentStatus = 'unpaid',
+    this.workerProgress = 0,
+    this.workerStatus = 'assigned',
+    this.submittedDeliverables = const [],
+    this.gracePeriodDeadline,
+    this.autoReleasedAt,
     this.status = 'pending',
     this.rejectionReason,
     this.reviewedAt,
@@ -88,6 +106,10 @@ class OpportunityApplicationModel {
   bool get isConsideration => status == 'under_consideration';
   bool get isCounterOfferByCreator => counterOfferBy == 'creator';
   bool get isCounterOfferByClient => counterOfferBy != 'creator';
+  bool get isTermPayment => paymentScheme == 'term';
+  bool get isFullyPaid => paymentStatus == 'paid' || (bidPrice != null && paidAmount >= (counterOfferPrice ?? bidPrice!));
+  double get agreedFee => counterOfferPrice ?? bidPrice ?? 0.0;
+  double get remainingUnpaidFee => (agreedFee - paidAmount).clamp(0.0, double.infinity);
   String get creatorId => (rawCreatorId != null && rawCreatorId!.isNotEmpty) ? rawCreatorId! : (creator?.id ?? '');
 
   String get subRoleLabel {
@@ -130,6 +152,24 @@ class OpportunityApplicationModel {
       }
     }
 
+    List<Map<String, dynamic>> terms = [];
+    if (json['payment_terms'] is List) {
+      for (final e in (json['payment_terms'] as List)) {
+        if (e is Map) {
+          terms.add(Map<String, dynamic>.from(e));
+        }
+      }
+    }
+
+    List<Map<String, dynamic>> deliverables = [];
+    if (json['submitted_deliverables'] is List) {
+      for (final e in (json['submitted_deliverables'] as List)) {
+        if (e is Map) {
+          deliverables.add(Map<String, dynamic>.from(e));
+        }
+      }
+    }
+
     return OpportunityApplicationModel(
       id: json['id']?.toString() ?? '',
       opportunityId: json['opportunity_id']?.toString() ?? '',
@@ -144,6 +184,15 @@ class OpportunityApplicationModel {
       counterOfferNotes: json['counter_offer_notes']?.toString(),
       counterOfferStatus: json['counter_offer_status']?.toString(),
       counterOfferBy: json['counter_offer_by']?.toString() ?? 'client',
+      paymentScheme: json['payment_scheme']?.toString() ?? 'full_at_end',
+      paymentTerms: terms,
+      paidAmount: json['paid_amount'] != null ? (double.tryParse(json['paid_amount'].toString()) ?? 0.0) : 0.0,
+      paymentStatus: json['payment_status']?.toString() ?? 'unpaid',
+      workerProgress: json['worker_progress'] != null ? (int.tryParse(json['worker_progress'].toString()) ?? 0) : 0,
+      workerStatus: json['worker_status']?.toString() ?? 'assigned',
+      submittedDeliverables: deliverables,
+      gracePeriodDeadline: json['grace_period_deadline']?.toString(),
+      autoReleasedAt: json['auto_released_at']?.toString(),
       status: json['status'] ?? 'pending',
       rejectionReason: json['rejection_reason'],
       reviewedAt: json['reviewed_at']?.toString(),

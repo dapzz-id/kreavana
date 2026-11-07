@@ -640,73 +640,74 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
 
     final currencyFmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
-    // KASUS 1: Budget >= 100 Jt -> Wajib Tanda Tangan Basah & MoU Fisik
+    // KASUS 1: Budget >= 100 Jt -> Wajib Tanda Tangan Basah Dokumen Fisik (3 Pihak)
     if (_opp.isWetSignatureBudget) {
-      final isWetSigned = _opp.isContractSigned ||
-          (_opp.wetSignatureDocumentUrl != null && _opp.wetSignatureDocumentUrl!.isNotEmpty) ||
-          (_opp.wetSignatureVerifiedAt != null && _opp.wetSignatureVerifiedAt!.isNotEmpty) ||
-          _opp.meetingStatus == 'verified_paid';
-
-      if (!isWetSigned) {
-        await showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.gavel_rounded, color: Color(0xFFD97706)),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Wajib Tanda Tangan Basah',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+      if (!_opp.isMeetingVerified) {
+        if (!_opp.isMeetingPending && !_opp.isMeetingInProcess) {
+          // 1. Muncul form atur tanggal pertemuan fisik 3 pihak
+          await _handleScheduleMeeting();
+          return;
+        } else if (_opp.isMeetingPending) {
+          // 2. Status pending jika sudah submit tanggal
+          if (_isMarketingOrAdmin) {
+            await _handleAdminReviewMeeting();
+          } else {
+            if (!mounted) return;
+            await showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Row(
+                  children: [
+                    Icon(Icons.hourglass_top_rounded, color: Colors.orange),
+                    SizedBox(width: 8),
+                    Expanded(child: Text('Jadwal Menunggu Persetujuan Admin', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold))),
+                  ],
                 ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
-                  ),
-                  child: const Text(
-                    'Proyek ini memiliki anggaran skala besar (>= Rp 100.000.000).\n\n'
-                    'Sesuai regulasi hukum & perbankan:\n'
-                    '1. Wajib penandatanganan dokumen fisik (Tanda Tangan Basah) dan MoU resmi tatap muka.\n'
-                    '2. Dokumen fisik harus diverifikasi oleh Tim Legal Kreavana sebelum acara resmi dapat dimulai.',
-                    style: TextStyle(fontSize: 12.5, height: 1.4),
-                  ),
+                content: Text(
+                  'Jadwal pertemuan fisik tanda tangan basah telah diajukan:\n\n'
+                  '• Tanggal: ${_opp.meetingDate ?? "-"}\n'
+                  '• Waktu: ${_opp.meetingTime ?? "-"}\n'
+                  '• Lokasi: ${_opp.meetingLocation ?? "-"}\n\n'
+                  'Status saat ini: PENDING.\n'
+                  'Sedang menunggu persetujuan dari Admin Kreavana.',
+                  style: const TextStyle(fontSize: 13, height: 1.4),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Status saat ini: Menunggu TTD Basah / Verifikasi Dokumen Fisik.',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange.shade800),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Tutup'),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+                ],
               ),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD97706)),
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _handleScheduleMeeting();
-                },
-                icon: const Icon(Icons.calendar_month_rounded, size: 16, color: Colors.white),
-                label: const Text('Jadwalkan MoU', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            );
+          }
+          return;
+        } else if (_opp.isMeetingInProcess) {
+          // 3. Status diproses jika admin menyetujui tanggalnya
+          if (_isMarketingOrAdmin) {
+            await _handleAdminStartEventAfterWetSignature();
+          } else {
+            if (!mounted) return;
+            await showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Row(
+                  children: [
+                    Icon(Icons.verified_user_rounded, color: Color(0xFF2563EB)),
+                    SizedBox(width: 8),
+                    Expanded(child: Text('Jadwal Disetujui (DIPROSES)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold))),
+                  ],
+                ),
+                content: Text(
+                  'Jadwal pertemuan fisik tanda tangan basah telah disetujui Admin Kreavana (Status: Diproses).\n\n'
+                  'Acara akan dimulai secara resmi oleh Admin Kreavana setelah pertemuan tatap muka 3 pihak (Admin, Penyelenggara, dan Pekerja) serta penandatanganan dokumen MoU basah selesai dilakukan.',
+                  style: const TextStyle(fontSize: 13, height: 1.4),
+                ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+                ],
               ),
-            ],
-          ),
-        );
-        return;
+            );
+          }
+          return;
+        }
       }
     }
 
@@ -1515,57 +1516,107 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
     final titleCtrl = TextEditingController();
     final urlCtrl = TextEditingController();
     final notesCtrl = TextEditingController();
+    String selectedType = 'link'; // 'link', 'image', 'video', 'document'
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Kirim Dokumen / Link Kerja'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Judul Dokumen / File',
-                hintText: 'Misal: Draft Foto High-Res / Rundown Acara',
-                border: OutlineInputBorder(),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.upload_file_rounded, color: AppTheme.primaryPurple),
+                SizedBox(width: 8),
+                Text('Unggah Hasil Kerja (Deliverables)'),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Pekerja dapat mengunggah bukti hasil kerja berupa Tautan (Link Drive/Figma), Foto/Gambar, Video Dokumentasi, atau Dokumen Berkas.',
+                    style: TextStyle(fontSize: 12.5, height: 1.4),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text('Pilih Tipe Hasil Kerja:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('🔗 Link URL', style: TextStyle(fontSize: 11)),
+                        selected: selectedType == 'link',
+                        onSelected: (val) => setDialogState(() => selectedType = 'link'),
+                      ),
+                      ChoiceChip(
+                        label: const Text('🖼️ Foto / Image', style: TextStyle(fontSize: 11)),
+                        selected: selectedType == 'image',
+                        onSelected: (val) => setDialogState(() => selectedType = 'image'),
+                      ),
+                      ChoiceChip(
+                        label: const Text('🎥 Video', style: TextStyle(fontSize: 11)),
+                        selected: selectedType == 'video',
+                        onSelected: (val) => setDialogState(() => selectedType = 'video'),
+                      ),
+                      ChoiceChip(
+                        label: const Text('📄 Dokumen', style: TextStyle(fontSize: 11)),
+                        selected: selectedType == 'document',
+                        onSelected: (val) => setDialogState(() => selectedType = 'document'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: titleCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Judul Hasil Kerja / Berkas *',
+                      hintText: 'Misal: Link RAW Files Foto / Final Video Highlight',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: urlCtrl,
+                    decoration: InputDecoration(
+                      labelText: selectedType == 'link'
+                          ? 'Tautan URL (Drive / Figma / YouTube) *'
+                          : 'Tautan / URL Berkas *',
+                      hintText: 'https://...',
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.link_rounded, size: 18),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: notesCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Catatan Keterangan (Opsional)',
+                      hintText: 'Akses link telah dibuka, password zip...',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: urlCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Link / URL (Google Drive, Figma, Dropbox)',
-                hintText: 'https://drive.google.com/...',
-                border: OutlineInputBorder(),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryPurple),
+                onPressed: () {
+                  if (titleCtrl.text.trim().isEmpty || urlCtrl.text.trim().isEmpty) {
+                    AppSnackbar.error(ctx, 'Judul dan URL tautan hasil kerja wajib diisi.');
+                    return;
+                  }
+                  Navigator.pop(ctx, true);
+                },
+                child: const Text('Kirim Hasil Kerja', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: notesCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Catatan Tambahan (Opsional)',
-                hintText: 'Akses link telah dibuka untuk siapa saja yang memiliki tautan...',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 2,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryPurple),
-            onPressed: () {
-              if (titleCtrl.text.trim().isEmpty || urlCtrl.text.trim().isEmpty) {
-                AppSnackbar.error(ctx, 'Judul dan URL link wajib diisi.');
-                return;
-              }
-              Navigator.pop(ctx, true);
-            },
-            child: const Text('Kirim', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
 
@@ -1573,23 +1624,426 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
 
     setState(() => _actionLoading = true);
     try {
-      final res = await OpportunityService.submitDocuments(
+      final res = await OpportunityService.uploadDeliverable(
         applicationId: app.id,
-        documents: [
-          {
-            'title': titleCtrl.text.trim(),
-            'url': urlCtrl.text.trim(),
-            'notes': notesCtrl.text.trim().isNotEmpty ? notesCtrl.text.trim() : null,
-          }
-        ],
+        type: selectedType,
+        title: titleCtrl.text.trim(),
+        url: urlCtrl.text.trim(),
+        notes: notesCtrl.text.trim().isNotEmpty ? notesCtrl.text.trim() : null,
       );
 
       if (mounted) {
         if (res['status'] == true) {
-          AppSnackbar.success(context, 'Dokumen / link berhasil dikirimkan!');
+          AppSnackbar.success(context, 'Hasil kerja ($selectedType) berhasil dikirimkan!');
           await _fetchApplications();
         } else {
-          AppSnackbar.error(context, res['message'] ?? 'Gagal mengirimkan dokumen.');
+          AppSnackbar.error(context, res['message'] ?? 'Gagal mengunggah hasil kerja.');
+        }
+      }
+    } catch (e) {
+      if (mounted) AppSnackbar.error(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _actionLoading = false);
+    }
+  }
+
+  Future<void> _handleUpdateWorkerProgress(OpportunityApplicationModel app) async {
+    int current = app.workerProgress;
+    final notesCtrl = TextEditingController();
+
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                const Icon(Icons.trending_up_rounded, color: Color(0xFF059669)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Update Progress: ${app.creator?.name ?? app.subRoleLabel}',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Atur persentase penyelesaian tugas untuk posisi ${app.subRoleLabel}:',
+                  style: const TextStyle(fontSize: 12.5),
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: Text(
+                    '$current%',
+                    style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF059669)),
+                  ),
+                ),
+                Slider(
+                  value: current.toDouble(),
+                  min: 0,
+                  max: 100,
+                  divisions: 20,
+                  label: '$current%',
+                  activeColor: const Color(0xFF059669),
+                  onChanged: (val) => setDialogState(() => current = val.round()),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [0, 25, 50, 75, 100].map((step) {
+                    return InkWell(
+                      onTap: () => setDialogState(() => current = step),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: current == step
+                              ? const Color(0xFF059669).withValues(alpha: 0.15)
+                              : Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '$step%',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: current == step ? const Color(0xFF059669) : Colors.black87,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: notesCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Catatan Progress (Opsional)',
+                    hintText: 'Misal: Pengambilan gambar selesai, tahap editing...',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669)),
+                onPressed: () => Navigator.pop(ctx, current),
+                child: const Text('Simpan Progress', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if (result == null) return;
+
+    setState(() => _actionLoading = true);
+    try {
+      final res = await OpportunityService.updateWorkerProgress(
+        applicationId: app.id,
+        progress: result,
+        notes: notesCtrl.text.trim().isNotEmpty ? notesCtrl.text.trim() : null,
+      );
+
+      if (mounted) {
+        if (res['status'] == true) {
+          AppSnackbar.success(context, 'Progress berhasil diperbarui menjadi $result%!');
+          await _fetchApplications();
+          final updatedOpp = await OpportunityService.getOpportunityById(_opp.id ?? '');
+          if (updatedOpp != null && mounted) {
+            setState(() => _opp = updatedOpp);
+          }
+        } else {
+          AppSnackbar.error(context, res['message'] ?? 'Gagal memperbarui progress.');
+        }
+      }
+    } catch (e) {
+      if (mounted) AppSnackbar.error(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _actionLoading = false);
+    }
+  }
+
+  Future<void> _handlePayWorkerTerm(
+    OpportunityApplicationModel app, {
+    int? milestoneIndex,
+    double? amount,
+    String? title,
+    String? note,
+  }) async {
+    final currencyFmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final targetAmount = amount ?? (milestoneIndex != null && milestoneIndex < app.paymentTerms.length
+        ? (double.tryParse(app.paymentTerms[milestoneIndex]['amount']?.toString() ?? '0') ?? 0.0)
+        : app.remainingUnpaidFee);
+
+    final termTitle = note ?? title ?? (milestoneIndex != null && milestoneIndex < app.paymentTerms.length
+        ? (app.paymentTerms[milestoneIndex]['title'] ?? 'Termin ${milestoneIndex + 1}')
+        : 'Pelunasan Penuh');
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.payment_rounded, color: Color(0xFF059669)),
+            SizedBox(width: 8),
+            Text('Konfirmasi Pencairan Honor'),
+          ],
+        ),
+        content: Text(
+          'Anda akan mencairkan pembayaran honor dari Escrow Rekber Kreavana:\n\n'
+          '• Penerima: ${app.creator?.name ?? "Pekerja"}\n'
+          '• Peran: ${app.subRoleLabel}\n'
+          '• Tahap: $termTitle\n'
+          '• Nominal: ${currencyFmt.format(targetAmount)}\n\n'
+          'Dana sebesar ${currencyFmt.format(targetAmount)} akan langsung diteruskan ke dompet saldo pekerja secara aman.',
+          style: const TextStyle(fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669)),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Ya, Cairkan Sekarang', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _actionLoading = true);
+    try {
+      final res = await OpportunityService.payWorker(
+        applicationId: app.id,
+        milestoneIndex: milestoneIndex,
+        amount: targetAmount,
+      );
+
+      if (mounted) {
+        if (res['status'] == true) {
+          AppSnackbar.success(context, res['message'] ?? 'Pembayaran berhasil dicairkan ke pekerja!');
+          await _fetchApplications();
+        } else {
+          AppSnackbar.error(context, res['message'] ?? 'Gagal mencairkan pembayaran.');
+        }
+      }
+    } catch (e) {
+      if (mounted) AppSnackbar.error(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _actionLoading = false);
+    }
+  }
+
+  Future<void> _handleAutoReleaseEscrow() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.lock_open_rounded, color: Color(0xFF059669)),
+            SizedBox(width: 8),
+            Text('Auto-Release Dana Escrow?'),
+          ],
+        ),
+        content: const Text(
+          'Masa tenggang 1 bulan pasca tanggal acara telah lewat.\n\n'
+          'Sistem akan mencairkan seluruh sisa dana Escrow yang belum dibayarkan langsung ke masing-masing pekerja sesuai kesepakatan nego resmi.',
+          style: TextStyle(fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669)),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eksekusi Auto-Release', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _actionLoading = true);
+    try {
+      final res = await OpportunityService.autoReleaseEscrow(_opp.id ?? '');
+      if (mounted) {
+        if (res['status'] == true) {
+          AppSnackbar.success(context, res['message'] ?? 'Auto-release berhasil dijalankan!');
+          await _fetchApplications();
+          final updated = await OpportunityService.getOpportunityById(_opp.id ?? '');
+          if (updated != null && mounted) setState(() => _opp = updated);
+        } else {
+          AppSnackbar.info(context, res['message'] ?? 'Masa tenggang 1 bulan belum terpenuhi.');
+        }
+      }
+    } catch (e) {
+      if (mounted) AppSnackbar.error(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _actionLoading = false);
+    }
+  }
+
+  Future<void> _handleAdminReviewMeeting() async {
+    final notesCtrl = TextEditingController();
+
+    final decision = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF2563EB)),
+            SizedBox(width: 8),
+            Expanded(child: Text('Tinjau Jadwal Temu Fisik (Admin)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold))),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Penyelenggara mengajukan jadwal temu tanda tangan basah:\n'
+                '• Tanggal: ${_opp.meetingDate ?? "-"}\n'
+                '• Waktu: ${_opp.meetingTime ?? "-"}\n'
+                '• Lokasi: ${_opp.meetingLocation ?? "-"}\n'
+                '• Catatan: ${_opp.meetingNotes ?? "-"}\n\n'
+                'Jika disetujui, status akan berubah menjadi DIPROSES.',
+                style: const TextStyle(fontSize: 12.5, height: 1.4),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: notesCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Catatan Admin (Opsional)',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'reject'),
+            child: const Text('Tolak Jadwal', style: TextStyle(color: Colors.red)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2563EB)),
+            onPressed: () => Navigator.pop(ctx, 'approve'),
+            child: const Text('Setujui (Status: Diproses)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (decision == null) return;
+
+    setState(() => _actionLoading = true);
+    try {
+      final res = await OpportunityService.reviewMeeting(
+        opportunityId: _opp.id ?? '',
+        decision: decision,
+        notes: notesCtrl.text.trim().isNotEmpty ? notesCtrl.text.trim() : null,
+      );
+
+      if (mounted) {
+        if (res['status'] == true && res['data'] != null) {
+          setState(() => _opp = res['data'] as OpportunityModel);
+          AppSnackbar.success(context, res['message'] ?? 'Status jadwal berhasil diperbarui!');
+        } else {
+          AppSnackbar.error(context, res['message'] ?? 'Gagal memperbarui status jadwal.');
+        }
+      }
+    } catch (e) {
+      if (mounted) AppSnackbar.error(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _actionLoading = false);
+    }
+  }
+
+  Future<void> _handleAdminStartEventAfterWetSignature() async {
+    final docCtrl = TextEditingController(text: _opp.wetSignatureDocumentUrl ?? '');
+    final notesCtrl = TextEditingController();
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.gavel_rounded, color: Color(0xFF059669)),
+            SizedBox(width: 8),
+            Expanded(child: Text('Verifikasi TTD Basah & Mulai Acara', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold))),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Pertemuan fisik telah disetujui (Status: Diproses).\n\n'
+                'Admin akan memverifikasi bahwa penandatanganan dokumen MoU fisik basah telah selesai dilakukan oleh ketiga pihak, menahan saldo Escrow secara resmi, dan mengaktifkan acara.',
+                style: TextStyle(fontSize: 12.5, height: 1.4),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: docCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'URL / Bukti Dokumen MoU Basah (Opsional)',
+                  hintText: 'https://storage... / scan-mou.pdf',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.picture_as_pdf_rounded, size: 18),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: notesCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Catatan Verifikasi Admin Legal (Opsional)',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669)),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Verifikasi & Mulai Acara Resmi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _actionLoading = true);
+    try {
+      final res = await OpportunityService.adminStartEvent(
+        opportunityId: _opp.id ?? '',
+        documentMouUrl: docCtrl.text.trim().isNotEmpty ? docCtrl.text.trim() : null,
+        notes: notesCtrl.text.trim().isNotEmpty ? notesCtrl.text.trim() : null,
+      );
+
+      if (mounted) {
+        if (res['status'] == true && res['data'] != null) {
+          setState(() => _opp = res['data'] as OpportunityModel);
+          AppSnackbar.success(context, 'Acara resmi dimulai oleh Admin setelah verifikasi tanda tangan basah fisik!');
+          await _fetchApplications();
+        } else {
+          AppSnackbar.error(context, res['message'] ?? 'Gagal memulai acara.');
         }
       }
     } catch (e) {
@@ -1623,7 +2077,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
           children: [
             Icon(Icons.handshake_rounded, color: Colors.amber),
             SizedBox(width: 8),
-            Text('Atur Jadwal Pertemuan MoU'),
+            Expanded(child: Text('Jadwal Temu Tanda Tangan Basah Dokumen Fisik (3 Pihak)', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold))),
           ],
         ),
         content: SingleChildScrollView(
@@ -1631,16 +2085,28 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Pertemuan tatap muka bersama perwakilan Kreavana untuk penandatanganan berkas perjanjian kerjasama (MoU) formal proyek >= Rp 20.000.000.',
-                style: TextStyle(fontSize: 12.5, height: 1.4),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'Pertemuan tatap muka penandatanganan berkas MoU fisik asli untuk proyek bernilai >= Rp 100.000.000.\n\n'
+                  'Dihadiri oleh 3 Pihak:\n'
+                  '1. Admin Kreavana (Tim Legal & Penjamin Escrow)\n'
+                  '2. Pembuat Acara (Penyelenggara)\n'
+                  '3. Penerima Kerjaan (Kreator yang disetujui)\n\n'
+                  'Setelah diajukan, status jadwal adalah PENDING menunggu persetujuan Admin Kreavana. Jika disetujui Admin, status menjadi DIPROSES.',
+                  style: TextStyle(fontSize: 12, height: 1.4),
+                ),
               ),
               const SizedBox(height: 14),
               TextField(
                 controller: dateCtrl,
                 decoration: const InputDecoration(
-                  labelText: 'Tanggal Pertemuan (YYYY-MM-DD)',
-                  hintText: '2026-10-05',
+                  labelText: 'Tanggal Pertemuan (YYYY-MM-DD) *',
+                  hintText: '2026-11-20',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.calendar_today_rounded, size: 18),
                 ),
@@ -1649,7 +2115,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
               TextField(
                 controller: timeCtrl,
                 decoration: const InputDecoration(
-                  labelText: 'Waktu Pertemuan',
+                  labelText: 'Waktu Pertemuan *',
                   hintText: '14:00 WIB',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.access_time_rounded, size: 18),
@@ -1659,7 +2125,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
               TextField(
                 controller: locCtrl,
                 decoration: const InputDecoration(
-                  labelText: 'Lokasi Pertemuan (Kantor / Pick Map)',
+                  labelText: 'Lokasi Pertemuan Tatap Muka *',
                   hintText: 'Kreavana Creative Hub, Jakarta Selatan',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.place_rounded, size: 18),
@@ -1669,8 +2135,8 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
               TextField(
                 controller: notesCtrl,
                 decoration: const InputDecoration(
-                  labelText: 'Catatan Khusus (Opsional)',
-                  hintText: 'Membawa draft dokumen pengadaan fisik...',
+                  labelText: 'Catatan Dokumen Fisik (Opsional)',
+                  hintText: 'Membawa draft dokumen pengadaan fisik asli...',
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 2,
@@ -1689,7 +2155,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
               }
               Navigator.pop(ctx, true);
             },
-            child: const Text('Simpan Jadwal', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text('Ajukan Jadwal Temu', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -1711,7 +2177,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
           setState(() {
             _opp = res['data'] as OpportunityModel;
           });
-          AppSnackbar.success(context, 'Jadwal pertemuan MoU berhasil diagendakan!');
+          AppSnackbar.success(context, 'Jadwal pertemuan fisik tanda tangan basah diajukan! Status: PENDING (Menunggu Persetujuan Admin Kreavana).');
         } else {
           AppSnackbar.error(context, res['message'] ?? 'Gagal menjadwalkan pertemuan.');
         }
@@ -3662,15 +4128,15 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
             ],
           ),
 
-          // Submitted Documents / Deliverables Section (for approved applicants)
+          // ── Approved Worker Workspace (Progress, Deliverables, Payment Terms, Auto-Release) ──
           if (app.isApproved) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF13111E) : Colors.white,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
                 ),
@@ -3678,94 +4144,542 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Header Pekerja Terpilih
                   Row(
                     children: [
-                      const Icon(Icons.folder_shared_rounded, size: 16, color: AppTheme.primaryPurple),
-                      const SizedBox(width: 6),
-                      const Text(
-                        'Dokumen & Link Hasil Kerja Pelamar:',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                      const Spacer(),
-                      if (widget.user?.id == app.creatorId || _isOwner)
-                        TextButton.icon(
-                          onPressed: () => _handleSubmitDeliverable(app),
-                          icon: const Icon(Icons.add_link_rounded, size: 14),
-                          label: const Text('Kirim Dokumen / Link', style: TextStyle(fontSize: 11)),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppTheme.primaryPurple,
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          ),
-                        ),
-                    ],
-                  ),
-                  if (app.submittedDocuments.isEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      'Belum ada link atau dokumen yang diunggah oleh pelamar.',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ] else ...[
-                    const SizedBox(height: 8),
-                    ...app.submittedDocuments.map((doc) {
-                      final title = doc['title'] ?? 'Dokumen / Tautan';
-                      final url = doc['url'] ?? '';
-                      final notes = doc['notes'] ?? '';
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 6),
-                        padding: const EdgeInsets.all(8),
+                      Container(
+                        padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E1B33) : const Color(0xFFF1F5F9),
+                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Row(
+                        child: const Icon(Icons.verified_user_rounded, size: 16, color: Color(0xFF10B981)),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Manajemen Kerja & Pembayaran Pelamar',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'PELAMAR TERPILIH',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // 1. Progress Kerja Individual (Worker Progress)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E1B33) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Icon(Icons.link_rounded, size: 16, color: Color(0xFF06B6D4)),
-                            const SizedBox(width: 8),
+                            Row(
+                              children: [
+                                const Icon(Icons.trending_up_rounded, size: 16, color: AppTheme.primaryPurple),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Progress Kerja: ${app.workerProgress}%',
+                                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: app.workerProgress >= 100
+                                    ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                    : (app.workerProgress > 0
+                                        ? const Color(0xFF6366F1).withValues(alpha: 0.15)
+                                        : Colors.grey.withValues(alpha: 0.15)),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                app.workerProgress >= 100
+                                    ? 'Selesai 100%'
+                                    : (app.workerProgress > 0 ? 'Sedang Dikerjakan' : 'Belum Berjalan'),
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: app.workerProgress >= 100
+                                      ? const Color(0xFF059669)
+                                      : (app.workerProgress > 0 ? const Color(0xFF4F46E5) : Colors.grey.shade600),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: LinearProgressIndicator(
+                            value: app.workerProgress / 100.0,
+                            minHeight: 7,
+                            backgroundColor: isDark ? Colors.white12 : Colors.grey.shade200,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              app.workerProgress >= 100 ? const Color(0xFF10B981) : AppTheme.primaryPurple,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: _actionLoading ? null : () => _handleUpdateWorkerProgress(app),
+                            icon: const Icon(Icons.edit_note_rounded, size: 14),
+                            label: const Text('Perbarui Progress', style: TextStyle(fontSize: 11)),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppTheme.primaryPurple,
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 2. Deliverables / Bukti Hasil Kerja (Link, Gambar, Video, Dokumen)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E1B33) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.folder_shared_rounded, size: 16, color: Color(0xFF06B6D4)),
+                            const SizedBox(width: 6),
+                            const Text(
+                              'Hasil Kerja / Deliverables:',
+                              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+                            ),
+                            const Spacer(),
+                            TextButton.icon(
+                              onPressed: _actionLoading ? null : () => _handleSubmitDeliverable(app),
+                              icon: const Icon(Icons.upload_file_rounded, size: 14),
+                              label: const Text('Unggah Hasil Kerja', style: TextStyle(fontSize: 11)),
+                              style: TextButton.styleFrom(
+                                foregroundColor: const Color(0xFF06B6D4),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (app.submittedDeliverables.isEmpty && app.submittedDocuments.isEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            'Belum ada hasil kerja (link/gambar/video/dokumen) yang diunggah oleh pekerja.',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ] else ...[
+                          const SizedBox(height: 8),
+                          ...[...app.submittedDeliverables, ...app.submittedDocuments].map((doc) {
+                            final type = (doc['type'] ?? 'link').toString().toLowerCase();
+                            final title = doc['title'] ?? 'Hasil Kerja';
+                            final url = doc['url'] ?? '';
+                            final notes = doc['notes'] ?? '';
+                            final createdAt = doc['created_at']?.toString() ?? '';
+
+                            IconData iconData = Icons.link_rounded;
+                            Color iconColor = const Color(0xFF06B6D4);
+                            String typeLabel = 'Link';
+
+                            if (type == 'image' || url.endsWith('.jpg') || url.endsWith('.png') || url.endsWith('.jpeg')) {
+                              iconData = Icons.image_rounded;
+                              iconColor = const Color(0xFF8B5CF6);
+                              typeLabel = 'Gambar';
+                            } else if (type == 'video' || url.endsWith('.mp4') || url.contains('youtube') || url.contains('drive.google')) {
+                              iconData = Icons.videocam_rounded;
+                              iconColor = const Color(0xFFEF4444);
+                              typeLabel = 'Video';
+                            } else if (type == 'document' || type == 'doc' || url.endsWith('.pdf') || url.endsWith('.docx')) {
+                              iconData = Icons.description_rounded;
+                              iconColor = const Color(0xFFF59E0B);
+                              typeLabel = 'Dokumen';
+                            }
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF13111E) : Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: iconColor.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Icon(iconData, size: 16, color: iconColor),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                title,
+                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                              ),
+                                            ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                              decoration: BoxDecoration(
+                                                color: iconColor.withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                typeLabel,
+                                                style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: iconColor),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (url.isNotEmpty)
+                                          InkWell(
+                                            onTap: () async {
+                                              final uri = Uri.tryParse(url);
+                                              if (uri != null && await canLaunchUrl(uri)) {
+                                                await launchUrl(uri);
+                                              } else if (mounted) {
+                                                AppSnackbar.info(context, 'Tautan: $url');
+                                              }
+                                            },
+                                            child: Text(
+                                              url,
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                color: Color(0xFF2563EB),
+                                                decoration: TextDecoration.underline,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        if (notes.isNotEmpty)
+                                          Text(
+                                            'Catatan: $notes',
+                                            style: TextStyle(
+                                              fontSize: 10.5,
+                                              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                                            ),
+                                          ),
+                                        if (createdAt.isNotEmpty)
+                                          Text(
+                                            createdAt.length > 10 ? createdAt.substring(0, 10) : createdAt,
+                                            style: TextStyle(
+                                              fontSize: 9.5,
+                                              color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 3. Skema Pembayaran & Tombol Bayar
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E1B33) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.payments_rounded, size: 16, color: Color(0xFF10B981)),
+                                const SizedBox(width: 6),
+                                Text(
+                                  app.isTermPayment ? 'Skema: Pembayaran Per-Termin' : 'Skema: Sekaligus di Akhir',
+                                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: app.isFullyPaid
+                                    ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                    : (app.paidAmount > 0
+                                        ? const Color(0xFFF59E0B).withValues(alpha: 0.15)
+                                        : Colors.red.withValues(alpha: 0.1)),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                app.isFullyPaid
+                                    ? 'LUNAS'
+                                    : (app.paidAmount > 0 ? 'DIBAYAR SEBAGIAN' : 'BELUM DIBAYAR'),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: app.isFullyPaid
+                                      ? const Color(0xFF059669)
+                                      : (app.paidAmount > 0 ? const Color(0xFFD97706) : Colors.red.shade700),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    title,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                    'Total Honor: ${currencyFmt.format(app.agreedFee)}',
+                                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
                                   ),
-                                  if (url.isNotEmpty)
-                                    InkWell(
-                                      onTap: () async {
-                                        final uri = Uri.tryParse(url);
-                                        if (uri != null && await canLaunchUrl(uri)) {
-                                          await launchUrl(uri);
-                                        } else if (context.mounted) {
-                                          AppSnackbar.info(context, 'Tautan: $url');
-                                        }
-                                      },
-                                      child: Text(
-                                        url,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Color(0xFF2563EB),
-                                          decoration: TextDecoration.underline,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
+                                  Text(
+                                    'Sudah Terbayar: ${currencyFmt.format(app.paidAmount)}',
+                                    style: const TextStyle(fontSize: 11, color: Color(0xFF059669)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    'Sisa Tagihan:',
+                                    style: TextStyle(fontSize: 10.5, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
+                                  ),
+                                  Text(
+                                    currencyFmt.format(app.remainingUnpaidFee),
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: app.remainingUnpaidFee > 0 ? const Color(0xFFDC2626) : const Color(0xFF059669),
                                     ),
-                                  if (notes.isNotEmpty)
-                                    Text(
-                                      'Catatan: $notes',
-                                      style: TextStyle(fontSize: 10.5, color: isDark ? AppTheme.textMuted : Colors.grey.shade600),
-                                    ),
+                                  ),
                                 ],
                               ),
                             ),
                           ],
                         ),
-                      );
-                    }),
+
+                        // Jika Skema Per-Termin: Tampilkan list termin & tombol bayar per termin
+                        if (app.isTermPayment && app.paymentTerms.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          const Divider(height: 1),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Jadwal Termin Pembayaran:',
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 6),
+                          ...List.generate(app.paymentTerms.length, (idx) {
+                            final term = app.paymentTerms[idx];
+                            final termName = term['name']?.toString() ?? 'Termin ${idx + 1}';
+                            final termPct = term['percentage'] != null ? '${term['percentage']}%' : '';
+                            final termAmt = double.tryParse(term['amount']?.toString() ?? '0') ??
+                                (app.agreedFee * ((double.tryParse(term['percentage']?.toString() ?? '0') ?? 0) / 100.0));
+                            final isPaid = term['is_paid'] == true || term['status'] == 'paid';
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF13111E) : Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '$termName ${termPct.isNotEmpty ? "($termPct)" : ""}',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5),
+                                        ),
+                                        Text(
+                                          currencyFmt.format(termAmt),
+                                          style: const TextStyle(fontSize: 11, color: Color(0xFF059669)),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (isPaid)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF059669)),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Lunas',
+                                            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  else if (_isOwner && (_opp.status == 'in_progress' || _opp.status == 'completed'))
+                                    ElevatedButton.icon(
+                                      onPressed: _actionLoading
+                                          ? null
+                                          : () => _handlePayWorkerTerm(
+                                                app,
+                                                milestoneIndex: idx,
+                                                amount: termAmt,
+                                                note: 'Pembayaran $termName',
+                                              ),
+                                      icon: const Icon(Icons.payment_rounded, size: 12, color: Colors.white),
+                                      label: const Text('Bayar Termin', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF10B981),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                      ),
+                                    )
+                                  else
+                                    Text(
+                                      'Belum Dibayar',
+                                      style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600),
+                                    ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
+
+                        // Jika Skema Sekaligus di Akhir: Tombol Bayar Pelunasan
+                        if (!app.isTermPayment && !app.isFullyPaid && _isOwner && (_opp.status == 'in_progress' || _opp.status == 'completed')) ...[
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _actionLoading
+                                  ? null
+                                  : () => _handlePayWorkerTerm(
+                                        app,
+                                        amount: app.remainingUnpaidFee,
+                                        note: 'Pelunasan Sekaligus Honor Pekerja',
+                                      ),
+                              icon: const Icon(Icons.payments_rounded, size: 15, color: Colors.white),
+                              label: Text(
+                                'Bayar Pelunasan (${currencyFmt.format(app.remainingUnpaidFee)})',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF10B981),
+                                padding: const EdgeInsets.symmetric(vertical: 9),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  // 4. Batas Waktu 1 Bulan & Auto-Release Alert
+                  if (!app.isFullyPaid && (_opp.isGracePeriodActive || app.gracePeriodDeadline != null)) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDC2626).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFDC2626).withValues(alpha: 0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.timer_outlined, size: 18, color: Color(0xFFDC2626)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Masa Tenggang Pembayaran 1 Bulan Aktif (Sisa: ${_opp.gracePeriodDaysLeft} Hari)',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFDC2626)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Acara telah selesai namun honor pekerja belum dilunasi. Pembuat acara diberikan waktu 1 bulan lagi. '
+                            'Jika batas waktu terlewati dan belum dibayar, sistem akan otomatis mencairkan sisa saldo escrow ke pekerja sesuai kesepakatan nego.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? Colors.white70 : Colors.grey.shade800,
+                              height: 1.35,
+                            ),
+                          ),
+                          if (_opp.gracePeriodDaysLeft <= 0 || _isMarketingOrAdmin) ...[
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: ElevatedButton.icon(
+                                onPressed: _actionLoading ? null : _handleAutoReleaseEscrow,
+                                icon: const Icon(Icons.flash_on_rounded, size: 14, color: Colors.white),
+                                label: const Text('Cairkan Otomatis (Auto-Release)', style: TextStyle(fontSize: 11, color: Colors.white)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFDC2626),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -5248,7 +6162,9 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
     final hasMeeting = _opp.meetingDate != null && _opp.meetingDate!.isNotEmpty;
     final isMoUConfirmed = _opp.escrowStatus == 'completed' ||
         _opp.wetSignatureVerifiedAt != null ||
-        _opp.meetingStatus == 'verified_paid';
+        _opp.meetingStatus == 'verified_paid' ||
+        _opp.isMeetingVerified ||
+        _opp.adminStartedAt != null;
 
     return Container(
       width: double.infinity,
@@ -5301,7 +6217,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                       ],
                     ),
                     Text(
-                      'Wajib Tanda Tangan Basah & Perjanjian Kerjasama Legal (MoU Fisik) Kreavana',
+                      'Wajib Tanda Tangan Basah & Perjanjian Kerjasama Legal (MoU Fisik 3 Pihak)',
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
@@ -5313,15 +6229,23 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isMoUConfirmed ? const Color(0xFF059669) : const Color(0xFFD97706),
+                  color: isMoUConfirmed
+                      ? const Color(0xFF059669)
+                      : (_opp.isMeetingInProcess
+                          ? const Color(0xFF2563EB)
+                          : (_opp.isMeetingPending ? const Color(0xFFD97706) : Colors.red.shade700)),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  isMoUConfirmed ? 'TTD BASAH SAH' : 'PERLU TTD BASAH & MoU',
+                  isMoUConfirmed
+                      ? 'TTD BASAH SAH'
+                      : (_opp.isMeetingInProcess
+                          ? 'STATUS: DIPROSES'
+                          : (_opp.isMeetingPending ? 'STATUS: PENDING' : 'PERLU JADWAL')),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
-                    fontSize: 11,
+                    fontSize: 10.5,
                   ),
                 ),
               ),
@@ -5345,7 +6269,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Untuk mencegah sengketa hukum dan mematuhi regulasi perbankan, transaksi bernilai Rp 100 Juta ke atas wajib memiliki dokumen fisik yang telah ditandatangani secara basah (MoU Fisik) dan diverifikasi oleh tim legal sebelum acara dapat dimulai.',
+                    'Untuk transaksi bernilai Rp 100 Juta ke atas, diwajibkan pertemuan fisik tanda tangan basah dokumen MoU 3 pihak (Admin Kreavana, Pembuat Acara, dan Seluruh Penerima Job). Setelah jadwal diajukan (status: Pending), admin akan meninjau (status: Diproses), dan acara hanya dapat dimulai secara resmi oleh Admin Kreavana setelah MoU fisik diverifikasi.',
                     style: TextStyle(
                       fontSize: 12,
                       color: isDark ? Colors.white70 : Colors.grey.shade800,
@@ -5369,9 +6293,39 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Jadwal Pertemuan MoU Terjadwal:',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Jadwal Temu Tanda Tangan Basah Dokumen Fisik:',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: isMoUConfirmed
+                              ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                              : (_opp.isMeetingInProcess
+                                  ? const Color(0xFF2563EB).withValues(alpha: 0.15)
+                                  : const Color(0xFFD97706).withValues(alpha: 0.15)),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isMoUConfirmed
+                              ? 'MoU Fisik Terverifikasi'
+                              : (_opp.isMeetingInProcess
+                                  ? 'Diproses (Disetujui Admin)'
+                                  : 'Menunggu Persetujuan Admin (Pending)'),
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                            color: isMoUConfirmed
+                                ? const Color(0xFF059669)
+                                : (_opp.isMeetingInProcess ? const Color(0xFF2563EB) : const Color(0xFFD97706)),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -5404,6 +6358,93 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                       style: TextStyle(fontSize: 11.5, color: isDark ? AppTheme.textMuted : Colors.grey.shade700),
                     ),
                   ],
+
+                  // Status Meeting Explanations and Admin Actions
+                  if (_opp.isMeetingPending) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD97706).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFD97706).withValues(alpha: 0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.hourglass_top_rounded, size: 14, color: Color(0xFFD97706)),
+                              SizedBox(width: 6),
+                              Text(
+                                'Status: Pending (Menunggu Persetujuan Admin)',
+                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Jadwal pertemuan fisik telah diajukan oleh pembuat acara. Admin Kreavana akan meninjau dan mengonfirmasi tanggal tersebut.',
+                            style: TextStyle(fontSize: 11, color: isDark ? Colors.white70 : Colors.grey.shade800),
+                          ),
+                          if (_isMarketingOrAdmin) ...[
+                            const SizedBox(height: 8),
+                            ElevatedButton.icon(
+                              onPressed: _actionLoading ? null : _handleAdminReviewMeeting,
+                              icon: const Icon(Icons.rate_review_rounded, size: 14, color: Colors.white),
+                              label: const Text('Tinjau & Setujui Jadwal Temu', style: TextStyle(fontSize: 11, color: Colors.white)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFD97706),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ] else if (_opp.isMeetingInProcess) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.assignment_turned_in_rounded, size: 14, color: Color(0xFF2563EB)),
+                              SizedBox(width: 6),
+                              Text(
+                                'Status: Diproses (Jadwal Disetujui Admin)',
+                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Admin Kreavana telah menyetujui jadwal pertemuan. Ketiga pihak (Admin, Pembuat Acara, dan Penerima Job) akan bertemu untuk tanda tangan basah berkas fisik MoU. Setelah selesai, acara resmi akan dimulai oleh Admin Kreavana.',
+                            style: TextStyle(fontSize: 11, color: isDark ? Colors.white70 : Colors.grey.shade800),
+                          ),
+                          if (_isMarketingOrAdmin) ...[
+                            const SizedBox(height: 8),
+                            ElevatedButton.icon(
+                              onPressed: _actionLoading ? null : _handleAdminStartEventAfterWetSignature,
+                              icon: const Icon(Icons.verified_rounded, size: 14, color: Colors.white),
+                              label: const Text('Verifikasi TTD Basah & Mulai Acara', style: TextStyle(fontSize: 11, color: Colors.white)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2563EB),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -5412,7 +6453,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    'Jadwal pertemuan tatap muka belum diatur oleh pembuat event.',
+                    'Jadwal pertemuan fisik tanda tangan basah 3 pihak belum diatur.',
                     style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMuted : Colors.grey.shade700),
                   ),
                 ),
@@ -5420,7 +6461,7 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
                   ElevatedButton.icon(
                     onPressed: _actionLoading ? null : _handleScheduleMeeting,
                     icon: const Icon(Icons.edit_calendar_rounded, size: 15, color: Colors.white),
-                    label: const Text('Atur Jadwal & Lokasi (Map)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                    label: const Text('Atur Jadwal Temu Fisik (Map)', style: TextStyle(color: Colors.white, fontSize: 12)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFD97706),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

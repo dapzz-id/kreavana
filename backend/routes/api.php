@@ -197,6 +197,12 @@ Route::middleware(['auth:api', 'user.not_suspended'])->group(function () {
         Route::get('{id}/contracts', [OpportunityController::class, 'getContracts']);
         Route::post('{id}/update-progress', [OpportunityController::class, 'updateProgress']);
         Route::post('{id}/schedule-meeting', [OpportunityController::class, 'scheduleMeeting']);
+        Route::post('{id}/review-meeting', [OpportunityController::class, 'reviewMeeting'])->middleware('role:admin,marketing');
+        Route::post('{id}/admin-start-event', [OpportunityController::class, 'adminStartEvent'])->middleware('role:admin,marketing');
+        Route::post('{id}/auto-release-escrow', [OpportunityController::class, 'autoReleaseEscrow']);
+        Route::post('applications/{id}/progress', [OpportunityController::class, 'updateWorkerProgress']);
+        Route::post('applications/{id}/deliverables', [OpportunityController::class, 'uploadDeliverable']);
+        Route::post('applications/{id}/pay', [OpportunityController::class, 'payWorker']);
         Route::post('applications/{id}/submit-documents', [OpportunityController::class, 'submitDocuments']);
     });
 

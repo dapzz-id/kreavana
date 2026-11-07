@@ -59,15 +59,27 @@ class OpportunityRequirementModel {
   final String subRoleSlug;
   final int quantity;
   final String? notes;
+  final String paymentScheme;
+  final List<Map<String, dynamic>> paymentTerms;
 
   OpportunityRequirementModel({
     this.id,
     required this.subRoleSlug,
     this.quantity = 1,
     this.notes,
+    this.paymentScheme = 'full_at_end',
+    this.paymentTerms = const [],
   });
 
   factory OpportunityRequirementModel.fromJson(Map<String, dynamic> json) {
+    List<Map<String, dynamic>> terms = [];
+    if (json['payment_terms'] is List) {
+      for (final t in json['payment_terms']) {
+        if (t is Map) {
+          terms.add(Map<String, dynamic>.from(t));
+        }
+      }
+    }
     return OpportunityRequirementModel(
       id: json['id']?.toString(),
       subRoleSlug: json['sub_role_slug'] ?? '',
@@ -75,6 +87,8 @@ class OpportunityRequirementModel {
           ? int.tryParse((json['quantity_needed'] ?? json['quantity']).toString()) ?? 1
           : 1,
       notes: json['notes'],
+      paymentScheme: json['payment_scheme']?.toString() ?? 'full_at_end',
+      paymentTerms: terms,
     );
   }
 
@@ -84,6 +98,8 @@ class OpportunityRequirementModel {
       'sub_role_slug': subRoleSlug,
       'quantity': quantity,
       'notes': notes,
+      'payment_scheme': paymentScheme,
+      'payment_terms': paymentTerms,
     };
   }
 
@@ -241,6 +257,11 @@ class OpportunityModel {
   final String? adminName;
   final String? adminSignatureUrl;
   final String? adminSignedAt;
+  final String? adminStartedAt;
+  final String? autoReleaseTriggeredAt;
+  final String? gracePeriodDeadline;
+  final bool isGracePeriodActive;
+  final int gracePeriodDaysLeft;
   final bool isWetSignatureRequired;
   final bool isDynamicSignatureRequired;
 
@@ -293,6 +314,11 @@ class OpportunityModel {
     this.adminName,
     this.adminSignatureUrl,
     this.adminSignedAt,
+    this.adminStartedAt,
+    this.autoReleaseTriggeredAt,
+    this.gracePeriodDeadline,
+    this.isGracePeriodActive = false,
+    this.gracePeriodDaysLeft = 0,
     this.isWetSignatureRequired = false,
     this.isDynamicSignatureRequired = true,
   });
@@ -302,6 +328,9 @@ class OpportunityModel {
   bool get isOngoing => status.toLowerCase() == 'in_progress' || status.toLowerCase() == 'ongoing';
   bool get isClosed => status.toLowerCase() == 'closed' || status.toLowerCase() == 'completed';
   bool get hasExternalRating => externalRating != null && externalRating! > 0;
+  bool get isMeetingPending => meetingStatus.toLowerCase() == 'pending' || meetingStatus.toLowerCase() == 'pending_marketing_review';
+  bool get isMeetingInProcess => meetingStatus.toLowerCase() == 'diproses' || meetingStatus.toLowerCase() == 'approved';
+  bool get isMeetingVerified => meetingStatus.toLowerCase() == 'verified_completed' || meetingStatus.toLowerCase() == 'verified_paid' || (wetSignatureVerifiedAt != null && wetSignatureVerifiedAt!.isNotEmpty);
 
   bool get isEventRunning {
     if (status.toLowerCase() != 'open') return true;
@@ -431,6 +460,11 @@ class OpportunityModel {
     String? adminName,
     String? adminSignatureUrl,
     String? adminSignedAt,
+    String? adminStartedAt,
+    String? autoReleaseTriggeredAt,
+    String? gracePeriodDeadline,
+    bool? isGracePeriodActive,
+    int? gracePeriodDaysLeft,
     bool? isWetSignatureRequired,
     bool? isDynamicSignatureRequired,
   }) {
@@ -483,6 +517,11 @@ class OpportunityModel {
       adminName: adminName ?? this.adminName,
       adminSignatureUrl: adminSignatureUrl ?? this.adminSignatureUrl,
       adminSignedAt: adminSignedAt ?? this.adminSignedAt,
+      adminStartedAt: adminStartedAt ?? this.adminStartedAt,
+      autoReleaseTriggeredAt: autoReleaseTriggeredAt ?? this.autoReleaseTriggeredAt,
+      gracePeriodDeadline: gracePeriodDeadline ?? this.gracePeriodDeadline,
+      isGracePeriodActive: isGracePeriodActive ?? this.isGracePeriodActive,
+      gracePeriodDaysLeft: gracePeriodDaysLeft ?? this.gracePeriodDaysLeft,
       isWetSignatureRequired: isWetSignatureRequired ?? this.isWetSignatureRequired,
       isDynamicSignatureRequired: isDynamicSignatureRequired ?? this.isDynamicSignatureRequired,
     );
@@ -586,6 +625,13 @@ class OpportunityModel {
       adminName: json['admin_name']?.toString(),
       adminSignatureUrl: json['admin_signature_url']?.toString(),
       adminSignedAt: json['admin_signed_at']?.toString(),
+      adminStartedAt: json['admin_started_at']?.toString(),
+      autoReleaseTriggeredAt: json['auto_release_triggered_at']?.toString(),
+      gracePeriodDeadline: json['grace_period_deadline']?.toString(),
+      isGracePeriodActive: json['is_grace_period_active'] == true,
+      gracePeriodDaysLeft: json['grace_period_days_left'] != null
+          ? int.tryParse(json['grace_period_days_left'].toString()) ?? 0
+          : 0,
       isWetSignatureRequired: json['is_wet_signature_required'] == true,
       isDynamicSignatureRequired: json['is_dynamic_signature_required'] == true ||
           json['signature_type'] == 'dynamic_electronic',
@@ -641,6 +687,11 @@ class OpportunityModel {
       'admin_name': adminName,
       'admin_signature_url': adminSignatureUrl,
       'admin_signed_at': adminSignedAt,
+      'admin_started_at': adminStartedAt,
+      'auto_release_triggered_at': autoReleaseTriggeredAt,
+      'grace_period_deadline': gracePeriodDeadline,
+      'is_grace_period_active': isGracePeriodActive,
+      'grace_period_days_left': gracePeriodDaysLeft,
       'is_wet_signature_required': isWetSignatureRequired,
       'is_dynamic_signature_required': isDynamicSignatureRequired,
     };

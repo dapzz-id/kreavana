@@ -91,7 +91,7 @@ class OpportunityController extends Controller
             'sub_role_slug' => 'required|string|max:50',
             'pitch_message' => 'required|string|min:10|max:2000',
             'questions_notes' => 'nullable|string|max:1000',
-            'bid_price' => 'nullable|numeric|min:0',
+            'bid_price' => 'required|numeric|min:1',
         ]);
 
         try {
@@ -386,7 +386,122 @@ class OpportunityController extends Controller
 
         try {
             $opp = $this->opportunityService->scheduleMeeting($id, $user->id, $validated);
-            return $this->successResponse('Jadwal pertemuan dengan pihak Kreavana berhasil diajukan.', $opp);
+            return $this->successResponse('Jadwal pertemuan fisik tanda tangan basah berhasil diajukan.', $opp);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function reviewMeeting(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        $validated = $request->validate([
+            'decision' => 'required|in:approve,reject',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $opp = $this->opportunityService->reviewMeeting($id, $user->id, $validated['decision'], $validated['notes'] ?? null);
+            $msg = $validated['decision'] === 'approve'
+                ? 'Jadwal pertemuan fisik disetujui. Status acara: Diproses.'
+                : 'Jadwal pertemuan fisik ditolak.';
+            return $this->successResponse($msg, $opp);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function adminStartEvent(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        $validated = $request->validate([
+            'document_mou_url' => 'nullable|string|max:500',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $opp = $this->opportunityService->adminStartEvent($id, $user->id, $validated);
+            return $this->successResponse('Acara resmi dimulai oleh Admin setelah verifikasi tanda tangan basah fisik!', $opp);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function updateWorkerProgress(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        $validated = $request->validate([
+            'progress' => 'required|integer|min:0|max:100',
+            'notes' => 'nullable|string|max:1000',
+            'worker_status' => 'nullable|string|max:40',
+        ]);
+
+        try {
+            $res = $this->opportunityService->updateWorkerProgress($id, $user->id, (int) $validated['progress'], $validated['notes'] ?? null, $validated['worker_status'] ?? null);
+            return $this->successResponse('Progress pekerja berhasil diperbarui.', $res);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function uploadDeliverable(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        $validated = $request->validate([
+            'type' => 'required|in:link,image,video,document',
+            'url' => 'nullable|string|max:1000',
+            'title' => 'required|string|max:200',
+            'notes' => 'nullable|string|max:1000',
+            'file' => 'nullable|file|max:51200', // Max 50MB
+        ]);
+
+        try {
+            $file = $request->file('file');
+            $res = $this->opportunityService->submitWorkerDeliverable($id, $user->id, $validated, $file);
+            return $this->successResponse('Hasil kerja (deliverable) berhasil diunggah.', $res);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function payWorker(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        $validated = $request->validate([
+            'milestone_index' => 'nullable|integer|min:0',
+            'amount' => 'nullable|numeric|min:1',
+        ]);
+
+        try {
+            $milestoneIndex = isset($validated['milestone_index']) ? (int) $validated['milestone_index'] : null;
+            $amount = isset($validated['amount']) ? (float) $validated['amount'] : null;
+
+            $res = $this->opportunityService->payWorkerTerm($id, $user->id, $milestoneIndex, $amount);
+            return $this->successResponse('Pembayaran honor berhasil dicairkan ke saldo pekerja.', $res);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function autoReleaseEscrow(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+
+        try {
+            $res = $this->opportunityService->checkAndAutoReleaseEscrow($id, $user->id);
+            return $this->successResponse($res['message'], $res);
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             return $this->errorResponse($e->getMessage(), $e->getStatusCode());
         } catch (\Exception $e) {
