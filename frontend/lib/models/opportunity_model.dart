@@ -175,6 +175,8 @@ class OpportunityApprovedCreatorModel {
   final String? avatarUrl;
   final String? subRole;
   final String? capability;
+  final String? creatorSignature;
+  final String? creatorSignedAt;
 
   OpportunityApprovedCreatorModel({
     required this.id,
@@ -183,7 +185,11 @@ class OpportunityApprovedCreatorModel {
     this.avatarUrl,
     this.subRole,
     this.capability,
+    this.creatorSignature,
+    this.creatorSignedAt,
   });
+
+  bool get isSigned => creatorSignedAt != null && creatorSignedAt!.isNotEmpty;
 
   factory OpportunityApprovedCreatorModel.fromJson(Map<String, dynamic> json) {
     return OpportunityApprovedCreatorModel(
@@ -193,6 +199,8 @@ class OpportunityApprovedCreatorModel {
       avatarUrl: json['avatar_url'],
       subRole: json['sub_role'],
       capability: json['capability'],
+      creatorSignature: json['creator_signature'],
+      creatorSignedAt: json['creator_signed_at'],
     );
   }
 
@@ -204,6 +212,8 @@ class OpportunityApprovedCreatorModel {
       'avatar_url': avatarUrl,
       'sub_role': subRole,
       'capability': capability,
+      'creator_signature': creatorSignature,
+      'creator_signed_at': creatorSignedAt,
     };
   }
 }

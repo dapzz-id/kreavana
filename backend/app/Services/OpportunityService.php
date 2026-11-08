@@ -332,7 +332,7 @@ class OpportunityService extends BaseService
     }
 
     /**
-     * Tanda tangani kontrak perjanjian acara secara elektronik dinamis.
+     * Tanda tangani kontrak perjanjian acara secara elektronik dinamis (3 Pihak: Klien, Kreator, Admin).
      */
     public function signContract(string $opportunityId, string $userId, array $data): array
     {
@@ -340,8 +340,16 @@ class OpportunityService extends BaseService
             $opp = Opportunity::where('id', $opportunityId)->lockForUpdate()->firstOrFail();
             $user = User::where('id', $userId)->firstOrFail();
 
-            if ($opp->posted_by !== $userId && $user->role !== RoleType::Admin) {
-                abort(403, 'Hanya pembuat proyek yang dapat menandatangani dokumen ini.');
+            $isClient = ($opp->posted_by === $userId || $user->role === RoleType::Admin);
+
+            // Cek apakah user adalah pekerja/kreator yang disetujui untuk acara ini (Pihak Kedua)
+            $creatorApp = OpportunityApplication::where('opportunity_id', $opp->id)
+                ->where('user_id', $userId)
+                ->where('status', 'approved')
+                ->first();
+
+            if (!$isClient && !$creatorApp) {
+                abort(403, 'Hanya pihak bersepakat (pembuat acara atau pekerja kreatif yang disetujui) yang dapat menandatangani dokumen ini.');
             }
 
             $signature = $data['signature'] ?? $data['electronic_signature'] ?? null;
@@ -349,10 +357,96 @@ class OpportunityService extends BaseService
                 abort(422, 'Data tanda tangan elektronik dynamic tidak boleh kosong.');
             }
 
-            $opp->signature_type = 'dynamic_electronic';
-            $opp->client_signature = (string) $signature;
-            $opp->client_signed_at = now();
+            // Jika ada pembaruan ketentuan khusus dinamis (dynamic_terms)
+            if (!empty($data['dynamic_terms'])) {
+                $rawTerms = $data['dynamic_terms'];
+                if (is_string($rawTerms)) {
+                    $decoded = json_decode($rawTerms, true);
+                    $rawTerms = is_array($decoded) ? $decoded : array_filter(array_map('trim', explode("\n", $rawTerms)));
+                }
+                if (is_array($rawTerms) && !empty($rawTerms)) {
+                    $opp->dynamic_terms = array_values(array_filter(array_map('trim', $rawTerms)));
+                }
+            }
+
+            if ($isClient) {
+                $opp->signature_type = 'dynamic_electronic';
+                $opp->client_signature = (string) $signature;
+                $opp->client_signed_at = now();
+
+                // Auto-input Pihak Ketiga: Admin Kreavana (Nama & Tanda Tangan Resmi)
+                $adminName = SystemSetting::get('admin_contract_signer_name', 'Tim Legal & Penjamin Escrow Kreavana');
+                $adminSignatureUrl = SystemSetting::get('admin_contract_signature_image', '/assets/images/kreavana_official_signature.png');
+                $opp->admin_name = $adminName;
+                $opp->admin_signature_url = $adminSignatureUrl;
+                $opp->admin_signed_at = $opp->admin_signed_at ?: now();
+
+                // Sinkronkan ke job_contracts jika sudah terbentuk
+                JobContract::where('opportunity_id', $opp->id)->update([
+                    'client_signature' => (string) $signature,
+                    'client_signed_at' => now(),
+                    'dynamic_terms' => $opp->dynamic_terms,
+                    'admin_name' => $adminName,
+                    'admin_signature_url' => $adminSignatureUrl,
+                    'admin_signed_at' => $opp->admin_signed_at,
+                ]);
+            }
+
+            if ($creatorApp) {
+                $creatorApp->creator_signature = (string) $signature;
+                $creatorApp->creator_signed_at = now();
+                if (!empty($opp->dynamic_terms)) {
+                    $creatorApp->dynamic_terms = $opp->dynamic_terms;
+                }
+                $creatorApp->save();
+
+                // Sinkronkan ke job_contracts milik pekerja ini
+                JobContract::where('opportunity_id', $opp->id)
+                    ->where('worker_id', $userId)
+                    ->update([
+                        'creator_signature' => (string) $signature,
+                        'creator_signed_at' => now(),
+                        'dynamic_terms' => $opp->dynamic_terms,
+                    ]);
+            }
+
             $opp->save();
+
+            return $this->formatOpportunity($opp->fresh(['approvedApplications.creator', 'user']), true);
+        });
+    }
+
+    /**
+     * Perbarui butir-butir ketentuan khusus / klausul dinamis kontrak oleh Klien atau Kreator.
+     */
+    public function updateDynamicTerms(string $opportunityId, string $userId, array $dynamicTerms): array
+    {
+        return DB::transaction(function () use ($opportunityId, $userId, $dynamicTerms) {
+            $opp = Opportunity::where('id', $opportunityId)->lockForUpdate()->firstOrFail();
+            $user = User::where('id', $userId)->firstOrFail();
+
+            $isClient = ($opp->posted_by === $userId || $user->role === RoleType::Admin);
+            $isApprovedCreator = OpportunityApplication::where('opportunity_id', $opp->id)
+                ->where('user_id', $userId)
+                ->where('status', 'approved')
+                ->exists();
+
+            if (!$isClient && !$isApprovedCreator) {
+                abort(403, 'Hanya pihak bersepakat yang dapat memperbarui ketentuan khusus kontrak.');
+            }
+
+            $cleanedTerms = array_values(array_filter(array_map('trim', $dynamicTerms)));
+            if (empty($cleanedTerms)) {
+                abort(422, 'Ketentuan khusus tidak boleh kosong.');
+            }
+
+            $opp->dynamic_terms = $cleanedTerms;
+            $opp->save();
+
+            // Sinkronkan ke job_contracts jika ada
+            JobContract::where('opportunity_id', $opp->id)->update([
+                'dynamic_terms' => $cleanedTerms,
+            ]);
 
             return $this->formatOpportunity($opp->fresh(['approvedApplications.creator', 'user']), true);
         });
@@ -1828,6 +1922,8 @@ class OpportunityService extends BaseService
                     'avatar_url' => $app->creator?->avatar_url,
                     'sub_role' => is_string($app->creator?->sub_role) ? $app->creator?->sub_role : $app->creator?->sub_role?->value,
                     'capability' => $app->sub_role_slug,
+                    'creator_signature' => $app->creator_signature,
+                    'creator_signed_at' => $app->creator_signed_at?->toIso8601String(),
                 ];
             })->filter(fn ($c) => !empty($c['id']))->values()->toArray();
         }

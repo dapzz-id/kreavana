@@ -494,17 +494,40 @@ class OpportunityService {
     String? signature,
     String? signatureType,
     String? documentUrl,
+    List<String>? dynamicTerms,
   }) async {
     try {
       final body = <String, dynamic>{};
       if (signature != null && signature.isNotEmpty) body['signature'] = signature;
       if (signatureType != null && signatureType.isNotEmpty) body['signature_type'] = signatureType;
       if (documentUrl != null && documentUrl.isNotEmpty) body['document_url'] = documentUrl;
+      if (dynamicTerms != null && dynamicTerms.isNotEmpty) body['dynamic_terms'] = dynamicTerms;
 
       final res = await ApiService.post('opportunities/$opportunityId/sign-contract', body);
       return {
         'status': res['status'] == true,
         'message': res['message'] ?? 'Kontrak berhasil ditandatangani.',
+        'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateDynamicTerms({
+    required String opportunityId,
+    required List<String> dynamicTerms,
+  }) async {
+    try {
+      final res = await ApiService.post('opportunities/$opportunityId/dynamic-terms', {
+        'dynamic_terms': dynamicTerms,
+      });
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Ketentuan khusus kontrak berhasil diperbarui.',
         'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
       };
     } catch (e) {

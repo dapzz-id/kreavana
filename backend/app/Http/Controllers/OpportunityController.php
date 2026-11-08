@@ -307,6 +307,24 @@ class OpportunityController extends Controller
         }
     }
 
+    public function updateDynamicTerms(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+
+        $request->validate([
+            'dynamic_terms' => 'required|array',
+        ]);
+
+        try {
+            $opp = $this->opportunityService->updateDynamicTerms($id, $user->id, $request->input('dynamic_terms'));
+            return $this->successResponse('Ketentuan khusus kontrak berhasil diperbarui.', $opp);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
     public function startEvent(Request $request, string $id)
     {
         $user = Auth::guard('api')->user();

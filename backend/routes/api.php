@@ -194,6 +194,7 @@ Route::middleware(['auth:api', 'user.not_suspended'])->group(function () {
         Route::post('applications/{id}/respond-counter-offer', [OpportunityController::class, 'respondCounterOffer']);
         Route::post('{id}/start-event', [OpportunityController::class, 'startEvent']);
         Route::post('{id}/sign-contract', [OpportunityController::class, 'signContract']);
+        Route::post('{id}/dynamic-terms', [OpportunityController::class, 'updateDynamicTerms']);
         Route::get('{id}/contracts', [OpportunityController::class, 'getContracts']);
         Route::post('{id}/update-progress', [OpportunityController::class, 'updateProgress']);
         Route::post('{id}/schedule-meeting', [OpportunityController::class, 'scheduleMeeting']);
