@@ -1463,13 +1463,6 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                   item.deadline!,
                   isDark,
                 ),
-              if (item.opportunity != null && item.opportunity!.hasExternalRating)
-                _buildMetaChip(
-                  Icons.star_rounded,
-                  '${item.opportunity!.externalRating!.toStringAsFixed(1)} (${item.opportunity!.externalRatingSource ?? 'Rating Luar'})',
-                  isDark,
-                  highlight: true,
-                ),
             ],
           ),
           const SizedBox(height: 14),

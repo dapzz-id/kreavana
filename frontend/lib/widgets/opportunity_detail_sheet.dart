@@ -1018,32 +1018,6 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
                 ),
               ),
             ),
-            if (opp.hasExternalRating) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.star_rounded, size: 14, color: Color(0xFFD97706)),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${opp.externalRating!.toStringAsFixed(1)} (${opp.externalRatingSource ?? 'Rating Luar'})',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFD97706),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ],
         ),
         const SizedBox(height: 16),
@@ -1126,44 +1100,6 @@ class _OpportunityDetailSheetState extends State<OpportunityDetailSheet> {
             ],
           ),
         ),
-        if (opp.hasExternalRating) ...[
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF59E0B).withValues(alpha: isDark ? 0.08 : 0.05),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.verified_rounded, color: Color(0xFFD97706), size: 18),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Rekam Jejak Acara Sebelumnya (Terverifikasi Eksternal)',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFD97706)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Acara ini memiliki rekam jejak eksternal dengan rating ${opp.externalRating!.toStringAsFixed(1)} dari 5.0 (Sumber: ${opp.externalRatingSource ?? "Eksternal"}).',
-                  style: TextStyle(fontSize: 12, height: 1.4, color: isDark ? Colors.white70 : Colors.grey.shade800),
-                ),
-                if (opp.externalProofUrl != null && opp.externalProofUrl!.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Tautan Bukti/Liputan: ${opp.externalProofUrl!}',
-                    style: const TextStyle(fontSize: 11.5, color: AppTheme.primaryPurple, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
         const SizedBox(height: 16),
 
         // 4. Required Capabilities (Multi-Role Breakdown)

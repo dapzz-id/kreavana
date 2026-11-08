@@ -75,11 +75,6 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   final _meetingLocationController = TextEditingController();
   final _meetingNotesController = TextEditingController();
 
-  bool _hasExternalRating = false;
-  final _externalRatingController = TextEditingController();
-  final _externalRatingSourceController = TextEditingController();
-  final _externalProofUrlController = TextEditingController();
-
   String? _bannerUrl;
   DateTime _eventStartDate = DateTime.now().add(const Duration(days: 3));
   DateTime _eventEndDate = DateTime.now().add(const Duration(days: 5));
@@ -535,9 +530,6 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
     _bannerUrlController.dispose();
     _meetingLocationController.dispose();
     _meetingNotesController.dispose();
-    _externalRatingController.dispose();
-    _externalRatingSourceController.dispose();
-    _externalProofUrlController.dispose();
     if (_requirements != null) {
       for (final item in _requirements!) {
         item.dispose();
@@ -718,15 +710,6 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
             ? _meetingNotesController.text.trim()
             : null,
         requirements: requirementsPayload,
-        externalRating: (_hasExternalRating && _externalRatingController.text.trim().isNotEmpty)
-            ? double.tryParse(_externalRatingController.text.trim())
-            : null,
-        externalRatingSource: (_hasExternalRating && _externalRatingSourceController.text.trim().isNotEmpty)
-            ? _externalRatingSourceController.text.trim()
-            : null,
-        externalProofUrl: (_hasExternalRating && _externalProofUrlController.text.trim().isNotEmpty)
-            ? _externalProofUrlController.text.trim()
-            : null,
       );
 
       if (!mounted) return;
@@ -1047,10 +1030,6 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                                       ],
                                     ),
                                   ),
-                                  _buildCardContainer(
-                                    isDark: isDark,
-                                    child: _buildExternalRatingSection(isDark, isDesktop),
-                                  ),
                                 ],
                               ),
                             ),
@@ -1174,10 +1153,6 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                                     _buildEscrowProtectionCard(isDark),
                                 ],
                               ),
-                            ),
-                            _buildCardContainer(
-                              isDark: isDark,
-                              child: _buildExternalRatingSection(isDark, false),
                             ),
                             _buildSubmitCard(isDark),
                           ],
@@ -2977,84 +2952,6 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
             ),
         ],
       ),
-    );
-  }
-
-  // ─── Rekam Jejak & Rating Luar (Opsional) ──────────────────────────────────
-  Widget _buildExternalRatingSection(bool isDark, bool isDesktop) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.star_rate_rounded, color: Color(0xFFF59E0B), size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Rekam Jejak & Rating Sebelumnya',
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Opsional: Tampilkan bukti rating portofolio luar agar kreator lebih yakin.',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Switch(
-              value: _hasExternalRating,
-              activeThumbColor: const Color(0xFFF59E0B),
-              onChanged: (val) => setState(() => _hasExternalRating = val),
-            ),
-          ],
-        ),
-        if (_hasExternalRating) ...[
-          const SizedBox(height: 16),
-          const Divider(height: 1),
-          const SizedBox(height: 16),
-          AnimatedInputField(
-            controller: _externalRatingController,
-            label: 'Skor Rating Luar (1.0 - 5.0)',
-            hint: 'Contoh: 4.8',
-            icon: Icons.star_half_rounded,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          ),
-          const SizedBox(height: 14),
-          AnimatedInputField(
-            controller: _externalRatingSourceController,
-            label: 'Sumber Rating / Platform',
-            hint: 'Contoh: Google Reviews, Loket.com, Tiket.com, Survei Acara',
-            icon: Icons.public_rounded,
-          ),
-          const SizedBox(height: 14),
-          AnimatedInputField(
-            controller: _externalProofUrlController,
-            label: 'Link Bukti Publikasi / Portofolio Luar',
-            hint: 'https://instagram.com/recap_event atau link liputan berita...',
-            icon: Icons.link_rounded,
-            keyboardType: TextInputType.url,
-          ),
-        ],
-      ],
     );
   }
 
