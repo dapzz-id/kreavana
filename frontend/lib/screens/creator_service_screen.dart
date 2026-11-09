@@ -1459,11 +1459,16 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
   List<String> get _availableFilters {
     final data = _data;
     if (data == null) return ['Semua'];
-    final tags = data.items
-        .map((item) => item.tag)
-        .whereType<String>()
-        .toSet()
-        .toList();
+    final tagsSet = <String>{};
+    for (final item in data.items) {
+      if (item.tag != null && item.tag!.trim().isNotEmpty) {
+        for (final t in item.tag!.split(',')) {
+          final trimmed = t.trim();
+          if (trimmed.isNotEmpty) tagsSet.add(trimmed);
+        }
+      }
+    }
+    final tags = tagsSet.toList();
     tags.sort();
     return ['Semua', ...tags];
   }
@@ -1500,7 +1505,14 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
     }
 
     if (_selectedFilter != 'Semua') {
-      items = items.where((item) => item.tag == _selectedFilter).toList();
+      items = items.where((item) {
+        if (item.tag == null) return false;
+        final tags = item.tag!
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty);
+        return tags.contains(_selectedFilter) || item.tag == _selectedFilter;
+      }).toList();
     }
     if (_query.trim().isNotEmpty) {
       final q = _query.toLowerCase();
@@ -4360,7 +4372,9 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
               for (final val in statusOptions.where((s) => s != 'Semua'))
                 DropdownMenuItem(
                   value: val,
-                  child: Text('$val (${data.items.where((i) => i.tag == val).length})'),
+                  child: Text(
+                    '$val (${data.items.where((i) => (i.tag ?? '').split(',').map((e) => e.trim()).contains(val)).length})',
+                  ),
                 ),
             ],
             onChanged: (value) => setState(() => _selectedFilter = value ?? 'Semua'),
@@ -5364,7 +5378,11 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
                         Positioned(
                           top: 12,
                           left: 12,
-                          child: _buildEnhancedTag(item.tag!, isDark),
+                          right: 52,
+                          child: Align(
+                            alignment: Alignment.topLeft,
+                            child: _buildEnhancedTag(item.tag!, isDark),
+                          ),
                         ),
                       Positioned(
                         top: 12,
@@ -6482,6 +6500,27 @@ class _CreatorServiceScreenState extends State<CreatorServiceScreen>
   }
 
   Widget _buildEnhancedTag(String tag, bool isDark) {
+    if (tag.contains(',')) {
+      final tags = tag
+          .split(',')
+          .map((t) => t.trim())
+          .where((t) => t.isNotEmpty)
+          .toList();
+      if (tags.length > 1) {
+        return Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children:
+              tags.map((t) => _buildSingleEnhancedTag(t, isDark)).toList(),
+        );
+      } else if (tags.isNotEmpty) {
+        return _buildSingleEnhancedTag(tags.first, isDark);
+      }
+    }
+    return _buildSingleEnhancedTag(tag, isDark);
+  }
+
+  Widget _buildSingleEnhancedTag(String tag, bool isDark) {
     final status = tag.toLowerCase();
 
     // Enhanced tag colors with gradients
@@ -7822,7 +7861,13 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
   }
 
   Future<void> _openTagPicker(ValueChanged<String> onSave) async {
-    String temp = _formTag;
+    final selectedTags = _formTag
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet();
+    final customTagController = TextEditingController();
+
     await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -7831,169 +7876,325 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
         final dark = Theme.of(ctx).brightness == Brightness.dark;
         final viewInsets = MediaQuery.of(ctx).viewInsets;
         return StatefulBuilder(
-          builder: (ctx, setSheet) => Padding(
-            padding: EdgeInsets.only(bottom: viewInsets.bottom),
-            child: SingleChildScrollView(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: dark ? AppTheme.cardBg : Colors.white,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(28),
+          builder: (ctx, setSheet) {
+            final allTags = <String>[
+              ..._availableFormTags,
+              ...selectedTags.where((t) => !_availableFormTags.contains(t)),
+            ];
+
+            return Padding(
+              padding: EdgeInsets.only(bottom: viewInsets.bottom),
+              child: SingleChildScrollView(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: dark ? AppTheme.cardBg : Colors.white,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(28),
+                    ),
                   ),
-                ),
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: dark ? AppTheme.cardDark2 : Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 44,
+                          height: 5,
                           decoration: BoxDecoration(
-                            gradient: _roleGradient,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.label_outline_rounded,
-                            size: 17,
-                            color: Colors.white,
+                            color: dark
+                                ? AppTheme.cardDark2
+                                : Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(3),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        const Text(
-                          'Pilih Kategori / Tag',
-                          style: TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _availableFormTags.map((t) {
-                        final sel = temp == t;
-                        return GestureDetector(
-                          onTap: () => setSheet(() => temp = t),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 9,
-                            ),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          Container(
+                            width: 38,
+                            height: 38,
                             decoration: BoxDecoration(
-                              gradient: sel ? _roleGradient : null,
-                              color: sel
-                                  ? null
-                                  : (dark
-                                        ? AppTheme.cardDark2
-                                        : Colors.grey.shade50),
+                              gradient: _roleGradient,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: sel
-                                    ? Colors.transparent
-                                    : (dark
-                                          ? AppTheme.inputBorder
-                                          : Colors.grey.shade200),
-                              ),
-                              boxShadow: sel ? AppTheme.primaryShadow : null,
                             ),
-                            child: Text(
-                              t,
-                              style: TextStyle(
-                                color: sel
-                                    ? Colors.white
-                                    : (dark ? Colors.white : AppTheme.textDark),
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w800,
-                              ),
+                            child: const Icon(
+                              Icons.label_outline_rounded,
+                              size: 18,
+                              color: Colors.white,
                             ),
                           ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextButton(
-                            onPressed: () {
-                              setSheet(() => temp = '');
-                              Navigator.pop(ctx);
-                            },
-                            child: Text(
-                              'Reset',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          flex: 2,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              onSave(temp);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  behavior: SnackBarBehavior.floating,
-                                  backgroundColor: AppTheme.success,
-                                  duration: const Duration(milliseconds: 900),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  content: Text(
-                                    temp.isEmpty
-                                        ? 'Tag dihapus'
-                                        : 'Tag "$temp" dipilih ✓',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 12,
-                                    ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Pilih Kategori / Tag',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900,
                                   ),
                                 ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _roleAccentColor,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 13),
+                                const SizedBox(height: 2),
+                                Text(
+                                  selectedTags.isEmpty
+                                      ? 'Bisa pilih lebih dari 1 tag'
+                                      : '${selectedTags.length} tag terpilih (${selectedTags.join(', ')})',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: selectedTags.isEmpty
+                                        ? (dark
+                                            ? Colors.grey.shade400
+                                            : Colors.grey.shade600)
+                                        : _roleAccentColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
-                            child: const Text(
-                              'Pilih Tag',
+                          ),
+                          if (selectedTags.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 9,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _roleAccentColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '${selectedTags.length} dipilih',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: _roleAccentColor,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // Custom tag input
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: customTagController,
                               style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 12.5,
+                                fontSize: 12,
+                                color: dark ? Colors.white : AppTheme.textDark,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'Tambah tag kustom...',
+                                hintStyle: TextStyle(
+                                  fontSize: 11.5,
+                                  color: dark
+                                      ? Colors.grey.shade500
+                                      : Colors.grey.shade400,
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                filled: true,
+                                fillColor: dark
+                                    ? AppTheme.cardDark2
+                                    : Colors.grey.shade100,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                              onSubmitted: (val) {
+                                final trimmed = val.trim();
+                                if (trimmed.isNotEmpty) {
+                                  setSheet(() {
+                                    selectedTags.add(trimmed);
+                                    customTagController.clear();
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            style: IconButton.styleFrom(
+                              backgroundColor:
+                                  _roleAccentColor.withValues(alpha: 0.15),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.all(10),
+                            ),
+                            icon: Icon(
+                              Icons.add_rounded,
+                              color: _roleAccentColor,
+                              size: 20,
+                            ),
+                            onPressed: () {
+                              final trimmed = customTagController.text.trim();
+                              if (trimmed.isNotEmpty) {
+                                setSheet(() {
+                                  selectedTags.add(trimmed);
+                                  customTagController.clear();
+                                });
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: allTags.map((t) {
+                          final sel = selectedTags.contains(t);
+                          return GestureDetector(
+                            onTap: () {
+                              setSheet(() {
+                                if (sel) {
+                                  selectedTags.remove(t);
+                                } else {
+                                  selectedTags.add(t);
+                                }
+                              });
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 13,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: sel ? _roleGradient : null,
+                                color: sel
+                                    ? null
+                                    : (dark
+                                        ? AppTheme.cardDark2
+                                        : Colors.grey.shade50),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: sel
+                                      ? Colors.transparent
+                                      : (dark
+                                          ? AppTheme.inputBorder
+                                          : Colors.grey.shade200),
+                                ),
+                                boxShadow: sel ? AppTheme.primaryShadow : null,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (sel) ...[
+                                    const Icon(
+                                      Icons.check_rounded,
+                                      size: 13,
+                                      color: Colors.white,
+                                    ),
+                                    const SizedBox(width: 4),
+                                  ],
+                                  Text(
+                                    t,
+                                    style: TextStyle(
+                                      color: sel
+                                          ? Colors.white
+                                          : (dark
+                                              ? Colors.white
+                                              : AppTheme.textDark),
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 22),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextButton(
+                              onPressed: () {
+                                if (selectedTags.isEmpty) {
+                                  Navigator.pop(ctx);
+                                } else {
+                                  setSheet(() => selectedTags.clear());
+                                }
+                              },
+                              child: Text(
+                                selectedTags.isEmpty ? 'Tutup' : 'Reset Semua',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.grey.shade600,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                final joined = selectedTags.join(', ');
+                                onSave(joined);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    behavior: SnackBarBehavior.floating,
+                                    backgroundColor: AppTheme.success,
+                                    duration:
+                                        const Duration(milliseconds: 1200),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    content: Text(
+                                      joined.isEmpty
+                                          ? 'Tag dikosongkan'
+                                          : '${selectedTags.length} tag dipilih: $joined ✓',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _roleAccentColor,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 13),
+                              ),
+                              child: Text(
+                                selectedTags.isEmpty
+                                    ? 'Pilih Tag'
+                                    : 'Terapkan (${selectedTags.length} Tag)',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -9146,7 +9347,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                             )
                                             ? Image.memory(
                                                 base64Decode(
-                                                  item!.thumbnailUrl!
+                                                  item.thumbnailUrl!
                                                       .split(',')
                                                       .last,
                                                 ),
@@ -9165,7 +9366,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                               )
                                             : Image.network(
                                                 ApiService.resolveAssetUrl(
-                                                  item!.thumbnailUrl,
+                                                  item.thumbnailUrl,
                                                 ),
                                                 width: 44,
                                                 height: 44,
@@ -9337,37 +9538,45 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                               ),
                                             ),
                                             if (item.tag != null)
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 10,
-                                                  vertical: 5,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: isRejectedItem
-                                                      ? const Color(0xFFEF4444).withValues(alpha: 0.12)
-                                                      : (isPendingReview
-                                                          ? const Color(0xFFF59E0B).withValues(alpha: 0.12)
-                                                          : (isPublishedItem
-                                                              ? const Color(0xFF10B981).withValues(alpha: 0.12)
-                                                              : _roleAccentColor.withValues(alpha: 0.1))),
-                                                  borderRadius:
-                                                      BorderRadius.circular(20),
-                                                ),
-                                                child: Text(
-                                                  item.tag!,
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: isRejectedItem
-                                                        ? const Color(0xFFEF4444)
-                                                        : (isPendingReview
-                                                            ? const Color(0xFFF59E0B)
-                                                            : (isPublishedItem
-                                                                ? const Color(0xFF10B981)
-                                                                : _roleAccentColor)),
-                                                  ),
-                                                ),
+                                              Wrap(
+                                                spacing: 4,
+                                                runSpacing: 4,
+                                                alignment: WrapAlignment.end,
+                                                children: item.tag!
+                                                    .split(',')
+                                                    .map((e) => e.trim())
+                                                    .where((e) => e.isNotEmpty)
+                                                    .map((t) => Container(
+                                                          padding: const EdgeInsets.symmetric(
+                                                            horizontal: 10,
+                                                            vertical: 5,
+                                                          ),
+                                                          decoration: BoxDecoration(
+                                                            color: isRejectedItem
+                                                                ? const Color(0xFFEF4444).withValues(alpha: 0.12)
+                                                                : (isPendingReview
+                                                                    ? const Color(0xFFF59E0B).withValues(alpha: 0.12)
+                                                                    : (isPublishedItem
+                                                                        ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                                                                        : _roleAccentColor.withValues(alpha: 0.1))),
+                                                            borderRadius: BorderRadius.circular(20),
+                                                          ),
+                                                          child: Text(
+                                                            t,
+                                                            style: TextStyle(
+                                                              fontSize: 11,
+                                                              fontWeight: FontWeight.w700,
+                                                              color: isRejectedItem
+                                                                  ? const Color(0xFFEF4444)
+                                                                  : (isPendingReview
+                                                                      ? const Color(0xFFF59E0B)
+                                                                      : (isPublishedItem
+                                                                          ? const Color(0xFF10B981)
+                                                                          : _roleAccentColor)),
+                                                            ),
+                                                          ),
+                                                        ))
+                                                    .toList(),
                                               ),
                                           ],
                                         ),
@@ -9460,36 +9669,48 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                         ),
                                         const Spacer(),
                                         if (item.tag != null)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 6,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              gradient: statusTagGradient,
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: (isPendingReview
-                                                          ? const Color(0xFFF59E0B)
-                                                          : (isRejectedItem
-                                                              ? const Color(0xFFEF4444)
-                                                              : _roleAccentColor))
-                                                      .withValues(alpha: 0.3),
-                                                  blurRadius: 8,
-                                                  offset: const Offset(0, 3),
-                                                ),
-                                              ],
-                                            ),
-                                            child: Text(
-                                              item.tag!,
-                                              style: const TextStyle(
-                                                fontSize: 10.5,
-                                                fontWeight: FontWeight.w900,
-                                                color: Colors.white,
-                                              ),
-                                            ),
+                                          Wrap(
+                                            spacing: 4,
+                                            runSpacing: 4,
+                                            alignment: WrapAlignment.end,
+                                            children: item.tag!
+                                                .split(',')
+                                                .map((e) => e.trim())
+                                                .where((e) => e.isNotEmpty)
+                                                .map(
+                                                  (t) => Container(
+                                                    padding: const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 6,
+                                                    ),
+                                                    decoration: BoxDecoration(
+                                                      gradient: statusTagGradient,
+                                                      borderRadius:
+                                                          BorderRadius.circular(12),
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: (isPendingReview
+                                                                  ? const Color(0xFFF59E0B)
+                                                                  : (isRejectedItem
+                                                                      ? const Color(0xFFEF4444)
+                                                                      : _roleAccentColor))
+                                                              .withValues(alpha: 0.3),
+                                                          blurRadius: 8,
+                                                          offset: const Offset(0, 3),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    child: Text(
+                                                      t,
+                                                      style: const TextStyle(
+                                                        fontSize: 10.5,
+                                                        fontWeight: FontWeight.w900,
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                )
+                                                .toList(),
                                           ),
                                       ],
                                     ),
@@ -10416,7 +10637,7 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
         : Image.network(
             _formImageUrl.trim(),
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Icon(
+            errorBuilder: (_, _, _) => Icon(
               _formIcon ?? Icons.image_rounded,
               size: 15,
               color: Colors.white,
@@ -10446,36 +10667,36 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                                                               ),
                                                               if (_formTag
                                                                   .isNotEmpty)
-                                                                Container(
-                                                                  padding:
-                                                                      const EdgeInsets.symmetric(
-                                                                        horizontal:
-                                                                            8,
-                                                                        vertical:
-                                                                            3,
-                                                                      ),
-                                                                  decoration: BoxDecoration(
-                                                                    color: _roleAccentColor
-                                                                        .withValues(
-                                                                          alpha:
-                                                                              0.12,
+                                                                Wrap(
+                                                                  spacing: 4,
+                                                                  runSpacing: 4,
+                                                                  children: _formTag
+                                                                      .split(',')
+                                                                      .map((t) => t.trim())
+                                                                      .where((t) => t.isNotEmpty)
+                                                                      .map(
+                                                                        (t) => Container(
+                                                                          padding: const EdgeInsets.symmetric(
+                                                                            horizontal: 8,
+                                                                            vertical: 3,
+                                                                          ),
+                                                                          decoration: BoxDecoration(
+                                                                            color: _roleAccentColor.withValues(
+                                                                              alpha: 0.12,
+                                                                            ),
+                                                                            borderRadius: BorderRadius.circular(8),
+                                                                          ),
+                                                                          child: Text(
+                                                                            t,
+                                                                            style: TextStyle(
+                                                                              fontSize: 9.5,
+                                                                              color: _roleAccentColor,
+                                                                              fontWeight: FontWeight.w800,
+                                                                            ),
+                                                                          ),
                                                                         ),
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
-                                                                          8,
-                                                                        ),
-                                                                  ),
-                                                                  child: Text(
-                                                                    _formTag,
-                                                                    style: TextStyle(
-                                                                      fontSize:
-                                                                          9.5,
-                                                                      color: _roleAccentColor,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .w800,
-                                                                    ),
-                                                                  ),
+                                                                      )
+                                                                      .toList(),
                                                                 ),
                                                             ],
                                                           ),
@@ -11195,7 +11416,11 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                   _formTag.isEmpty
                       ? 'Pilih status'
                       : _formTag,
-                  _formTag.isNotEmpty ? _formTag : 'Pilih',
+                  _formTag.isNotEmpty
+                      ? (_formTag.contains(',')
+                          ? '${_formTag.split(',').where((e) => e.trim().isNotEmpty).length} Tag'
+                          : _formTag)
+                      : 'Pilih',
                 ),
                 (
                   widget.data.key == 'eo_timeline'
@@ -11250,7 +11475,11 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                       _formTag.isEmpty
                           ? 'Menunggu'
                           : _formTag,
-                      _formTag.isNotEmpty ? _formTag : 'Menunggu',
+                      _formTag.isNotEmpty
+                          ? (_formTag.contains(',')
+                              ? '${_formTag.split(',').where((e) => e.trim().isNotEmpty).length} Tag'
+                              : _formTag)
+                          : 'Menunggu',
                     ),
                   ]
                 : <(String, IconData, String, String)>[
@@ -11278,7 +11507,11 @@ class _ServiceDetailSheetState extends State<_ServiceDetailSheet>
                       _formTag.isEmpty
                           ? 'Klik untuk memilih tag kategori'
                           : 'Tag aktif: $_formTag',
-                      _formTag.isNotEmpty ? _formTag : 'Pilih',
+                      _formTag.isNotEmpty
+                          ? (_formTag.contains(',')
+                              ? '${_formTag.split(',').where((e) => e.trim().isNotEmpty).length} Tag'
+                              : _formTag)
+                          : 'Pilih',
                     ),
                     (
                       'Nilai / Harga',
