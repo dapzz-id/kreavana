@@ -70,6 +70,9 @@ class OpportunityApplicationModel {
   final String? reviewedAt;
   final String? createdAt;
   final List<Map<String, dynamic>> submittedDocuments;
+  final String? creatorSignature;
+  final String? creatorSignedAt;
+  final List<String> dynamicTerms;
 
   OpportunityApplicationModel({
     required this.id,
@@ -98,12 +101,16 @@ class OpportunityApplicationModel {
     this.reviewedAt,
     this.createdAt,
     this.submittedDocuments = const [],
+    this.creatorSignature,
+    this.creatorSignedAt,
+    this.dynamicTerms = const [],
   });
 
   bool get isPending => status == 'pending';
   bool get isApproved => status == 'approved';
   bool get isRejected => status == 'rejected';
   bool get isConsideration => status == 'under_consideration';
+  bool get isCreatorSigned => creatorSignedAt != null && creatorSignedAt!.isNotEmpty;
   bool get isCounterOfferByCreator => counterOfferBy == 'creator';
   bool get isCounterOfferByClient => counterOfferBy != 'creator';
   bool get isTermPayment => paymentScheme == 'term';
@@ -198,6 +205,11 @@ class OpportunityApplicationModel {
       reviewedAt: json['reviewed_at']?.toString(),
       createdAt: json['created_at']?.toString(),
       submittedDocuments: docs,
+      creatorSignature: json['creator_signature']?.toString(),
+      creatorSignedAt: json['creator_signed_at']?.toString(),
+      dynamicTerms: json['dynamic_terms'] is List
+          ? (json['dynamic_terms'] as List).map((e) => e.toString()).toList()
+          : const [],
     );
   }
 }

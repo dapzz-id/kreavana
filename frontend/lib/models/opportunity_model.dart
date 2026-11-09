@@ -396,16 +396,25 @@ class OpportunityModel {
 
   bool get isDynamicSignatureBudget => !isWetSignatureBudget;
 
-  bool get isContractSigned {
+  bool get isClientSigned =>
+      (clientSignature != null && clientSignature!.isNotEmpty) ||
+      (clientSignedAt != null && clientSignedAt!.isNotEmpty);
+
+  bool get areAllApprovedCreatorsSigned =>
+      approvedCreators.isNotEmpty && approvedCreators.every((c) => c.isSigned);
+
+  bool get isContractFullyApproved {
     if (isWetSignatureBudget) {
       return (wetSignatureDocumentUrl != null && wetSignatureDocumentUrl!.isNotEmpty) ||
           (wetSignatureVerifiedAt != null && wetSignatureVerifiedAt!.isNotEmpty) ||
-          meetingStatus == 'verified_paid';
+          meetingStatus == 'verified_paid' ||
+          meetingStatus == 'verified_completed';
     } else {
-      return (clientSignature != null && clientSignature!.isNotEmpty) ||
-          (clientSignedAt != null && clientSignedAt!.isNotEmpty);
+      return isClientSigned && areAllApprovedCreatorsSigned;
     }
   }
+
+  bool get isContractSigned => isContractFullyApproved;
 
   bool get isLargeTransaction => isWetSignatureBudget;
 

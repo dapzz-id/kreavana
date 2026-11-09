@@ -298,6 +298,9 @@ class OpportunityService extends BaseService
                 'submitted_deliverables' => $app->submitted_deliverables ?? [],
                 'grace_period_deadline' => $app->grace_period_deadline?->toIso8601String(),
                 'auto_released_at' => $app->auto_released_at?->toIso8601String(),
+                'creator_signature' => $app->creator_signature,
+                'creator_signed_at' => $app->creator_signed_at?->toIso8601String(),
+                'dynamic_terms' => $app->dynamic_terms ?? [],
                 'status' => $app->status,
                 'rejection_reason' => $app->rejection_reason,
                 'reviewed_at' => $app->reviewed_at?->toIso8601String(),
@@ -344,7 +347,7 @@ class OpportunityService extends BaseService
 
             // Cek apakah user adalah pekerja/kreator yang disetujui untuk acara ini (Pihak Kedua)
             $creatorApp = OpportunityApplication::where('opportunity_id', $opp->id)
-                ->where('user_id', $userId)
+                ->where('creator_id', $userId)
                 ->where('status', 'approved')
                 ->first();
 
@@ -385,11 +388,30 @@ class OpportunityService extends BaseService
                 JobContract::where('opportunity_id', $opp->id)->update([
                     'client_signature' => (string) $signature,
                     'client_signed_at' => now(),
+                    'client_approved' => true,
                     'dynamic_terms' => $opp->dynamic_terms,
                     'admin_name' => $adminName,
                     'admin_signature_url' => $adminSignatureUrl,
                     'admin_signed_at' => $opp->admin_signed_at,
                 ]);
+
+                // Beritahu pekerja/kreator yang disetujui bahwa klien telah menandatangani kontrak
+                $approvedApps = OpportunityApplication::where('opportunity_id', $opp->id)
+                    ->where('status', 'approved')
+                    ->get();
+                foreach ($approvedApps as $app) {
+                    $this->notificationRepo->create([
+                        'user_id' => $app->creator_id,
+                        'title' => 'Penyelenggara Telah Menandatangani Kontrak',
+                        'message' => "Penyelenggara acara telah menandatangani Dokumen Kontrak Digital untuk proyek '{$opp->title}'. Silakan tinjau dan bubuhi tanda tangan Anda.",
+                        'type' => 'project',
+                        'data' => [
+                            'opportunity_id' => $opp->id,
+                        ],
+                        'is_read' => false,
+                        'created_at' => now(),
+                    ]);
+                }
             }
 
             if ($creatorApp) {
@@ -402,12 +424,27 @@ class OpportunityService extends BaseService
 
                 // Sinkronkan ke job_contracts milik pekerja ini
                 JobContract::where('opportunity_id', $opp->id)
-                    ->where('worker_id', $userId)
+                    ->where('creator_id', $userId)
                     ->update([
                         'creator_signature' => (string) $signature,
                         'creator_signed_at' => now(),
+                        'creator_approved' => true,
                         'dynamic_terms' => $opp->dynamic_terms,
                     ]);
+
+                // Beritahu pembuat event bahwa kreator telah menandatangani kontrak
+                $this->notificationRepo->create([
+                    'user_id' => $opp->posted_by,
+                    'title' => 'Kontrak Digital Disetujui Pekerja',
+                    'message' => "Pekerja kreatif ({$user->name}) telah menandatangani Dokumen Kontrak Digital untuk proyek '{$opp->title}'.",
+                    'type' => 'project',
+                    'data' => [
+                        'opportunity_id' => $opp->id,
+                        'creator_id' => $userId,
+                    ],
+                    'is_read' => false,
+                    'created_at' => now(),
+                ]);
             }
 
             $opp->save();
@@ -427,7 +464,7 @@ class OpportunityService extends BaseService
 
             $isClient = ($opp->posted_by === $userId || $user->role === RoleType::Admin);
             $isApprovedCreator = OpportunityApplication::where('opportunity_id', $opp->id)
-                ->where('user_id', $userId)
+                ->where('creator_id', $userId)
                 ->where('status', 'approved')
                 ->exists();
 
@@ -513,7 +550,17 @@ class OpportunityService extends BaseService
                 // Budget < 100jt: Wajib tanda tangan elektronik dynamic (Tripartite 3 Pihak)
                 $dynamicSignature = $data['signature'] ?? $data['electronic_signature'] ?? $opp->client_signature ?? null;
                 if (empty($dynamicSignature) && empty($opp->client_signed_at)) {
-                    abort(422, 'Wajib menandatangani Tanda Tangan Elektronik Dynamic secara sah sebelum memulai acara.');
+                    abort(422, 'Tidak dapat memulai acara: Dokumen kontrak digital belum ditandatangani oleh Pihak Pertama (Penyelenggara). Silakan tandatangani kontrak digital terlebih dahulu.');
+                }
+
+                // Cek apakah seluruh kreator yang disetujui telah menyetujui & menandatangani kontrak digital
+                $unsignedCreators = $approvedApps->filter(function ($app) {
+                    return empty($app->creator_signature) || empty($app->creator_signed_at);
+                });
+
+                if ($unsignedCreators->isNotEmpty()) {
+                    $creatorNames = $unsignedCreators->map(fn($a) => $a->creator->name ?? 'Kreator')->implode(', ');
+                    abort(422, "Tidak dapat memulai acara: Dokumen kontrak digital wajib disetujui dan ditandatangani oleh kedua belah pihak sebelum acara dimulai. Menunggu pengesahan/tanda tangan digital dari pekerja kreatif: {$creatorNames}.");
                 }
 
                 $opp->signature_type = 'dynamic_electronic';
@@ -628,8 +675,8 @@ class OpportunityService extends BaseService
                 }
 
                 $contractNumber = 'KVN-CTR/' . date('Ymd') . '/' . strtoupper(substr($opp->id, 0, 4)) . '-' . strtoupper(substr($app->id, 0, 4));
-                $creatorSig = $app->creator_signature ?: ('SIG-CREATOR-' . strtoupper(substr(md5($app->creator_id . $opp->id), 0, 10)));
-                $creatorSignedAt = $app->creator_signed_at ?: ($app->reviewed_at ?: now());
+                $creatorSig = $app->creator_signature;
+                $creatorSignedAt = $app->creator_signed_at ?: now();
 
                 JobContract::updateOrCreate(
                     [
@@ -652,8 +699,10 @@ class OpportunityService extends BaseService
                         'grace_period_deadline' => $graceDeadline,
                         'creator_signature' => $creatorSig,
                         'creator_signed_at' => $creatorSignedAt,
+                        'creator_approved' => true,
                         'client_signature' => $opp->client_signature,
                         'client_signed_at' => $opp->client_signed_at,
+                        'client_approved' => true,
                         'admin_name' => $adminName,
                         'admin_signature_url' => $adminSignatureUrl,
                         'admin_signed_at' => now(),
@@ -1555,8 +1604,8 @@ class OpportunityService extends BaseService
 
                 $this->notificationRepo->create([
                     'user_id' => $application->creator_id,
-                    'title' => 'Lamaran Proyek Disetujui!',
-                    'message' => 'Selamat! Lamaran Anda untuk proyek "' . $opp->title . '" telah disetujui oleh pemilik proyek' . $priceInfo . '.',
+                    'title' => 'Lamaran Disetujui — Lengkapi Kontrak Digital',
+                    'message' => 'Selamat! Lamaran Anda untuk proyek "' . $opp->title . '" telah disetujui' . $priceInfo . '. Silakan tinjau ketentuan dan bubuhi tanda tangan pada Dokumen Kontrak Digital sebelum acara dimulai.',
                     'type' => 'project',
                     'data' => [
                         'opportunity_id' => $opp->id,
