@@ -38,6 +38,7 @@ class JobContract {
   bool disputeOpened;
   String? disputeGroupId;
   String? cancelReason;
+  final String? revisionNotes;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -88,6 +89,7 @@ class JobContract {
     this.disputeOpened = false,
     this.disputeGroupId,
     this.cancelReason,
+    this.revisionNotes,
     this.createdAt,
     this.updatedAt,
     this.creator,
@@ -163,6 +165,7 @@ class JobContract {
       disputeOpened: json['dispute_opened'] ?? false,
       disputeGroupId: json['dispute_group_id']?.toString(),
       cancelReason: json['cancel_reason']?.toString(),
+      revisionNotes: json['revision_notes']?.toString(),
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'])
           : null,

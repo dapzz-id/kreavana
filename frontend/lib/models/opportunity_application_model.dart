@@ -65,6 +65,7 @@ class OpportunityApplicationModel {
   final List<Map<String, dynamic>> submittedDeliverables;
   final String? gracePeriodDeadline;
   final String? autoReleasedAt;
+  final String? revisionNotes;
   final String status;
   final String? rejectionReason;
   final String? reviewedAt;
@@ -93,6 +94,7 @@ class OpportunityApplicationModel {
     this.paymentStatus = 'unpaid',
     this.workerProgress = 0,
     this.workerStatus = 'assigned',
+    this.revisionNotes,
     this.submittedDeliverables = const [],
     this.gracePeriodDeadline,
     this.autoReleasedAt,
@@ -115,6 +117,9 @@ class OpportunityApplicationModel {
   bool get isCounterOfferByClient => counterOfferBy != 'creator';
   bool get isTermPayment => paymentScheme == 'term';
   bool get isFullyPaid => paymentStatus == 'paid' || (bidPrice != null && paidAmount >= (counterOfferPrice ?? bidPrice!));
+  bool get isRevision => workerStatus == 'revision';
+  bool get isReview => workerStatus == 'review';
+  bool get isCompletedWork => workerStatus == 'completed' || workerProgress >= 100;
   double get agreedFee => counterOfferPrice ?? bidPrice ?? 0.0;
   double get remainingUnpaidFee => (agreedFee - paidAmount).clamp(0.0, double.infinity);
   String get creatorId => (rawCreatorId != null && rawCreatorId!.isNotEmpty) ? rawCreatorId! : (creator?.id ?? '');
@@ -197,6 +202,7 @@ class OpportunityApplicationModel {
       paymentStatus: json['payment_status']?.toString() ?? 'unpaid',
       workerProgress: json['worker_progress'] != null ? (int.tryParse(json['worker_progress'].toString()) ?? 0) : 0,
       workerStatus: json['worker_status']?.toString() ?? 'assigned',
+      revisionNotes: json['revision_notes']?.toString(),
       submittedDeliverables: deliverables,
       gracePeriodDeadline: json['grace_period_deadline']?.toString(),
       autoReleasedAt: json['auto_released_at']?.toString(),

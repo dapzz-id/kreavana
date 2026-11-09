@@ -47,6 +47,7 @@ class JobContract extends Model
         'admin_signed_at',
         'dispute_group_id',
         'cancel_reason',
+        'revision_notes',
         'scheduled_at',
         'started_at',
         'submitted_at',

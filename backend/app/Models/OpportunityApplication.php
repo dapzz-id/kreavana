@@ -31,6 +31,7 @@ class OpportunityApplication extends Model
         'payment_status',
         'worker_progress',
         'worker_status',
+        'revision_notes',
         'submitted_deliverables',
         'grace_period_deadline',
         'auto_released_at',

@@ -295,6 +295,7 @@ class OpportunityService extends BaseService
                 'payment_status' => $app->payment_status ?? 'unpaid',
                 'worker_progress' => (int) ($app->worker_progress ?? 0),
                 'worker_status' => $app->worker_status ?? 'assigned',
+                'revision_notes' => $app->revision_notes ?? null,
                 'submitted_deliverables' => $app->submitted_deliverables ?? [],
                 'grace_period_deadline' => $app->grace_period_deadline?->toIso8601String(),
                 'auto_released_at' => $app->auto_released_at?->toIso8601String(),
@@ -1176,15 +1177,52 @@ class OpportunityService extends BaseService
                 $app->worker_status = 'in_progress';
             }
         }
+
+        // Simpan catatan revisi jika status revision atau ada notes
+        if ($notes) {
+            if (Schema::hasColumn('opportunity_applications', 'revision_notes')) {
+                $app->revision_notes = $notes;
+            }
+            if ($app->worker_status === 'revision') {
+                $deliverables = $app->submitted_deliverables ?? [];
+                $deliverables[] = [
+                    'id' => (string) Str::uuid(),
+                    'type' => 'revision_request',
+                    'title' => 'Permintaan Catatan Revisi',
+                    'notes' => $notes,
+                    'uploaded_by' => $user->name,
+                    'uploaded_at' => now()->toIso8601String(),
+                ];
+                $app->submitted_deliverables = $deliverables;
+            }
+        }
         $app->save();
+
+        // Tentukan mapping WorkStatus untuk JobContract
+        $targetWorkStatus = WorkStatus::InProgress;
+        if ($app->worker_status === 'completed' || $clamped >= 100) {
+            $targetWorkStatus = WorkStatus::Completed;
+        } elseif ($app->worker_status === 'revision') {
+            $targetWorkStatus = WorkStatus::Revision;
+        } elseif ($app->worker_status === 'review') {
+            $targetWorkStatus = WorkStatus::Review;
+        }
+
+        $contractUpdates = [
+            'worker_progress' => $clamped,
+            'work_status' => $targetWorkStatus,
+        ];
+        if (isset($deliverables)) {
+            $contractUpdates['deliverables'] = $deliverables;
+        }
+        if ($notes && Schema::hasColumn('job_contracts', 'revision_notes')) {
+            $contractUpdates['revision_notes'] = $notes;
+        }
 
         // Sinkronisasi dengan JobContract
         JobContract::where('opportunity_id', $opp->id)
             ->where('creator_id', $app->creator_id)
-            ->update([
-                'worker_progress' => $clamped,
-                'work_status' => $clamped >= 100 ? WorkStatus::Completed : WorkStatus::InProgress,
-            ]);
+            ->update($contractUpdates);
 
         // Hitung rata-rata progress seluruh pekerja untuk event_progress
         $avgProgress = (int) OpportunityApplication::where('opportunity_id', $opp->id)
@@ -1196,18 +1234,29 @@ class OpportunityService extends BaseService
         }
         $opp->save();
 
-        // Kirim notifikasi ke lawan pihak
+        // Judul & pesan notifikasi
         $targetUserId = $isCreator ? $opp->posted_by : $app->creator_id;
         $updaterName = $user->name ?: 'Mitra';
+        $notifTitle = 'Update Progress Pekerja (' . $clamped . '%)';
+        if ($app->worker_status === 'revision') {
+            $notifTitle = 'Permintaan Revisi Hasil Kerja';
+        } elseif ($app->worker_status === 'review') {
+            $notifTitle = 'Hasil Kerja Siap Ditinjau';
+        } elseif ($app->worker_status === 'completed') {
+            $notifTitle = 'Hasil Kerja Disetujui (Selesai 100%)';
+        }
+
         $this->notificationRepo->create([
             'user_id' => $targetUserId,
-            'title' => 'Update Progress Pekerja (' . $clamped . '%)',
-            'message' => $updaterName . ' telah memperbarui progress pengerjaan untuk posisi ' . ucwords(str_replace('_', ' ', $app->sub_role_slug)) . ' menjadi ' . $clamped . '%.' . ($notes ? ' Catatan: ' . $notes : ''),
+            'title' => $notifTitle,
+            'message' => $updaterName . ' telah memperbarui progress pengerjaan untuk posisi ' . ucwords(str_replace('_', ' ', $app->sub_role_slug)) . ' menjadi ' . $clamped . '% (Status: ' . $app->worker_status . ').' . ($notes ? ' Catatan: ' . $notes : ''),
             'type' => 'project',
             'data' => [
                 'opportunity_id' => $opp->id,
                 'application_id' => $app->id,
                 'worker_progress' => $clamped,
+                'worker_status' => $app->worker_status,
+                'revision_notes' => $notes,
             ],
             'is_read' => false,
             'created_at' => now(),
@@ -1265,13 +1314,18 @@ class OpportunityService extends BaseService
         $deliverables = $app->submitted_deliverables ?? [];
         $deliverables[] = $newDeliverable;
         $app->submitted_deliverables = $deliverables;
+        if ($app->worker_status === 'revision') {
+            $app->worker_status = 'review';
+        }
         $app->save();
 
         // Sinkronisasi dengan JobContract
+        $contractWorkStatus = ($app->worker_progress >= 100) ? WorkStatus::Completed : WorkStatus::Review;
         JobContract::where('opportunity_id', $opp->id)
             ->where('creator_id', $app->creator_id)
             ->update([
                 'deliverables' => $deliverables,
+                'work_status' => $contractWorkStatus,
             ]);
 
         // Notifikasi ke pembuat acara

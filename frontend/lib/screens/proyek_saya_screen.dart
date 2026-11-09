@@ -564,6 +564,79 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     ).then((_) => _fetchRealtimeProjects());
   }
 
+  Future<void> _openContractOpportunity(UnifiedProjectItem item) async {
+    final c = item.contract;
+    if (c == null) return;
+    final oppId = c.opportunityId;
+    if (oppId == null || oppId.isEmpty) {
+      _showContractDetailDialog(item);
+      return;
+    }
+
+    // 1. Cek apakah model opportunity sudah ada di list realtime saat ini
+    for (final it in _allItems) {
+      if (it.opportunity != null && it.opportunity!.id == oppId) {
+        _openOpportunityDetail(it.opportunity!);
+        return;
+      }
+    }
+
+    // 2. Jika belum ada di list, tampilkan loader lalu ambil via API
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 16),
+                Text('Membuka workspace proyek...', style: TextStyle(fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final opp = await OpportunityService.getOpportunityById(oppId);
+      if (mounted) {
+        Navigator.pop(context); // Tutup loader
+        if (opp != null) {
+          _openOpportunityDetail(opp);
+        } else {
+          final currencyFmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+          final fallbackOpp = OpportunityModel(
+            id: oppId,
+            title: c.title,
+            description: c.description ?? 'Aktivitas dan pengerjaan proyek ${c.title}.',
+            budgetRange: currencyFmt.format(c.agreedPrice),
+            subRoleSlug: 'creator',
+            type: 'project',
+            status: c.contractStatus == 'active' ? 'in_progress' : c.contractStatus,
+            postedBy: c.clientId,
+          );
+          _openOpportunityDetail(fallbackOpp);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memuat detail proyek: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   String _getPartnerId(JobContract contract) {
     final currentUserId = widget.user?.id ?? '';
     if (currentUserId.isNotEmpty && contract.creatorId == currentUserId) {
@@ -1322,7 +1395,11 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
           if (isOpportunity && item.opportunity != null) {
             _openOpportunityDetail(item.opportunity!);
           } else if (!isOpportunity) {
-            _showContractDetailDialog(item);
+            if (item.contract?.opportunityId != null && item.contract!.opportunityId!.isNotEmpty) {
+              _openContractOpportunity(item);
+            } else {
+              _showContractDetailDialog(item);
+            }
           }
         },
         child: Container(
@@ -1674,6 +1751,23 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
+                if (item.contract?.opportunityId != null && item.contract!.opportunityId!.isNotEmpty) ...[
+                  ElevatedButton.icon(
+                    onPressed: () => _openContractOpportunity(item),
+                    icon: const Icon(Icons.dashboard_customize_rounded, size: 14),
+                    label: const Text('Workspace Proyek', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryPurple,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 OutlinedButton(
                   onPressed: () {
                     _showContractDetailDialog(item);
@@ -1968,6 +2062,19 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                   foregroundColor: Colors.white,
                 ),
               ),
+          if (c.opportunityId != null && c.opportunityId!.isNotEmpty)
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _openContractOpportunity(item);
+              },
+              icon: const Icon(Icons.dashboard_customize_rounded, size: 15),
+              label: const Text('Buka Detail & Workspace Proyek'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryPurple,
+                foregroundColor: Colors.white,
+              ),
+            ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Tutup'),
