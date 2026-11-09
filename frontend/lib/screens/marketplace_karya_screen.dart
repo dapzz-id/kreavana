@@ -1,11 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../app/theme.dart';
 import '../app/app_animations.dart';
 import '../models/marketplace_item.dart';
 import '../models/user_model.dart';
+import '../services/app_router.dart';
 import '../services/marketplace_service.dart';
+import '../services/system_settings_service.dart';
 import '../widgets/app_empty_state.dart';
+import '../widgets/feature_disabled_view.dart';
 import 'marketplace_detail_screen.dart';
 import 'jual_karya_screen.dart';
 import '../widgets/skeleton/skeleton_base.dart';
@@ -51,16 +55,22 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
   @override
   void initState() {
     super.initState();
+    SystemSettingsService.moduleStatuses.addListener(_onModuleStatusesChanged);
     _loadAll();
     _scrollCtrl.addListener(_onScroll);
   }
 
   @override
   void dispose() {
+    SystemSettingsService.moduleStatuses.removeListener(_onModuleStatusesChanged);
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
     _debounce?.cancel();
     super.dispose();
+  }
+
+  void _onModuleStatusesChanged() {
+    if (mounted) setState(() {});
   }
 
   void _onSearchChanged() {
@@ -93,6 +103,9 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
         _sortBy,
         1,
       );
+      if (itemsRes['code'] == 'MODULE_DISABLED') {
+        SystemSettingsService.updateLocalModule('marketplace_enabled', false);
+      }
       if (mounted) {
         _parseItems(itemsRes, append: false);
       }
@@ -321,6 +334,43 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final isWide = MediaQuery.of(context).size.width > 900;
+    final effectiveUser = widget.user ?? currentUserNotifier.value;
+    final isMarketplaceOff = !SystemSettingsService.isMarketplaceEnabled && !(effectiveUser?.isAdmin ?? false);
+
+    if (isMarketplaceOff) {
+      final disabledView = Scaffold(
+        backgroundColor: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
+        appBar: AppBar(
+          automaticallyImplyLeading: !isWide && Navigator.canPop(context),
+          toolbarHeight: 70,
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          title: const Text(
+            'Marketplace Karya',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+        ),
+        body: FeatureDisabledView(
+          featureName: 'Marketplace Karya',
+          icon: Icons.storefront_outlined,
+          onBackToHome: () {
+            if (context.mounted) {
+              context.go(AppRoutes.beranda);
+            }
+          },
+        ),
+      );
+
+      if (isWide && effectiveUser != null) {
+        return DesktopSidebarLayout(
+          user: effectiveUser,
+          activeRoute: 'beranda',
+          onUserUpdated: widget.onUserUpdated,
+          child: disabledView,
+        );
+      }
+      return disabledView;
+    }
 
     final scaffold = Scaffold(
       backgroundColor: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
@@ -616,7 +666,6 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
             ),
     );
 
-    final effectiveUser = widget.user ?? currentUserNotifier.value;
     if (isWide && effectiveUser != null) {
       return DesktopSidebarLayout(
         user: effectiveUser,

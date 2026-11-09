@@ -180,7 +180,7 @@ Route::middleware(['auth:api', 'user.not_suspended'])->group(function () {
     });
 
     // Opportunities (Write & Applications)
-    Route::prefix('opportunities')->group(function () {
+    Route::prefix('opportunities')->middleware('module:opportunities_enabled')->group(function () {
         Route::get('my', [OpportunityController::class, 'myOpportunities']);
         Route::post('/', [OpportunityController::class, 'store'])->middleware('permission:create_opportunity');
         Route::post('report', [OpportunityController::class, 'submitReport'])->middleware('permission:submit_report');
@@ -496,7 +496,7 @@ Route::prefix('subscription')->group(function () {
 });
 
 // Public Opportunities (Guest Browsing)
-Route::prefix('opportunities')->group(function () {
+Route::prefix('opportunities')->middleware('module:opportunities_enabled')->group(function () {
     Route::get('/', [OpportunityController::class, 'index']);
     Route::get('map', [OpportunityController::class, 'mapLocations']);
     Route::get('{id}', [OpportunityController::class, 'show']);
@@ -505,7 +505,7 @@ Route::prefix('opportunities')->group(function () {
 
 // Public Client Dashboard Overview (Guest Browsing)
 Route::get('client-dashboard/overview', [DashboardController::class, 'overview']);
-Route::get('collaborations', [CollaborationController::class, 'index']);
+Route::get('collaborations', [CollaborationController::class, 'index'])->middleware('module:collaboration_enabled');
 
 // Internal Machine-to-Machine (S2S) Endpoints from users_api / IAM
 Route::prefix('internal/v1')->middleware([\App\Http\Middleware\VerifyInternalServiceSignature::class])->group(function () {

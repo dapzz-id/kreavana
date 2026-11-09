@@ -58,6 +58,31 @@ class FeatureDisabledView extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.gpp_bad_rounded, size: 14, color: Colors.red),
+                    SizedBox(width: 6),
+                    Text(
+                      'STATUS 403 • AKSES DITOLAK (DINONAKTIFKAN ADMIN)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.red,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
               Text(
                 'Fitur $featureName Dinonaktifkan',
                 textAlign: TextAlign.center,

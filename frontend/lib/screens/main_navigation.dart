@@ -923,7 +923,7 @@ class _MainNavigationState extends State<MainNavigation> {
           isCollapsed: isCollapsed,
           isMobileDrawer: isMobileDrawer,
         ),
-      if (!_hasSpecificCreatorSubRole && !_isCompany) ...[
+      if (!_hasSpecificCreatorSubRole && !_isCompany && !_isSchool && !_isGovernment) ...[
         if (SystemSettingsService.isMarketplaceEnabled || _currentUser.isAdmin)
           _buildSidebarItem(
             icon: Icons.storefront_outlined,
@@ -935,7 +935,7 @@ class _MainNavigationState extends State<MainNavigation> {
             isCollapsed: isCollapsed,
             isMobileDrawer: isMobileDrawer,
           ),
-        if (_isCreatorUser && !_isGovernment && !_isSchool)
+        if (_isCreatorUser)
           _buildSidebarItem(
             icon: Icons.calendar_today_outlined,
             activeIcon: Icons.calendar_today,

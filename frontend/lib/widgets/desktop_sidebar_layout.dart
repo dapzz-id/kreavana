@@ -1391,7 +1391,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
-                        if (!_hasSpecificCreatorSubRole && !_isCompany) ...[
+                        if (!_hasSpecificCreatorSubRole && !_isCompany && !_isSchool && !_isGovernment) ...[
                           if (SystemSettingsService.isMarketplaceEnabled || widget.user.isAdmin)
                             _buildNavRow(
                               icon: Icons.storefront_outlined,
@@ -1401,7 +1401,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                               isDark: isDark,
                               isCollapsed: collapsed,
                             ),
-                          if (_isCreatorUser && !_isGovernment && !_isSchool)
+                          if (_isCreatorUser)
                             _buildNavRow(
                               icon: Icons.calendar_today_outlined,
                               label: 'Agenda',
