@@ -30,6 +30,7 @@ import '../../../screens/detail_kebutuhan_screen.dart';
 import '../../../screens/direct_message_screen.dart';
 import '../../../services/chat_service.dart';
 import '../../../app/app_animations.dart';
+import '../../../widgets/app_sweet_alert.dart';
 class _RoleDashboardConfig {
   final String badge;
   final String greeting;
@@ -514,11 +515,11 @@ class _DashboardScreenState extends State<DashboardScreen>
       return _RoleDashboardConfig(
         badge: '✦ MODE INSTITUSI PENDIDIKAN',
         greeting: 'Halo, $name! 🎓',
-        subtitle: 'Jembatani talenta siswa dengan industri, kelola program magang, dan kurasi karya kreatif kampus.',
-        primaryButtonLabel: '+ Buka Magang',
-        primaryButtonIcon: Icons.school_outlined,
-        secondaryButtonLabel: 'Cari Mitra Industri',
-        secondaryButtonIcon: Icons.business_outlined,
+        subtitle: 'Jembatani talenta siswa dengan industri, kurasi karya kreatif kampus, dan pantau kemitraan industri.',
+        primaryButtonLabel: 'Cari Mitra Industri',
+        primaryButtonIcon: Icons.business_outlined,
+        secondaryButtonLabel: 'Review Karya Siswa',
+        secondaryButtonIcon: Icons.collections_bookmark_outlined,
         recommendationTitle: 'Mitra Industri Rekomendasi',
         recommendationNiche: 'Industri Kreatif',
         recommendationRole: 'client',
@@ -561,9 +562,9 @@ class _DashboardScreenState extends State<DashboardScreen>
           },
         ],
         quickActions: [
-          {'icon': Icons.work_outline, 'label': 'Buka Magang'},
           {'icon': Icons.business, 'label': 'Cari Mitra Industri'},
           {'icon': Icons.collections_bookmark_outlined, 'label': 'Review Karya'},
+          {'icon': Icons.badge_outlined, 'label': 'Direktori Talenta'},
           {'icon': Icons.calendar_month_outlined, 'label': 'Atur Jadwal'},
           {'icon': Icons.assessment_outlined, 'label': 'Laporan'},
           {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
@@ -702,10 +703,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         ],
         quickActions: [
           {'icon': Icons.business_center_outlined, 'label': 'Buka Proyek Korporat'},
+          {'icon': Icons.school_outlined, 'label': 'Buka Program Magang'},
           {'icon': Icons.search, 'label': 'Cari Vendor'},
           {'icon': Icons.compare_arrows, 'label': 'Bandingkan'},
           {'icon': Icons.folder_open, 'label': 'Kontrak Berjalan'},
-          {'icon': Icons.payment, 'label': 'Bayar DP'},
           {'icon': Icons.insights_rounded, 'label': 'Grafik Performa'},
         ],
         aiTips: [
@@ -2091,7 +2092,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       case 'Jadwal Tampil':
       case 'Jadwal Panggung / Tampil':
       case 'Jadwal Panggung':
-      case 'Jadwal & Ketersediaan':
       case 'Jadwal & Booking':
         _openCreatorService(sub == 'mc' ? 'mc_booking' : 'talent_jadwal');
         break;
@@ -2169,10 +2169,30 @@ class _DashboardScreenState extends State<DashboardScreen>
       case 'Pengaturan Siswa':
       case 'Karya Siswa Terkurasi':
       case 'Mitra Magang Industri':
-      case 'Buka Magang':
-      case 'Buka Lowongan Magang':
       case 'Review Karya':
+      case 'Review Karya Siswa':
         _openInstitutionWorkspace();
+        break;
+      case 'Buka Magang':
+      case 'Buka Program Magang':
+      case 'Buka Lowongan Magang':
+        if (sub == 'school' || sub == 'institution' || sub == 'institusi' || sub == 'sekolah' || sub == 'kampus') {
+          AppSweetAlert.error(
+            context,
+            'Fitur Buka Program Magang khusus untuk akun Corporate / Mitra Industri. Institusi Pendidikan tidak dapat membuka lowongan magang.',
+            title: 'Akses Ditolak (403)',
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BuatKebutuhanScreen(
+                user: widget.user,
+                initialKategori: 'magang',
+              ),
+            ),
+          );
+        }
         break;
 
       // ── Layanan Pemerintah ──

@@ -69,7 +69,7 @@ class _InstitutionWorkspaceScreenState
   }
 
   static const Map<String, String> _titles = {
-    'tenders': 'Peluang Magang & Proyek',
+    'tenders': 'Program Magang Industri & Proyek',
     'partners': 'Mitra & Komunitas Industri',
     'facilities': 'Fasilitas & Venue',
     'reports': 'Laporan & Evaluasi Kinerja',
@@ -84,7 +84,7 @@ class _InstitutionWorkspaceScreenState
   };
 
   static const Map<String, String> _actions = {
-    'tenders': 'Buka Program / Magang',
+    'tenders': 'Program Magang',
     'partners': 'Tambah Mitra Industri',
     'facilities': 'Tambah Fasilitas',
     'reports': 'Buat Laporan',
@@ -596,7 +596,23 @@ class _InstitutionWorkspaceScreenState
     }
   }
 
+  bool get _canCreateResource {
+    if (widget.resourceType == 'tenders' && !_isCorporate && !_isGovernment) {
+      return false;
+    }
+    return true;
+  }
+
   Future<void> _openEditor([Map<String, dynamic>? existing]) async {
+    if (existing == null && !_canCreateResource) {
+      AppSweetAlert.error(
+        context,
+        'Fitur Buka Program Magang khusus untuk akun Corporate / Mitra Industri. Institusi Pendidikan tidak dapat membuka lowongan magang.',
+        title: 'Akses Ditolak (403)',
+      );
+      return;
+    }
+
     // If triggered from popup menu, wait for popup route to pop cleanly
     await Future.delayed(const Duration(milliseconds: 100));
     if (!mounted) return;
@@ -940,7 +956,7 @@ class _InstitutionWorkspaceScreenState
                             ],
                           ),
                         ),
-                        if (!isCompact) ...[
+                        if (!isCompact && _canCreateResource) ...[
                           const SizedBox(width: 20),
                           ElevatedButton.icon(
                             onPressed: _openEditor,
@@ -965,7 +981,7 @@ class _InstitutionWorkspaceScreenState
                         ],
                       ],
                     ),
-                    if (isCompact) ...[
+                    if (isCompact && _canCreateResource) ...[
                       const SizedBox(height: 16),
                       SizedBox(
                         width: double.infinity,
@@ -2125,17 +2141,19 @@ class _InstitutionWorkspaceScreenState
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                     ),
-                    const SizedBox(height: 18),
-                    ElevatedButton.icon(
-                      onPressed: _openEditor,
-                      icon: const Icon(Icons.add, size: 18, color: Colors.white),
-                      label: Text(_action, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1E3A8A),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    if (_canCreateResource) ...[
+                      const SizedBox(height: 18),
+                      ElevatedButton.icon(
+                        onPressed: _openEditor,
+                        icon: const Icon(Icons.add, size: 18, color: Colors.white),
+                        label: Text(_action, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1E3A8A),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -2189,12 +2207,14 @@ class _InstitutionWorkspaceScreenState
         ),
         automaticallyImplyLeading: MediaQuery.of(context).size.width <= 900,
         actions: [
-          IconButton(
-            tooltip: _action,
-            onPressed: _openEditor,
-            icon: const Icon(Icons.add_circle_outline),
-          ),
-          const SizedBox(width: 8),
+          if (_canCreateResource) ...[
+            IconButton(
+              tooltip: _action,
+              onPressed: _openEditor,
+              icon: const Icon(Icons.add_circle_outline),
+            ),
+            const SizedBox(width: 8),
+          ],
         ],
       ),
       body: _buildBody(isDark),

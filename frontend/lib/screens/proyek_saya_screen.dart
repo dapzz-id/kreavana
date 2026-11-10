@@ -22,6 +22,7 @@ import 'client_verification_page.dart';
 import '../widgets/user_profile_modal.dart';
 import '../widgets/opportunity_review_dialog.dart';
 import '../widgets/repeat_order_dialog.dart';
+import '../widgets/app_sweet_alert.dart';
 
 enum ProjectItemType {
   opportunity,
@@ -461,6 +462,15 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   }
 
   Future<void> _openBuatKebutuhan() async {
+    if (_isSchool) {
+      AppSweetAlert.error(
+        context,
+        'Fitur Buka Program Magang khusus untuk akun Corporate / Mitra Industri. Institusi Pendidikan tidak dapat membuka lowongan magang.',
+        title: 'Akses Ditolak (403)',
+      );
+      return;
+    }
+
     // Check if client is verified
     final isClient =
         widget.user?.role == 'user' || widget.user?.isClient == true;
@@ -856,7 +866,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                           },
                         ),
                         BreadcrumbItem(
-                          label: _isSchool ? 'Program & Magang' : 'Proyek Saya',
+                          label: _isSchool ? 'Program Magang Industri' : 'Proyek Saya',
                           icon: _isSchool ? Icons.work_outline_rounded : Icons.folder_rounded,
                         ),
                       ],
@@ -905,7 +915,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               ),
         ),
       ),
-      floatingActionButton: (!isDesktop)
+      floatingActionButton: (!isDesktop && !_isSchool)
           ? FloatingActionButton.extended(
               heroTag: 'proyek_saya_fab_mobile',
               onPressed: _openBuatKebutuhan,
@@ -966,7 +976,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                _isSchool ? 'Program & Magang' : 'Proyek Saya',
+                _isSchool ? 'Program Magang Industri' : 'Proyek Saya',
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
@@ -976,7 +986,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               const SizedBox(height: 4),
               Text(
                 _isSchool
-                    ? 'Kelola program magang, PKL, dan proyek kreatif bersama industri dan studio mitra.'
+                    ? 'Pantau program magang industri dan kemitraan siswa bersama studio mitra.'
                     : 'Pantau kebutuhan terbuka, proposal kreator, dan progres kontrak kerja Anda.',
                 style: TextStyle(
                   fontSize: 13,
@@ -998,14 +1008,14 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         ),
-        if (isDesktop) ...[
+        if (isDesktop && !_isSchool) ...[
           const SizedBox(width: 12),
           ElevatedButton.icon(
             onPressed: _openBuatKebutuhan,
             icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-            label: Text(
-              _isSchool ? 'Buka Program / Magang' : 'Buat Proyek Baru',
-              style: const TextStyle(
+            label: const Text(
+              'Buat Proyek Baru',
+              style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
@@ -2127,7 +2137,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             Text(
               _selectedStatus == 'Semua'
                   ? (_isSchool
-                      ? 'Belum Ada Program Magang yang Dibuka'
+                      ? 'Belum Ada Program Magang Aktif'
                       : 'Belum Ada Proyek yang Dibuat')
                   : (_isSchool
                       ? 'Tidak Ada Program pada Status "$_selectedStatus"'
@@ -2140,7 +2150,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             const SizedBox(height: 8),
             Text(
               _isSchool
-                  ? 'Publikasikan program magang, PKL, atau proyek kreatif sekolah Anda untuk menghubungkan siswa dengan industri dan studio mitra.'
+                  ? 'Program magang dibuka langsung oleh mitra korporat dan industri. Pantau program dan pelamar magang dari mitra industri di sini.'
                   : 'Publikasikan kebutuhan proyek Anda sekarang untuk menerima proposal dari kreator terverifikasi.',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -2148,20 +2158,22 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                 color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
               ),
             ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: _openBuatKebutuhan,
-              icon: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
-              label: Text(
-                _isSchool ? 'Buka Program Magang Baru' : 'Buat Kebutuhan Baru',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            if (!_isSchool) ...[
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: _openBuatKebutuhan,
+                icon: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                label: const Text(
+                  'Buat Kebutuhan Baru',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryPurple,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryPurple,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
+            ],
           ],
         ),
       ),

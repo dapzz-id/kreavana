@@ -72,6 +72,18 @@ class OpportunityController extends Controller
     public function store(StoreOpportunityRequest $request)
     {
         $user = Auth::guard('api')->user();
+
+        if ($user) {
+            $rawSub = $user->sub_role;
+            $subRole = is_object($rawSub) && isset($rawSub->value) 
+                ? strtolower(trim($rawSub->value)) 
+                : strtolower(trim((string)$rawSub));
+
+            if (in_array($subRole, ['institution', 'institusi', 'school', 'sekolah', 'kampus', 'campus', 'education'])) {
+                return $this->errorResponse('Institusi Pendidikan tidak memiliki akses untuk membuka lowongan magang atau proyek. Program magang hanya dapat dibuka oleh akun Corporate / Mitra Industri.', 403);
+            }
+        }
+
         if ($user && $user->role->value === 'user' && !$user->is_verified) {
             return $this->errorResponse('Klien wajib melakukan verifikasi KTP terlebih dahulu sebelum mempublikasikan kebutuhan proyek.', 403);
         }
