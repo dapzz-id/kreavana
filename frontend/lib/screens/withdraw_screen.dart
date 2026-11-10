@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../models/user_model.dart';
 import '../services/wallet_service.dart';
 import '../services/api_service.dart';
@@ -429,9 +428,8 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                   TextField(
                     controller: _amountController,
                     keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      const IndonesianCurrencyInputFormatter(),
+                    inputFormatters: const [
+                      IndonesianCurrencyInputFormatter(),
                     ],
                     style: const TextStyle(
                       fontSize: 28,
