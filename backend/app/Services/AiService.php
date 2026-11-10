@@ -157,11 +157,19 @@ class AiService extends BaseService implements AiServiceInterface
 
             if ($includeData) {
                 try {
-                    $recommendationCards = $this->findRelevantCreators($message, 100);
+                    if ($this->isCreatorRecommendationIntent($message)) {
+                        $recommendationCards = $this->findRelevantCreators($message, 15);
 
-                    if (!empty($recommendationCards)) {
-                        $count = count($recommendationCards);
-                        $prompt = $message . "\n\n[SISTEM PLATFORM KREAVANA]:\nDitemukan {$count} akun kreator terverifikasi yang cocok dengan kriteria pencarian dan telah ditampilkan secara visual pada daftar kartu rekomendasi sistem.\nTUGAS ANDA: Berikan pesan pengantar yang sangat singkat, ramah, dan langsung ke intinya (cukup 1-2 kalimat saja, contoh: 'Berikut adalah rekomendasi {$count} akun kreator terverifikasi di Kreavana yang sesuai dengan kebutuhan Anda:').\nATURAN KETAT: JANGAN menjabarkan atau menjelaskan kelebihan, ulasan, atau profil kreator satu per satu di rangkuman teks ini, karena seluruh akun beserta portofolio dan profil lengkapnya sudah ditampilkan langsung pada kartu rekomendasi sistem.";
+                        if (!empty($recommendationCards)) {
+                            $count = count($recommendationCards);
+                            $prompt = $message . "\n\n[SISTEM PLATFORM KREAVANA]:\nDitemukan {$count} akun kreator terverifikasi yang cocok dengan kriteria pencarian dan telah ditampilkan secara visual pada daftar kartu rekomendasi sistem di layar pengguna.\nTUGAS ANDA: Berikan pesan pengantar yang sangat singkat, ramah, dan langsung ke intinya (cukup 1-2 kalimat saja, contoh: 'Berikut adalah rekomendasi {$count} akun kreator terverifikasi di Kreavana yang sesuai dengan kebutuhan Anda:').\nATURAN KETAT: JANGAN menjabarkan atau menulis ulang profil kreator satu per satu di rangkuman teks ini, karena seluruh akun beserta portofolio dan profil lengkapnya sudah ditampilkan langsung pada kartu rekomendasi sistem.";
+                        } else {
+                            $prompt = $message . "\n\n[SISTEM PLATFORM KREAVANA]:\nPengguna mencari rekomendasi kreator/jasa, namun sistem belum menemukan akun kreator yang cocok dengan spesifikasi tersebut di database saat ini.\nTUGAS ANDA: Beritahu pengguna dengan sopan dan ramah bahwa belum ditemukan kreator yang spesifik sesuai kriteria tersebut di database, dan sarankan mereka untuk mempublikasikan lowongan/kebutuhan melalui menu 'Proyek Saya' agar kreator yang berminat dapat langsung mengajukan proposal.";
+                        }
+                    } else {
+                        // User TIDAK meminta rekomendasi akun atau kreator.
+                        // Berikan jawaban langsung atas pertanyaan atau sapaan pengguna.
+                        $prompt = $message . "\n\n[SISTEM PLATFORM KREAVANA]:\nTUGAS ANDA: Jawab pertanyaan, sapaan, atau pesan pengguna di atas secara langsung, jelas, ramah, dan solutif sebagai asisten resmi Kreavana.\nATURAN KETAT: JANGAN menyapa dengan menawarkan daftar rekomendasi akun kreator atau membuat daftar rekomendasi akun fiktif, karena pengguna tidak meminta rekomendasi akun. Fokuslah sepenuhnya untuk menjawab pertanyaan pengguna dengan tepat.";
                     }
                 } catch (\Throwable $e) {
                     // Fallback to original prompt if query fails
@@ -180,12 +188,64 @@ class AiService extends BaseService implements AiServiceInterface
     }
 
     /**
+     * Cek apakah pesan pengguna memang bermaksud mencari atau meminta rekomendasi akun/kreator/jasa.
+     */
+    protected function isCreatorRecommendationIntent(string $message): bool
+    {
+        $msg = strtolower(trim($message));
+        if (empty($msg)) {
+            return false;
+        }
+
+        // 1. Abaikan sapaan umum murni (greetings)
+        if (preg_match('/^(hi|halo|hello|hai|hei|p|ping|selamat\s*(pagi|siang|sore|malam)|assalamu[\'\w]*|tes|test|oy|woy|help)[\s\!\.\?]*$/i', $msg)) {
+            return false;
+        }
+
+        // 2. Pertanyaan definisi/penjelasan (apa itu, jelaskan, bagaimana cara, kenapa, dll.)
+        if (preg_match('/^(apa\s*itu|jelaskan|apakah|bagaimana\s*cara|gimana\s*cara|mengapa|kenapa|tips|panduan|tutorial)\b/i', $msg)) {
+            // Kecuali jika ada kata "rekomendasi akun/kreator"
+            if (!preg_match('/\b(rekomendasi|rekomendasikan)\s+(akun|kreator|creator|talent|freelance|vendor|fotografer|videografer|desainer|mc|mua|wo|eo)\b/i', $msg)) {
+                return false;
+            }
+        }
+
+        // 3. Keyword eksplisit minta rekomendasi akun / kreator / talent / jasa
+        if (preg_match('/\b(rekomendasi|rekomendasikan|sarankan|referensi)\b/i', $msg)) {
+            if (preg_match('/\b(kreator|creator|akun|orang|talent|freelance|freelancer|vendor|mitra|jasa|siapa|wo\b|eo\b|wedding\s*organi[sz]er|event\s*organi[sz]er|fotografer|photographer|videografer|videographer|desainer|designer|editor|animator|mc|mua|makeup|singer|penyanyi|musisi|musician|band|drone|model)\b/i', $msg)) {
+                return true;
+            }
+            if (preg_match('/^(minta\s*)?rekomendasi(\s*(dong|ya|pls|please|kreator|akun))?$/i', $msg)) {
+                return true;
+            }
+        }
+
+        // 4. Keyword pencarian / perekrutan / kebutuhan kreator
+        $hasSearchVerb = preg_match('/\b(cari|carikan|mencari|butuh|membutuhkan|perlu|memerlukan|hire|pekerjakan|sewa|booking|kontrak|ada\s*ga|ada\s*gk|ada\s*kah|adakah|ada\s*yang\s*bisa|siapa\s*yang\s*bisa|tolong\s*carikan)\b/i', $msg);
+
+        $hasCreatorTarget = preg_match('/\b(kreator|creator|talent|freelance|freelancer|vendor|mitra|jasa|wo\b|eo\b|wedding\s*organi[sz]er|event\s*organi[sz]er|fotografer|photographer|foto|videografer|videographer|video|shooting|edit\s*video|editing|editor|desain|desainer|designer|logo|animator|animasi|mc|host|pembawa\s*acara|mua|makeup|tata\s*rias|singer|penyanyi|musisi|musician|band|tukang\s*kendang|drone|model)\b/i', $msg);
+
+        if ($hasSearchVerb && $hasCreatorTarget) {
+            // Hindari false-positive seperti "bagaimana cara mencari proyek" atau "cara cari kerja"
+            if (!preg_match('/\b(cara|panduan|tips)\s*(cari|mencari)\s*(event|proyek|project|pekerjaan|lowongan|job|klien)\b/i', $msg)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Cari dan rangking kreator yang relevan dengan pertanyaan / prompt pengguna.
      * Mendukung deteksi sub-role spesifik (Wedding Organizer, Videografer, Fotografer, dll.),
      * deteksi lokasi geografis (Bekasi, Jakarta, Bandung, dll.), serta perangkingan booster akun.
      */
-    protected function findRelevantCreators(string $message, int $limit = 100): array
+    protected function findRelevantCreators(string $message, int $limit = 15): array
     {
+        if (!$this->isCreatorRecommendationIntent($message)) {
+            return [];
+        }
+
         $normalizedMsg = strtolower($message);
 
         // 1. Deteksi sub_role spesifik berdasarkan konteks pesan pengguna
