@@ -29,11 +29,13 @@ import 'proyek_saya_screen.dart';
 class DetailKebutuhanScreen extends StatefulWidget {
   final OpportunityModel opportunity;
   final UserModel? user;
+  final JobContract? initialContract;
 
   const DetailKebutuhanScreen({
     super.key,
     required this.opportunity,
     this.user,
+    this.initialContract,
   });
 
   @override
@@ -93,12 +95,107 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
       final apps = await OpportunityService.getOpportunityApplications(_opp.id ?? '');
       if (mounted) {
         setState(() {
-          _applications = apps;
+          if (apps.isEmpty && (_opp.approvedCreators.isNotEmpty || widget.initialContract != null)) {
+            final approvedList = _opp.approvedCreators.isNotEmpty
+                ? _opp.approvedCreators
+                : (widget.initialContract != null
+                    ? [
+                        OpportunityApprovedCreatorModel(
+                          id: widget.initialContract!.creatorId,
+                          name: widget.initialContract!.creatorName,
+                          username: widget.initialContract!.creatorName.toLowerCase().replaceAll(' ', '_'),
+                          avatarUrl: widget.initialContract!.creator?['avatar_url'],
+                          subRole: _opp.subRoleSlug,
+                          creatorSignature: widget.initialContract!.creatorSignature,
+                          creatorSignedAt: widget.initialContract!.creatorSignedAt?.toIso8601String() ??
+                              (widget.initialContract!.creatorApproved ? DateTime.now().toIso8601String() : null),
+                        )
+                      ]
+                    : <OpportunityApprovedCreatorModel>[]);
+
+            _applications = approvedList.map((c) {
+              return OpportunityApplicationModel(
+                id: 'app_${c.id}',
+                opportunityId: _opp.id ?? '',
+                rawCreatorId: c.id,
+                creator: OpportunityApplicantModel(
+                  id: c.id,
+                  name: c.name,
+                  username: c.username,
+                  avatarUrl: c.avatarUrl,
+                  subRole: c.subRole ?? _opp.subRoleSlug,
+                  isVerified: true,
+                ),
+                subRoleSlug: c.subRole ?? _opp.subRoleSlug,
+                pitchMessage: widget.initialContract?.description ?? 'Kontrak kerja sama aktif untuk proyek ${_opp.title}.',
+                bidPrice: widget.initialContract?.agreedPrice,
+                status: 'approved',
+                creatorSignature: c.creatorSignature,
+                creatorSignedAt: c.creatorSignedAt,
+                workerStatus: widget.initialContract?.workStatus ?? 'in_progress',
+                workerProgress: widget.initialContract?.workerProgress ?? 0,
+                submittedDeliverables: widget.initialContract?.deliverables ?? const [],
+                paymentScheme: widget.initialContract?.paymentScheme ?? 'full_at_end',
+                paymentTerms: widget.initialContract?.paymentTerms ?? const [],
+              );
+            }).toList();
+          } else {
+            _applications = apps;
+          }
           _loadingApps = false;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _loadingApps = false);
+      if (mounted) {
+        setState(() {
+          if (_opp.approvedCreators.isNotEmpty || widget.initialContract != null) {
+            final approvedList = _opp.approvedCreators.isNotEmpty
+                ? _opp.approvedCreators
+                : (widget.initialContract != null
+                    ? [
+                        OpportunityApprovedCreatorModel(
+                          id: widget.initialContract!.creatorId,
+                          name: widget.initialContract!.creatorName,
+                          username: widget.initialContract!.creatorName.toLowerCase().replaceAll(' ', '_'),
+                          avatarUrl: widget.initialContract!.creator?['avatar_url'],
+                          subRole: _opp.subRoleSlug,
+                          creatorSignature: widget.initialContract!.creatorSignature,
+                          creatorSignedAt: widget.initialContract!.creatorSignedAt?.toIso8601String() ??
+                              (widget.initialContract!.creatorApproved ? DateTime.now().toIso8601String() : null),
+                        )
+                      ]
+                    : <OpportunityApprovedCreatorModel>[]);
+
+            _applications = approvedList.map((c) {
+              return OpportunityApplicationModel(
+                id: 'app_${c.id}',
+                opportunityId: _opp.id ?? '',
+                rawCreatorId: c.id,
+                creator: OpportunityApplicantModel(
+                  id: c.id,
+                  name: c.name,
+                  username: c.username,
+                  avatarUrl: c.avatarUrl,
+                  subRole: c.subRole ?? _opp.subRoleSlug,
+                  isVerified: true,
+                ),
+                subRoleSlug: c.subRole ?? _opp.subRoleSlug,
+                pitchMessage: widget.initialContract?.description ?? 'Kontrak kerja sama aktif untuk proyek ${_opp.title}.',
+                bidPrice: widget.initialContract?.agreedPrice,
+                status: 'approved',
+                creatorSignature: c.creatorSignature,
+                creatorSignedAt: c.creatorSignedAt,
+                workerStatus: widget.initialContract?.workStatus ?? 'in_progress',
+                workerProgress: widget.initialContract?.workerProgress ?? 0,
+                submittedDeliverables: widget.initialContract?.deliverables ?? const [],
+                paymentScheme: widget.initialContract?.paymentScheme ?? 'full_at_end',
+                paymentTerms: widget.initialContract?.paymentTerms ?? const [],
+              );
+            }).toList();
+          }
+          _loadingApps = false;
+        });
+      }
     }
   }
 
@@ -1133,6 +1230,9 @@ class _DetailKebutuhanScreenState extends State<DetailKebutuhanScreen> {
     try {
       contracts = await OpportunityService.getOpportunityContracts(_opp.id ?? '');
     } catch (_) {}
+    if (contracts.isEmpty && widget.initialContract != null) {
+      contracts = [widget.initialContract!];
+    }
     setState(() => _actionLoading = false);
 
     if (!mounted) return;

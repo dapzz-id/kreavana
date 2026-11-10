@@ -418,12 +418,12 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             }
             if (target != null) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) _showContractDetailDialog(target!);
+                if (mounted) _openContractOpportunity(target!);
               });
             } else if (widget.initialContract != null) {
               final item = UnifiedProjectItem.fromContract(widget.initialContract!, currentUserId: widget.user?.id);
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) _showContractDetailDialog(item);
+                if (mounted) _openContractOpportunity(item);
               });
             } else if (widget.initialTitle != null && widget.initialTitle!.isNotEmpty) {
               final dummyContract = JobContract(
@@ -443,7 +443,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               );
               final item = UnifiedProjectItem.fromContract(dummyContract, currentUserId: widget.user?.id);
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) _showContractDetailDialog(item);
+                if (mounted) _openContractOpportunity(item);
               });
             }
           }
@@ -562,13 +562,14 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     }
   }
 
-  void _openOpportunityDetail(OpportunityModel opp) {
+  void _openOpportunityDetail(OpportunityModel opp, {JobContract? contract}) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => DetailKebutuhanScreen(
           opportunity: opp,
           user: widget.user ?? currentUserNotifier.value,
+          initialContract: contract,
         ),
       ),
     ).then((_) => _fetchRealtimeProjects());
@@ -576,74 +577,129 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
 
   Future<void> _openContractOpportunity(UnifiedProjectItem item) async {
     final c = item.contract;
-    if (c == null) return;
-    final oppId = c.opportunityId;
-    if (oppId == null || oppId.isEmpty) {
-      _showContractDetailDialog(item);
+    if (c == null) {
+      if (item.opportunity != null) {
+        _openOpportunityDetail(item.opportunity!);
+      }
       return;
     }
 
-    // 1. Cek apakah model opportunity sudah ada di list realtime saat ini
-    for (final it in _allItems) {
-      if (it.opportunity != null && it.opportunity!.id == oppId) {
-        _openOpportunityDetail(it.opportunity!);
-        return;
+    final oppId = c.opportunityId;
+    if (oppId != null && oppId.isNotEmpty) {
+      // 1. Cek apakah model opportunity sudah ada di list realtime saat ini
+      for (final it in _allItems) {
+        if (it.opportunity != null && it.opportunity!.id == oppId) {
+          _openOpportunityDetail(it.opportunity!, contract: c);
+          return;
+        }
       }
-    }
 
-    // 2. Jika belum ada di list, tampilkan loader lalu ambil via API
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(width: 16),
-                Text('Membuka workspace proyek...', style: TextStyle(fontWeight: FontWeight.w600)),
-              ],
+      // 2. Jika belum ada di list, tampilkan loader lalu ambil via API
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(width: 16),
+                  Text('Membuka detail proyek...', style: TextStyle(fontWeight: FontWeight.w600)),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    try {
-      final opp = await OpportunityService.getOpportunityById(oppId);
-      if (mounted) {
-        Navigator.pop(context); // Tutup loader
-        if (opp != null) {
-          _openOpportunityDetail(opp);
-        } else {
-          final currencyFmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
-          final fallbackOpp = OpportunityModel(
-            id: oppId,
-            title: c.title,
-            description: c.description ?? 'Aktivitas dan pengerjaan proyek ${c.title}.',
-            budgetRange: currencyFmt.format(c.agreedPrice),
-            subRoleSlug: 'creator',
-            type: 'project',
-            status: c.contractStatus == 'active' ? 'in_progress' : c.contractStatus,
-            postedBy: c.clientId,
-          );
-          _openOpportunityDetail(fallbackOpp);
+      try {
+        final opp = await OpportunityService.getOpportunityById(oppId);
+        if (mounted) {
+          Navigator.pop(context); // Tutup loader
+          if (opp != null) {
+            _openOpportunityDetail(opp, contract: c);
+            return;
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          Navigator.pop(context);
         }
       }
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal memuat detail proyek: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+    }
+
+    // Bangun model OpportunityModel dari data kontrak lengkap agar tampil persis seperti halaman Detail Kebutuhan
+    final currencyFmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final deadlineStr = c.deadline != null
+        ? DateFormat('yyyy-MM-dd').format(c.deadline!)
+        : (c.scheduledEndDate != null ? DateFormat('yyyy-MM-dd').format(c.scheduledEndDate!) : null);
+    final deadlineFormatted = c.deadline != null
+        ? DateFormat('dd MMM yyyy').format(c.deadline!)
+        : (c.scheduledEndDate != null ? DateFormat('dd MMM yyyy').format(c.scheduledEndDate!) : null);
+
+    final partnerRole = _getPartnerRole(c);
+    final approvedCreator = OpportunityApprovedCreatorModel(
+      id: c.creatorId,
+      name: c.creatorName.isNotEmpty ? c.creatorName : 'Kreator Partner',
+      username: c.creator?['username'] ?? c.creatorName.toLowerCase().replaceAll(' ', '_'),
+      avatarUrl: c.creator?['avatar_url'] ?? c.creator?['profile_photo_url'],
+      subRole: partnerRole.isNotEmpty ? partnerRole : 'creator',
+      creatorSignature: c.creatorSignature,
+      creatorSignedAt: c.creatorSignedAt?.toIso8601String() ??
+          (c.creatorApproved ? (c.createdAt?.toIso8601String() ?? DateTime.now().toIso8601String()) : null),
+    );
+
+    final poster = OpportunityPoster(
+      id: c.clientId,
+      name: c.clientName.isNotEmpty ? c.clientName : (widget.user?.name ?? 'Klien'),
+      username: c.client?['username'] ?? (widget.user?.username ?? 'klien'),
+      avatarUrl: c.client?['avatar_url'] ?? c.client?['profile_photo_url'],
+      role: 'client',
+    );
+
+    final defaultDynamicTerms = [
+      'Penyelenggara (Pihak Pertama) wajib menyediakan akses lokasi, jadwal rundown yang jelas, dan koordinasi teknis di venue.',
+      'Penyediaan fasilitas dan alat kerja utama (seperti kamera, lensa, instrumen, dll) disepakati tertulis antara pembuat event dan pekerja.',
+      'Pekerja (Pihak Kedua) berkewajiban hadir tepat waktu dan menyerahkan hasil kerja sesuai standar profesional yang disepakati.',
+      'Honorarium kerja diamankan 100% pada sistem Escrow Rekber Kreavana (Pihak Ketiga) dan hanya dicairkan setelah hasil pekerjaan disetujui.',
+    ];
+
+    final dynamicTerms = c.dynamicTerms.isNotEmpty
+        ? c.dynamicTerms
+        : (c.terms != null && c.terms!.isNotEmpty ? [c.terms!] : defaultDynamicTerms);
+
+    final fallbackOpp = OpportunityModel(
+      id: (c.opportunityId != null && c.opportunityId!.isNotEmpty) ? c.opportunityId : c.id,
+      title: c.title,
+      description: c.description ?? 'Aktivitas dan pengerjaan proyek ${c.title}.',
+      budgetRange: currencyFmt.format(c.agreedPrice),
+      subRoleSlug: partnerRole.isNotEmpty ? partnerRole : (widget.user?.subRole ?? 'creator'),
+      type: 'project',
+      location: 'Indonesia',
+      deadline: deadlineStr ?? deadlineFormatted,
+      status: c.contractStatus == 'active' ? 'in_progress' : c.contractStatus,
+      postedBy: c.clientId,
+      poster: poster,
+      approvedCreators: [approvedCreator],
+      applicationsCount: 1,
+      escrowStatus: c.escrowPaid ? 'held_in_escrow' : 'none',
+      escrowAmount: c.escrowAmount > 0 ? c.escrowAmount : c.agreedPrice,
+      dynamicTerms: dynamicTerms,
+      signatureType: 'dynamic_electronic',
+      clientSignature: c.clientSignature,
+      clientSignedAt: c.clientSignedAt?.toIso8601String(),
+      adminName: c.adminName ?? 'Admin Kreavana',
+      adminSignatureUrl: c.adminSignatureUrl,
+      adminSignedAt: c.adminSignedAt?.toIso8601String(),
+      eventProgress: c.workerProgress,
+      createdAt: c.createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
+    );
+
+    if (mounted) {
+      _openOpportunityDetail(fallbackOpp, contract: c);
     }
   }
 
@@ -1405,11 +1461,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
           if (isOpportunity && item.opportunity != null) {
             _openOpportunityDetail(item.opportunity!);
           } else if (!isOpportunity) {
-            if (item.contract?.opportunityId != null && item.contract!.opportunityId!.isNotEmpty) {
-              _openContractOpportunity(item);
-            } else {
-              _showContractDetailDialog(item);
-            }
+            _openContractOpportunity(item);
           }
         },
         child: Container(
@@ -1780,7 +1832,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                 ],
                 OutlinedButton(
                   onPressed: () {
-                    _showContractDetailDialog(item);
+                    _openContractOpportunity(item);
                   },
                   style: OutlinedButton.styleFrom(
                     shape: RoundedRectangleBorder(
@@ -1984,126 +2036,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     );
   }
 
-  void _showContractDetailDialog(UnifiedProjectItem item) {
-    final c = item.contract;
-    if (c == null) return;
 
-    final partnerId = _getPartnerId(c);
-    final partnerName = _getPartnerName(c);
-    final partnerRole = _getPartnerRole(c);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Row(
-          children: [
-            const Icon(Icons.handshake_rounded, color: AppTheme.primaryPurple),
-            const SizedBox(width: 8),
-            const Expanded(
-              child: Text(
-                'Detail Kontrak Proyek',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              c.title,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            ),
-            const SizedBox(height: 8),
-            Text('Partner: $partnerName'),
-            Text('Nilai Kontrak: ${item.priceOrBudget}'),
-            Text('Status Kontrak: ${item.statusLabel}'),
-            Text('Status Kerja: ${c.workStatus}'),
-            if (c.deadline != null)
-              Text('Batas Waktu: ${DateFormat('dd MMM yyyy').format(c.deadline!)}'),
-            if (c.description != null && c.description!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              const Text('Catatan/Deskripsi:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(c.description!, style: const TextStyle(fontSize: 12)),
-            ],
-          ],
-        ),
-        actions: [
-          if (partnerId.isNotEmpty)
-            OutlinedButton.icon(
-              onPressed: () {
-                UserProfileModal.show(
-                  context,
-                  userId: partnerId,
-                  initialName: partnerName,
-                  initialRole: partnerRole,
-                  currentUser: widget.user,
-                );
-              },
-              icon: const Icon(Icons.person_outline_rounded, size: 15),
-              label: const Text('Profil & Portofolio'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.primaryPurple,
-              ),
-            ),
-          if (c.isCompleted || item.progress >= 1.0)
-            if (c.clientId == widget.user?.id || widget.user?.isClient == true)
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  RepeatOrderDialog.show(
-                    context,
-                    contractId: c.id,
-                    creatorId: c.creatorId,
-                    creatorName: c.creatorName.isNotEmpty ? c.creatorName : 'Kreator',
-                    creatorAvatar: c.creator?['avatar_url'] ?? c.creator?['profile_photo_url'],
-                    originalTitle: item.title,
-                    originalPrice: c.agreedPrice,
-                    defaultTerms: c.terms,
-                    onSuccess: _fetchRealtimeProjects,
-                  );
-                },
-                icon: const Icon(Icons.replay_rounded, size: 15, color: Colors.white),
-                label: const Text('Repeat Order'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF7C3AED),
-                  foregroundColor: Colors.white,
-                ),
-              ),
-          if (c.opportunityId != null && c.opportunityId!.isNotEmpty)
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(ctx);
-                _openContractOpportunity(item);
-              },
-              icon: const Icon(Icons.dashboard_customize_rounded, size: 15),
-              label: const Text('Buka Detail & Workspace Proyek'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryPurple,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Tutup'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _openChatWithPartner(partnerId, partnerName);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryPurple,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Kirim Pesan'),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ── Empty State ────────────────────────────────────────────────────────────
   Widget _buildEmptyState(bool isDark) {
