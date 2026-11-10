@@ -68,8 +68,22 @@ class _InstitutionWorkspaceScreenState
     ].contains(sub);
   }
 
+  bool get _isSchool {
+    final sub = widget.user.subRole?.toLowerCase() ?? '';
+    return [
+      'school',
+      'sekolah',
+      'universitas',
+      'institution',
+      'kampus',
+      'smk',
+      'education',
+      'institusi',
+    ].contains(sub);
+  }
+
   static const Map<String, String> _titles = {
-    'tenders': 'Program Magang Industri & Proyek',
+    'tenders': 'Pengadaan & Tender (RFP)',
     'partners': 'Mitra & Komunitas Industri',
     'facilities': 'Fasilitas & Venue',
     'reports': 'Laporan & Evaluasi Kinerja',
@@ -84,7 +98,7 @@ class _InstitutionWorkspaceScreenState
   };
 
   static const Map<String, String> _actions = {
-    'tenders': 'Program Magang',
+    'tenders': 'Buat Tender RFP',
     'partners': 'Tambah Mitra Industri',
     'facilities': 'Tambah Fasilitas',
     'reports': 'Buat Laporan',
@@ -379,6 +393,18 @@ class _InstitutionWorkspaceScreenState
   @override
   void initState() {
     super.initState();
+    if (_isSchool && widget.resourceType == 'tenders') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        AppSweetAlert.error(
+          context,
+          'Fitur Pengadaan & Vendor hanya tersedia untuk akun Corporate / Perusahaan.',
+          title: 'Akses Ditolak (403)',
+        );
+        Navigator.maybePop(context);
+      });
+      return;
+    }
     _loadRecords();
   }
 
@@ -2198,6 +2224,33 @@ class _InstitutionWorkspaceScreenState
 
   @override
   Widget build(BuildContext context) {
+    if (_isSchool && widget.resourceType == 'tenders') {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Akses Ditolak'),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.lock_outline_rounded, size: 64, color: Colors.grey),
+              const SizedBox(height: 16),
+              const Text(
+                'Fitur Pengadaan & Vendor khusus untuk akun Corporate / Perusahaan.',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => Navigator.maybePop(context),
+                child: const Text('Kembali'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final content = Scaffold(
       appBar: AppBar(

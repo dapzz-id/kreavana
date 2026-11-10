@@ -16,6 +16,13 @@ class SchoolDummySeeder extends Seeder
 {
     public function run(): void
     {
+        // Pastikan tidak ada resource tenders yang tertinggal untuk institusi / sekolah (tenders khusus corporate)
+        InstitutionResource::where('resource_type', 'tenders')
+            ->whereHas('owner', function ($q) {
+                $q->whereIn('sub_role', ['institution', 'school', 'sekolah', 'kampus', 'smk', 'universitas', 'education', 'institusi']);
+            })
+            ->delete();
+
         $usernames = ['institution_demo', 'smk_demo', 'sekolah_demo'];
         $seeded = 0;
 
@@ -239,90 +246,7 @@ class SchoolDummySeeder extends Seeder
             ],
         ];
 
-        // ── FITUR 3: PELUANG MAGANG, RISET, DAN PROYEK (TENDERS & OPPORTUNITIES) ──
-        $opportunities = [
-            [
-                'resource_type' => 'tenders',
-                'title' => 'Program Magang MBKM: 3D Character & Environment Modeler',
-                'description' => 'Kesempatan magang bersertifikat selama 6 bulan di studio animasi untuk pengerjaan aset serial animasi 3D berstandar internasional.',
-                'status' => 'open',
-                'metadata' => [
-                    'category' => 'Magang PKL / MBKM',
-                    'industry_partner' => 'PT Studio Animasi Nusantara',
-                    'quota' => '10 Mahasiswa',
-                    'allowance' => 'Rp 3.500.000 / bulan',
-                    'duration' => '6 Bulan (Konversi 20 SKS)',
-                    'deadline' => Carbon::now()->addDays(20)->format('Y-m-d'),
-                    'applicants_count' => 24,
-                    'skills' => ['Blender', 'Maya', 'Substance Painter'],
-                ],
-                'published_at' => Carbon::now()->subDays(6),
-            ],
-            [
-                'resource_type' => 'tenders',
-                'title' => 'Riset Terapan: Penerapan Fotogrametri 3D untuk Cagar Budaya',
-                'description' => 'Hibah penelitian kolaboratif dosen dan mahasiswa bersama instansi kebudayaan dalam mendokumentasikan candi bersejarah ke bentuk aset 3D digital interaktif.',
-                'status' => 'in_progress',
-                'metadata' => [
-                    'category' => 'Riset Kolaboratif Industri',
-                    'industry_partner' => 'Balai Pelestarian Kebudayaan & GeoSpatial ID',
-                    'grant_budget' => 65000000,
-                    'budget' => 65000000,
-                    'duration' => '8 Bulan',
-                    'deadline' => Carbon::now()->addDays(90)->format('Y-m-d'),
-                    'lead_researcher' => 'Budi Wicaksono, M.Sn.',
-                    'student_researchers' => 4,
-                ],
-                'published_at' => Carbon::now()->subDays(15),
-            ],
-            [
-                'resource_type' => 'tenders',
-                'title' => 'Proyek Pengembangan Web Portal Interaktif Budaya Nusantara',
-                'description' => 'Pengembangan platform web interaktif galeri seni dan e-commerce cinderamata UMKM daerah oleh tim mahasiswa prodi RPL & DKV.',
-                'status' => 'in_progress',
-                'metadata' => [
-                    'category' => 'Proyek Industri Kreatif',
-                    'industry_partner' => 'Dinas Koperasi & UKM Provinsi',
-                    'budget' => 45000000,
-                    'duration' => '3 Bulan',
-                    'deadline' => Carbon::now()->addDays(40)->format('Y-m-d'),
-                    'team_members' => 6,
-                ],
-                'published_at' => Carbon::now()->subDays(20),
-            ],
-            [
-                'resource_type' => 'tenders',
-                'title' => 'Magang Industri: UI/UX & Design System Specialist',
-                'description' => 'Program magang intensif perancangan design system, wireframing, dan usability testing produk SaaS di agency digital.',
-                'status' => 'open',
-                'metadata' => [
-                    'category' => 'Magang PKL / MBKM',
-                    'industry_partner' => 'Pixel Creative Agency',
-                    'quota' => '8 Mahasiswa',
-                    'allowance' => 'Rp 3.000.000 / bulan',
-                    'duration' => '6 Bulan',
-                    'deadline' => Carbon::now()->addDays(15)->format('Y-m-d'),
-                    'applicants_count' => 19,
-                    'skills' => ['Figma', 'Prototyping', 'User Research'],
-                ],
-                'published_at' => Carbon::now()->subDays(3),
-            ],
-            [
-                'resource_type' => 'tenders',
-                'title' => 'Proyek Produksi Serial Film Dokumenter Kesenian Tari Nusantara',
-                'description' => 'Kerja sama peliputan dokumenter seni tari 5 episode beresolusi 4K untuk siaran televisi kebudayaan dan arsip digital kementerian.',
-                'status' => 'completed',
-                'metadata' => [
-                    'category' => 'Proyek Industri Kreatif',
-                    'industry_partner' => 'PT Media Cakrawala Siber',
-                    'budget' => 38000000,
-                    'duration' => '2 Bulan',
-                    'deadline' => Carbon::now()->subDays(5)->format('Y-m-d'),
-                    'output' => '5 Episode Master Video 4K HDR',
-                ],
-                'published_at' => Carbon::now()->subMonths(2),
-            ],
-        ];
+        // (Catatan: Pengadaan / Vendor / Tenders khusus untuk akun Corporate, tidak disediakan untuk institusi pendidikan)
 
         // ── FITUR 4: DIREKTORI MITRA DAN INDUSTRI (PARTNERS) ──────────────────────
         $partners = [
@@ -964,7 +888,6 @@ class SchoolDummySeeder extends Seeder
         $allResources = array_merge(
             $studyPrograms,
             $events,
-            $opportunities,
             $partners,
             $talents,
             $reports,

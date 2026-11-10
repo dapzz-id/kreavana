@@ -984,24 +984,6 @@ class _MainNavigationState extends State<MainNavigation> {
           isMobileDrawer: isMobileDrawer,
         ),
         _buildSidebarLink(
-          icon: Icons.handshake_outlined,
-          label: 'Pengadaan & Vendor',
-          onTap: () {
-            setState(() => _activeGovRoute = 'tender_kolaborasi');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'tenders',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _activeGovRoute == 'tender_kolaborasi',
-          isMobileDrawer: isMobileDrawer,
-        ),
-        _buildSidebarLink(
           icon: Icons.people_outlined,
           label: 'Daftar Kreator & Vendor',
           onTap: () => _navigateToScreenIndex(1),

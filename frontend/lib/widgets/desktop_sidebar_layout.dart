@@ -556,7 +556,15 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
       case 'tender_kolaborasi':
       case 'tenders':
       case 'pengadaan_vendor':
-        destination = (_isSchool || _isCompany || _isGovernment)
+        if (_isSchool) {
+          AppSweetAlert.error(
+            context,
+            'Fitur Pengadaan & Vendor hanya tersedia untuk akun Corporate / Perusahaan.',
+            title: 'Akses Ditolak (403)',
+          );
+          return;
+        }
+        destination = (_isCompany || _isGovernment)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'tenders',
@@ -1431,14 +1439,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             label: 'Kegiatan & Event',
                             onTap: () => _pushLink('agenda'),
                             isSelected: _isRouteActive('agenda'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                          ),
-                          _buildNavRow(
-                            icon: Icons.handshake_outlined,
-                            label: 'Pengadaan & Vendor',
-                            onTap: () => _pushLink('tender_kolaborasi'),
-                            isSelected: _isRouteActive('tender_kolaborasi'),
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
