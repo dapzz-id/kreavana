@@ -205,6 +205,9 @@ class ProfileService extends BaseService
         if ($user->role->value === 'creator' || ($user->is_verified && $user->verification_type === 'creator')) {
             throw new Exception('Akun Anda telah terdaftar sebagai Kreator. Verifikasi KTP Klien dinonaktifkan.', 422);
         }
+        if ($user->isCorporate()) {
+            throw new Exception('Akun Anda telah berstatus Corporate. Verifikasi KTP Klien tidak diperlukan untuk akun Corporate.', 422);
+        }
         if ($user->is_verified && $user->verification_type === 'client') {
             throw new Exception('Identitas KTP Anda sudah terverifikasi.', 422);
         }

@@ -272,8 +272,9 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
         subRoleSlug: 'animator',
         type: 'project',
         status: 'open',
-        eventStartDate: '2027-01-14',
-        eventEndDate: '2027-02-14',
+        deadline: '2026-12-23',
+        eventStartDate: '2026-12-23',
+        eventEndDate: '2027-02-23',
         budgetRange: 'Rp 3.500.000 / bulan',
         requirements: [
           OpportunityRequirementModel(
@@ -544,10 +545,11 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
       return;
     }
 
-    // Check if client is verified
+    // Check if client is verified (Akun corporate tidak memerlukan verifikasi KTP)
+    final isCorporate = widget.user?.isCorporate == true;
     final isClient =
         widget.user?.role == 'user' || widget.user?.isClient == true;
-    if (isClient) {
+    if (isClient && !isCorporate) {
       bool isVerified = widget.user?.isVerified == true;
       if (!isVerified) {
         // Double check latest status from server
@@ -1554,8 +1556,10 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                       : item.statusLabel)),
           statusBadgeColor: item.statusColor,
           registrationPeriod: item.deadline != null && item.deadline != '-'
-              ? item.deadline
-              : '14 Jan – 14 Feb 2027',
+              ? (item.deadline!.trim().length >= 10 && RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(item.deadline!.trim())
+                  ? item.deadline!.trim().substring(0, 10)
+                  : item.deadline!)
+              : '2026-12-23',
           quotaText: '4 dari 10 posisi',
           requirements: const [
             'Siswa SMK jurusan terkait',

@@ -64,7 +64,25 @@ class UserModel {
   });
 
   bool get isClient => role == 'user' || role == 'client';
-  bool get isClientVerified => isClient && isVerified;
+  bool get isCorporate {
+    if (isAdmin) return false;
+    final r = role.toLowerCase().trim();
+    final s = (subRole ?? '').toLowerCase().trim();
+    const corporateKeywords = [
+      'corporate',
+      'company',
+      'enterprise',
+      'business',
+      'perusahaan',
+      'bisnis',
+      'b2b',
+    ];
+    return corporateKeywords.contains(r) ||
+        corporateKeywords.contains(s) ||
+        username == 'corporate_demo' ||
+        email.startsWith('corporate@');
+  }
+  bool get isClientVerified => isCorporate || (isClient && isVerified);
   bool get isCreatorVerified => isCreator && (isVerified || isCreatorApproved);
 
   factory UserModel.fromJson(Map<String, dynamic> json) {

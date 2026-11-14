@@ -64,6 +64,24 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
   void initState() {
     super.initState();
     _currentUser = widget.user;
+    if (_currentUser?.isCorporate == true) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Akun Corporate tidak memerlukan verifikasi KTP perorangan.',
+            ),
+            backgroundColor: Colors.blue,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      });
+      return;
+    }
     if (_currentUser?.isGuest == true) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;

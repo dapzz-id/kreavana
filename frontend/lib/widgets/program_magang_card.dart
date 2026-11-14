@@ -67,31 +67,19 @@ class ProgramMagangCard extends StatelessWidget {
       statusBg = const Color(0xFFDBEAFE);
     }
 
-    // 3. Registration period
-    String? period;
-    if (opp.eventStartDate != null &&
-        opp.eventStartDate!.isNotEmpty &&
-        opp.eventEndDate != null &&
-        opp.eventEndDate!.isNotEmpty) {
-      try {
-        final start = DateTime.tryParse(opp.eventStartDate!.trim());
-        final end = DateTime.tryParse(opp.eventEndDate!.trim());
-        if (start != null && end != null) {
-          final startFmt = DateFormat('d MMM', 'id_ID').format(start);
-          final endFmt = DateFormat('d MMM yyyy', 'id_ID').format(end);
-          period = '$startFmt – $endFmt';
-        } else {
-          period = '${opp.eventStartDate} – ${opp.eventEndDate}';
-        }
-      } catch (_) {
-        period = '${opp.eventStartDate} – ${opp.eventEndDate}';
+    // 3. Registration period (format: YYYY-MM-DD, e.g. 2026-12-23)
+    String period = '2026-12-23';
+    final rawDate = opp.deadline ?? opp.eventDate ?? opp.eventStartDate;
+    if (rawDate != null && rawDate.trim().isNotEmpty) {
+      final trimmed = rawDate.trim();
+      final parsed = DateTime.tryParse(trimmed);
+      if (parsed != null) {
+        period = DateFormat('yyyy-MM-dd').format(parsed);
+      } else if (trimmed.length >= 10 && RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(trimmed)) {
+        period = trimmed.substring(0, 10);
+      } else {
+        period = trimmed;
       }
-    } else if (opp.eventDate != null && opp.eventDate!.isNotEmpty) {
-      period = opp.eventDate;
-    } else if (opp.deadline != null && opp.deadline!.isNotEmpty) {
-      period = 'Hingga ${opp.deadline}';
-    } else {
-      period = '14 Jan – 14 Feb 2027';
     }
 
     // 4. Quota text
@@ -170,9 +158,21 @@ class ProgramMagangCard extends StatelessWidget {
       statusBg = const Color(0xFFDBEAFE);
     }
 
-    final period = meta['period']?.toString() ??
-        meta['duration']?.toString() ??
-        '14 Jan – 14 Feb 2027';
+    final rawPeriod = meta['deadline']?.toString() ??
+        meta['period']?.toString() ??
+        meta['registration_period']?.toString() ??
+        data['deadline']?.toString() ??
+        '2026-12-23';
+
+    String period = '2026-12-23';
+    final parsed = DateTime.tryParse(rawPeriod.trim());
+    if (parsed != null) {
+      period = DateFormat('yyyy-MM-dd').format(parsed);
+    } else if (rawPeriod.trim().length >= 10 && RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(rawPeriod.trim())) {
+      period = rawPeriod.trim().substring(0, 10);
+    } else {
+      period = rawPeriod.trim();
+    }
 
     final quota = meta['quota_text']?.toString() ??
         meta['quota']?.toString() ??
@@ -348,7 +348,7 @@ class ProgramMagangCard extends StatelessWidget {
               _buildInfoRow(
                 icon: Icons.calendar_month_outlined,
                 label: 'Periode pendaftaran',
-                value: registrationPeriod ?? '14 Jan – 14 Feb 2027',
+                value: registrationPeriod ?? '2026-12-23',
                 isDark: isDark,
               ),
               const SizedBox(height: 16),

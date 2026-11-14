@@ -57,6 +57,26 @@ class User extends Authenticatable implements JWTSubject
         return false;
     }
 
+    /**
+     * Check if user is a corporate / company entity account.
+     */
+    public function isCorporate(): bool
+    {
+        $rawSub = $this->sub_role;
+        $subRole = is_object($rawSub) && isset($rawSub->value) 
+            ? strtolower(trim($rawSub->value)) 
+            : strtolower(trim((string)$rawSub));
+        $role = is_object($this->role) && isset($this->role->value)
+            ? strtolower(trim($this->role->value))
+            : strtolower(trim((string)$this->role));
+        
+        $keywords = ['corporate', 'company', 'business', 'perusahaan', 'bisnis', 'enterprise', 'b2b'];
+        return in_array($subRole, $keywords)
+            || in_array($role, $keywords)
+            || $this->username === 'corporate_demo'
+            || str_starts_with($this->email ?? '', 'corporate@');
+    }
+
     protected function castAttribute($key, $value)
     {
         if ($key === 'sub_role') {

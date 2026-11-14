@@ -326,18 +326,62 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
               isDark: isDark,
               children: [
                 // Client Verification tile
-                _buildNavTile(
-                  icon: Icons.badge_outlined,
-                  iconColor: widget.user!.isCreator
-                      ? const Color(0xFF10B981)
-                      : const Color(0xFF3B82F6),
-                  title: 'Verifikasi Identitas (KTP)',
-                  subtitle: widget.user!.isCreator
-                      ? 'Khusus akun Klien · Anda sudah terverifikasi sebagai Kreator (Centang Hijau)'
-                      : (widget.user!.isVerified
-                          ? 'Terverifikasi · Badge centang biru aktif'
-                          : 'Diperlukan untuk membuat proyek — upload KTP & selfie'),
-                  isDark: isDark,
+                if (widget.user!.isCorporate)
+                  _buildNavTile(
+                    icon: Icons.corporate_fare_rounded,
+                    iconColor: const Color(0xFF6366F1),
+                    title: 'Status Entitas Perusahaan (Corporate)',
+                    subtitle: 'Terdaftar resmi sebagai Corporate · Akses penuh publikasi proyek B2B tanpa verifikasi KTP',
+                    isDark: isDark,
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.verified_rounded,
+                            color: Color(0xFF6366F1),
+                            size: 13,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'Corporate',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF6366F1),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    onTap: () {
+                      AppSnackbar.info(
+                        context,
+                        'Akun Anda telah terdaftar sebagai Corporate. Verifikasi KTP perorangan tidak diperlukan.',
+                      );
+                    },
+                  )
+                else
+                  _buildNavTile(
+                    icon: Icons.badge_outlined,
+                    iconColor: widget.user!.isCreator
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFF3B82F6),
+                    title: 'Verifikasi Identitas (KTP)',
+                    subtitle: widget.user!.isCreator
+                        ? 'Khusus akun Klien · Anda sudah terverifikasi sebagai Kreator (Centang Hijau)'
+                        : (widget.user!.isVerified
+                            ? 'Terverifikasi · Badge centang biru aktif'
+                            : 'Diperlukan untuk membuat proyek — upload KTP & selfie'),
+                    isDark: isDark,
                   trailing: widget.user!.isCreator
                       ? Container(
                           padding: const EdgeInsets.symmetric(

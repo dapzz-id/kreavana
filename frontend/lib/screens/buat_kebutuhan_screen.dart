@@ -103,6 +103,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   }
 
   bool get _isCorporate {
+    if (widget.user?.isCorporate == true) return true;
     final sub = (widget.user?.subRole ?? '').toLowerCase().trim();
     final role = (widget.user?.role ?? '').toLowerCase().trim();
     return sub == 'company' ||
@@ -119,6 +120,10 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   bool _isClientVerified = true;
 
   Future<void> _checkClientVerification() async {
+    if (_isCorporate || widget.user?.isCorporate == true) {
+      if (mounted) setState(() => _isClientVerified = true);
+      return;
+    }
     final isClient =
         widget.user?.role == 'user' || widget.user?.isClient == true;
     if (!isClient) {
@@ -621,9 +626,10 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   }
 
   Future<void> _submit() async {
+    final isCorporateUser = _isCorporate || widget.user?.isCorporate == true;
     final isClient =
         widget.user?.role == 'user' || widget.user?.isClient == true;
-    if (isClient && !_isClientVerified) {
+    if (!isCorporateUser && isClient && !_isClientVerified) {
       final shouldVerify = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -895,7 +901,8 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                     ),
                   ],
                 ),
-                if (!_isClientVerified &&
+                if (!(_isCorporate || widget.user?.isCorporate == true) &&
+                    !_isClientVerified &&
                     (widget.user?.role == 'user' ||
                         widget.user?.isClient == true))
                   Container(

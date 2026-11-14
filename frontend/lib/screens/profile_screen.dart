@@ -646,7 +646,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // ── Quick action buttons ─────────────────────────────────────────
           if (!_currentUser.isAdmin) ...[
             const SizedBox(height: 16),
-            if (!_currentUser.isVerified && !_currentUser.isCreator)
+            if (!_currentUser.isVerified && !_currentUser.isCreator && !_currentUser.isCorporate)
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
