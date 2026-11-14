@@ -62,5 +62,23 @@ void main() {
         expect(u.isClientVerified, isTrue);
       }
     });
+
+    test('UserModel.fromJson automatically marks corporate accounts as isVerified', () {
+      final json = {
+        'id': 'corp-demo',
+        'name': 'PT Kreavana Nusantara Korporat',
+        'username': 'corporate_demo',
+        'email': 'corporate@kreavana.id',
+        'role': 'user',
+        'sub_role': 'corporate',
+        'is_verified': false,
+      };
+
+      final user = UserModel.fromJson(json);
+      expect(user.isCorporate, isTrue);
+      expect(user.isVerified, isTrue);
+      expect(user.isClientVerified, isTrue);
+      expect(user.verificationType, equals('corporate'));
+    });
   });
 }

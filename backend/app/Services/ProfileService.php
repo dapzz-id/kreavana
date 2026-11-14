@@ -295,10 +295,12 @@ class ProfileService extends BaseService
             ];
         }
 
+        $isCorporate = method_exists($user, 'isCorporate') ? $user->isCorporate() : false;
+
         return [
-            'is_verified' => (bool) $user->is_verified,
-            'verification_type' => $user->verification_type,
-            'verified_at' => $user->verified_at?->toISOString(),
+            'is_verified' => $isCorporate ? true : (bool) $user->is_verified,
+            'verification_type' => $isCorporate ? ($user->verification_type ?? 'corporate') : $user->verification_type,
+            'verified_at' => $user->verified_at?->toISOString() ?? ($isCorporate ? now()->toISOString() : null),
             'has_pending' => $pending !== null,
             'pending_application' => $pending,
             'latest_application' => $latest,

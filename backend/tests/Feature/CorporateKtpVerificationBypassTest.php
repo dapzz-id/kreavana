@@ -96,4 +96,35 @@ class CorporateKtpVerificationBypassTest extends TestCase
                 'message' => 'Akun Anda telah berstatus Corporate. Verifikasi KTP Klien tidak diperlukan untuk akun Corporate.',
             ]);
     }
+
+    public function test_corporate_user_has_is_verified_true_via_model_attribute()
+    {
+        $corp = User::factory()->create([
+            'role' => RoleType::User,
+            'sub_role' => 'corporate',
+            'is_verified' => false,
+        ]);
+
+        $this->assertTrue($corp->isCorporate());
+        $this->assertTrue($corp->is_verified);
+        $this->assertEquals('corporate', $corp->verification_type);
+    }
+
+    public function test_corporate_user_verification_status_endpoint_returns_verified_true()
+    {
+        $corp = User::factory()->create([
+            'role' => RoleType::User,
+            'sub_role' => 'corporate',
+            'is_verified' => false,
+        ]);
+
+        $token = JWTAuth::fromUser($corp);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->getJson('/api/verification/status');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.is_verified', true)
+            ->assertJsonPath('data.verification_type', 'corporate');
+    }
 }

@@ -77,6 +77,22 @@ class User extends Authenticatable implements JWTSubject
             || str_starts_with($this->email ?? '', 'corporate@');
     }
 
+    public function getIsVerifiedAttribute($value): bool
+    {
+        if ($this->isCorporate()) {
+            return true;
+        }
+        return (bool) $value;
+    }
+
+    public function getVerificationTypeAttribute($value): ?string
+    {
+        if ($this->isCorporate()) {
+            return $value ?: 'corporate';
+        }
+        return $value;
+    }
+
     protected function castAttribute($key, $value)
     {
         if ($key === 'sub_role') {
