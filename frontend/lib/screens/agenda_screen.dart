@@ -486,134 +486,11 @@ class _AgendaScreenState extends State<AgendaScreen> {
     );
   }
 
-  String? _resolveEventAsset(Map<String, dynamic> item) {
-    final title = (item['title'] ?? '').toString().toLowerCase();
-    final type = (item['type'] ?? '').toString().toLowerCase();
-
-    // 1. Dies Natalis & Expo Seni ISRK
-    if (title.contains('dies natalis') || title.contains('expo seni') || title.contains('isrk')) {
-      return 'assets/events/dies_natalis_seni.png';
-    }
-
-    // 2. Coffee & Creative Expo
-    if (title.contains('coffee') || title.contains('nusantara creative') || title.contains('expo')) {
-      return 'assets/events/creative_coffee_expo.png';
-    }
-
-    // 3. Hackathon & Game Jam
-    if (title.contains('hackathon') || title.contains('game jam') || title.contains('coding') || title.contains('lomba')) {
-      return 'assets/events/hackathon_jam.png';
-    }
-
-    // 4. Masterclass & Workshop
-    if (title.contains('masterclass') || title.contains('workshop') || title.contains('pelatihan') || type.contains('workshop')) {
-      return 'assets/events/masterclass_workshop.png';
-    }
-
-    // 5. Partner Emblems
-    if (title.contains('google')) return 'assets/partners/google.png';
-    if (title.contains('animasi')) return 'assets/partners/animasi_nusantara.png';
-    if (title.contains('pixel')) return 'assets/partners/pixel_creative.png';
-    if (title.contains('svara')) return 'assets/partners/svara_audio.png';
-    if (title.contains('cakrawala')) return 'assets/partners/cakrawala_media.png';
-    if (title.contains('adgi')) return 'assets/partners/adgi.png';
-    if (title.contains('game')) return 'assets/partners/game_guild.png';
-
-    // 6. Institutional Emblems
-    if (title.contains('kampus') || title.contains('dudi') || title.contains('mbkm')) {
-      return 'assets/kampus_merdeka.png';
-    }
-    if (title.contains('kemendikbud')) {
-      return 'assets/kemendikbud.png';
-    }
-
-    return null;
-  }
-
-  String? _resolveEventNetworkLogo(Map<String, dynamic> item) {
-    final title = (item['title'] ?? '').toString().toLowerCase();
-    if (title.contains('dies natalis') || title.contains('expo seni')) {
-      return 'https://cdn-icons-png.flaticon.com/512/3845/3845868.png';
-    }
-    if (title.contains('coffee') || title.contains('nusantara creative')) {
-      return 'https://cdn-icons-png.flaticon.com/512/924/924514.png';
-    }
-    if (title.contains('hackathon') || title.contains('game jam')) {
-      return 'https://cdn-icons-png.flaticon.com/512/686/686589.png';
-    }
-    if (title.contains('masterclass') || title.contains('workshop')) {
-      return 'https://cdn-icons-png.flaticon.com/512/1055/1055666.png';
-    }
-    if (title.contains('google')) {
-      return 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/240px-Google_%22G%22_logo.svg.png';
-    }
-    return null;
-  }
-
-  Widget _buildEventEmblem({
-    required String? assetPath,
-    required String? networkUrl,
-    required IconData fallbackIcon,
-    required Color accentColor,
-  }) {
-    if (assetPath != null && assetPath.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Image.asset(
-          assetPath,
-          width: 40,
-          height: 40,
-          fit: BoxFit.contain,
-          errorBuilder: (_, _, _) {
-            if (networkUrl != null && networkUrl.isNotEmpty) {
-              return Image.network(
-                networkUrl,
-                width: 40,
-                height: 40,
-                fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => _buildFallbackIconContainer(fallbackIcon, accentColor),
-              );
-            }
-            return _buildFallbackIconContainer(fallbackIcon, accentColor);
-          },
-        ),
-      );
-    }
-    if (networkUrl != null && networkUrl.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Image.network(
-          networkUrl,
-          width: 40,
-          height: 40,
-          fit: BoxFit.contain,
-          errorBuilder: (_, _, _) => _buildFallbackIconContainer(fallbackIcon, accentColor),
-        ),
-      );
-    }
-    return _buildFallbackIconContainer(fallbackIcon, accentColor);
-  }
-
-  Widget _buildFallbackIconContainer(IconData icon, Color accentColor) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: accentColor.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Center(
-        child: Icon(icon, color: accentColor, size: 22),
-      ),
-    );
-  }
-
   Widget _buildAgendaCard(
     Map<String, dynamic> item,
     Color accentColor,
     bool isDark,
   ) {
-    final typeColor = item['typeColor'] as Color? ?? accentColor;
     final title = item['title']?.toString() ?? 'Kegiatan Agenda';
     final location = item['location']?.toString() ?? 'Lokasi Ditentukan';
     final isOnline = location.toLowerCase().contains('meet') ||
@@ -625,230 +502,292 @@ class _AgendaScreenState extends State<AgendaScreen> {
     final end = item['endDate'] as DateTime?;
     final durationDays = (start != null && end != null) ? (end.difference(start).inDays + 1).clamp(1, 365) : 1;
 
-    final assetLogo = _resolveEventAsset(item);
-    final networkLogo = _resolveEventNetworkLogo(item);
-    final fallbackIcon = (item['icon'] as IconData?) ?? (isOnline ? Icons.videocam_rounded : Icons.festival_rounded);
-    final isReminded = _remindedAgendas.contains(item['id']);
-
-    // Dynamic category tag
+    // Resolve Category, Badge Label, and Type Color
     final String categoryBadge;
+    final Color typeColor;
     final titleLower = title.toLowerCase();
+
     if (titleLower.contains('dies natalis') || titleLower.contains('seni')) {
-      categoryBadge = '🎬 Produksi Video 4K • Seni & DUDI';
+      categoryBadge = '🎬 Produksi Video 4K';
+      typeColor = const Color(0xFF2563EB); // Royal Blue
     } else if (titleLower.contains('coffee') || titleLower.contains('expo')) {
-      categoryBadge = '☕ Expo Industri Kreatif & Artisan';
-    } else if (titleLower.contains('hackathon') || titleLower.contains('jam')) {
-      categoryBadge = '💻 Hackathon & Game Jam Vokasi';
+      categoryBadge = '☕ Expo Industri Kreatif';
+      typeColor = const Color(0xFFD97706); // Amber
+    } else if (titleLower.contains('hackathon') || titleLower.contains('jam') || titleLower.contains('lomba')) {
+      categoryBadge = '💻 Hackathon & Game Jam';
+      typeColor = const Color(0xFF7C3AED); // Purple
     } else if (titleLower.contains('workshop') || titleLower.contains('masterclass')) {
-      categoryBadge = '🎨 Masterclass & Pelatihan Industri';
+      categoryBadge = '🎨 Workshop & Pelatihan';
+      typeColor = const Color(0xFF059669); // Emerald
     } else {
       categoryBadge = item['type']?.toString() ?? 'Agenda Resmi';
+      typeColor = item['typeColor'] as Color? ?? accentColor;
     }
 
+    final dateDisplay = item['endDateStr'] != null && item['endDateStr'] != item['date']
+        ? '${item['date']}-${item['endDateStr']}'
+        : (item['date'] as String? ?? '01');
+
+    final isReminded = _remindedAgendas.contains(item['id']);
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
         ),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.2 : 0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top Accent Line
-            Container(
-              height: 3.5,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    typeColor,
-                    accentColor,
-                  ],
-                ),
+        borderRadius: BorderRadius.circular(16),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 1. LEFT ACCENT STRIPE (Color-coded indicator)
+              Container(
+                width: 4,
+                color: typeColor,
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+
+              // 2. MAIN INNER CARD CONTENT
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 1. DATE CALENDAR BADGE
+                      // CALENDAR BLOCK (74px width, unified date anchor)
                       Container(
-                        width: 76,
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                        width: 74,
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              accentColor.withValues(alpha: isDark ? 0.25 : 0.12),
-                              accentColor.withValues(alpha: isDark ? 0.15 : 0.06),
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
+                          color: isDark ? const Color(0xFF1E1B33) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF2D2A4A) : const Color(0xFFE2E8F0),
                           ),
-                          borderRadius: BorderRadius.circular(15),
-                          border: Border.all(color: accentColor.withValues(alpha: 0.25)),
                         ),
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              item['endDateStr'] != null && item['endDateStr'] != item['date']
-                                  ? '${item['date']}-${item['endDateStr']}'
-                                  : (item['date'] as String? ?? '01'),
-                              style: TextStyle(
-                                fontSize: item['endDateStr'] != null && item['endDateStr'] != item['date'] ? 14 : 19,
-                                fontWeight: FontWeight.w800,
-                                color: accentColor,
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-                            const SizedBox(height: 1),
-                            Text(
-                              (item['month'] as String? ?? 'Jan').toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: accentColor,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                            Text(
-                              item['year'] != null ? '${item['year']}' : '${DateTime.now().year}',
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                color: isDark ? Colors.white60 : Colors.grey.shade600,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
+                            // Month Header Strip
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 4),
                               decoration: BoxDecoration(
-                                color: accentColor.withValues(alpha: 0.18),
-                                borderRadius: BorderRadius.circular(5),
+                                color: typeColor,
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(11),
+                                  topRight: Radius.circular(11),
+                                ),
                               ),
                               child: Text(
-                                '$durationDays Hari',
-                                style: TextStyle(
-                                  fontSize: 8.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: accentColor,
+                                (item['month'] as String? ?? 'JAN').toUpperCase(),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: 0.8,
                                 ),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-
-                      // 2. LOGO EMBLEM CONTAINER
-                      Container(
-                        width: 52,
-                        height: 52,
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
+                            // Date & Duration
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    dateDisplay,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: dateDisplay.length > 4 ? 13.5 : 17.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      letterSpacing: -0.3,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    '${item['year'] ?? DateTime.now().year}',
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                  if (durationDays > 1) ...[
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                      decoration: BoxDecoration(
+                                        color: typeColor.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        '$durationDays Hari',
+                                        style: TextStyle(
+                                          fontSize: 8.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: typeColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
                             ),
                           ],
                         ),
-                        child: Center(
-                          child: _buildEventEmblem(
-                            assetPath: assetLogo,
-                            networkUrl: networkLogo,
-                            fallbackIcon: fallbackIcon,
-                            accentColor: accentColor,
-                          ),
-                        ),
                       ),
-                      const SizedBox(width: 14),
 
-                      // 3. MAIN TITLE & DETAILS
+                      const SizedBox(width: 16),
+
+                      // RIGHT COLUMN: METADATA & ACTIONS
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Tags Row
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 4,
-                              crossAxisAlignment: WrapCrossAlignment.center,
+                            // Top Row: Category tag + Format tag + Spacer + Reminder Button
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                // Category Pill
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: typeColor.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: typeColor.withValues(alpha: 0.25)),
-                                  ),
-                                  child: Text(
-                                    categoryBadge,
-                                    style: TextStyle(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: typeColor,
-                                    ),
-                                  ),
-                                ),
-                                // Mode Badge (Online / Offline)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: isOnline ? const Color(0xFFEFF6FF) : const Color(0xFFF0FDF4),
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                      color: isOnline ? const Color(0xFFBFDBFE) : const Color(0xFFBBF7D0),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
+                                Expanded(
+                                  child: Wrap(
+                                    spacing: 6,
+                                    runSpacing: 4,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
                                     children: [
-                                      Icon(
-                                        isOnline ? Icons.videocam_rounded : Icons.location_on_rounded,
-                                        size: 11,
-                                        color: isOnline ? const Color(0xFF2563EB) : const Color(0xFF16A34A),
+                                      // Category Tag
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: typeColor.withValues(alpha: 0.10),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(color: typeColor.withValues(alpha: 0.25)),
+                                        ),
+                                        child: Text(
+                                          categoryBadge,
+                                          style: TextStyle(
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: typeColor,
+                                          ),
+                                        ),
                                       ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        isOnline ? 'Daring / Online' : 'Luring / On-Site',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w700,
-                                          color: isOnline ? const Color(0xFF2563EB) : const Color(0xFF16A34A),
+                                      // Mode Badge (Online / Offline)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: isOnline ? const Color(0xFFEFF6FF) : const Color(0xFFF0FDF4),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(
+                                            color: isOnline ? const Color(0xFFBFDBFE) : const Color(0xFFBBF7D0),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              isOnline ? Icons.videocam_rounded : Icons.location_on_rounded,
+                                              size: 11,
+                                              color: isOnline ? const Color(0xFF2563EB) : const Color(0xFF16A34A),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              isOnline ? 'Daring' : 'Luring',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                color: isOnline ? const Color(0xFF2563EB) : const Color(0xFF16A34A),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
+                                const SizedBox(width: 8),
+
+                                // Reminder Action Button (Top-right aligned)
+                                InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      if (isReminded) {
+                                        _remindedAgendas.remove(item['id']);
+                                      } else {
+                                        _remindedAgendas.add(item['id']);
+                                      }
+                                    });
+                                    if (isReminded) {
+                                      AppSweetAlert.info(
+                                        context,
+                                        'Pengingat untuk "$title" telah dinonaktifkan.',
+                                        title: 'Pengingat Dibatalkan',
+                                      );
+                                    } else {
+                                      AppSweetAlert.success(
+                                        context,
+                                        'Alarm & pengingat kalender berhasil disetel untuk "$title"!',
+                                        title: 'Pengingat Disetel',
+                                      );
+                                    }
+                                  },
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: isReminded
+                                          ? const Color(0xFF16A34A)
+                                          : (isDark ? const Color(0xFF201D35) : const Color(0xFFF8FAFC)),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: isReminded
+                                            ? const Color(0xFF16A34A)
+                                            : (isDark ? const Color(0xFF383457) : const Color(0xFFCBD5E1)),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          isReminded ? Icons.check_circle_rounded : Icons.notifications_none_rounded,
+                                          size: 13,
+                                          color: isReminded ? Colors.white : (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF475569)),
+                                        ),
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          isReminded ? 'Pengingat Aktif' : 'Ingatkan Saya',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: isReminded ? Colors.white : (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF475569)),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
-                            const SizedBox(height: 6),
+
+                            const SizedBox(height: 8),
+
                             // Event Title
                             Text(
                               title,
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 15.5,
                                 fontWeight: FontWeight.w800,
                                 color: isDark ? Colors.white : const Color(0xFF0F172A),
                                 height: 1.25,
@@ -856,172 +795,78 @@ class _AgendaScreenState extends State<AgendaScreen> {
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
+
                             const SizedBox(height: 4),
+
                             // Organizer Subtitle
                             Text(
                               'Penyelenggara: ${item['organizer'] ?? 'Institut Seni & Riset Kreatif (ISRK)'}',
                               style: TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w500,
-                                color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                               ),
+                            ),
+
+                            const SizedBox(height: 10),
+
+                            // Inline Metadata Strip (Unified without bloated gray bar)
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 6,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.schedule_rounded,
+                                      size: 14,
+                                      color: Color(0xFFD97706),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      item['time'] as String? ?? '09:00 - 16:00 WIB',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.place_rounded,
+                                      size: 14,
+                                      color: Color(0xFFEF4444),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      location,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-
-                  // 4. METADATA INFO CHIPS (Date Range, Time, Venue)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.white.withValues(alpha: 0.04) : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
-                      ),
-                    ),
-                    child: Wrap(
-                      spacing: 16,
-                      runSpacing: 8,
-                      children: [
-                        // Tanggal Range
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.calendar_month_rounded, size: 14, color: accentColor),
-                            const SizedBox(width: 6),
-                            Text(
-                              item['dateRange'] as String? ?? '${item['date']} ${item['month']} ${item['year'] ?? ''}',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.white70 : const Color(0xFF334155),
-                              ),
-                            ),
-                          ],
-                        ),
-                        // Jam Pelaksanaan
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.schedule_rounded, size: 14, color: const Color(0xFFD97706)),
-                            const SizedBox(width: 6),
-                            Text(
-                              item['time'] as String? ?? '09:00 - 16:00 WIB',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.white70 : const Color(0xFF334155),
-                              ),
-                            ),
-                          ],
-                        ),
-                        // Lokasi / Venue
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.place_rounded, size: 14, color: const Color(0xFFEF4444)),
-                            const SizedBox(width: 6),
-                            Text(
-                              location,
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.white70 : const Color(0xFF334155),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // 5. FOOTER ACTIONS ROW
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Left: Reminder Status Indicator
-                      Row(
-                        children: [
-                          Icon(
-                            isReminded ? Icons.check_circle_rounded : Icons.notifications_none_rounded,
-                            size: 15,
-                            color: isReminded ? const Color(0xFF16A34A) : Colors.grey.shade500,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            isReminded ? 'Pengingat Aktif (Alarm H-1 & H-3 Jam)' : 'Pengingat belum aktif',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: isReminded ? FontWeight.w700 : FontWeight.w500,
-                              color: isReminded ? const Color(0xFF16A34A) : Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                      // Right: Reminder Toggle Button & Details
-                      Row(
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              setState(() {
-                                if (isReminded) {
-                                  _remindedAgendas.remove(item['id']);
-                                } else {
-                                  _remindedAgendas.add(item['id']);
-                                }
-                              });
-                              if (isReminded) {
-                                AppSweetAlert.info(
-                                  context,
-                                  'Pengingat untuk "$title" telah dinonaktifkan.',
-                                  title: 'Pengingat Dibatalkan',
-                                );
-                              } else {
-                                AppSweetAlert.success(
-                                  context,
-                                  'Alarm & pengingat kalender berhasil diaktifkan untuk "$title"!',
-                                  title: 'Pengingat Disetel',
-                                );
-                              }
-                            },
-                            icon: Icon(
-                              isReminded ? Icons.alarm_on_rounded : Icons.notification_add_rounded,
-                              size: 15,
-                            ),
-                            label: Text(
-                              isReminded ? 'Pengingat Aktif' : 'Ingatkan Saya',
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isReminded ? const Color(0xFF16A34A) : accentColor,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 9,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

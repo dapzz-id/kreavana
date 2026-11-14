@@ -649,11 +649,22 @@ class _InstitutionWorkspaceScreenState
     if (widget.resourceType == 'tenders' && !_isCorporate && !_isGovernment) {
       return false;
     }
+    if (widget.resourceType == 'documents') {
+      return false;
+    }
     return true;
   }
 
   Future<void> _openEditor([Map<String, dynamic>? existing]) async {
     if (existing == null && !_canCreateResource) {
+      if (widget.resourceType == 'documents') {
+        AppSweetAlert.info(
+          context,
+          'Dokumen MoU diterbitkan secara otomatis setelah pengajuan kemitraan di menu Mitra Industri disetujui oleh Corporate.',
+          title: 'Penerbitan Dokumen Otomatis',
+        );
+        return;
+      }
       AppSweetAlert.error(
         context,
         'Fitur Buka Program Magang khusus untuk akun Corporate / Mitra Industri. Institusi Pendidikan tidak dapat membuka lowongan magang.',
@@ -1643,25 +1654,7 @@ class _InstitutionWorkspaceScreenState
     }
     final t = title.toLowerCase();
     if (t.contains('google')) {
-      return 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/240px-Google_%22G%22_logo.svg.png';
-    }
-    if (t.contains('animasi') || t.contains('animation')) {
-      return 'https://cdn-icons-png.flaticon.com/512/3845/3845868.png';
-    }
-    if (t.contains('pixel') || t.contains('creative') || t.contains('desain')) {
-      return 'https://cdn-icons-png.flaticon.com/512/3233/3233483.png';
-    }
-    if (t.contains('svara') || t.contains('audio') || t.contains('sound')) {
-      return 'https://cdn-icons-png.flaticon.com/512/2983/2983780.png';
-    }
-    if (t.contains('cakrawala') || t.contains('media') || t.contains('siber')) {
-      return 'https://cdn-icons-png.flaticon.com/512/2983/2983803.png';
-    }
-    if (t.contains('adgi')) {
-      return 'https://cdn-icons-png.flaticon.com/512/1055/1055666.png';
-    }
-    if (t.contains('game') || t.contains('guild')) {
-      return 'https://cdn-icons-png.flaticon.com/512/686/686589.png';
+      return 'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png';
     }
     return null;
   }
@@ -1671,20 +1664,18 @@ class _InstitutionWorkspaceScreenState
     required String? networkFallbackUrl,
     required String initials,
     required List<Color> gradientColors,
+    required String title,
+    required String category,
   }) {
-    if (logoPath != null && logoPath.isNotEmpty) {
-      if (logoPath.startsWith('http://') || logoPath.startsWith('https://')) {
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.network(
-            logoPath,
-            width: 40,
-            height: 40,
-            fit: BoxFit.contain,
-            errorBuilder: (_, _, _) => _buildMonogramFallback(initials, gradientColors),
-          ),
-        );
-      }
+    final t = title.toLowerCase();
+
+    // 1. Dedicated authentic Google "G" emblem
+    if (t.contains('google')) {
+      return _buildGoogleLogoWidget();
+    }
+
+    // 2. Local Asset Loader
+    if (logoPath != null && logoPath.isNotEmpty && !logoPath.startsWith('http')) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(10),
         child: Image.asset(
@@ -1699,30 +1690,78 @@ class _InstitutionWorkspaceScreenState
                 width: 40,
                 height: 40,
                 fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => _buildMonogramFallback(initials, gradientColors),
+                errorBuilder: (_, _, _) => _buildCorporateEmblemWidget(title, category, gradientColors),
               );
             }
-            return _buildMonogramFallback(initials, gradientColors);
+            return _buildCorporateEmblemWidget(title, category, gradientColors);
           },
         ),
       );
     }
-    if (networkFallbackUrl != null && networkFallbackUrl.isNotEmpty) {
+
+    // 3. Network URL Loader
+    final url = (logoPath != null && logoPath.startsWith('http')) ? logoPath : networkFallbackUrl;
+    if (url != null && url.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(10),
         child: Image.network(
-          networkFallbackUrl,
+          url,
           width: 40,
           height: 40,
           fit: BoxFit.contain,
-          errorBuilder: (_, _, _) => _buildMonogramFallback(initials, gradientColors),
+          errorBuilder: (_, _, _) => _buildCorporateEmblemWidget(title, category, gradientColors),
         ),
       );
     }
-    return _buildMonogramFallback(initials, gradientColors);
+
+    // 4. Elegant Corporate Emblem Fallback (No ugly raw monogram letters)
+    return _buildCorporateEmblemWidget(title, category, gradientColors);
   }
 
-  Widget _buildMonogramFallback(String initials, List<Color> gradientColors) {
+  Widget _buildGoogleLogoWidget() {
+    return SizedBox(
+      width: 38,
+      height: 38,
+      child: Image.asset(
+        'assets/partners/google.png',
+        width: 38,
+        height: 38,
+        fit: BoxFit.contain,
+        errorBuilder: (_, _, _) {
+          return Image.network(
+            'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png',
+            width: 38,
+            height: 38,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => CustomPaint(
+              size: const Size(38, 38),
+              painter: _GoogleGLogoPainter(),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCorporateEmblemWidget(String title, String category, List<Color> gradientColors) {
+    final t = title.toLowerCase();
+    final IconData emblemIcon;
+    if (t.contains('animasi') || t.contains('animation')) {
+      emblemIcon = Icons.movie_creation_rounded;
+    } else if (t.contains('pixel') || t.contains('creative') || t.contains('desain')) {
+      emblemIcon = Icons.auto_awesome_rounded;
+    } else if (t.contains('svara') || t.contains('audio') || t.contains('sound') || t.contains('musik')) {
+      emblemIcon = Icons.graphic_eq_rounded;
+    } else if (t.contains('cakrawala') || t.contains('media') || t.contains('siber') || t.contains('broadcast')) {
+      emblemIcon = Icons.podcasts_rounded;
+    } else if (t.contains('adgi') || t.contains('desainer')) {
+      emblemIcon = Icons.draw_rounded;
+    } else if (t.contains('game') || t.contains('guild')) {
+      emblemIcon = Icons.sports_esports_rounded;
+    } else {
+      emblemIcon = Icons.apartment_rounded;
+    }
+
     return Container(
       width: 40,
       height: 40,
@@ -1733,16 +1772,19 @@ class _InstitutionWorkspaceScreenState
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: gradientColors.first.withValues(alpha: 0.28),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Center(
-        child: Text(
-          initials,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-            fontSize: 15,
-            letterSpacing: 0.5,
-          ),
+        child: Icon(
+          emblemIcon,
+          color: Colors.white,
+          size: 20,
         ),
       ),
     );
@@ -1894,6 +1936,8 @@ class _InstitutionWorkspaceScreenState
                       networkFallbackUrl: networkUrl,
                       initials: initials,
                       gradientColors: gradientColors,
+                      title: title,
+                      category: category,
                     ),
                   ),
                 ),
@@ -4065,7 +4109,9 @@ class _InstitutionWorkspaceScreenState
                     Text(
                       _search.isNotEmpty || _statusFilter != 'Semua'
                           ? 'Coba sesuaikan kata kunci pencarian atau ubah filter status.'
-                          : 'Tambahkan data pertama Anda untuk dikelola dan dipublikasikan secara resmi.',
+                          : (widget.resourceType == 'documents'
+                              ? 'Berkas dokumen MoU otomatis terbit di sini setelah pengajuan kemitraan di menu "Mitra Industri" disetujui oleh Corporate.'
+                              : 'Tambahkan data pertama Anda untuk dikelola dan dipublikasikan secara resmi.'),
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                     ),
@@ -5058,9 +5104,9 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
 
   Widget _buildCorporateSearchSection() {
     return _buildFieldCardContainer(
-      title: 'Cari & Hubungkan Akun Corporate Mitra *',
+      title: 'Cari & Hubungkan Akun Corporate Mitra',
       subtitle: 'Tautkan pengajuan kemitraan ini ke entitas akun Corporate / Perusahaan resmi di Kreavana.',
-      icon: Icons.apartment_rounded,
+      icon: Icons.business_rounded,
       children: [
         if (_selectedCorporate != null) ...[
           Container(
@@ -5262,6 +5308,26 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
             ),
           ],
         ],
+        const SizedBox(height: 14),
+        _buildFieldWithHeader(
+          label: 'Nama Resmi Perusahaan / Mitra Industri *',
+          caption: 'Nama identitas resmi rekanan (terisi otomatis jika memilih akun di atas).',
+          child: TextFormField(
+            controller: _titleController,
+            style: TextStyle(
+              fontSize: 13.5,
+              color: _isDark ? Colors.white : const Color(0xFF0F172A),
+            ),
+            decoration: _inputDecoration(
+              hint: 'Contoh: PT Studio Animasi Nusantara, Google, Inc...',
+              prefixIcon: Icons.domain_rounded,
+            ),
+            validator: (value) =>
+                value == null || value.trim().isEmpty
+                    ? 'Nama / Judul mitra industri wajib diisi'
+                    : null,
+          ),
+        ),
       ],
     );
   }
@@ -5814,4 +5880,53 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
       ],
     );
   }
+}
+
+class _GoogleGLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final strokeWidth = size.width * 0.22;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - strokeWidth) / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+
+    const degToRad = 3.141592653589793 / 180.0;
+
+    // 1. Red (top arc)
+    paint.color = const Color(0xFFEA4335);
+    canvas.drawArc(rect, -155 * degToRad, 110 * degToRad, false, paint);
+
+    // 2. Yellow (bottom-left arc)
+    paint.color = const Color(0xFFFBBC05);
+    canvas.drawArc(rect, -225 * degToRad, 70 * degToRad, false, paint);
+
+    // 3. Green (bottom-right arc)
+    paint.color = const Color(0xFF34A853);
+    canvas.drawArc(rect, 45 * degToRad, 90 * degToRad, false, paint);
+
+    // 4. Blue (right arc)
+    paint.color = const Color(0xFF4285F4);
+    canvas.drawArc(rect, -45 * degToRad, 90 * degToRad, false, paint);
+
+    // 5. Blue horizontal crossbar
+    final barPaint = Paint()
+      ..color = const Color(0xFF4285F4)
+      ..style = PaintingStyle.fill;
+    final barHeight = strokeWidth;
+    final barRect = Rect.fromLTWH(
+      center.dx - 2,
+      center.dy - barHeight / 2,
+      radius + strokeWidth / 2 + 2,
+      barHeight,
+    );
+    canvas.drawRect(barRect, barPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

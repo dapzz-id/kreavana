@@ -143,7 +143,7 @@ class _DokumenInstansiScreenState extends State<DokumenInstansiScreen> {
           ],
         ),
         actions: [
-          if (widget.user != null)
+          if (widget.user != null && _isGovernment)
             Padding(
               padding: const EdgeInsets.only(right: 16),
               child: ElevatedButton.icon(
