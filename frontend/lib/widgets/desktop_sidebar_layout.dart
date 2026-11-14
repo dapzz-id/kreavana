@@ -1113,7 +1113,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
               children: [
                 Expanded(
                   child: InkWell(
-                    onTap: () => _pushLink((_isSchool || _isGovernment) ? 'profil_akun' : 'profil'),
+                    onTap: () => _pushLink((_isSchool || _isGovernment) ? 'profil_instansi' : 'profil'),
                     borderRadius: BorderRadius.circular(10),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -1511,14 +1511,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             const SizedBox(height: 8),
                           ],
                           _buildNavRow(
-                            icon: Icons.person_outline_rounded,
-                            label: 'Profil Akun (PIC)',
-                            onTap: () => _pushLink('profil_akun'),
-                            isSelected: _isRouteActive('profil_akun'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                          ),
-                          _buildNavRow(
                             icon: Icons.account_balance_outlined,
                             label: 'Profil Institusi',
                             onTap: () => _pushLink('profil_instansi'),
@@ -1648,14 +1640,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                           ] else ...[
                             const SizedBox(height: 8),
                           ],
-                          _buildNavRow(
-                            icon: Icons.person_outline_rounded,
-                            label: 'Profil Akun (PIC)',
-                            onTap: () => _pushLink('profil_akun'),
-                            isSelected: _isRouteActive('profil_akun'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                          ),
                           _buildNavRow(
                             icon: Icons.account_balance_outlined,
                             label: 'Profil Instansi',
