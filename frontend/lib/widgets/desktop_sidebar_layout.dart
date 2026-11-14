@@ -295,6 +295,13 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
           current == 'edit_pengumuman';
     }
 
+    // Program & Magang (Institusi Pendidikan)
+    if (t == 'program_magang' || t == 'program-magang') {
+      return current == 'program_magang' ||
+          current == 'program-magang' ||
+          current == 'detail_magang';
+    }
+
     // Karya & Portofolio Siswa
     if (t == 'karya_siswa' || t == 'showcases') {
       return current == 'karya_siswa' ||
@@ -542,7 +549,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         return;
       }
       final routeToPerm = <String, String>{
-        'proyek_saya': 'program_magang',
+        'program_magang': 'program_magang',
         'agenda': 'kegiatan_event',
         'mitra_komunitas': 'mitra_industri',
         'partners': 'mitra_industri',
@@ -682,6 +689,10 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         return;
       case 'buat_kebutuhan':
         _navigateToRoute(AppRoutes.buatKebutuhan);
+        return;
+      case 'program_magang':
+      case 'program-magang':
+        _navigateToRoute(AppRoutes.programMagang);
         return;
     }
   }
@@ -1468,15 +1479,25 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             ),
                         ],
                         if (_isSchool) ...[
-                          if (effectiveUser.hasInstitutionPermission('kegiatan_event') ||
+                          if (effectiveUser.hasInstitutionPermission('program_magang') ||
+                              effectiveUser.hasInstitutionPermission('kegiatan_event') ||
                               effectiveUser.hasInstitutionPermission('mitra_industri') ||
                               effectiveUser.hasInstitutionPermission('karya_siswa')) ...[
                             if (!collapsed) ...[
                               const SizedBox(height: 18),
-                              _buildSectionHeader('PENGELOLAAN INSTITUSI', isDark),
+                              _buildSectionHeader('PENGELOLAAN SEKOLAH', isDark),
                             ] else ...[
                               const SizedBox(height: 8),
                             ],
+                            if (effectiveUser.hasInstitutionPermission('program_magang'))
+                              _buildNavRow(
+                                icon: Icons.work_outline,
+                                label: 'Program & Magang',
+                                onTap: () => _pushLink('program_magang'),
+                                isSelected: _isRouteActive('program_magang'),
+                                isDark: isDark,
+                                isCollapsed: collapsed,
+                              ),
                             if (effectiveUser.hasInstitutionPermission('kegiatan_event'))
                               _buildNavRow(
                                 icon: Icons.event_outlined,

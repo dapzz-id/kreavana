@@ -986,6 +986,15 @@ class _MainNavigationState extends State<MainNavigation> {
       ],
       if (_isSchool) ...[
         _buildSidebarLink(
+          icon: Icons.work_outline,
+          label: 'Program & Magang',
+          onTap: () => _navigateToRoute(AppRoutes.programMagang),
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'program_magang',
+          isMobileDrawer: isMobileDrawer,
+        ),
+        _buildSidebarLink(
           icon: Icons.event_outlined,
           label: 'Kegiatan & Event',
           onTap: () => _navigateToScreenIndex(4),

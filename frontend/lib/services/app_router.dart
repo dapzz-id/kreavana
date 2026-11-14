@@ -13,6 +13,7 @@ import '../screens/institution_workspace_screen.dart';
 import '../screens/tim_hak_akses_screen.dart';
 import '../screens/corporate_lowongan_screen.dart';
 import '../screens/corporate_vacancy_detail_screen.dart';
+import '../screens/program_magang_screen.dart';
 import '../screens/buat_kebutuhan_screen.dart';
 import '../screens/not_found_screen.dart';
 import '../screens/detail_kebutuhan_screen.dart';
@@ -73,6 +74,7 @@ class AppRoutes {
   // Institusi Pendidikan / Sekolah / Kampus
   static const profilAkun = '/profil-akun';
   static const profilInstitusi = '/profil-institusi';
+  static const programMagang = '/program-magang';
   static const timHakAkses = '/tim-hak-akses';
   static const dokumenInstitusi = '/dokumen-institusi';
   static const pengumumanInstitusi = '/pengumuman-institusi';
@@ -313,7 +315,7 @@ final GoRouter appRouter = GoRouter(
         }
 
         final staffPermRouteMap = <String, String>{
-          AppRoutes.proyek: 'program_magang',
+          AppRoutes.programMagang: 'program_magang',
           AppRoutes.agenda: 'kegiatan_event',
           AppRoutes.mitraIndustri: 'mitra_industri',
           AppRoutes.karyaSiswa: 'karya_siswa',
@@ -346,6 +348,7 @@ final GoRouter appRouter = GoRouter(
 
     // 4. Rute Khusus Organisasi Resmi (Institusi, Corporate, Government, Admin)
     const orgRoutes = [
+      AppRoutes.programMagang,
       AppRoutes.timHakAkses,
       AppRoutes.dokumenInstitusi,
       AppRoutes.pengumumanInstitusi,
@@ -572,6 +575,17 @@ final GoRouter appRouter = GoRouter(
         return InstitutionWorkspaceScreen(
           user: user,
           resourceType: 'partners',
+          onUserUpdated: (u) => currentUserNotifier.value = u,
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.programMagang,
+      name: 'program-magang',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return ProgramMagangScreen(
+          user: user,
           onUserUpdated: (u) => currentUserNotifier.value = u,
         );
       },
