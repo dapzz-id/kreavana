@@ -8,7 +8,9 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Jangan batalkan run yang sedang berjalan agar build dapat selesai sampai tuntas
+  # dan tidak memunculkan status 'Cancelled' saat ada commit baru yang masuk berurutan.
+  cancel-in-progress: false
 
 permissions:
   contents: read
