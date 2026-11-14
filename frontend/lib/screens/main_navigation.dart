@@ -1017,39 +1017,6 @@ class _MainNavigationState extends State<MainNavigation> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              'PEMANTAUAN AKADEMIK',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white54 : Colors.grey.shade500,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-        ],
-        _buildSidebarLink(
-          icon: Icons.summarize_outlined,
-          label: 'Laporan Kegiatan',
-          onTap: () => _navigateToRoute(AppRoutes.laporanKegiatan),
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _activeGovRoute == 'laporan',
-          isMobileDrawer: isMobileDrawer,
-        ),
-        _buildSidebarLink(
-          icon: Icons.monitor_outlined,
-          label: 'Monitoring & Evaluasi',
-          onTap: () => _navigateToRoute(AppRoutes.monitoringEvaluasi),
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _activeGovRoute == 'monitoring_evaluasi',
-          isMobileDrawer: isMobileDrawer,
-        ),
-        if (!isCollapsed) ...[
-          const SizedBox(height: 18),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
               'DATA & DOKUMEN',
               style: TextStyle(
                 fontSize: 11,
