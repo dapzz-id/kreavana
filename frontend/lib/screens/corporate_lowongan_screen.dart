@@ -1174,6 +1174,7 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
   late final TextEditingController _newRequirementController;
 
   bool _isSalaryRange = true;
+  bool _isSalaryNegotiable = false;
   String _category = 'magang'; // 'magang' or 'job'
   DateTime _selectedDeadline = DateTime(2026, 9, 21);
   bool _isSaving = false;
@@ -1237,6 +1238,9 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
   }
 
   String get currentAllowanceText {
+    if (_isSalaryNegotiable) {
+      return 'Kompetitif / Sesuai Kesepakatan';
+    }
     final min = _minSalaryController.text.trim();
     final max = _maxSalaryController.text.trim();
     if (_isSalaryRange) {
@@ -1247,12 +1251,12 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
       } else if (max.isNotEmpty) {
         return 'Hingga Rp $max / bulan';
       }
-      return 'Rp 2.500.000 - Rp 3.500.000 / bulan';
+      return 'Kompetitif / Sesuai Kesepakatan';
     } else {
       if (min.isNotEmpty) {
         return 'Rp $min / bulan';
       }
-      return 'Rp 3.500.000 / bulan';
+      return 'Kompetitif / Sesuai Kesepakatan';
     }
   }
 
@@ -1382,26 +1386,6 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
         title: 'Kuota Posisi Belum Ditentukan',
       );
       return;
-    }
-
-    if (_isSalaryRange) {
-      if (_minSalaryController.text.trim().isEmpty || _maxSalaryController.text.trim().isEmpty) {
-        AppSweetAlert.warning(
-          context,
-          'Harap tentukan nominal minimum dan maksimum rentang gaji.',
-          title: 'Rentang Gaji Belum Lengkap',
-        );
-        return;
-      }
-    } else {
-      if (_minSalaryController.text.trim().isEmpty) {
-        AppSweetAlert.warning(
-          context,
-          'Harap tentukan nominal gaji / uang saku.',
-          title: 'Nominal Gaji Kosong',
-        );
-        return;
-      }
     }
 
     setState(() => _isSaving = true);
@@ -1608,12 +1592,12 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
 
   Widget _buildSalaryField() {
     return _buildFieldWithHeader(
-      label: 'Estimasi Gaji / Uang Saku *',
-      caption: 'Tentukan rentang nominal (minimum s/d maksimum) atau nominal tetap per bulan.',
+      label: 'Estimasi Gaji / Uang Saku (Opsional)',
+      caption: 'Opsional: Tentukan rentang nominal, nominal tetap per bulan, atau pilih opsi Kompetitif / Negosiasi.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Mode Selector: Rentang vs Tetap
+          // Mode Selector: Rentang vs Tetap vs Kompetitif / Negosiasi
           Wrap(
             spacing: 6,
             runSpacing: 6,
@@ -1621,6 +1605,7 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
               InkWell(
                 onTap: () {
                   setState(() {
+                    _isSalaryNegotiable = false;
                     _isSalaryRange = true;
                     if (_maxSalaryController.text.isEmpty) {
                       _maxSalaryController.text = _category == 'magang' ? '3.500.000' : '18.000.000';
@@ -1631,10 +1616,14 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: _isSalaryRange ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9),
+                    color: (!_isSalaryNegotiable && _isSalaryRange)
+                        ? const Color(0xFFEFF6FF)
+                        : const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: _isSalaryRange ? const Color(0xFF93C5FD) : const Color(0xFFE2E8F0),
+                      color: (!_isSalaryNegotiable && _isSalaryRange)
+                          ? const Color(0xFF93C5FD)
+                          : const Color(0xFFE2E8F0),
                     ),
                   ),
                   child: Row(
@@ -1643,7 +1632,9 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
                       Icon(
                         Icons.linear_scale_rounded,
                         size: 14,
-                        color: _isSalaryRange ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                        color: (!_isSalaryNegotiable && _isSalaryRange)
+                            ? const Color(0xFF2563EB)
+                            : const Color(0xFF64748B),
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -1651,7 +1642,9 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
                         style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w700,
-                          color: _isSalaryRange ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                          color: (!_isSalaryNegotiable && _isSalaryRange)
+                              ? const Color(0xFF2563EB)
+                              : const Color(0xFF64748B),
                         ),
                       ),
                     ],
@@ -1661,6 +1654,7 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
               InkWell(
                 onTap: () {
                   setState(() {
+                    _isSalaryNegotiable = false;
                     _isSalaryRange = false;
                   });
                 },
@@ -1668,10 +1662,14 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: !_isSalaryRange ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9),
+                    color: (!_isSalaryNegotiable && !_isSalaryRange)
+                        ? const Color(0xFFEFF6FF)
+                        : const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: !_isSalaryRange ? const Color(0xFF93C5FD) : const Color(0xFFE2E8F0),
+                      color: (!_isSalaryNegotiable && !_isSalaryRange)
+                          ? const Color(0xFF93C5FD)
+                          : const Color(0xFFE2E8F0),
                     ),
                   ),
                   child: Row(
@@ -1680,7 +1678,9 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
                       Icon(
                         Icons.attach_money_rounded,
                         size: 14,
-                        color: !_isSalaryRange ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                        color: (!_isSalaryNegotiable && !_isSalaryRange)
+                            ? const Color(0xFF2563EB)
+                            : const Color(0xFF64748B),
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -1688,7 +1688,46 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
                         style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w700,
-                          color: !_isSalaryRange ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                          color: (!_isSalaryNegotiable && !_isSalaryRange)
+                              ? const Color(0xFF2563EB)
+                              : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    _isSalaryNegotiable = true;
+                  });
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: _isSalaryNegotiable ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _isSalaryNegotiable ? const Color(0xFF93C5FD) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.handshake_rounded,
+                        size: 14,
+                        color: _isSalaryNegotiable ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Kompetitif / Negosiasi',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: _isSalaryNegotiable ? const Color(0xFF2563EB) : const Color(0xFF64748B),
                         ),
                       ),
                     ],
@@ -1700,7 +1739,28 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
           const SizedBox(height: 8),
 
           // Input Controls
-          if (_isSalaryRange)
+          if (_isSalaryNegotiable)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, size: 18, color: Color(0xFF2563EB)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Nominal gaji/uang saku bersifat fleksibel dan akan disepakati saat tahap seleksi / wawancara.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade700, height: 1.35),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (_isSalaryRange)
             Row(
               children: [
                 Expanded(
@@ -1710,14 +1770,10 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
                     inputFormatters: [const IndonesianCurrencyInputFormatter()],
                     onChanged: (_) => setState(() {}),
                     decoration: _inputDecoration(
-                      hint: 'Min: 2.500.000',
+                      hint: 'Min (Opsional)',
                       prefixText: 'Rp ',
                       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                     ),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'Min wajib';
-                      return null;
-                    },
                   ),
                 ),
                 const Padding(
@@ -1738,16 +1794,10 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
                     inputFormatters: [const IndonesianCurrencyInputFormatter()],
                     onChanged: (_) => setState(() {}),
                     decoration: _inputDecoration(
-                      hint: 'Maks: 3.500.000',
+                      hint: 'Maks (Opsional)',
                       prefixText: 'Rp ',
                       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                     ),
-                    validator: (v) {
-                      if (_isSalaryRange && (v == null || v.trim().isEmpty)) {
-                        return 'Maks wajib';
-                      }
-                      return null;
-                    },
                   ),
                 ),
               ],
@@ -1759,14 +1809,10 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
               inputFormatters: [const IndonesianCurrencyInputFormatter()],
               onChanged: (_) => setState(() {}),
               decoration: _inputDecoration(
-                hint: 'Contoh: 3.500.000',
+                hint: 'Contoh: 3.500.000 (Opsional)',
                 prefixText: 'Rp ',
                 prefixIcon: Icons.payments_outlined,
               ),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Nominal wajib diisi';
-                return null;
-              },
             ),
           const SizedBox(height: 6),
 

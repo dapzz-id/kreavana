@@ -205,5 +205,33 @@ void main() {
       expect(find.text('Pratinjau: Rp 2.500.000 / bulan'), findsOneWidget);
       expect(find.text('s/d'), findsNothing);
     });
+
+    testWidgets('Salary is optional: can toggle to Kompetitif / Negosiasi or clear nominal', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 1000));
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: CorporateVacancyFormDialog(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Verify label is optional
+      expect(find.text('Estimasi Gaji / Uang Saku (Opsional)'), findsOneWidget);
+
+      // Verify Kompetitif / Negosiasi option exists
+      final negoBtn = find.text('Kompetitif / Negosiasi');
+      expect(negoBtn, findsOneWidget);
+
+      // Tap Kompetitif / Negosiasi
+      await tester.ensureVisible(negoBtn);
+      await tester.tap(negoBtn);
+      await tester.pump();
+
+      // Verify preview displays Kompetitif / Sesuai Kesepakatan
+      expect(find.text('Pratinjau: Kompetitif / Sesuai Kesepakatan'), findsOneWidget);
+    });
   });
 }

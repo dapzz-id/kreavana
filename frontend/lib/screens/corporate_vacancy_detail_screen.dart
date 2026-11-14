@@ -557,8 +557,13 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
         iconColor: const Color(0xFF16A34A),
         bgColor: const Color(0xFFDCFCE7),
         label: 'Estimasi Gaji / Uang Saku',
-        value: _currentVacancy.allowance,
-        subtitle: 'Standar kompetitif',
+        value: _currentVacancy.allowance.trim().isNotEmpty
+            ? _currentVacancy.allowance
+            : 'Kompetitif / Sesuai Kesepakatan',
+        subtitle: _currentVacancy.allowance.trim().isNotEmpty &&
+                !_currentVacancy.allowance.toLowerCase().contains('kompetitif')
+            ? 'Standar kompetitif'
+            : 'Dapat dinegosiasikan',
       ),
       _StatItem(
         icon: Icons.assignment_ind_rounded,
