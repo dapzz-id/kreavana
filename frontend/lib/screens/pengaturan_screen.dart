@@ -4,7 +4,6 @@ import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../features/auth/services/auth_service.dart';
 import '../utils/app_errors.dart';
-import 'profile_screen.dart';
 import 'payment_methods_screen.dart';
 import 'addresses_screen.dart';
 import 'help_screen.dart';
@@ -78,19 +77,13 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
     return true;
   }
 
-  void _openProfile() {
+  void _openProfile({bool isInstitution = false}) {
     if (!_requireAuth('mengakses dan mengedit profil')) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ProfileScreen(
-          user: widget.user!,
-          onUserUpdated: widget.onUserUpdated ?? (_) {},
-          onLogout: widget.onLogout ?? () {},
-          showSidebar: true,
-        ),
-      ),
-    );
+    if (isInstitution) {
+      context.go(AppRoutes.profilInstitusi);
+    } else {
+      context.go(AppRoutes.profil);
+    }
   }
 
   @override
@@ -230,14 +223,33 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
             icon: Icons.person_outline,
             isDark: isDark,
             children: [
-              _buildNavTile(
-                icon: Icons.person_outline,
-                iconColor: AppTheme.primaryPurple,
-                title: 'Profil Saya',
-                subtitle: 'Edit nama, foto, bio',
-                isDark: isDark,
-                onTap: _openProfile,
-              ),
+              if (widget.user != null && widget.user!.isInstitution) ...[
+                _buildNavTile(
+                  icon: Icons.person_outline_rounded,
+                  iconColor: AppTheme.primaryPurple,
+                  title: 'Profil Akun (PIC)',
+                  subtitle: 'Edit nama PIC, foto akun, kontak pengelola',
+                  isDark: isDark,
+                  onTap: () => _openProfile(isInstitution: false),
+                ),
+                _buildNavTile(
+                  icon: Icons.account_balance_outlined,
+                  iconColor: const Color(0xFF6366F1),
+                  title: 'Profil Institusi',
+                  subtitle: 'Kelola legalitas, NPSN, akreditasi, dan pimpinan',
+                  isDark: isDark,
+                  onTap: () => _openProfile(isInstitution: true),
+                ),
+              ] else ...[
+                _buildNavTile(
+                  icon: Icons.person_outline,
+                  iconColor: AppTheme.primaryPurple,
+                  title: 'Profil Saya',
+                  subtitle: 'Edit nama, foto, bio',
+                  isDark: isDark,
+                  onTap: () => _openProfile(isInstitution: false),
+                ),
+              ],
               _buildNavTile(
                 icon: Icons.lock_outline,
                 iconColor: const Color(0xFF3B82F6),
