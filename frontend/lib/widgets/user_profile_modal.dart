@@ -105,10 +105,12 @@ class _UserProfileModalState extends State<UserProfileModal>
     final data = await VerificationService.getPublicProfile(widget.userId);
     _loadReviews();
     if (mounted) {
-      final isCreator = (data?['role'] ?? widget.initialRole ?? 'user') == 'creator';
       final isInst = _isInstitutionProfile(data);
+      final isCreator = (data?['role'] ?? widget.initialRole ?? 'user') == 'creator';
+      final int tabCount = isInst ? (isCreator ? 5 : 4) : (isCreator ? 4 : 3);
+      _tabController?.dispose();
       _tabController = TabController(
-        length: isCreator ? 4 : (isInst ? 4 : 3),
+        length: tabCount,
         vsync: this,
       );
       setState(() {
