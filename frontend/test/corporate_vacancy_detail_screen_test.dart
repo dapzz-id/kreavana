@@ -209,7 +209,7 @@ void main() {
       expect(find.text('Disetujui'), findsWidgets);
     });
 
-    testWidgets('Rejecting institution automatically marks all its applicants as Ditolak',
+    testWidgets('Rejecting institution automatically removes it and all its applicants from list',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(1280, 2200));
 
@@ -226,6 +226,10 @@ void main() {
       // Go to Daftar Pelamar tab
       await tester.tap(find.text('Daftar Pelamar (3)'));
       await tester.pumpAndSettle();
+
+      // SMKN 4 Bandung and Dimas Aditya are initially visible
+      expect(find.text('SMKN 4 Bandung'), findsOneWidget);
+      expect(find.text('Dimas Aditya'), findsOneWidget);
 
       // Click Tolak on SMKN 4 Bandung
       final rejectBtn = find.byKey(const ValueKey('btn_reject_inst_SMKN 4 Bandung'));
@@ -241,22 +245,61 @@ void main() {
       await tester.tap(find.text('Ya, Tolak Institusi'));
       await tester.pumpAndSettle();
 
-      // SMKN 4 Bandung should now show Ditolak
-      expect(find.text('Ditolak'), findsWidgets);
+      // SMKN 4 Bandung and Dimas Aditya must immediately disappear from the list!
+      expect(find.text('SMKN 4 Bandung'), findsNothing);
+      expect(find.text('Dimas Aditya'), findsNothing);
 
-      // Dimas Aditya (who was 'Interview') must now have 'Ajukan Siswa Pengganti' button because he is Ditolak!
-      final replacementBtn = find.byKey(const ValueKey('btn_propose_replacement_Dimas Aditya'));
-      expect(replacementBtn, findsOneWidget);
+      // Tab count updates from 3 to 2
+      expect(find.text('Daftar Pelamar (2)'), findsOneWidget);
+
+      // Other institutions remain in the list
+      expect(find.text('Politeknik Negeri Media Kreatif'), findsWidgets);
+      expect(find.text('SMKN 1 Surabaya'), findsOneWidget);
     });
 
-    testWidgets('Can propose replacement student for rejected applicant and Corporate can approve it',
+    testWidgets('Can propose replacement student for rejected applicant from active institution and Corporate can approve it',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(1280, 2200));
+
+      final vacancyWithRejectedStudent = CorporateVacancyItem(
+        id: 'test_vac_2',
+        title: sampleVacancy.title,
+        description: sampleVacancy.description,
+        category: sampleVacancy.category,
+        categoryLabel: sampleVacancy.categoryLabel,
+        status: sampleVacancy.status,
+        statusLabel: sampleVacancy.statusLabel,
+        statusBadgeColor: sampleVacancy.statusBadgeColor,
+        statusBadgeBg: sampleVacancy.statusBadgeBg,
+        registrationPeriod: sampleVacancy.registrationPeriod,
+        quotaText: sampleVacancy.quotaText,
+        allowance: sampleVacancy.allowance,
+        requirements: sampleVacancy.requirements,
+        applicantsCount: 2,
+        applicants: const [
+          CorporateApplicant(
+            name: 'Siti Nurhaliza',
+            institution: 'Politeknik Negeri Media Kreatif',
+            role: '3D Texture & Lookdev',
+            appliedDate: '11 Feb 2026',
+            status: 'Ditolak',
+            note: 'Portofolio belum memenuhi standar.',
+          ),
+          CorporateApplicant(
+            name: 'Reza Pratama',
+            institution: 'SMKN 1 Surabaya - Multimedia',
+            role: '3D Environment Artist',
+            appliedDate: '12 Feb 2026',
+            status: 'Diterima',
+            note: 'Telah menandatangani MoU.',
+          ),
+        ],
+      );
 
       await tester.pumpWidget(
         MaterialApp(
           home: CorporateVacancyDetailScreen(
-            item: sampleVacancy,
+            item: vacancyWithRejectedStudent,
             user: corpUser,
           ),
         ),
@@ -264,19 +307,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // Go to Daftar Pelamar tab
-      await tester.tap(find.text('Daftar Pelamar (3)'));
+      await tester.tap(find.text('Daftar Pelamar (2)'));
       await tester.pumpAndSettle();
 
-      // Reject SMKN 4 Bandung to make Dimas Aditya rejected
-      final rejectBtn = find.byKey(const ValueKey('btn_reject_inst_SMKN 4 Bandung'));
-      await tester.ensureVisible(rejectBtn);
-      await tester.tap(rejectBtn);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Ya, Tolak Institusi'));
-      await tester.pumpAndSettle();
-
-      // Tap 'Ajukan Siswa Pengganti'
-      final proposeBtn = find.byKey(const ValueKey('btn_propose_replacement_Dimas Aditya'));
+      // Tap 'Ajukan Siswa Pengganti' for Siti Nurhaliza
+      final proposeBtn = find.byKey(const ValueKey('btn_propose_replacement_Siti Nurhaliza'));
       expect(proposeBtn, findsOneWidget);
       await tester.ensureVisible(proposeBtn);
       await tester.tap(proposeBtn);
@@ -297,7 +332,7 @@ void main() {
 
       // Verify Budi Santoso appears as replacement student
       expect(find.text('Budi Santoso'), findsOneWidget);
-      expect(find.textContaining('Menggantikan Dimas Aditya'), findsOneWidget);
+      expect(find.textContaining('Menggantikan Siti Nurhaliza'), findsOneWidget);
 
       // Corporate quick approval button should be visible
       final approveReplacementBtn = find.text('Setujui Pengganti');

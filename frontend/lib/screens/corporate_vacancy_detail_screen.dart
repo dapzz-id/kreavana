@@ -179,7 +179,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
           ),
           content: Text(
             'Anda yakin ingin menolak institusi "$instName"?\n\n'
-            'Perhatian: Menolak institusi akan secara otomatis menolak seluruh ($count) siswa magang/kerja dari institusi ini.',
+            'Perhatian: Menolak institusi akan secara otomatis membatalkan kemitraan, sehingga seluruh ($count) siswa dari institusi ini tidak dapat disetujui dan langsung dihapus dari daftar pelamar program magang.',
             style: const TextStyle(fontSize: 13.5, color: Color(0xFF334155), height: 1.45),
           ),
           actions: [
@@ -192,16 +192,13 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
                 Navigator.of(ctx).pop();
                 setState(() {
                   _institutionStatuses[instName] = 'rejected';
-                  for (int i = 0; i < _applicants.length; i++) {
-                    if (_getInstitutionBaseName(_applicants[i].institution) == instName) {
-                      _applicants[i] = _applicants[i].copyWith(status: 'Ditolak');
-                    }
-                  }
+                  _applicants.removeWhere((app) => _getInstitutionBaseName(app.institution) == instName);
+                  _collapsedInstitutions.remove(instName);
                 });
                 AppSweetAlert.error(
                   context,
-                  'Institusi $instName telah ditolak. Seluruh ($count) siswa magang dari institusi ini otomatis ditolak.',
-                  title: 'Institusi & Seluruh Siswa Ditolak',
+                  'Institusi $instName telah ditolak. Seluruh ($count) siswa dari institusi ini otomatis tidak dapat disetujui dan telah dihapus dari daftar.',
+                  title: 'Institusi Ditolak & Siswa Dihapus',
                 );
               },
               icon: const Icon(Icons.cancel_rounded, size: 16),
@@ -425,6 +422,17 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
   }
 
   void _updateApplicantStatus(int index, String newStatus) {
+    if (index < 0 || index >= _applicants.length) return;
+    final app = _applicants[index];
+    final inst = _getInstitutionBaseName(app.institution);
+    if (_getInstitutionStatus(inst) == 'rejected') {
+      AppSweetAlert.error(
+        context,
+        'Institusi $inst telah ditolak. Siswa dari institusi ini otomatis tidak bisa disetujui untuk masuk program magang.',
+        title: 'Institusi Ditolak',
+      );
+      return;
+    }
     setState(() {
       _applicants[index] = _applicants[index].copyWith(status: newStatus);
     });
@@ -467,6 +475,10 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
   List<CorporateApplicant> get _filteredApplicants {
     final query = _applicantSearchController.text.trim().toLowerCase();
     return _applicants.where((app) {
+      final inst = _getInstitutionBaseName(app.institution);
+      if (_getInstitutionStatus(inst) == 'rejected') {
+        return false;
+      }
       if (_selectedApplicantFilter != 'Semua' && app.status != _selectedApplicantFilter) {
         return false;
       }
@@ -1125,10 +1137,13 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
   Widget _buildApplicantsManagementTab(bool isDesktop, bool isDark) {
     final filtered = _filteredApplicants;
 
-    // Group filtered applicants by institution base name
+    // Group filtered applicants by institution base name (excluding rejected institutions)
     final Map<String, List<CorporateApplicant>> grouped = {};
     for (final app in filtered) {
       final inst = _getInstitutionBaseName(app.institution);
+      if (_getInstitutionStatus(inst) == 'rejected') {
+        continue;
+      }
       grouped.putIfAbsent(inst, () => []).add(app);
     }
 
@@ -1211,7 +1226,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
         const SizedBox(height: 16),
 
         // List of applicants grouped by institution
-        if (filtered.isEmpty)
+        if (grouped.isEmpty)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
@@ -1259,6 +1274,9 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
     bool isDark,
   ) {
     final instStatus = _getInstitutionStatus(instName);
+    if (instStatus == 'rejected') {
+      return const SizedBox.shrink();
+    }
     // If search or filter is active, force expand so matching items are visible
     final hasSearchOrFilter = _applicantSearchController.text.isNotEmpty || _selectedApplicantFilter != 'Semua';
     final isExpanded = hasSearchOrFilter || !_collapsedInstitutions.contains(instName);
@@ -1479,6 +1497,10 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
 
   // ── Individual Applicant Card ───────────────────────────────────────────────
   Widget _buildApplicantCard(CorporateApplicant app, bool isDark) {
+    final inst = _getInstitutionBaseName(app.institution);
+    if (_getInstitutionStatus(inst) == 'rejected') {
+      return const SizedBox.shrink();
+    }
     final rawIdx = _applicants.indexOf(app);
     final isRejected = app.status == 'Ditolak';
     final isReplacement = app.isReplacement;
