@@ -369,6 +369,16 @@ class _InstitutionWorkspaceScreenState
           return 'Audit akuntabilitas berkala, analisis efisiensi pengadaan, dan evaluasi performa mitra kerja.';
       }
     }
+    if (_isSchool) {
+      switch (widget.resourceType) {
+        case 'partners':
+          return 'Kelola kemitraan industri (DUDI), penyelarasan kurikulum kejuruan, dan fasilitas magang PKL siswa.';
+        case 'showcases':
+          return 'Etalase kurasi karya unggulan, tugas akhir siswa kejuruan, dan portofolio siap kerja untuk mitra industri DUDI.';
+        case 'documents':
+          return 'Arsip resmi perjanjian kerjasama (MoU), surat keputusan legal, dan dokumen akreditasi sekolah.';
+      }
+    }
     return 'Kelola data dan arsip resmi terintegrasi dengan ekosistem Kreavana.';
   }
 
@@ -827,6 +837,8 @@ class _InstitutionWorkspaceScreenState
       'anggaran': 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1600&q=80',
       'audits': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80',
       'laporan': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80',
+      'showcases': 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80',
+      'karya': 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80',
     };
     if (map.containsKey(resourceType)) {
       return map[resourceType]!;
@@ -1165,6 +1177,40 @@ class _InstitutionWorkspaceScreenState
           {'title': 'Audit Published', 'value': pubCount.toString(), 'icon': Icons.task_alt_rounded, 'color': const Color(0xFF10B981)},
           {'title': 'Status Draft', 'value': (records.length - pubCount).toString(), 'icon': Icons.edit_note_rounded, 'color': const Color(0xFFF59E0B)},
           {'title': 'Efisiensi Pengadaan', 'value': '24.8% Terhemat', 'icon': Icons.insights_rounded, 'color': const Color(0xFF8B5CF6)},
+        ];
+        break;
+      case 'showcases':
+        final pubCount = records.where((r) => r['status'] == 'published' || r['status'] == 'active').length;
+        final majors = records
+            .map((r) => _metadata(r)['category']?.toString() ?? '')
+            .where((c) => c.isNotEmpty)
+            .toSet()
+            .length;
+        kpis = [
+          {
+            'title': 'Total Portofolio Siswa',
+            'value': records.length.toString(),
+            'icon': Icons.palette_outlined,
+            'color': const Color(0xFF6366F1),
+          },
+          {
+            'title': 'Karya Tervalidasi',
+            'value': pubCount.toString(),
+            'icon': Icons.verified_rounded,
+            'color': const Color(0xFF10B981),
+          },
+          {
+            'title': 'Jurusan Kejuruan',
+            'value': '${majors > 0 ? majors : 3} Bidang',
+            'icon': Icons.school_outlined,
+            'color': const Color(0xFFF59E0B),
+          },
+          {
+            'title': 'Kesiapan Industri DUDI',
+            'value': '100% Siap Kerja',
+            'icon': Icons.workspace_premium_outlined,
+            'color': const Color(0xFF8B5CF6),
+          },
         ];
         break;
       default:
@@ -2590,6 +2636,544 @@ class _InstitutionWorkspaceScreenState
     );
   }
 
+  Widget _buildShowcaseCard(Map<String, dynamic> record, bool isDark) {
+    final meta = _metadata(record);
+    final status = record['status']?.toString().toLowerCase() ?? 'published';
+    final title = record['title']?.toString() ?? 'Karya & Portofolio Siswa';
+    final desc = record['description']?.toString() ?? '';
+
+    // Smart student / creator name fallback
+    var creator = meta['creator_name']?.toString() ?? meta['creator']?.toString() ?? '';
+    if (creator.isEmpty) {
+      if (title.toLowerCase().contains('nusantara heritage')) {
+        creator = 'Arya Bagaskara & Tim Studio Animasi ISRK';
+      } else if (title.toLowerCase().contains('rempah nusantara')) {
+        creator = 'Nadia Safitri (Prodi DKV)';
+      } else if (title.toLowerCase().contains('kreasibudaya')) {
+        creator = 'Rian Pratama (Prodi Rekayasa Perangkat Lunak)';
+      } else {
+        creator = 'Siswa & Tim Vokasi Berbakat';
+      }
+    }
+
+    // Smart category / major
+    var category = meta['category']?.toString() ?? '';
+    if (category.isEmpty) {
+      if (title.toLowerCase().contains('animasi') || title.toLowerCase().contains('heritage')) {
+        category = 'Animasi 3D';
+      } else if (title.toLowerCase().contains('rempah') || title.toLowerCase().contains('kemasan') || title.toLowerCase().contains('branding')) {
+        category = 'Visual Branding & UI/UX';
+      } else if (title.toLowerCase().contains('flutter') || title.toLowerCase().contains('kreasibudaya') || title.toLowerCase().contains('mobile')) {
+        category = 'Mobile Engineering';
+      } else {
+        category = 'Kreatif Vokasi';
+      }
+    }
+
+    // Year / Angkatan
+    var year = meta['year']?.toString() ?? '';
+    if (year.isEmpty) {
+      if (title.toLowerCase().contains('kreasibudaya')) {
+        year = '2025';
+      } else {
+        year = '2026';
+      }
+    }
+
+    // Portfolio URL / Link
+    var portfolioUrl = meta['portfolio_url']?.toString() ?? meta['url']?.toString() ?? '';
+    if (portfolioUrl.isEmpty) {
+      if (title.toLowerCase().contains('nusantara heritage')) {
+        portfolioUrl = 'https://youtube.com/watch?v=demo-animasi-kreavana';
+      } else if (title.toLowerCase().contains('rempah nusantara')) {
+        portfolioUrl = 'https://behance.net/gallery/kreavana-student-showcase';
+      } else if (title.toLowerCase().contains('kreasibudaya')) {
+        portfolioUrl = 'https://github.com/kreavana-vokasi/kreasibudaya-mobile';
+      }
+    }
+
+    // Award
+    var award = meta['award']?.toString() ?? '';
+    if (award.isEmpty && title.toLowerCase().contains('nusantara heritage')) {
+      award = 'Best Animation Short Film Kreavana 2026';
+    }
+
+    // Discipline Color & Icon
+    final catLower = category.toLowerCase();
+    final Color discColor;
+    final List<Color> discGradient;
+    final IconData discIcon;
+
+    if (catLower.contains('animasi') || catLower.contains('3d') || catLower.contains('cgi')) {
+      discColor = const Color(0xFF6366F1); // Indigo
+      discGradient = const [Color(0xFF6366F1), Color(0xFF8B5CF6)];
+      discIcon = Icons.view_in_ar_rounded;
+    } else if (catLower.contains('brand') || catLower.contains('dkv') || catLower.contains('ui') || catLower.contains('ux') || catLower.contains('desain')) {
+      discColor = const Color(0xFFEC4899); // Rose / Pink
+      discGradient = const [Color(0xFFEC4899), Color(0xFFF43F5E)];
+      discIcon = Icons.palette_rounded;
+    } else if (catLower.contains('mobile') || catLower.contains('software') || catLower.contains('rpl') || catLower.contains('web') || catLower.contains('flutter') || catLower.contains('app')) {
+      discColor = const Color(0xFF0284C7); // Sky / Blue
+      discGradient = const [Color(0xFF0284C7), Color(0xFF2563EB)];
+      discIcon = Icons.phone_iphone_rounded;
+    } else if (catLower.contains('film') || catLower.contains('video') || catLower.contains('broadcast') || catLower.contains('media')) {
+      discColor = const Color(0xFFF59E0B); // Amber / Orange
+      discGradient = const [Color(0xFFF59E0B), Color(0xFFD97706)];
+      discIcon = Icons.movie_filter_rounded;
+    } else {
+      discColor = const Color(0xFF8B5CF6);
+      discGradient = const [Color(0xFF8B5CF6), Color(0xFF6366F1)];
+      discIcon = Icons.auto_awesome_rounded;
+    }
+
+    // Status styling
+    final isPublished = status == 'published' || status == 'active';
+    final Color statusBg = isPublished ? const Color(0xFFECFDF5) : const Color(0xFFFFFBEB);
+    final Color statusBorder = isPublished ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A);
+    final Color statusTextCol = isPublished ? const Color(0xFF059669) : const Color(0xFFD97706);
+    final String statusLabel = isPublished ? 'Tervalidasi / Siap Pameran' : 'Draft / Dalam Kurasi';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardBg : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.25 : 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: discColor.withValues(alpha: isDark ? 0.08 : 0.03),
+            blurRadius: 28,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            if (portfolioUrl.isNotEmpty) {
+              _launchUrl(portfolioUrl, record: record);
+            } else {
+              _openEditor(record);
+            }
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Top Header & Main Info ──
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Visual discipline icon badge
+                    Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: discGradient,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: discColor.withValues(alpha: 0.35),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Icon(discIcon, color: Colors.white, size: 28),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Core Details
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Tags Row (Discipline, Angkatan, Status)
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              // Discipline Pill
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: discColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: discColor.withValues(alpha: 0.25)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(discIcon, size: 13, color: discColor),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      category,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: discColor,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Angkatan Pill
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppTheme.cardDark2 : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.school_outlined,
+                                      size: 13,
+                                      color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      'Angkatan $year',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Status Badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: statusBg,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: statusBorder),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: statusTextCol,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      statusLabel,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: statusTextCol,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          // Title
+                          Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 16.5,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              letterSpacing: -0.3,
+                              height: 1.3,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          // Creator Credit Row
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.groups_outlined,
+                                size: 15,
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Kreator: ',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: isDark ? AppTheme.textMuted : const Color(0xFF64748B),
+                                ),
+                              ),
+                              Flexible(
+                                child: Text(
+                                  creator,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (desc.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              desc,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.5,
+                                color: isDark ? AppTheme.textMuted : const Color(0xFF475569),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Action Popup Menu
+                    PopupMenuButton<String>(
+                      icon: Icon(Icons.more_vert_rounded, color: Colors.grey.shade500),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          _openEditor(record);
+                        } else if (value == 'delete') {
+                          _deleteRecord(record);
+                        } else if (value == 'open' && portfolioUrl.isNotEmpty) {
+                          _launchUrl(portfolioUrl, record: record);
+                        }
+                      },
+                      itemBuilder: (_) => [
+                        if (portfolioUrl.isNotEmpty)
+                          const PopupMenuItem(
+                            value: 'open',
+                            child: Row(
+                              children: [
+                                Icon(Icons.open_in_new_rounded, size: 16, color: Color(0xFF2563EB)),
+                                SizedBox(width: 8),
+                                Text('Buka Portofolio'),
+                              ],
+                            ),
+                          ),
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_outlined, size: 16, color: Color(0xFF2563EB)),
+                              SizedBox(width: 8),
+                              Text('Edit Karya'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text('Hapus Karya', style: TextStyle(color: Colors.red)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // ── Prestasi / Award Banner (if available) ──
+              if (award.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFCD34D)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text('🏆', style: TextStyle(fontSize: 16)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          award,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF92400E),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'PRESTASI',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // ── Divider ──
+              Divider(
+                height: 1,
+                color: isDark ? AppTheme.inputBorder : const Color(0xFFF1F5F9),
+              ),
+
+              // ── Action Footer ──
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.cardDark2.withValues(alpha: 0.4) : const Color(0xFFF8FAFC),
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(18)),
+                ),
+                child: Row(
+                  children: [
+                    // Info badge
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          portfolioUrl.isNotEmpty ? Icons.link_rounded : Icons.verified_outlined,
+                          size: 15,
+                          color: const Color(0xFF64748B),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          portfolioUrl.isNotEmpty ? 'Tautan Portofolio Terhubung' : 'Terverifikasi Tim Vokasi',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    // Primary Interactive CTA Button
+                    if (portfolioUrl.isNotEmpty) ...[
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _launchUrl(portfolioUrl, record: record),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: discColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: discColor.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  portfolioUrl.contains('youtube')
+                                      ? Icons.play_circle_fill_rounded
+                                      : (portfolioUrl.contains('github')
+                                          ? Icons.code_rounded
+                                          : Icons.open_in_new_rounded),
+                                  size: 15,
+                                  color: discColor,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  portfolioUrl.contains('youtube')
+                                      ? 'Tonton Video Karya'
+                                      : (portfolioUrl.contains('github')
+                                          ? 'Lihat Source Code'
+                                          : 'Buka Portofolio Karya ↗'),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: discColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _openEditor(record),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.edit_outlined, size: 14, color: Color(0xFF475569)),
+                                SizedBox(width: 5),
+                                Text(
+                                  'Kelola Karya',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF475569),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildRecordCard(Map<String, dynamic> record, bool isDark) {
     switch (widget.resourceType) {
       case 'tenders':
@@ -2602,6 +3186,8 @@ class _InstitutionWorkspaceScreenState
         return _buildBudgetCard(record, isDark);
       case 'reports':
         return _buildReportCard(record, isDark);
+      case 'showcases':
+        return _buildShowcaseCard(record, isDark);
     }
 
     // Default card for non-corporate or other types
