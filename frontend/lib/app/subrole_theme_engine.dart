@@ -118,6 +118,27 @@ class SubRoleThemeEngine {
       primaryColor: Color(0xFF4338CA), // Solid Academic Indigo
       description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
     ),
+    'institusi': SubRoleThemeConfig(
+      slug: 'institusi',
+      label: 'Sekolah & Perguruan Tinggi',
+      icon: Icons.school_rounded,
+      primaryColor: Color(0xFF4338CA),
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
+    ),
+    'lembaga': SubRoleThemeConfig(
+      slug: 'lembaga',
+      label: 'Sekolah & Perguruan Tinggi',
+      icon: Icons.school_rounded,
+      primaryColor: Color(0xFF4338CA),
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
+    ),
+    'yayasan': SubRoleThemeConfig(
+      slug: 'yayasan',
+      label: 'Sekolah & Perguruan Tinggi',
+      icon: Icons.school_rounded,
+      primaryColor: Color(0xFF4338CA),
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
+    ),
     'instansi': SubRoleThemeConfig(
       slug: 'instansi',
       label: 'Sekolah & Perguruan Tinggi',
@@ -212,6 +233,27 @@ class SubRoleThemeEngine {
       label: 'Sekolah & Perguruan Tinggi',
       icon: Icons.school_rounded,
       primaryColor: Color(0xFF4338CA), // Solid Academic Indigo
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
+    ),
+    'institusi': SubRoleThemeConfig(
+      slug: 'institusi',
+      label: 'Sekolah & Perguruan Tinggi',
+      icon: Icons.school_rounded,
+      primaryColor: Color(0xFF4338CA),
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
+    ),
+    'lembaga': SubRoleThemeConfig(
+      slug: 'lembaga',
+      label: 'Sekolah & Perguruan Tinggi',
+      icon: Icons.school_rounded,
+      primaryColor: Color(0xFF4338CA),
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
+    ),
+    'yayasan': SubRoleThemeConfig(
+      slug: 'yayasan',
+      label: 'Sekolah & Perguruan Tinggi',
+      icon: Icons.school_rounded,
+      primaryColor: Color(0xFF4338CA),
       description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
     ),
     'government': SubRoleThemeConfig(

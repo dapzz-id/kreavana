@@ -23,12 +23,12 @@ class InstitutionResourceController extends Controller
         'members',
         'team',
         'study_programs',
+        'talents',
         'programs',
         'events',
         'competitions',
         'internships',
         'research',
-        'talents',
         'students',
     ];
 
@@ -49,8 +49,11 @@ class InstitutionResourceController extends Controller
     public function searchCorporates(Request $request)
     {
         $q = trim((string) $request->query('q', ''));
-        $currentUserId = $request->user()->id;
+        if (empty($q)) {
+            return $this->successResponse('Daftar akun corporate mitra', []);
+        }
 
+        $currentUserId = $request->user()->id;
         $corporateKeywords = ['corporate', 'company', 'business', 'perusahaan', 'bisnis', 'enterprise', 'b2b'];
 
         $query = \App\Models\User::query()
@@ -60,15 +63,12 @@ class InstitutionResourceController extends Controller
                     ->orWhereIn('role', $corporateKeywords)
                     ->orWhere('username', 'corporate_demo')
                     ->orWhere('email', 'like', 'corporate%@%');
-            });
-
-        if (!empty($q)) {
-            $query->where(function ($filter) use ($q) {
+            })
+            ->where(function ($filter) use ($q) {
                 $filter->where('name', 'like', '%' . $q . '%')
                     ->orWhere('username', 'like', '%' . $q . '%')
                     ->orWhere('email', 'like', '%' . $q . '%');
             });
-        }
 
         $corporates = $query->select([
             'id',
@@ -82,15 +82,8 @@ class InstitutionResourceController extends Controller
             'is_verified',
             'verification_type',
         ])
-        ->limit(15)
+        ->limit(6)
         ->get();
-
-        if ($corporates->isEmpty() && empty($q)) {
-            $demo = \App\Models\User::where('username', 'corporate_demo')->first();
-            if ($demo) {
-                $corporates = collect([$demo]);
-            }
-        }
 
         return $this->successResponse('Daftar akun corporate mitra', $corporates);
     }
@@ -211,7 +204,6 @@ class InstitutionResourceController extends Controller
             $isCorporate = in_array($subRoleLower, [
                 'corporate', 'company', 'business', 'perusahaan', 'bisnis'
             ], true);
-
             $isGovernment = in_array($subRoleLower, [
                 'government', 'pemerintah', 'instansi', 'dinas', 'bumn', 'kementerian'
             ], true);
@@ -219,7 +211,6 @@ class InstitutionResourceController extends Controller
             $isSchool = in_array($subRoleLower, [
                 'institution', 'school', 'sekolah', 'kampus', 'education', 'institusi', 'smk', 'universitas'
             ], true);
-
             if ($isCorporate && InstitutionResource::where('user_id', $user->id)->count() === 0) {
                 \Database\Seeders\CorporateDummySeeder::seedForUser($user);
             } elseif ($isGovernment && InstitutionResource::where('user_id', $user->id)->count() === 0) {
