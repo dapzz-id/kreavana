@@ -2434,24 +2434,55 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     return Icons.edit_note_rounded;
   }
 
+  Map<String, dynamic> _getFieldMeta(_WorkspaceField field) {
+    final key = field.key.toLowerCase();
+    if (key.contains('category') || key.contains('spesialisasi')) {
+      return {
+        'label': '${field.label} *',
+        'caption': 'Bidang industri utama mitra yang relevan dengan keahlian siswa.',
+        'hint': field.hint ?? 'Contoh: Animasi 3D, Desain Grafis, Production House',
+        'chips': ['Animasi 3D', 'Desain & UI/UX', 'Video & Media', 'Software & IT', 'Marketing Digital'],
+      };
+    }
+    if (key.contains('contact') || key.contains('pic') || key.contains('email')) {
+      return {
+        'label': '${field.label} *',
+        'caption': 'Penanggung jawab (PIC) kemitraan atau kontak resmi instansi.',
+        'hint': field.hint ?? 'Contoh: Budi Santoso (HR) - 08123456789 / info@mitra.com',
+        'chips': <String>[],
+      };
+    }
+    if (key.contains('website') || key.contains('url') || field.kind == _FieldKind.url) {
+      return {
+        'label': field.label,
+        'caption': 'Alamat website resmi atau tautan portofolio/sosial media.',
+        'hint': field.hint ?? 'Contoh: https://perusahaan.com atau https://instagram.com/mitra',
+        'chips': <String>[],
+      };
+    }
+    return {
+      'label': field.label,
+      'caption': 'Pastikan data yang diisi sesuai dengan dokumen kerjasama resmi.',
+      'hint': field.hint ?? 'Masukkan ${field.label.toLowerCase()}...',
+      'chips': <String>[],
+    };
+  }
+
   InputDecoration _inputDecoration({
-    required String label,
-    String? hint,
+    required String hint,
     IconData? prefixIcon,
     String? prefixText,
     Widget? suffixIcon,
   }) {
     return InputDecoration(
-      labelText: label,
       hintText: hint,
       prefixText: prefixText,
       prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 20, color: const Color(0xFF2563EB)) : null,
       suffixIcon: suffixIcon,
       filled: true,
-      fillColor: const Color(0xFFF8FAFC),
-      labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF475569)),
+      fillColor: Colors.white,
       hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: Colors.grey.shade300),
@@ -2471,163 +2502,339 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12, top: 8),
-      child: Row(
+  Widget _buildFieldCardContainer({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: const Color(0xFF2563EB)),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1E293B),
-              letterSpacing: 0.2,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                ),
+                child: Icon(icon, size: 18, color: const Color(0xFF2563EB)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Divider(
-              color: Colors.grey.shade200,
-              thickness: 1,
-            ),
-          ),
+          const SizedBox(height: 14),
+          const Divider(height: 1, thickness: 1, color: Color(0xFFE2E8F0)),
+          const SizedBox(height: 16),
+          ...children,
         ],
       ),
     );
   }
 
+  Widget _buildFieldWithHeader({
+    required String label,
+    required String caption,
+    required Widget child,
+    List<String> chips = const [],
+    TextEditingController? targetController,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1E293B),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 3),
+        Text(
+          caption,
+          style: TextStyle(
+            fontSize: 11.5,
+            color: Colors.grey.shade600,
+            height: 1.3,
+          ),
+        ),
+        const SizedBox(height: 8),
+        child,
+        if (chips.isNotEmpty && targetController != null) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: chips.map((chipText) {
+              return InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () {
+                  setState(() {
+                    targetController.text = chipText;
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.add_rounded, size: 13, color: Color(0xFF2563EB)),
+                      const SizedBox(width: 4),
+                      Text(
+                        chipText,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF334155),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildFieldWidget(_WorkspaceField field) {
-    return TextFormField(
-      controller: _controllers[field.key],
-      keyboardType: field.kind == _FieldKind.number
-          ? TextInputType.number
-          : (field.kind == _FieldKind.url ? TextInputType.url : TextInputType.text),
-      decoration: _inputDecoration(
-        label: field.label,
-        hint: field.hint,
-        prefixText: field.prefix,
-        prefixIcon: _getFieldIcon(field),
+    final meta = _getFieldMeta(field);
+    final ctrl = _controllers[field.key]!;
+
+    return _buildFieldWithHeader(
+      label: meta['label'] as String,
+      caption: meta['caption'] as String,
+      chips: (meta['chips'] as List<dynamic>).cast<String>(),
+      targetController: ctrl,
+      child: TextFormField(
+        controller: ctrl,
+        keyboardType: field.kind == _FieldKind.number
+            ? TextInputType.number
+            : (field.kind == _FieldKind.url ? TextInputType.url : TextInputType.text),
+        decoration: _inputDecoration(
+          hint: meta['hint'] as String,
+          prefixText: field.prefix,
+          prefixIcon: _getFieldIcon(field),
+        ),
       ),
     );
   }
 
   Widget _buildStatusDropdown() {
-    return DropdownButtonFormField<String>(
-      initialValue: _status,
-      decoration: _inputDecoration(
-        label: 'Status Publikasi',
-        prefixIcon: Icons.flag_outlined,
-      ),
-      items: widget.statuses
-          .map(
-            (value) => DropdownMenuItem(
-              value: value,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: value == 'active' || value == 'published'
-                          ? Colors.green.shade600
-                          : (value == 'draft' ? Colors.amber.shade600 : const Color(0xFF2563EB)),
+    return _buildFieldWithHeader(
+      label: 'Status Kemitraan & Akses *',
+      caption: 'Tentukan status keaktifan mitra untuk keperluan penempatan magang siswa.',
+      child: DropdownButtonFormField<String>(
+        initialValue: _status,
+        decoration: _inputDecoration(
+          hint: 'Pilih status...',
+          prefixIcon: Icons.verified_user_outlined,
+        ),
+        items: widget.statuses
+            .map(
+              (value) => DropdownMenuItem(
+                value: value,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 9,
+                      height: 9,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: value == 'active' || value == 'published'
+                            ? Colors.green.shade600
+                            : (value == 'draft' ? Colors.amber.shade600 : const Color(0xFF64748B)),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(widget.statusLabel(value)),
-                ],
+                    const SizedBox(width: 10),
+                    Text(
+                      widget.statusLabel(value),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      value == 'active' || value == 'published'
+                          ? '(Siap Kerjasama)'
+                          : (value == 'draft' ? '(Tahap Inisiasi)' : '(Arsip)'),
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          )
-          .toList(),
-      onChanged: (value) {
-        if (value != null) {
-          setState(() => _status = value);
-        }
-      },
+            )
+            .toList(),
+        onChanged: (value) {
+          if (value != null) {
+            setState(() => _status = value);
+          }
+        },
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isPartnerResource = widget.resourceType == 'partners';
+
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-      titlePadding: const EdgeInsets.fromLTRB(24, 20, 16, 12),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      actionsPadding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
-      title: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      titlePadding: EdgeInsets.zero,
+      contentPadding: const EdgeInsets.fromLTRB(28, 20, 28, 12),
+      actionsPadding: const EdgeInsets.fromLTRB(28, 16, 28, 24),
+      backgroundColor: Colors.white,
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
+          // Top accent gradient bar
           Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2563EB).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.2)),
+            height: 4,
+            decoration: const BoxDecoration(
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(24),
+                topRight: Radius.circular(24),
+              ),
+              gradient: LinearGradient(
+                colors: [Color(0xFF2563EB), Color(0xFF38BDF8)],
+              ),
             ),
-            child: Icon(widget.icon, color: const Color(0xFF2563EB), size: 24),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 20, 20, 16),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        widget.existing == null ? widget.action : 'Edit ${widget.title}',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF2563EB).withValues(alpha: 0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
-                      child: const Text(
-                        'Instansi',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF2563EB)),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  child: Icon(widget.icon, color: Colors.white, size: 24),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  'Tersimpan aman di database instansi Kreavana',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              widget.existing == null ? widget.action : 'Edit ${widget.title}',
+                              style: const TextStyle(
+                                fontSize: 19,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0F172A),
+                                letterSpacing: -0.3,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                            ),
+                            child: const Text(
+                              'B2B Governance',
+                              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF2563EB)),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        isPartnerResource
+                            ? 'Lengkapi profil rekanan industri untuk program magang, guru tamu, dan sertifikasi kejuruan.'
+                            : 'Tersimpan aman di pangkalan data instansi Kreavana untuk tata kelola resmi.',
+                        style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600, height: 1.3),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF64748B)),
+                  tooltip: 'Tutup Dialog',
+                  style: IconButton.styleFrom(
+                    backgroundColor: const Color(0xFFF1F5F9),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
                 ),
               ],
             ),
           ),
-          IconButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF64748B)),
-            tooltip: 'Tutup',
-            style: IconButton.styleFrom(
-              backgroundColor: const Color(0xFFF1F5F9),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
+          const Divider(height: 1, thickness: 1, color: Color(0xFFE2E8F0)),
         ],
       ),
       content: SizedBox(
-        width: 660,
+        width: 720,
         child: SingleChildScrollView(
           child: Form(
             key: _formKey,
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final isWide = constraints.maxWidth >= 500;
+                final isWide = constraints.maxWidth >= 540;
 
                 final secondaryWidgets = <Widget>[
                   for (final field in widget.fields) _buildFieldWidget(field),
@@ -2643,7 +2850,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(child: secondaryWidgets[i]),
-                            const SizedBox(width: 14),
+                            const SizedBox(width: 16),
                             Expanded(child: secondaryWidgets[i + 1]),
                           ],
                         ),
@@ -2652,14 +2859,14 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                       gridRows.add(secondaryWidgets[i]);
                     }
                     if (i + 2 < secondaryWidgets.length) {
-                      gridRows.add(const SizedBox(height: 14));
+                      gridRows.add(const SizedBox(height: 16));
                     }
                   }
                 } else {
                   for (int i = 0; i < secondaryWidgets.length; i++) {
                     gridRows.add(secondaryWidgets[i]);
                     if (i + 1 < secondaryWidgets.length) {
-                      gridRows.add(const SizedBox(height: 14));
+                      gridRows.add(const SizedBox(height: 16));
                     }
                   }
                 }
@@ -2668,34 +2875,90 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionHeader('Informasi Pokok', Icons.info_outline_rounded),
-                    TextFormField(
-                      controller: _titleController,
-                      decoration: _inputDecoration(
-                        label: 'Nama / Judul',
-                        hint: 'Masukkan nama atau judul resmi...',
-                        prefixIcon: Icons.title_rounded,
+                    // Guidance banner
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
                       ),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                              ? 'Nama / Judul wajib diisi'
-                              : null,
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _descriptionController,
-                      minLines: 3,
-                      maxLines: 5,
-                      decoration: _inputDecoration(
-                        label: 'Deskripsi / Ruang Lingkup',
-                        hint: 'Jelaskan ringkasan kebutuhan, spesifikasi, atau catatan...',
-                        prefixIcon: Icons.notes_rounded,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline_rounded, color: Color(0xFF2563EB), size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              isPartnerResource
+                                  ? 'Panduan: Masukkan nama resmi instansi/studio mitra beserta kontak PIC. Data ini akan otomatis tampil di direktori kemitraan sekolah dan dapat ditautkan ke program magang siswa.'
+                                  : 'Panduan: Lengkapi seluruh kolom wajib bertanda bintang (*) untuk menjaga keabsahan arsip instansi.',
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF1E40AF), height: 1.4),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                    const SizedBox(height: 16),
+
+                    // Section 1: Profil & Identitas Utama
+                    _buildFieldCardContainer(
+                      title: isPartnerResource ? 'Profil & Identitas Mitra Industri' : 'Informasi Utama & Pokok',
+                      subtitle: isPartnerResource
+                          ? 'Nama badan usaha resmi dan ringkasan bentuk kemitraan'
+                          : 'Judul dan penjelasan umum mengenai arsip',
+                      icon: Icons.business_rounded,
+                      children: [
+                        _buildFieldWithHeader(
+                          label: isPartnerResource ? 'Nama Mitra Industri / Perusahaan *' : 'Nama / Judul Resmi *',
+                          caption: isPartnerResource
+                              ? 'Tuliskan nama lengkap badan usaha, CV, PT, studio, atau agensi rekanan.'
+                              : 'Nama identitas resmi dokumen atau aset.',
+                          child: TextFormField(
+                            controller: _titleController,
+                            decoration: _inputDecoration(
+                              hint: isPartnerResource
+                                  ? 'Contoh: PT Studio Animasi Nusantara, Google Indonesia, Agensi Desain'
+                                  : 'Masukkan nama atau judul resmi...',
+                              prefixIcon: Icons.domain_rounded,
+                            ),
+                            validator: (value) =>
+                                value == null || value.trim().isEmpty
+                                    ? 'Nama / Judul wajib diisi'
+                                    : null,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildFieldWithHeader(
+                          label: isPartnerResource ? 'Deskripsi & Ruang Lingkup Kerjasama' : 'Deskripsi / Ruang Lingkup',
+                          caption: isPartnerResource
+                              ? 'Jelaskan profil singkat mitra dan bentuk kerjasama (misal: Tempat PKL magang siswa 6 bulan, guru tamu industri, uji kompetensi, atau rekrutmen).'
+                              : 'Jelaskan ringkasan kebutuhan, spesifikasi, atau catatan penting.',
+                          child: TextFormField(
+                            controller: _descriptionController,
+                            minLines: 3,
+                            maxLines: 4,
+                            decoration: _inputDecoration(
+                              hint: isPartnerResource
+                                  ? 'Contoh: Kerjasama strategis penempatan magang siswa SMK jurusan Animasi 3D dan DKV, penyelarasan kurikulum industri, dan sertifikasi kejuruan...'
+                                  : 'Jelaskan ringkasan kebutuhan, spesifikasi, atau catatan...',
+                              prefixIcon: Icons.notes_rounded,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
                     if (secondaryWidgets.isNotEmpty) ...[
-                      const SizedBox(height: 18),
-                      _buildSectionHeader('Detail Spesifikasi & Publikasi', Icons.tune_rounded),
-                      ...gridRows,
+                      const SizedBox(height: 16),
+                      // Section 2: Spesifikasi & Kontak (2 Columns)
+                      _buildFieldCardContainer(
+                        title: isPartnerResource ? 'Spesifikasi Industri & Kontak Penanggung Jawab' : 'Detail Spesifikasi & Publikasi',
+                        subtitle: isPartnerResource
+                            ? 'Bidang keahlian mitra dan kontak resmi untuk koordinasi sekolah'
+                            : 'Parameter pendukung dan status publikasi sistem',
+                        icon: Icons.hub_outlined,
+                        children: gridRows,
+                      ),
                     ],
                   ],
                 );
@@ -2705,36 +2968,56 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
         ),
       ),
       actions: [
-        OutlinedButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFF64748B),
-            side: const BorderSide(color: Color(0xFFCBD5E1)),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-          child: const Text('Batal', style: TextStyle(fontWeight: FontWeight.w600)),
-        ),
-        FilledButton.icon(
-          icon: _isSaving
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                )
-              : const Icon(Icons.check_circle_outline_rounded, size: 18),
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF2563EB),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-            elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-          onPressed: _isSaving ? null : _submit,
-          label: Text(
-            _isSaving ? 'Menyimpan...' : 'Simpan Data',
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.shield_outlined, size: 16, color: Color(0xFF64748B)),
+                const SizedBox(width: 6),
+                Text(
+                  'Tervalidasi Sistem Instansi Kreavana',
+                  style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF64748B),
+                    side: const BorderSide(color: Color(0xFFCBD5E1)),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Batal', style: TextStyle(fontWeight: FontWeight.w600)),
+                ),
+                const SizedBox(width: 12),
+                FilledButton.icon(
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.check_circle_outline_rounded, size: 18),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: _isSaving ? null : _submit,
+                  label: Text(
+                    _isSaving ? 'Menyimpan...' : (isPartnerResource ? 'Simpan Mitra Industri' : 'Simpan Data'),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ],
     );
