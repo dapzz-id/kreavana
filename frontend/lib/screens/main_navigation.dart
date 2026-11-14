@@ -985,15 +985,6 @@ class _MainNavigationState extends State<MainNavigation> {
           isMobileDrawer: isMobileDrawer,
         ),
         _buildSidebarLink(
-          icon: Icons.people_outlined,
-          label: 'Daftar Kreator & Vendor',
-          onTap: () => _navigateToScreenIndex(1),
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _currentIndex == 1 && _activeGovRoute == null,
-          isMobileDrawer: isMobileDrawer,
-        ),
-        _buildSidebarLink(
           icon: Icons.diversity_3_outlined,
           label: 'Mitra Industri & Sanggar',
           onTap: () {
@@ -1111,24 +1102,6 @@ class _MainNavigationState extends State<MainNavigation> {
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'dokumen_instansi',
-          isMobileDrawer: isMobileDrawer,
-        ),
-        _buildSidebarLink(
-          icon: Icons.campaign_outlined,
-          label: 'Pengumuman Sekolah',
-          onTap: () {
-            setState(() => _activeGovRoute = 'pengumuman_publik');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'announcements',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _activeGovRoute == 'pengumuman_publik',
           isMobileDrawer: isMobileDrawer,
         ),
         if (!isCollapsed) ...[
