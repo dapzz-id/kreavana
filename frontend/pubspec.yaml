@@ -106,6 +106,7 @@ flutter:
 
   assets:
     - assets/
+    - assets/partners/
     - .env.development
     - .env.staging
 

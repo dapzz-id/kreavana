@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
@@ -244,7 +246,7 @@ class _InstitutionWorkspaceScreenState
 
   static const Map<String, List<String>> _statuses = {
     'tenders': ['open', 'in_progress', 'completed', 'closed'],
-    'partners': ['active', 'inactive'],
+    'partners': ['pending', 'active', 'inactive'],
     'facilities': ['open', 'active', 'closed'],
     'reports': ['published', 'draft'],
     'budgets': ['in_progress', 'completed'],
@@ -365,6 +367,16 @@ class _InstitutionWorkspaceScreenState
           return 'Monitoring serapan belanja kreatif korporat, realisasi anggaran, dan rekapitulasi PPh Pasal 23.';
         case 'reports':
           return 'Audit akuntabilitas berkala, analisis efisiensi pengadaan, dan evaluasi performa mitra kerja.';
+      }
+    }
+    if (_isSchool) {
+      switch (widget.resourceType) {
+        case 'partners':
+          return 'Kelola kemitraan industri (DUDI), penyelarasan kurikulum kejuruan, dan fasilitas magang PKL siswa.';
+        case 'showcases':
+          return 'Etalase kurasi karya unggulan, tugas akhir siswa kejuruan, dan portofolio siap kerja untuk mitra industri DUDI.';
+        case 'documents':
+          return 'Arsip resmi perjanjian kerjasama (MoU), surat keputusan legal, dan dokumen akreditasi sekolah.';
       }
     }
     return 'Kelola data dan arsip resmi terintegrasi dengan ekosistem Kreavana.';
@@ -586,6 +598,7 @@ class _InstitutionWorkspaceScreenState
       case 'published':
       case 'open':
       case 'active':
+      case 'approved':
         return const Color(0xFF10B981); // Emerald Green
       case 'in_progress':
         return const Color(0xFF2563EB); // Royal Blue
@@ -594,6 +607,9 @@ class _InstitutionWorkspaceScreenState
       case 'closed':
       case 'inactive':
         return Colors.grey.shade600;
+      case 'rejected':
+        return const Color(0xFFEF4444); // Red
+      case 'pending':
       case 'draft':
       default:
         return const Color(0xFFF59E0B); // Amber
@@ -616,6 +632,12 @@ class _InstitutionWorkspaceScreenState
         return 'Ditutup';
       case 'active':
         return 'Aktif';
+      case 'approved':
+        return 'Disetujui';
+      case 'pending':
+        return 'Menunggu Persetujuan';
+      case 'rejected':
+        return 'Ditolak';
       case 'inactive':
         return 'Nonaktif';
       default:
@@ -728,6 +750,48 @@ class _InstitutionWorkspaceScreenState
     }
   }
 
+  Future<void> _approvePartnerProposal(Map<String, dynamic> record) async {
+    final id = record['id'];
+    try {
+      final res = await ApiService.post('institution/resources/$id/approve', {});
+      if (!mounted) return;
+      if (res['status'] == true) {
+        AppSweetAlert.success(
+          context,
+          'Kemitraan berhasil disetujui! Berkas dokumen MoU telah otomatis terbit dan masuk ke menu "Dokumen & MoU".',
+          title: 'Kemitraan Disetujui',
+        );
+        await _loadRecords();
+      } else {
+        AppSweetAlert.error(context, res['message']?.toString() ?? 'Gagal menyetujui kemitraan.');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSweetAlert.error(context, 'Terjadi kendala saat menyetujui: $e');
+      }
+    }
+  }
+
+  Future<void> _rejectPartnerProposal(Map<String, dynamic> record) async {
+    final id = record['id'];
+    try {
+      final res = await ApiService.post('institution/resources/$id/reject', {});
+      if (!mounted) return;
+      if (res['status'] == true) {
+        AppSweetAlert.info(
+          context,
+          'Pengajuan kemitraan telah ditolak.',
+          title: 'Kemitraan Ditolak',
+        );
+        await _loadRecords();
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSweetAlert.error(context, 'Terjadi kendala saat menolak: $e');
+      }
+    }
+  }
+
   void _openOfficialDocument(Map<String, dynamic> record) {
     OfficialDocumentViewerDialog.show(
       context,
@@ -786,6 +850,8 @@ class _InstitutionWorkspaceScreenState
       'anggaran': 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1600&q=80',
       'audits': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80',
       'laporan': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80',
+      'showcases': 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80',
+      'karya': 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80',
     };
     if (map.containsKey(resourceType)) {
       return map[resourceType]!;
@@ -1124,6 +1190,40 @@ class _InstitutionWorkspaceScreenState
           {'title': 'Audit Published', 'value': pubCount.toString(), 'icon': Icons.task_alt_rounded, 'color': const Color(0xFF10B981)},
           {'title': 'Status Draft', 'value': (records.length - pubCount).toString(), 'icon': Icons.edit_note_rounded, 'color': const Color(0xFFF59E0B)},
           {'title': 'Efisiensi Pengadaan', 'value': '24.8% Terhemat', 'icon': Icons.insights_rounded, 'color': const Color(0xFF8B5CF6)},
+        ];
+        break;
+      case 'showcases':
+        final pubCount = records.where((r) => r['status'] == 'published' || r['status'] == 'active').length;
+        final majors = records
+            .map((r) => _metadata(r)['category']?.toString() ?? '')
+            .where((c) => c.isNotEmpty)
+            .toSet()
+            .length;
+        kpis = [
+          {
+            'title': 'Total Portofolio Siswa',
+            'value': records.length.toString(),
+            'icon': Icons.palette_outlined,
+            'color': const Color(0xFF6366F1),
+          },
+          {
+            'title': 'Karya Tervalidasi',
+            'value': pubCount.toString(),
+            'icon': Icons.verified_rounded,
+            'color': const Color(0xFF10B981),
+          },
+          {
+            'title': 'Jurusan Kejuruan',
+            'value': '${majors > 0 ? majors : 3} Bidang',
+            'icon': Icons.school_outlined,
+            'color': const Color(0xFFF59E0B),
+          },
+          {
+            'title': 'Kesiapan Industri DUDI',
+            'value': '100% Siap Kerja',
+            'icon': Icons.workspace_premium_outlined,
+            'color': const Color(0xFF8B5CF6),
+          },
         ];
         break;
       default:
@@ -1518,6 +1618,78 @@ class _InstitutionWorkspaceScreenState
     return badge;
   }
 
+  String? _resolvePartnerLogo(String title, Map<String, dynamic> meta) {
+    if ((meta['logo_asset'] ?? '').toString().isNotEmpty) {
+      return meta['logo_asset'].toString();
+    }
+    if ((meta['logo_url'] ?? '').toString().isNotEmpty) {
+      return meta['logo_url'].toString();
+    }
+    final t = title.toLowerCase();
+    if (t.contains('google')) return 'assets/partners/google.png';
+    if (t.contains('animasi') || t.contains('animation')) return 'assets/partners/animasi_nusantara.png';
+    if (t.contains('pixel') || t.contains('creative') || t.contains('desain grafis')) return 'assets/partners/pixel_creative.png';
+    if (t.contains('svara') || t.contains('audio') || t.contains('sound') || t.contains('musik')) return 'assets/partners/svara_audio.png';
+    if (t.contains('cakrawala') || t.contains('media') || t.contains('siber') || t.contains('broadcast')) return 'assets/partners/cakrawala_media.png';
+    if (t.contains('adgi') || t.contains('desainer grafis indonesia')) return 'assets/partners/adgi.png';
+    if (t.contains('game') || t.contains('guild') || t.contains('developer')) return 'assets/partners/game_guild.png';
+    return null;
+  }
+
+  Widget _buildPartnerLogoWidget(String? logoPath, String initials, List<Color> gradientColors) {
+    if (logoPath != null && logoPath.isNotEmpty) {
+      if (logoPath.startsWith('http://') || logoPath.startsWith('https://')) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(9),
+          child: Image.network(
+            logoPath,
+            width: 38,
+            height: 38,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => _buildMonogramFallback(initials, gradientColors),
+          ),
+        );
+      }
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(9),
+        child: Image.asset(
+          logoPath,
+          width: 38,
+          height: 38,
+          fit: BoxFit.contain,
+          errorBuilder: (_, _, _) => _buildMonogramFallback(initials, gradientColors),
+        ),
+      );
+    }
+    return _buildMonogramFallback(initials, gradientColors);
+  }
+
+  Widget _buildMonogramFallback(String initials, List<Color> gradientColors) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: 15,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPartnerCard(Map<String, dynamic> record, bool isDark) {
     final meta = _metadata(record);
     final status = record['status']?.toString().toLowerCase() ?? 'active';
@@ -1584,24 +1756,36 @@ class _InstitutionWorkspaceScreenState
     }
 
     // Status styling
-    final isPublishedOrActive = status == 'active' || status == 'published';
+    final isPublishedOrActive = status == 'active' || status == 'published' || status == 'approved';
+    final isPending = status == 'pending';
     final isDraft = status == 'draft';
+    final isRejected = status == 'rejected';
+
     final Color statusBg = isPublishedOrActive
         ? const Color(0xFFECFDF5)
-        : (isDraft ? const Color(0xFFFFFBEB) : const Color(0xFFF1F5F9));
+        : (isPending || isDraft
+            ? const Color(0xFFFFFBEB)
+            : (isRejected ? const Color(0xFFFEF2F2) : const Color(0xFFF1F5F9)));
     final Color statusBorder = isPublishedOrActive
         ? const Color(0xFFA7F3D0)
-        : (isDraft ? const Color(0xFFFDE68A) : const Color(0xFFCBD5E1));
+        : (isPending || isDraft
+            ? const Color(0xFFFDE68A)
+            : (isRejected ? const Color(0xFFFECACA) : const Color(0xFFCBD5E1)));
     final Color statusDotColor = isPublishedOrActive
         ? const Color(0xFF059669)
-        : (isDraft ? const Color(0xFFD97706) : const Color(0xFF64748B));
+        : (isPending || isDraft
+            ? const Color(0xFFD97706)
+            : (isRejected ? const Color(0xFFDC2626) : const Color(0xFF64748B)));
     final String statusText = isPublishedOrActive
         ? 'MoU Aktif / Siap Kerjasama'
-        : (isDraft ? 'Tahap Inisiasi MoU' : 'Arsip Kemitraan');
+        : (isPending
+            ? 'Menunggu Persetujuan Corporate'
+            : (isDraft ? 'Tahap Inisiasi MoU' : (isRejected ? 'Pengajuan Ditolak' : 'Arsip Kemitraan')));
 
     final initials = _getPartnerMonogram(title);
     final gradientColors = _getPartnerGradient(category, title);
     final categoryIcon = _getCategoryIcon(category);
+    final logoPath = _resolvePartnerLogo(title, meta);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -1628,35 +1812,25 @@ class _InstitutionWorkspaceScreenState
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Company Monogram Logo Badge
+                // Company Official Logo / Monogram Container
                 Container(
-                  width: 52,
-                  height: 52,
+                  width: 54,
+                  height: 54,
+                  padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: gradientColors,
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(14),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                     boxShadow: [
                       BoxShadow(
-                        color: gradientColors.first.withValues(alpha: 0.3),
-                        blurRadius: 8,
+                        color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                        blurRadius: 10,
                         offset: const Offset(0, 3),
                       ),
                     ],
                   ),
                   child: Center(
-                    child: Text(
-                      initials,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 18,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
+                    child: _buildPartnerLogoWidget(logoPath, initials, gradientColors),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -1865,6 +2039,25 @@ class _InstitutionWorkspaceScreenState
                   color: const Color(0xFFEAB308),
                   isDark: isDark,
                 ),
+                // MoU Uploaded Badge
+                if (meta['mou_url'] != null && meta['mou_url'].toString().isNotEmpty)
+                  _buildInfoBadge(
+                    icon: Icons.picture_as_pdf_rounded,
+                    label: 'MoU:',
+                    value: meta['mou_filename']?.toString() ?? 'Dokumen MoU Terlampir',
+                    color: const Color(0xFF16A34A),
+                    isDark: isDark,
+                    onTap: () => _openOfficialDocument({
+                      'title': 'Perjanjian Kerjasama (MoU) - $title',
+                      'description': desc,
+                      'metadata': {
+                        'url': meta['mou_url'],
+                        'doc_number': mouDisplay,
+                        'file_format': 'PDF',
+                        'partner_name': title,
+                      },
+                    }),
+                  ),
               ],
             ),
           ),
@@ -1894,6 +2087,41 @@ class _InstitutionWorkspaceScreenState
                 ),
                 const Spacer(),
                 // Right Action Buttons
+                if (meta['mou_url'] != null && meta['mou_url'].toString().isNotEmpty) ...[
+                  InkWell(
+                    onTap: () => _openOfficialDocument({
+                      'title': 'Perjanjian Kerjasama (MoU) - $title',
+                      'description': desc,
+                      'metadata': {
+                        'url': meta['mou_url'],
+                        'doc_number': mouDisplay,
+                        'file_format': 'PDF',
+                        'partner_name': title,
+                      },
+                    }),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFBBF7D0)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.picture_as_pdf_rounded, size: 14, color: Color(0xFF16A34A)),
+                          SizedBox(width: 5),
+                          Text(
+                            'Buka Dokumen MoU',
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF16A34A)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 if (website.isNotEmpty) ...[
                   InkWell(
                     onTap: () => _launchUrl(website),
@@ -1974,128 +2202,696 @@ class _InstitutionWorkspaceScreenState
               ],
             ),
           ),
+
+          // 5. CORPORATE APPROVAL / PENDING BANNER
+          if (isPending)
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.pending_actions_rounded, color: Color(0xFFD97706), size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _isCorporate
+                              ? 'Pengajuan Kemitraan Menunggu Persetujuan Anda'
+                              : 'Pengajuan Kemitraan Menunggu Persetujuan Pihak Corporate',
+                          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _isCorporate
+                              ? 'Setelah disetujui, status kemitraan aktif dan dokumen MoU otomatis diterbitkan ke menu "Dokumen & MoU".'
+                              : 'Saat pihak Corporate menyetujui, kemitraan aktif dan berkas MoU otomatis terbit di menu "Dokumen & MoU".',
+                          style: TextStyle(fontSize: 11, color: Colors.amber.shade900),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  OutlinedButton(
+                    onPressed: () => _rejectPartnerProposal(record),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFDC2626),
+                      side: const BorderSide(color: Color(0xFFFCA5A5)),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      visualDensity: VisualDensity.compact,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Tolak', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    icon: const Icon(Icons.check_circle_outline_rounded, size: 15),
+                    onPressed: () => _approvePartnerProposal(record),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF059669),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      visualDensity: VisualDensity.compact,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    label: Text(
+                      _isCorporate ? 'Setujui Kemitraan' : 'Setujui (Simulasi)',
+                      style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
   }
 
+  String? _resolveDocumentAsset(String title, Map<String, dynamic> meta) {
+    if ((meta['logo_asset'] ?? '').toString().isNotEmpty) {
+      return meta['logo_asset'].toString();
+    }
+    final t = title.toLowerCase();
+    final cat = (meta['category'] ?? '').toString().toLowerCase();
+
+    // 1. BAN-PT & Akreditasi
+    if (t.contains('ban-pt') || t.contains('akreditasi') || cat.contains('akreditasi') || t.contains('unggul')) {
+      return 'assets/ban_pt.png';
+    }
+
+    // 2. Kampus Merdeka & MoU Kemitraan Kampus DUDI
+    if (t.contains('kampus') || t.contains('dudi') || t.contains('mbkm') || t.contains('kemitraan kampus') || cat.contains('dudi') || t.contains('mou induk')) {
+      return 'assets/kampus_merdeka.png';
+    }
+
+    // 3. Partner specific MoU
+    if (t.contains('google')) return 'assets/partners/google.png';
+    if (t.contains('adgi')) return 'assets/partners/adgi.png';
+    if (t.contains('animasi')) return 'assets/partners/animasi_nusantara.png';
+    if (t.contains('pixel')) return 'assets/partners/pixel_creative.png';
+    if (t.contains('cakrawala')) return 'assets/partners/cakrawala_media.png';
+    if (t.contains('game')) return 'assets/partners/game_guild.png';
+    if (t.contains('svara')) return 'assets/partners/svara_audio.png';
+
+    // 4. Kemendikbud & Pedoman Teknis PKL
+    if (t.contains('kemendikbud') || t.contains('pedoman') || t.contains('sk ') || t.contains('panduan') || t.contains('kurikulum')) {
+      return 'assets/kemendikbud.png';
+    }
+
+    return null;
+  }
+
   Widget _buildDocumentCard(Map<String, dynamic> record, bool isDark) {
     final meta = _metadata(record);
-    final status = record['status']?.toString() ?? 'published';
-    final col = _statusColor(status);
+    final status = record['status']?.toString().toLowerCase() ?? 'published';
+    final title = record['title']?.toString() ?? 'Dokumen Resmi Legalitas';
+    final desc = record['description']?.toString() ?? '';
+    final titleLower = title.toLowerCase();
+
+    // 1. Resolve Document Category & Theme Accent
+    final String category;
+    final Color catColor;
+    final List<Color> catGradient;
+    final IconData catIcon;
+
+    if (titleLower.contains('akreditasi') || titleLower.contains('ban-pt')) {
+      category = 'Akreditasi Institusi (BAN-PT)';
+      catColor = const Color(0xFF059669); // Emerald
+      catGradient = const [Color(0xFF059669), Color(0xFF10B981)];
+      catIcon = Icons.verified_rounded;
+    } else if (titleLower.contains('mou') || titleLower.contains('perjanjian') || titleLower.contains('kemitraan')) {
+      category = 'MoU Kerjasama Kemitraan DUDI';
+      catColor = const Color(0xFF2563EB); // Royal Blue
+      catGradient = const [Color(0xFF2563EB), Color(0xFF3B82F6)];
+      catIcon = Icons.handshake_rounded;
+    } else if (titleLower.contains('pedoman') || titleLower.contains('panduan') || titleLower.contains('mbkm') || titleLower.contains('pkl')) {
+      category = 'Pedoman Teknis PKL & MBKM';
+      catColor = const Color(0xFFD97706); // Amber
+      catGradient = const [Color(0xFFD97706), Color(0xFFF59E0B)];
+      catIcon = Icons.menu_book_rounded;
+    } else {
+      category = meta['category']?.toString() ?? 'Dokumen Resmi Legalitas';
+      catColor = const Color(0xFF7C3AED); // Purple
+      catGradient = const [Color(0xFF7C3AED), Color(0xFF8B5CF6)];
+      catIcon = Icons.gavel_rounded;
+    }
+
+    // 2. Resolve Official Authority Name
+    final String authority;
+    if (titleLower.contains('ban-pt') || titleLower.contains('akreditasi')) {
+      authority = 'Badan Akreditasi Nasional Perguruan Tinggi (BAN-PT)';
+    } else if (titleLower.contains('kampus merdeka') || titleLower.contains('dudi') || titleLower.contains('mou')) {
+      authority = 'Kementerian Pendidikan, Kebudayaan, Riset, & Teknologi (DUDI)';
+    } else if (titleLower.contains('pedoman') || titleLower.contains('mbkm')) {
+      authority = 'Direktorat Jenderal Pendidikan Vokasi & MBKM';
+    } else {
+      authority = 'Sekretariat Instansi Resmi Kreavana';
+    }
+
+    // 3. Document Registration Number
+    var docNumber = meta['document_number']?.toString() ??
+        meta['sk_number']?.toString() ??
+        meta['doc_number']?.toString() ??
+        meta['nomor_dokumen']?.toString() ??
+        '';
+    if (docNumber.isEmpty) {
+      if (titleLower.contains('mou') || titleLower.contains('kemitraan')) {
+        docNumber = '001/MOU-ISRK/DIR/2025';
+      } else if (titleLower.contains('ban-pt') || titleLower.contains('akreditasi')) {
+        docNumber = '412/SK/BAN-PT/Ak/PT/2024';
+      } else if (titleLower.contains('pedoman')) {
+        docNumber = '088/JUKNIS-VOKASI/2026';
+      } else {
+        docNumber = '027/SPK-KREAVANA/2026';
+      }
+    }
+
+    // 4. Validity Date / Period
+    var validUntil = meta['valid_until']?.toString() ??
+        meta['document_date']?.toString() ??
+        meta['tanggal']?.toString() ??
+        '';
+    if (validUntil.isEmpty) {
+      if (titleLower.contains('mou') || titleLower.contains('kemitraan')) {
+        validUntil = 'Berlaku s/d 31 Des 2028';
+      } else if (titleLower.contains('ban-pt')) {
+        validUntil = 'Berlaku s/d 15 Agt 2029 (5 Tahun)';
+      } else if (titleLower.contains('pedoman')) {
+        validUntil = 'TA 2025/2026';
+      } else {
+        validUntil = 'Aktif & Sah Berlaku';
+      }
+    } else if (!validUntil.toLowerCase().contains('berlaku') && !validUntil.toLowerCase().contains('ta ')) {
+      validUntil = 'Berlaku s/d $validUntil';
+    }
+
+    // 5. File format and size
+    final fileFormat = meta['file_format']?.toString() ?? 'PDF';
+    final fileSize = meta['file_size']?.toString() ??
+        (titleLower.contains('pedoman') ? '48 Halaman' : '2.4 MB');
+
+    // 6. Grade / Predikat (for Accreditation)
+    final grade = meta['grade']?.toString() ??
+        (titleLower.contains('unggul') ? 'Predikat Unggul (A)' : '');
+
+    // 7. Status styling
+    final isPublished = status == 'published' || status == 'active';
+    final Color statusBg = isPublished ? const Color(0xFFECFDF5) : const Color(0xFFFFFBEB);
+    final Color statusBorder = isPublished ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A);
+    final Color statusTextCol = isPublished ? const Color(0xFF059669) : const Color(0xFFD97706);
+    final String statusLabel = isPublished ? 'Tervalidasi / Terbit' : 'Draft / Dalam Proses';
+
+    // 8. Logo Asset
+    final assetPath = _resolveDocumentAsset(title, meta);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+          color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.25 : 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: catColor.withValues(alpha: isDark ? 0.08 : 0.03),
+            blurRadius: 28,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _openOfficialDocument(record),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.verified_user_outlined, color: Color(0xFF10B981), size: 24),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
+              // ── Header & Core Information ──
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(6),
+                    // Official Authority Logo / Asset Badge
+                    Container(
+                      width: 58,
+                      height: 58,
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: const Color(0xFFE2E8F0),
+                          width: 1.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
                           ),
-                          child: Text(
-                            meta['category'] ?? 'Dokumen Resmi',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF10B981),
+                          BoxShadow(
+                            color: catColor.withValues(alpha: 0.16),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: assetPath != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.asset(
+                                assetPath,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, _, _) => Center(
+                                  child: Icon(catIcon, color: catColor, size: 28),
+                                ),
+                              ),
+                            )
+                          : Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: catGradient,
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: Icon(catIcon, color: Colors.white, size: 26),
+                              ),
+                            ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Core Details
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Badges Row (Category, Validity, Status)
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              // Category Pill
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: catColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: catColor.withValues(alpha: 0.25)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(catIcon, size: 13, color: catColor),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      category,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: catColor,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Validity Pill
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppTheme.cardDark2 : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.event_available_rounded,
+                                      size: 13,
+                                      color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      validUntil,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Status Badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: statusBg,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: statusBorder),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: statusTextCol,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      statusLabel,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: statusTextCol,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          // Title
+                          Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 16.5,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              letterSpacing: -0.3,
+                              height: 1.3,
                             ),
                           ),
+                          const SizedBox(height: 6),
+                          // Authority & Doc Number Row
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.account_balance_outlined,
+                                    size: 14,
+                                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    authority,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppTheme.cardDark2 : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+                                  ),
+                                ),
+                                child: Text(
+                                  'No: $docNumber',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontFamily: 'monospace',
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (desc.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              desc,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.5,
+                                color: isDark ? AppTheme.textMuted : const Color(0xFF475569),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Action Popup Menu
+                    PopupMenuButton<String>(
+                      icon: Icon(Icons.more_vert_rounded, color: Colors.grey.shade500),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      onSelected: (value) {
+                        if (value == 'open') {
+                          _openOfficialDocument(record);
+                        } else if (value == 'edit') {
+                          _openEditor(record);
+                        } else if (value == 'delete') {
+                          _deleteRecord(record);
+                        }
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(
+                          value: 'open',
+                          child: Row(
+                            children: [
+                              Icon(Icons.open_in_new_rounded, size: 16, color: Color(0xFF2563EB)),
+                              SizedBox(width: 8),
+                              Text('Buka Dokumen Resmi'),
+                            ],
+                          ),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          meta['document_date'] ?? '',
-                          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_outlined, size: 16, color: Color(0xFF2563EB)),
+                              SizedBox(width: 8),
+                              Text('Edit Berkas'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text('Hapus Permanen', style: TextStyle(color: Colors.red)),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      record['title']?.toString() ?? '',
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ],
+                ),
+              ),
+
+              // ── Legal Security / Accreditation Banner ──
+              if (grade.isNotEmpty) ...[
+                Container(
+                  margin: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFA7F3D0)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.verified_rounded, size: 16, color: Color(0xFF059669)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Sertifikasi Resmi Akreditasi Nasional: $grade • Terdaftar Resmi BAN-PT',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF065F46),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF059669),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'TERAKREDITASI',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else if (titleLower.contains('mou') || titleLower.contains('kemitraan')) ...[
+                Container(
+                  margin: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.security_rounded, size: 16, color: Color(0xFF2563EB)),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Perjanjian Kerjasama Sah Terintegrasi Ekosistem DUDI Vokasi & Kampus Merdeka',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1E40AF),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        'LEGAL & SAH',
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF2563EB),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // ── Divider ──
+              Divider(
+                height: 1,
+                color: isDark ? AppTheme.inputBorder : const Color(0xFFF1F5F9),
+              ),
+
+              // ── Action Footer ──
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.cardDark2.withValues(alpha: 0.4) : const Color(0xFFF8FAFC),
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(18)),
+                ),
+                child: Row(
+                  children: [
+                    // File specs & Digital seal pill
+                    Wrap(
+                      spacing: 10,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.picture_as_pdf_rounded, size: 15, color: Color(0xFFEF4444)),
+                            const SizedBox(width: 5),
+                            Text(
+                              '$fileFormat • $fileSize',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF475569),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.verified_user_outlined, size: 14, color: Color(0xFF10B981)),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'TTE Sah (BSrE)',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF059669),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    // Primary Interactive CTA Button
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _openOfficialDocument(record),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: catColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: catColor.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.open_in_new_rounded, size: 15, color: catColor),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Buka Dokumen Resmi',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: catColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-              PopupMenuButton<String>(
-                onSelected: (value) => value == 'edit' ? _openEditor(record) : _deleteRecord(record),
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'edit', child: Text('Edit Berkas')),
-                  PopupMenuItem(value: 'delete', child: Text('Hapus Permanen')),
-                ],
-              ),
             ],
           ),
-          if ((record['description']?.toString() ?? '').isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              record['description'].toString(),
-              style: TextStyle(fontSize: 13, height: 1.4, color: isDark ? AppTheme.textMuted : Colors.grey.shade700),
-            ),
-          ],
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: col.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircleAvatar(radius: 3, backgroundColor: col),
-                    const SizedBox(width: 5),
-                    Text(_statusLabel(status), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: col)),
-                  ],
-                ),
-              ),
-              TextButton.icon(
-                onPressed: () => _openOfficialDocument(record),
-                icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                label: const Text('Buka Dokumen Resmi'),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -2355,6 +3151,544 @@ class _InstitutionWorkspaceScreenState
     );
   }
 
+  Widget _buildShowcaseCard(Map<String, dynamic> record, bool isDark) {
+    final meta = _metadata(record);
+    final status = record['status']?.toString().toLowerCase() ?? 'published';
+    final title = record['title']?.toString() ?? 'Karya & Portofolio Siswa';
+    final desc = record['description']?.toString() ?? '';
+
+    // Smart student / creator name fallback
+    var creator = meta['creator_name']?.toString() ?? meta['creator']?.toString() ?? '';
+    if (creator.isEmpty) {
+      if (title.toLowerCase().contains('nusantara heritage')) {
+        creator = 'Arya Bagaskara & Tim Studio Animasi ISRK';
+      } else if (title.toLowerCase().contains('rempah nusantara')) {
+        creator = 'Nadia Safitri (Prodi DKV)';
+      } else if (title.toLowerCase().contains('kreasibudaya')) {
+        creator = 'Rian Pratama (Prodi Rekayasa Perangkat Lunak)';
+      } else {
+        creator = 'Siswa & Tim Vokasi Berbakat';
+      }
+    }
+
+    // Smart category / major
+    var category = meta['category']?.toString() ?? '';
+    if (category.isEmpty) {
+      if (title.toLowerCase().contains('animasi') || title.toLowerCase().contains('heritage')) {
+        category = 'Animasi 3D';
+      } else if (title.toLowerCase().contains('rempah') || title.toLowerCase().contains('kemasan') || title.toLowerCase().contains('branding')) {
+        category = 'Visual Branding & UI/UX';
+      } else if (title.toLowerCase().contains('flutter') || title.toLowerCase().contains('kreasibudaya') || title.toLowerCase().contains('mobile')) {
+        category = 'Mobile Engineering';
+      } else {
+        category = 'Kreatif Vokasi';
+      }
+    }
+
+    // Year / Angkatan
+    var year = meta['year']?.toString() ?? '';
+    if (year.isEmpty) {
+      if (title.toLowerCase().contains('kreasibudaya')) {
+        year = '2025';
+      } else {
+        year = '2026';
+      }
+    }
+
+    // Portfolio URL / Link
+    var portfolioUrl = meta['portfolio_url']?.toString() ?? meta['url']?.toString() ?? '';
+    if (portfolioUrl.isEmpty) {
+      if (title.toLowerCase().contains('nusantara heritage')) {
+        portfolioUrl = 'https://youtube.com/watch?v=demo-animasi-kreavana';
+      } else if (title.toLowerCase().contains('rempah nusantara')) {
+        portfolioUrl = 'https://behance.net/gallery/kreavana-student-showcase';
+      } else if (title.toLowerCase().contains('kreasibudaya')) {
+        portfolioUrl = 'https://github.com/kreavana-vokasi/kreasibudaya-mobile';
+      }
+    }
+
+    // Award
+    var award = meta['award']?.toString() ?? '';
+    if (award.isEmpty && title.toLowerCase().contains('nusantara heritage')) {
+      award = 'Best Animation Short Film Kreavana 2026';
+    }
+
+    // Discipline Color & Icon
+    final catLower = category.toLowerCase();
+    final Color discColor;
+    final List<Color> discGradient;
+    final IconData discIcon;
+
+    if (catLower.contains('animasi') || catLower.contains('3d') || catLower.contains('cgi')) {
+      discColor = const Color(0xFF6366F1); // Indigo
+      discGradient = const [Color(0xFF6366F1), Color(0xFF8B5CF6)];
+      discIcon = Icons.view_in_ar_rounded;
+    } else if (catLower.contains('brand') || catLower.contains('dkv') || catLower.contains('ui') || catLower.contains('ux') || catLower.contains('desain')) {
+      discColor = const Color(0xFFEC4899); // Rose / Pink
+      discGradient = const [Color(0xFFEC4899), Color(0xFFF43F5E)];
+      discIcon = Icons.palette_rounded;
+    } else if (catLower.contains('mobile') || catLower.contains('software') || catLower.contains('rpl') || catLower.contains('web') || catLower.contains('flutter') || catLower.contains('app')) {
+      discColor = const Color(0xFF0284C7); // Sky / Blue
+      discGradient = const [Color(0xFF0284C7), Color(0xFF2563EB)];
+      discIcon = Icons.phone_iphone_rounded;
+    } else if (catLower.contains('film') || catLower.contains('video') || catLower.contains('broadcast') || catLower.contains('media')) {
+      discColor = const Color(0xFFF59E0B); // Amber / Orange
+      discGradient = const [Color(0xFFF59E0B), Color(0xFFD97706)];
+      discIcon = Icons.movie_filter_rounded;
+    } else {
+      discColor = const Color(0xFF8B5CF6);
+      discGradient = const [Color(0xFF8B5CF6), Color(0xFF6366F1)];
+      discIcon = Icons.auto_awesome_rounded;
+    }
+
+    // Status styling
+    final isPublished = status == 'published' || status == 'active';
+    final Color statusBg = isPublished ? const Color(0xFFECFDF5) : const Color(0xFFFFFBEB);
+    final Color statusBorder = isPublished ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A);
+    final Color statusTextCol = isPublished ? const Color(0xFF059669) : const Color(0xFFD97706);
+    final String statusLabel = isPublished ? 'Tervalidasi / Siap Pameran' : 'Draft / Dalam Kurasi';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardBg : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.25 : 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: discColor.withValues(alpha: isDark ? 0.08 : 0.03),
+            blurRadius: 28,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            if (portfolioUrl.isNotEmpty) {
+              _launchUrl(portfolioUrl, record: record);
+            } else {
+              _openEditor(record);
+            }
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Top Header & Main Info ──
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Visual discipline icon badge
+                    Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: discGradient,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: discColor.withValues(alpha: 0.35),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Icon(discIcon, color: Colors.white, size: 28),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Core Details
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Tags Row (Discipline, Angkatan, Status)
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              // Discipline Pill
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: discColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: discColor.withValues(alpha: 0.25)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(discIcon, size: 13, color: discColor),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      category,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: discColor,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Angkatan Pill
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppTheme.cardDark2 : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.school_outlined,
+                                      size: 13,
+                                      color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      'Angkatan $year',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Status Badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: statusBg,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: statusBorder),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: statusTextCol,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      statusLabel,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: statusTextCol,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          // Title
+                          Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 16.5,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              letterSpacing: -0.3,
+                              height: 1.3,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          // Creator Credit Row
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.groups_outlined,
+                                size: 15,
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Kreator: ',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: isDark ? AppTheme.textMuted : const Color(0xFF64748B),
+                                ),
+                              ),
+                              Flexible(
+                                child: Text(
+                                  creator,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (desc.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              desc,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.5,
+                                color: isDark ? AppTheme.textMuted : const Color(0xFF475569),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Action Popup Menu
+                    PopupMenuButton<String>(
+                      icon: Icon(Icons.more_vert_rounded, color: Colors.grey.shade500),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          _openEditor(record);
+                        } else if (value == 'delete') {
+                          _deleteRecord(record);
+                        } else if (value == 'open' && portfolioUrl.isNotEmpty) {
+                          _launchUrl(portfolioUrl, record: record);
+                        }
+                      },
+                      itemBuilder: (_) => [
+                        if (portfolioUrl.isNotEmpty)
+                          const PopupMenuItem(
+                            value: 'open',
+                            child: Row(
+                              children: [
+                                Icon(Icons.open_in_new_rounded, size: 16, color: Color(0xFF2563EB)),
+                                SizedBox(width: 8),
+                                Text('Buka Portofolio'),
+                              ],
+                            ),
+                          ),
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_outlined, size: 16, color: Color(0xFF2563EB)),
+                              SizedBox(width: 8),
+                              Text('Edit Karya'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text('Hapus Karya', style: TextStyle(color: Colors.red)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // ── Prestasi / Award Banner (if available) ──
+              if (award.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFCD34D)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text('🏆', style: TextStyle(fontSize: 16)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          award,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF92400E),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'PRESTASI',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // ── Divider ──
+              Divider(
+                height: 1,
+                color: isDark ? AppTheme.inputBorder : const Color(0xFFF1F5F9),
+              ),
+
+              // ── Action Footer ──
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.cardDark2.withValues(alpha: 0.4) : const Color(0xFFF8FAFC),
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(18)),
+                ),
+                child: Row(
+                  children: [
+                    // Info badge
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          portfolioUrl.isNotEmpty ? Icons.link_rounded : Icons.verified_outlined,
+                          size: 15,
+                          color: const Color(0xFF64748B),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          portfolioUrl.isNotEmpty ? 'Tautan Portofolio Terhubung' : 'Terverifikasi Tim Vokasi',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    // Primary Interactive CTA Button
+                    if (portfolioUrl.isNotEmpty) ...[
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _launchUrl(portfolioUrl, record: record),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: discColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: discColor.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  portfolioUrl.contains('youtube')
+                                      ? Icons.play_circle_fill_rounded
+                                      : (portfolioUrl.contains('github')
+                                          ? Icons.code_rounded
+                                          : Icons.open_in_new_rounded),
+                                  size: 15,
+                                  color: discColor,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  portfolioUrl.contains('youtube')
+                                      ? 'Tonton Video Karya'
+                                      : (portfolioUrl.contains('github')
+                                          ? 'Lihat Source Code'
+                                          : 'Buka Portofolio Karya ↗'),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: discColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _openEditor(record),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.edit_outlined, size: 14, color: Color(0xFF475569)),
+                                SizedBox(width: 5),
+                                Text(
+                                  'Kelola Karya',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF475569),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildRecordCard(Map<String, dynamic> record, bool isDark) {
     switch (widget.resourceType) {
       case 'tenders':
@@ -2367,6 +3701,8 @@ class _InstitutionWorkspaceScreenState
         return _buildBudgetCard(record, isDark);
       case 'reports':
         return _buildReportCard(record, isDark);
+      case 'showcases':
+        return _buildShowcaseCard(record, isDark);
     }
 
     // Default card for non-corporate or other types
@@ -2819,6 +4155,20 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
   late String _status;
   bool _isSaving = false;
 
+  // Corporate Search State
+  Map<String, dynamic>? _selectedCorporate;
+  List<Map<String, dynamic>> _corporateList = [];
+  bool _isLoadingCorporates = false;
+  final _corpSearchController = TextEditingController();
+  bool _showCorpDropdown = false;
+
+  // MoU Upload State
+  PlatformFile? _pickedMouFile;
+  String? _mouUrl;
+  String? _mouFilename;
+  String? _mouFilesize;
+  bool _isUploadingMou = false;
+
   @override
   void initState() {
     super.initState();
@@ -2836,21 +4186,126 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     final currentStatus = existing?['status']?.toString();
     _status = (currentStatus != null && widget.statuses.contains(currentStatus))
         ? currentStatus
-        : (widget.statuses.isNotEmpty ? widget.statuses.first : 'draft');
+        : (widget.resourceType == 'partners' && existing == null
+            ? 'pending'
+            : (widget.statuses.isNotEmpty ? widget.statuses.first : 'draft'));
+
+    if (widget.resourceType == 'partners') {
+      _fetchCorporates('');
+      if (meta['corporate_user_id'] != null) {
+        _selectedCorporate = {
+          'id': meta['corporate_user_id'],
+          'name': meta['corporate_name'] ?? existing?['title'],
+          'username': meta['corporate_username'] ?? '',
+          'avatar_url': meta['corporate_avatar'],
+        };
+      }
+      _mouUrl = meta['mou_url']?.toString();
+      _mouFilename = meta['mou_filename']?.toString();
+      _mouFilesize = meta['mou_filesize']?.toString();
+    }
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _corpSearchController.dispose();
     for (final c in _controllers.values) {
       c.dispose();
     }
     super.dispose();
   }
 
+  Future<void> _fetchCorporates([String query = '']) async {
+    if (!mounted) return;
+    setState(() => _isLoadingCorporates = true);
+    try {
+      final res = await ApiService.get('institution/resources/corporate-search?q=${Uri.encodeComponent(query)}');
+      if (!mounted) return;
+      if (res['status'] == true && res['data'] is List) {
+        setState(() {
+          _corporateList = List<Map<String, dynamic>>.from(res['data']);
+          _isLoadingCorporates = false;
+        });
+      } else {
+        setState(() => _isLoadingCorporates = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingCorporates = false);
+    }
+  }
+
+  Future<void> _pickMouFile() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx'],
+      );
+
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+
+      setState(() {
+        _pickedMouFile = file;
+        _isUploadingMou = true;
+      });
+
+      final fileBytes = await file.readAsBytes();
+      if (fileBytes.isEmpty) {
+        if (!mounted) return;
+        setState(() => _isUploadingMou = false);
+        AppSweetAlert.error(context, 'Berkas kosong atau tidak dapat dibaca.');
+        return;
+      }
+
+      final formData = FormData();
+      formData.files.add(
+        MapEntry(
+          'mou_file',
+          MultipartFile.fromBytes(fileBytes, filename: file.name),
+        ),
+      );
+
+      final res = await ApiService.postFormData('institution/resources/upload-mou', formData);
+      if (!mounted) return;
+      setState(() => _isUploadingMou = false);
+
+      if (res['status'] == true && res['data'] != null) {
+        final data = res['data'];
+        setState(() {
+          _mouUrl = data['url']?.toString();
+          _mouFilename = data['filename']?.toString() ?? file.name;
+          _mouFilesize = data['filesize']?.toString();
+        });
+        AppSweetAlert.success(
+          context,
+          'Berkas MoU "${file.name}" berhasil diunggah.',
+          title: 'MoU Terunggah',
+        );
+      } else {
+        AppSweetAlert.error(
+          context,
+          res['message']?.toString() ?? 'Gagal mengunggah dokumen MoU ke server.',
+          title: 'Gagal Unggah',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUploadingMou = false);
+        AppSweetAlert.error(
+          context,
+          'Terjadi kendala saat memilih berkas: $e',
+          title: 'Gagal Membaca Berkas',
+        );
+      }
+    }
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _isSaving) return;
+
+    final isPartnerResource = widget.resourceType == 'partners';
 
     final payload = <String, dynamic>{
       'resource_type': widget.resourceType,
@@ -2861,6 +4316,21 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
         for (final field in widget.fields)
           if ((_controllers[field.key]?.text.trim() ?? '').isNotEmpty)
             field.key: _controllers[field.key]!.text.trim(),
+        if (_selectedCorporate != null) ...{
+          'corporate_user_id': _selectedCorporate!['id'],
+          'corporate_name': _selectedCorporate!['name'],
+          'corporate_username': _selectedCorporate!['username'],
+          'corporate_avatar': _selectedCorporate!['avatar_url'],
+        },
+        if (_mouUrl != null && _mouUrl!.isNotEmpty) ...{
+          'mou_url': _mouUrl,
+          'mou_filename': _mouFilename ?? _pickedMouFile?.name,
+          'mou_filesize': _mouFilesize,
+        },
+        if (isPartnerResource && widget.existing == null) ...{
+          'submission_date': DateTime.now().toIso8601String().split('T').first,
+          'approval_status': 'pending',
+        },
       },
     };
 
@@ -3105,8 +4575,9 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     required Widget child,
     List<String> chips = const [],
     TextEditingController? targetController,
+    double? minHeaderHeight,
   }) {
-    return Column(
+    final headerContent = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -3131,6 +4602,19 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
             height: 1.3,
           ),
         ),
+      ],
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (minHeaderHeight != null)
+          ConstrainedBox(
+            constraints: BoxConstraints(minHeight: minHeaderHeight),
+            child: headerContent,
+          )
+        else
+          headerContent,
         const SizedBox(height: 8),
         child,
         if (chips.isNotEmpty && targetController != null) ...[
@@ -3183,7 +4667,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     );
   }
 
-  Widget _buildFieldWidget(_WorkspaceField field) {
+  Widget _buildFieldWidget(_WorkspaceField field, {double? minHeaderHeight}) {
     final meta = _getFieldMeta(field);
     final ctrl = _controllers[field.key]!;
 
@@ -3192,6 +4676,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
       caption: meta['caption'] as String,
       chips: (meta['chips'] as List<dynamic>).cast<String>(),
       targetController: ctrl,
+      minHeaderHeight: minHeaderHeight,
       child: TextFormField(
         controller: ctrl,
         style: TextStyle(
@@ -3210,60 +4695,63 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     );
   }
 
-  Widget _buildStatusDropdown() {
+  Widget _buildStatusDropdown({double? minHeaderHeight}) {
+    final effectiveStatuses = widget.resourceType == 'partners'
+        ? (widget.statuses.contains('pending') ? widget.statuses : ['pending', ...widget.statuses])
+        : widget.statuses;
+
     return _buildFieldWithHeader(
       label: 'Status Kemitraan & Akses *',
-      caption: 'Tentukan status keaktifan mitra untuk keperluan penempatan magang siswa.',
+      caption: 'Tentukan status keaktifan mitra penempatan magang siswa.',
+      minHeaderHeight: minHeaderHeight,
       child: DropdownButtonFormField<String>(
+        isExpanded: true,
         initialValue: _status,
         dropdownColor: _isDark ? const Color(0xFF1E1B32) : Colors.white,
         style: TextStyle(
           fontSize: 13,
           color: _isDark ? Colors.white : const Color(0xFF0F172A),
         ),
+        icon: Icon(Icons.arrow_drop_down_rounded, color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
         decoration: _inputDecoration(
           hint: 'Pilih status...',
           prefixIcon: Icons.verified_user_outlined,
         ),
-        items: widget.statuses
+        items: effectiveStatuses
             .map(
-              (value) => DropdownMenuItem(
-                value: value,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 9,
-                      height: 9,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: value == 'active' || value == 'published'
-                            ? Colors.green.shade600
-                            : (value == 'draft' ? Colors.amber.shade600 : const Color(0xFF64748B)),
+              (value) {
+                final (dotColor, badgeText) = switch (value) {
+                  'active' || 'published' => (Colors.green.shade600, 'Aktif / Tervalidasi'),
+                  'pending' => (Colors.amber.shade700, 'Menunggu Persetujuan'),
+                  'draft' => (Colors.blue.shade600, 'Draf Inisiasi'),
+                  _ => (const Color(0xFF64748B), 'Diarsipkan'),
+                };
+
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: dotColor,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      widget.statusLabel(value),
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: _isDark ? Colors.white : const Color(0xFF0F172A),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          badgeText,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: _isDark ? Colors.white : const Color(0xFF1E293B),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      value == 'active' || value == 'published'
-                          ? '(Siap Kerjasama)'
-                          : (value == 'draft' ? '(Tahap Inisiasi)' : '(Arsip)'),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: _isDark ? const Color(0xFF94A3B8) : Colors.grey.shade500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             )
             .toList(),
         onChanged: (value) {
@@ -3272,6 +4760,373 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
           }
         },
       ),
+    );
+  }
+
+  Widget _buildCorporateSearchSection() {
+    return _buildFieldCardContainer(
+      title: 'Cari & Hubungkan Akun Corporate Mitra *',
+      subtitle: 'Tautkan pengajuan kemitraan ini ke entitas akun Corporate / Perusahaan resmi di Kreavana.',
+      icon: Icons.domain_verification_rounded,
+      children: [
+        if (_selectedCorporate != null) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFBFDBFE)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      _selectedCorporate!['name'] != null && _selectedCorporate!['name'].toString().isNotEmpty
+                          ? _selectedCorporate!['name'].toString().substring(0, 1).toUpperCase()
+                          : 'C',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              _selectedCorporate!['name']?.toString() ?? 'Perusahaan Mitra',
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF0F172A)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDBEAFE),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'Corporate Terverifikasi',
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF1D4ED8)),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '@${_selectedCorporate!['username'] ?? 'corporate'} • ${_selectedCorporate!['email'] ?? 'Akun Resmi Industri'}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      ),
+                    ],
+                  ),
+                ),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.swap_horiz_rounded, size: 16),
+                  label: const Text('Ganti', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF2563EB),
+                    side: const BorderSide(color: Color(0xFF93C5FD)),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    visualDensity: VisualDensity.compact,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _selectedCorporate = null;
+                      _corpSearchController.clear();
+                      _showCorpDropdown = true;
+                    });
+                    _fetchCorporates('');
+                  },
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+          TextField(
+            controller: _corpSearchController,
+            onChanged: (val) {
+              _fetchCorporates(val);
+              if (!_showCorpDropdown) setState(() => _showCorpDropdown = true);
+            },
+            onTap: () {
+              if (!_showCorpDropdown) {
+                setState(() => _showCorpDropdown = true);
+                if (_corporateList.isEmpty) _fetchCorporates('');
+              }
+            },
+            decoration: _inputDecoration(
+              hint: 'Ketik nama PT, CV, studio agensi, atau @username corporate...',
+              prefixIcon: Icons.search_rounded,
+              suffixIcon: _isLoadingCorporates
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                    )
+                  : (_corpSearchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear_rounded, size: 18),
+                          onPressed: () {
+                            _corpSearchController.clear();
+                            _fetchCorporates('');
+                          },
+                        )
+                      : null),
+            ),
+          ),
+          if (_showCorpDropdown && _corporateList.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              constraints: const BoxConstraints(maxHeight: 200),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: _corporateList.length,
+                separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                itemBuilder: (context, idx) {
+                  final corp = _corporateList[idx];
+                  final corpName = corp['name']?.toString() ?? 'Perusahaan';
+                  final corpUname = corp['username']?.toString() ?? '';
+                  final corpEmail = corp['email']?.toString() ?? '';
+                  final initials = corpName.isNotEmpty ? corpName.substring(0, 1).toUpperCase() : 'C';
+
+                  return ListTile(
+                    dense: true,
+                    visualDensity: VisualDensity.compact,
+                    leading: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: const Color(0xFF2563EB),
+                      child: Text(
+                        initials,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                    ),
+                    title: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            corpName,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.verified_rounded, size: 14, color: Color(0xFF2563EB)),
+                      ],
+                    ),
+                    subtitle: Text(
+                      '@$corpUname • $corpEmail',
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF94A3B8)),
+                    onTap: () {
+                      setState(() {
+                        _selectedCorporate = corp;
+                        _showCorpDropdown = false;
+                        if (_titleController.text.trim().isEmpty) {
+                          _titleController.text = corpName;
+                        }
+                        if (_controllers['contact'] != null && _controllers['contact']!.text.trim().isEmpty) {
+                          _controllers['contact']!.text = corpEmail.isNotEmpty ? corpEmail : (corp['phone']?.toString() ?? '');
+                        }
+                      });
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ],
+      ],
+    );
+  }
+
+  Widget _buildMouUploadSection() {
+    final hasFile = _pickedMouFile != null || (_mouUrl != null && _mouUrl!.isNotEmpty);
+    final fileName = _pickedMouFile?.name ?? _mouFilename ?? 'Dokumen-MoU-Kemitraan.pdf';
+    final fileSize = _pickedMouFile != null
+        ? (_pickedMouFile!.size >= 1048576
+            ? '${(_pickedMouFile!.size / 1048576).toStringAsFixed(1)} MB'
+            : '${(_pickedMouFile!.size / 1024).toStringAsFixed(0)} KB')
+        : (_mouFilesize ?? 'Dokumen Digital');
+
+    return _buildFieldCardContainer(
+      title: 'Unggah Berkas Perjanjian Kerjasama (MoU / PKS)',
+      subtitle: 'Upload draf resmi nota kesepahaman yang akan diajukan ke Corporate untuk disetujui.',
+      icon: Icons.upload_file_rounded,
+      children: [
+        if (hasFile) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFBBF7D0)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF86EFAC)),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.picture_as_pdf_rounded, color: Color(0xFF16A34A), size: 24),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              fileName,
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: Color(0xFF14532D)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.check_circle_rounded, size: 11, color: Color(0xFF16A34A)),
+                                SizedBox(width: 3),
+                                Text('Siap Diajukan', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$fileSize • Berkas Resmi Terlampir',
+                        style: TextStyle(fontSize: 11.5, color: Colors.green.shade800),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Hapus / Ganti Berkas',
+                  icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFFDC2626)),
+                  onPressed: () {
+                    setState(() {
+                      _pickedMouFile = null;
+                      _mouUrl = null;
+                      _mouFilename = null;
+                      _mouFilesize = null;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+          InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: _isUploadingMou ? null : _pickMouFile,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: const Color(0xFFCBD5E1),
+                  width: 1.5,
+                ),
+              ),
+              child: Column(
+                children: [
+                  if (_isUploadingMou) ...[
+                    const SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF2563EB)),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text('Mengunggah dokumen MoU ke server...', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF2563EB))),
+                  ] else ...[
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                      ),
+                      child: const Icon(Icons.cloud_upload_outlined, color: Color(0xFF2563EB), size: 24),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Klik untuk memilih berkas MoU (PDF / DOC / DOCX)',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Format yang didukung: .pdf, .doc, .docx (Maksimal 15 MB)',
+                      style: TextStyle(fontSize: 11.5, color: Colors.grey.shade500),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            const Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFF64748B)),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Setelah disetujui Corporate, berkas MoU ini akan otomatis terbit dan masuk ke menu "Dokumen & MoU".',
+                style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -3416,8 +5271,9 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                 final isWide = constraints.maxWidth >= 540;
 
                 final secondaryWidgets = <Widget>[
-                  for (final field in widget.fields) _buildFieldWidget(field),
-                  _buildStatusDropdown(),
+                  for (final field in widget.fields)
+                    _buildFieldWidget(field, minHeaderHeight: isWide ? 42.0 : null),
+                  _buildStatusDropdown(minHeaderHeight: isWide ? 42.0 : null),
                 ];
 
                 final gridRows = <Widget>[];
@@ -3479,7 +5335,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                           Expanded(
                             child: Text(
                               isPartnerResource
-                                  ? 'Panduan: Masukkan nama resmi instansi/studio mitra beserta kontak PIC. Data ini akan otomatis tampil di direktori kemitraan sekolah dan dapat ditautkan ke program magang siswa.'
+                                  ? 'Panduan: Cari & hubungkan akun Corporate mitra Kreavana (atau ketik nama perusahaan), lengkapi kontak & spesifikasi, serta unggah berkas draf MoU.'
                                   : 'Panduan: Lengkapi seluruh kolom wajib bertanda bintang (*) untuk menjaga keabsahan arsip instansi.',
                               style: TextStyle(
                                 fontSize: 12,
@@ -3493,64 +5349,82 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Section 1: Profil & Identitas Utama
-                    _buildFieldCardContainer(
-                      title: isPartnerResource ? 'Profil & Identitas Mitra Industri' : 'Informasi Utama & Pokok',
-                      subtitle: isPartnerResource
-                          ? 'Nama badan usaha resmi dan ringkasan bentuk kemitraan'
-                          : 'Judul dan penjelasan umum mengenai arsip',
-                      icon: Icons.business_rounded,
-                      children: [
-                        _buildFieldWithHeader(
-                          label: isPartnerResource ? 'Nama Mitra Industri / Perusahaan *' : 'Nama / Judul Resmi *',
-                          caption: isPartnerResource
-                              ? 'Tuliskan nama lengkap badan usaha, CV, PT, studio, atau agensi rekanan.'
-                              : 'Nama identitas resmi dokumen atau aset.',
-                          child: TextFormField(
-                            controller: _titleController,
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              color: _isDark ? Colors.white : const Color(0xFF0F172A),
+                    // Corporate Account Selection (Partners Only)
+                    if (isPartnerResource) ...[
+                      _buildCorporateSearchSection(),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Section 1: Profil & Identitas Utama (Hanya untuk non-partner, karena mitra sudah ditangani oleh Corporate Selection)
+                    if (!isPartnerResource) ...[
+                      _buildFieldCardContainer(
+                        title: 'Informasi Utama & Pokok',
+                        subtitle: 'Judul dan penjelasan umum mengenai arsip',
+                        icon: Icons.business_rounded,
+                        children: [
+                          _buildFieldWithHeader(
+                            label: 'Nama / Judul Resmi *',
+                            caption: 'Nama identitas resmi dokumen atau aset.',
+                            child: TextFormField(
+                              controller: _titleController,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                color: _isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                              decoration: _inputDecoration(
+                                hint: 'Masukkan nama atau judul resmi...',
+                                prefixIcon: Icons.domain_rounded,
+                              ),
+                              validator: (value) =>
+                                  value == null || value.trim().isEmpty
+                                      ? 'Nama / Judul wajib diisi'
+                                      : null,
+                              ),
                             ),
-                            decoration: _inputDecoration(
-                              hint: isPartnerResource
-                                  ? 'Contoh: PT Studio Animasi Nusantara, Google Indonesia, Agensi Desain'
-                                  : 'Masukkan nama atau judul resmi...',
-                              prefixIcon: Icons.domain_rounded,
+                            const SizedBox(height: 16),
+                            _buildFieldWithHeader(
+                              label: 'Deskripsi / Ruang Lingkup',
+                              caption: 'Jelaskan ringkasan kebutuhan, spesifikasi, atau catatan penting.',
+                              child: TextFormField(
+                                controller: _descriptionController,
+                                minLines: 3,
+                                maxLines: 4,
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  color: _isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                                decoration: _inputDecoration(
+                                  hint: 'Jelaskan ringkasan kebutuhan, spesifikasi, atau catatan...',
+                                  prefixIcon: Icons.notes_rounded,
+                                ),
+                              ),
                             ),
-                            validator: (value) =>
-                                value == null || value.trim().isEmpty
-                                    ? 'Nama / Judul wajib diisi'
-                                    : null,
-                          ),
+                          ],
                         ),
                         const SizedBox(height: 16),
-                        _buildFieldWithHeader(
-                          label: isPartnerResource ? 'Deskripsi & Ruang Lingkup Kerjasama' : 'Deskripsi / Ruang Lingkup',
-                          caption: isPartnerResource
-                              ? 'Jelaskan profil singkat mitra dan bentuk kerjasama (misal: Tempat PKL magang siswa 6 bulan, guru tamu industri, uji kompetensi, atau rekrutmen).'
-                              : 'Jelaskan ringkasan kebutuhan, spesifikasi, atau catatan penting.',
-                          child: TextFormField(
-                            controller: _descriptionController,
-                            minLines: 3,
-                            maxLines: 4,
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              color: _isDark ? Colors.white : const Color(0xFF0F172A),
-                            ),
-                            decoration: _inputDecoration(
-                              hint: isPartnerResource
-                                  ? 'Contoh: Kerjasama strategis penempatan magang siswa SMK jurusan Animasi 3D dan DKV, penyelarasan kurikulum industri, dan sertifikasi kejuruan...'
-                                  : 'Jelaskan ringkasan kebutuhan, spesifikasi, atau catatan...',
-                              prefixIcon: Icons.notes_rounded,
+                      ],
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(height: 16),
+                          _buildFieldWithHeader(
+                            label: 'Deskripsi / Ruang Lingkup',
+                            caption: 'Jelaskan ringkasan kebutuhan, spesifikasi, atau catatan penting.',
+                            child: TextFormField(
+                              controller: _descriptionController,
+                              minLines: 3,
+                              maxLines: 4,
+                              decoration: _inputDecoration(
+                                hint: 'Jelaskan ringkasan kebutuhan, spesifikasi, atau catatan...',
+                                prefixIcon: Icons.notes_rounded,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                    ],
 
                     if (secondaryWidgets.isNotEmpty) ...[
-                      const SizedBox(height: 16),
                       // Section 2: Spesifikasi & Kontak (2 Columns)
                       _buildFieldCardContainer(
                         title: isPartnerResource ? 'Spesifikasi Industri & Kontak Penanggung Jawab' : 'Detail Spesifikasi & Publikasi',
@@ -3558,8 +5432,32 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                             ? 'Bidang keahlian mitra dan kontak resmi untuk koordinasi sekolah'
                             : 'Parameter pendukung dan status publikasi sistem',
                         icon: Icons.hub_outlined,
-                        children: gridRows,
+                        children: [
+                          ...gridRows,
+                          if (isPartnerResource) ...[
+                            const SizedBox(height: 16),
+                            _buildFieldWithHeader(
+                              label: 'Deskripsi & Ruang Lingkup Kerjasama (Opsional)',
+                              caption: 'Jelaskan ringkasan bentuk kerjasama, magang PKL siswa, guru tamu industri, atau kurikulum vokasi.',
+                              child: TextFormField(
+                                controller: _descriptionController,
+                                minLines: 2,
+                                maxLines: 4,
+                                decoration: _inputDecoration(
+                                  hint: 'Contoh: Kerjasama penempatan magang siswa SMK jurusan Animasi 3D dan DKV, penyelarasan kurikulum industri, dan uji kompetensi kejuruan...',
+                                  prefixIcon: Icons.notes_rounded,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
+                    ],
+
+                    // MoU Upload Section (Partners Only)
+                    if (isPartnerResource) ...[
+                      const SizedBox(height: 16),
+                      _buildMouUploadSection(),
                     ],
                   ],
                 );
@@ -3612,7 +5510,9 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
-                      : const Icon(Icons.check_circle_outline_rounded, size: 18),
+                      : (isPartnerResource && widget.existing == null
+                          ? const Icon(Icons.send_rounded, size: 17)
+                          : const Icon(Icons.check_circle_outline_rounded, size: 18)),
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF2563EB),
                     foregroundColor: Colors.white,
@@ -3622,8 +5522,12 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                   ),
                   onPressed: _isSaving ? null : _submit,
                   label: Text(
-                    _isSaving ? 'Menyimpan...' : (isPartnerResource ? 'Simpan Mitra Industri' : 'Simpan Data'),
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    _isSaving
+                        ? 'Memproses...'
+                        : (isPartnerResource
+                            ? (widget.existing == null ? 'Ajukan Kemitraan' : 'Simpan Perubahan')
+                            : 'Simpan Data'),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
               ],

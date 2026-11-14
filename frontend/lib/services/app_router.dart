@@ -3,9 +3,15 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/email_verification_screen.dart';
+import '../features/auth/services/auth_service.dart';
 import '../screens/main_navigation.dart';
 import '../models/user_model.dart';
 import '../screens/public_profile_screen.dart';
+import '../screens/profile_screen.dart';
+import '../screens/institution_workspace_screen.dart';
+import '../screens/tim_hak_akses_screen.dart';
+import '../screens/corporate_lowongan_screen.dart';
+import '../screens/buat_kebutuhan_screen.dart';
 import 'user_store.dart';
 import 'system_settings_service.dart';
 import 'auth_session_state.dart';
@@ -41,6 +47,25 @@ class AppRoutes {
   static const peluangProyek = '/peluang-proyek';
   static const kapasitasJadwal = '/kapasitas-jadwal';
   static const aiAssistant = '/ai';
+
+  // Institusi Pendidikan / Sekolah / Kampus
+  static const profilAkun = '/profil-akun';
+  static const profilInstitusi = '/profil-institusi';
+  static const timHakAkses = '/tim-hak-akses';
+  static const dokumenInstitusi = '/dokumen-institusi';
+  static const pengumumanInstitusi = '/pengumuman-institusi';
+  static const monitoringEvaluasi = '/monitoring-evaluasi';
+  static const laporanKegiatan = '/laporan-kegiatan';
+  static const karyaSiswa = '/karya-siswa';
+  static const mitraIndustri = '/mitra-industri';
+  static const realisasiAnggaran = '/realisasi-anggaran';
+
+  // Corporate / Perusahaan
+  static const lowonganCorporate = '/lowongan-corporate';
+  static const pengadaanVendor = '/pengadaan-vendor';
+
+  // Kebutuhan Proyek
+  static const buatKebutuhan = '/buat-kebutuhan';
 
   /// Index → URL mapping untuk pengguna reguler / kreator / klien
   static const Map<int, String> indexRouteMap = {
@@ -138,7 +163,7 @@ final GoRouter appRouter = GoRouter(
     final isAdmin = user != null && user.isAdmin;
 
     // Belum login & mencoba akses halaman terlindungi via URL bar → redirect ke /login
-    if ((user == null || isSignedOut) && !isPublic) {
+    if ((user == null || isSignedOut || user.isGuest) && !isPublic) {
       return AppRoutes.login;
     }
 
@@ -147,6 +172,23 @@ final GoRouter appRouter = GoRouter(
         !isSignedOut &&
         (currentPath == AppRoutes.login || currentPath == AppRoutes.register)) {
       return AppRoutes.beranda;
+    }
+
+    // Legacy URL aliases / redirect
+    if (currentPath == '/profil-sekolah') return AppRoutes.profilInstitusi;
+    if (currentPath == '/lowongan-magang' || currentPath == '/lowongan') {
+      return AppRoutes.lowonganCorporate;
+    }
+    if (currentPath == '/dokumen') return AppRoutes.dokumenInstitusi;
+    if (currentPath == '/laporan') return AppRoutes.laporanKegiatan;
+    if (currentPath == '/mitra-komunitas' || currentPath == '/mitra') {
+      return AppRoutes.mitraIndustri;
+    }
+    if (currentPath == '/tender-kolaborasi' || currentPath == '/tenders') {
+      return AppRoutes.pengadaanVendor;
+    }
+    if (currentPath == '/pengumuman' || currentPath == '/pengumuman-publik') {
+      return AppRoutes.pengumumanInstitusi;
     }
 
     // Proteksi module jika dinonaktifkan oleh administrator (non-admin dialihkan ke beranda)
@@ -168,6 +210,61 @@ final GoRouter appRouter = GoRouter(
       }
       if (currentPath == AppRoutes.wallet &&
           !SystemSettingsService.isWalletEnabled) {
+        return AppRoutes.beranda;
+      }
+    }
+
+    // ── RBAC & Route Permission Guards ──────────────────────────────────
+    // 1. Rute Khusus Administrator
+    const adminOnlyRoutes = [
+      AppRoutes.adminDashboard,
+      AppRoutes.adminVerification,
+      AppRoutes.adminResolution,
+      AppRoutes.adminSystemSettings,
+    ];
+    if (!isAdmin && adminOnlyRoutes.contains(currentPath)) {
+      return AppRoutes.beranda;
+    }
+
+    // 2. Rute Khusus Institusi Pendidikan / Sekolah
+    // Profil Institusi & Karya Siswa hanya untuk institusi/sekolah atau admin
+    if (!isAdmin) {
+      final isInst = user != null && user.isInstitution;
+      if ((currentPath == AppRoutes.profilInstitusi || currentPath == AppRoutes.karyaSiswa) && !isInst) {
+        return currentPath == AppRoutes.profilInstitusi ? AppRoutes.profil : AppRoutes.beranda;
+      }
+
+      // Pengadaan & Vendor DILARANG untuk Institusi (khusus Corporate / Pemerintah)
+      if (currentPath == AppRoutes.pengadaanVendor && isInst) {
+        return AppRoutes.beranda;
+      }
+    }
+
+    // 3. Rute Khusus Corporate / Perusahaan & Pemerintah
+    if (!isAdmin) {
+      final isCorp = user != null && user.isCorporate;
+      final isGov = user != null && user.isGovernment;
+      if (currentPath == AppRoutes.lowonganCorporate && !isCorp) {
+        return AppRoutes.beranda;
+      }
+      if (currentPath == AppRoutes.pengadaanVendor && !(isCorp || isGov)) {
+        return AppRoutes.beranda;
+      }
+    }
+
+    // 4. Rute Khusus Organisasi Resmi (Institusi, Corporate, Government, Admin)
+    const orgRoutes = [
+      AppRoutes.timHakAkses,
+      AppRoutes.dokumenInstitusi,
+      AppRoutes.pengumumanInstitusi,
+      AppRoutes.monitoringEvaluasi,
+      AppRoutes.laporanKegiatan,
+      AppRoutes.mitraIndustri,
+      AppRoutes.realisasiAnggaran,
+    ];
+    if (!isAdmin && orgRoutes.contains(currentPath)) {
+      final isOrg = user != null && (user.isInstitution || user.isCorporate || user.isGovernment);
+      if (!isOrg) {
         return AppRoutes.beranda;
       }
     }
@@ -256,6 +353,165 @@ final GoRouter appRouter = GoRouter(
             ? (_adminRouteIndexMap[AppRoutes.profil] ?? 0)
             : (_routeIndexMap[AppRoutes.profil] ?? 0);
         return MainNavigation(initialUser: user, initialIndex: initialIndex);
+      },
+    ),
+
+    // ── Dedicated Standalone Pages with RBAC ─────────────────────────────
+    GoRoute(
+      path: AppRoutes.profilAkun,
+      name: 'profil-akun',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return ProfileScreen(
+          user: user,
+          onUserUpdated: (u) => currentUserNotifier.value = u,
+          onLogout: () async {
+            await AuthService.logout();
+            appRouter.go(AppRoutes.login);
+          },
+          showSidebar: true,
+          isAccountProfileOnly: true,
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.profilInstitusi,
+      name: 'profil-institusi',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return ProfileScreen(
+          user: user,
+          onUserUpdated: (u) => currentUserNotifier.value = u,
+          onLogout: () async {
+            await AuthService.logout();
+            appRouter.go(AppRoutes.login);
+          },
+          showSidebar: true,
+          isInstitutionProfileOnly: true,
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.timHakAkses,
+      name: 'tim-hak-akses',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return TimHakAksesScreen(user: user);
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.dokumenInstitusi,
+      name: 'dokumen-institusi',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return InstitutionWorkspaceScreen(
+          user: user,
+          resourceType: 'documents',
+          onUserUpdated: (u) => currentUserNotifier.value = u,
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.pengumumanInstitusi,
+      name: 'pengumuman-institusi',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return InstitutionWorkspaceScreen(
+          user: user,
+          resourceType: 'announcements',
+          onUserUpdated: (u) => currentUserNotifier.value = u,
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.monitoringEvaluasi,
+      name: 'monitoring-evaluasi',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return InstitutionWorkspaceScreen(
+          user: user,
+          resourceType: 'monitoring',
+          onUserUpdated: (u) => currentUserNotifier.value = u,
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.laporanKegiatan,
+      name: 'laporan-kegiatan',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return InstitutionWorkspaceScreen(
+          user: user,
+          resourceType: 'reports',
+          onUserUpdated: (u) => currentUserNotifier.value = u,
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.karyaSiswa,
+      name: 'karya-siswa',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return InstitutionWorkspaceScreen(
+          user: user,
+          resourceType: 'showcases',
+          onUserUpdated: (u) => currentUserNotifier.value = u,
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.mitraIndustri,
+      name: 'mitra-industri',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return InstitutionWorkspaceScreen(
+          user: user,
+          resourceType: 'partners',
+          onUserUpdated: (u) => currentUserNotifier.value = u,
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.lowonganCorporate,
+      name: 'lowongan-corporate',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return CorporateLowonganScreen(
+          user: user,
+          onUserUpdated: (u) => currentUserNotifier.value = u,
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.pengadaanVendor,
+      name: 'pengadaan-vendor',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return InstitutionWorkspaceScreen(
+          user: user,
+          resourceType: 'tenders',
+          onUserUpdated: (u) => currentUserNotifier.value = u,
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.realisasiAnggaran,
+      name: 'realisasi-anggaran',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return InstitutionWorkspaceScreen(
+          user: user,
+          resourceType: 'budgets',
+          onUserUpdated: (u) => currentUserNotifier.value = u,
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.buatKebutuhan,
+      name: 'buat-kebutuhan',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return BuatKebutuhanScreen(user: user);
       },
     ),
   ],

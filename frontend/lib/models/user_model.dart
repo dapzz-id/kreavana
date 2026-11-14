@@ -117,6 +117,22 @@ class UserModel {
 
   bool get isSchool => isInstitution;
 
+  bool get isGovernment {
+    if (isAdmin) return false;
+    final r = role.toLowerCase().trim();
+    final s = (subRole ?? '').toLowerCase().trim();
+    const govtKeywords = [
+      'government',
+      'govt',
+      'pemerintah',
+      'instansi',
+      'dinas',
+      'bumn',
+      'kementerian',
+    ];
+    return govtKeywords.contains(r) || govtKeywords.contains(s);
+  }
+
   bool get isClientVerified => isCorporate || (isClient && isVerified);
   bool get isCreatorVerified => isCreator && (isVerified || isCreatorApproved);
 

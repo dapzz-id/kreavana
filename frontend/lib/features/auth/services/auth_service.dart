@@ -7,6 +7,7 @@ import '../../../services/secure_storage_service.dart';
 import '../../../services/realtime_service.dart';
 import '../../../services/fcm_service.dart';
 import '../../../services/encryption_service.dart';
+import '../../../services/sidebar_scroll_manager.dart';
 
 class AuthService {
   /// Register user baru
@@ -103,6 +104,7 @@ class AuthService {
       await ApiService.post('auth/logout', {});
     } finally {
       RealtimeService().dispose();
+      SidebarScrollManager.reset();
       await clearSession();
     }
   }
