@@ -2393,33 +2393,215 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     }
   }
 
+  IconData _getFieldIcon(_WorkspaceField field) {
+    final key = field.key.toLowerCase();
+    if (key.contains('contact') || key.contains('email') || key.contains('pic')) {
+      return Icons.alternate_email_rounded;
+    }
+    if (key.contains('phone') || key.contains('telepon') || key.contains('kontak')) {
+      return Icons.phone_outlined;
+    }
+    if (key.contains('website') || key.contains('url') || key.contains('link') || field.kind == _FieldKind.url) {
+      return Icons.language_rounded;
+    }
+    if (key.contains('category') || key.contains('kategori') || key.contains('spesialisasi')) {
+      return Icons.category_outlined;
+    }
+    if (key.contains('location') || key.contains('alamat') || key.contains('city') || key.contains('kota')) {
+      return Icons.location_on_outlined;
+    }
+    if (key.contains('date') || key.contains('deadline') || key.contains('period') || field.kind == _FieldKind.date) {
+      return Icons.calendar_today_outlined;
+    }
+    if (key.contains('budget') || key.contains('amount') || key.contains('price') || key.contains('omset') || field.kind == _FieldKind.number) {
+      return Icons.payments_outlined;
+    }
+    if (key.contains('capacity') || key.contains('student') || key.contains('beneficiaries')) {
+      return Icons.people_alt_outlined;
+    }
+    if (key.contains('facilities') || key.contains('sarana')) {
+      return Icons.construction_outlined;
+    }
+    if (key.contains('terms') || key.contains('ketentuan') || key.contains('permit')) {
+      return Icons.gavel_outlined;
+    }
+    if (key.contains('headmaster') || key.contains('manager') || key.contains('nip')) {
+      return Icons.badge_outlined;
+    }
+    if (key.contains('npsn') || key.contains('number')) {
+      return Icons.numbers_rounded;
+    }
+    return Icons.edit_note_rounded;
+  }
+
+  InputDecoration _inputDecoration({
+    required String label,
+    String? hint,
+    IconData? prefixIcon,
+    String? prefixText,
+    Widget? suffixIcon,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      prefixText: prefixText,
+      prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 20, color: const Color(0xFF2563EB)) : null,
+      suffixIcon: suffixIcon,
+      filled: true,
+      fillColor: const Color(0xFFF8FAFC),
+      labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF475569)),
+      hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.8),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.red.shade400),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12, top: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: const Color(0xFF2563EB)),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1E293B),
+              letterSpacing: 0.2,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Divider(
+              color: Colors.grey.shade200,
+              thickness: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFieldWidget(_WorkspaceField field) {
+    return TextFormField(
+      controller: _controllers[field.key],
+      keyboardType: field.kind == _FieldKind.number
+          ? TextInputType.number
+          : (field.kind == _FieldKind.url ? TextInputType.url : TextInputType.text),
+      decoration: _inputDecoration(
+        label: field.label,
+        hint: field.hint,
+        prefixText: field.prefix,
+        prefixIcon: _getFieldIcon(field),
+      ),
+    );
+  }
+
+  Widget _buildStatusDropdown() {
+    return DropdownButtonFormField<String>(
+      initialValue: _status,
+      decoration: _inputDecoration(
+        label: 'Status Publikasi',
+        prefixIcon: Icons.flag_outlined,
+      ),
+      items: widget.statuses
+          .map(
+            (value) => DropdownMenuItem(
+              value: value,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: value == 'active' || value == 'published'
+                          ? Colors.green.shade600
+                          : (value == 'draft' ? Colors.amber.shade600 : const Color(0xFF2563EB)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(widget.statusLabel(value)),
+                ],
+              ),
+            ),
+          )
+          .toList(),
+      onChanged: (value) {
+        if (value != null) {
+          setState(() => _status = value);
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      titlePadding: const EdgeInsets.fromLTRB(24, 20, 16, 12),
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       actionsPadding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
       title: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: const Color(0xFF2563EB).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.2)),
             ),
-            child: Icon(widget.icon, color: const Color(0xFF2563EB)),
+            child: Icon(widget.icon, color: const Color(0xFF2563EB), size: 24),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.existing == null ? widget.action : 'Edit ${widget.title}',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        widget.existing == null ? widget.action : 'Edit ${widget.title}',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                      ),
+                      child: const Text(
+                        'Instansi',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF2563EB)),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   'Tersimpan aman di database instansi Kreavana',
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
@@ -2427,95 +2609,111 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
               ],
             ),
           ),
+          IconButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF64748B)),
+            tooltip: 'Tutup',
+            style: IconButton.styleFrom(
+              backgroundColor: const Color(0xFFF1F5F9),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
         ],
       ),
       content: SizedBox(
-        width: 580,
+        width: 660,
         child: SingleChildScrollView(
           child: Form(
             key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nama / Judul',
-                    hintText: 'Masukkan nama atau judul resmi...',
-                    prefixIcon: Icon(Icons.title_rounded, size: 20),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) =>
-                      value == null || value.trim().isEmpty
-                          ? 'Nama / Judul wajib diisi'
-                          : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _descriptionController,
-                  minLines: 2,
-                  maxLines: 4,
-                  decoration: const InputDecoration(
-                    labelText: 'Deskripsi / Ruang Lingkup',
-                    hintText: 'Jelaskan ringkasan kebutuhan, spesifikasi, atau catatan...',
-                    prefixIcon: Icon(Icons.notes_rounded, size: 20),
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                for (final field in widget.fields) ...[
-                  TextFormField(
-                    controller: _controllers[field.key],
-                    keyboardType: field.kind == _FieldKind.number
-                        ? TextInputType.number
-                        : (field.kind == _FieldKind.url ? TextInputType.url : TextInputType.text),
-                    decoration: InputDecoration(
-                      labelText: field.label,
-                      hintText: field.hint,
-                      prefixText: field.prefix,
-                      prefixIcon: Icon(
-                        field.kind == _FieldKind.number
-                            ? Icons.payments_outlined
-                            : (field.kind == _FieldKind.date
-                                ? Icons.calendar_today_outlined
-                                : (field.kind == _FieldKind.url ? Icons.link_rounded : Icons.label_outline)),
-                        size: 20,
-                      ),
-                      border: const OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                DropdownButtonFormField<String>(
-                  initialValue: _status,
-                  decoration: const InputDecoration(
-                    labelText: 'Status Verifikasi / Publikasi',
-                    prefixIcon: Icon(Icons.flag_outlined, size: 20),
-                    border: OutlineInputBorder(),
-                  ),
-                  items: widget.statuses
-                      .map(
-                        (value) => DropdownMenuItem(
-                          value: value,
-                          child: Text(widget.statusLabel(value)),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth >= 500;
+
+                final secondaryWidgets = <Widget>[
+                  for (final field in widget.fields) _buildFieldWidget(field),
+                  _buildStatusDropdown(),
+                ];
+
+                final gridRows = <Widget>[];
+                if (isWide) {
+                  for (int i = 0; i < secondaryWidgets.length; i += 2) {
+                    if (i + 1 < secondaryWidgets.length) {
+                      gridRows.add(
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: secondaryWidgets[i]),
+                            const SizedBox(width: 14),
+                            Expanded(child: secondaryWidgets[i + 1]),
+                          ],
                         ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _status = value);
+                      );
+                    } else {
+                      gridRows.add(secondaryWidgets[i]);
                     }
-                  },
-                ),
-              ],
+                    if (i + 2 < secondaryWidgets.length) {
+                      gridRows.add(const SizedBox(height: 14));
+                    }
+                  }
+                } else {
+                  for (int i = 0; i < secondaryWidgets.length; i++) {
+                    gridRows.add(secondaryWidgets[i]);
+                    if (i + 1 < secondaryWidgets.length) {
+                      gridRows.add(const SizedBox(height: 14));
+                    }
+                  }
+                }
+
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionHeader('Informasi Pokok', Icons.info_outline_rounded),
+                    TextFormField(
+                      controller: _titleController,
+                      decoration: _inputDecoration(
+                        label: 'Nama / Judul',
+                        hint: 'Masukkan nama atau judul resmi...',
+                        prefixIcon: Icons.title_rounded,
+                      ),
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                              ? 'Nama / Judul wajib diisi'
+                              : null,
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _descriptionController,
+                      minLines: 3,
+                      maxLines: 5,
+                      decoration: _inputDecoration(
+                        label: 'Deskripsi / Ruang Lingkup',
+                        hint: 'Jelaskan ringkasan kebutuhan, spesifikasi, atau catatan...',
+                        prefixIcon: Icons.notes_rounded,
+                      ),
+                    ),
+                    if (secondaryWidgets.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      _buildSectionHeader('Detail Spesifikasi & Publikasi', Icons.tune_rounded),
+                      ...gridRows,
+                    ],
+                  ],
+                );
+              },
             ),
           ),
         ),
       ),
       actions: [
-        TextButton(
+        OutlinedButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Batal'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFF64748B),
+            side: const BorderSide(color: Color(0xFFCBD5E1)),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: const Text('Batal', style: TextStyle(fontWeight: FontWeight.w600)),
         ),
         FilledButton.icon(
           icon: _isSaving
@@ -2524,14 +2722,19 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                 )
-              : const Icon(Icons.save_rounded, size: 18),
+              : const Icon(Icons.check_circle_outline_rounded, size: 18),
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF2563EB),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+            elevation: 0,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
           onPressed: _isSaving ? null : _submit,
-          label: Text(_isSaving ? 'Menyimpan...' : 'Simpan'),
+          label: Text(
+            _isSaving ? 'Menyimpan...' : 'Simpan Data',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
         ),
       ],
     );

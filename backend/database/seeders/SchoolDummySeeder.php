@@ -1006,7 +1006,6 @@ class SchoolDummySeeder extends Seeder
                     'description' => $c['description'],
                     'agreed_price' => $c['agreed_price'],
                     'escrow_amount' => $c['agreed_price'],
-                    'escrow_paid' => true,
                     'creator_approved' => true,
                     'client_approved' => true,
                     'contract_status' => $c['contract_status'],
