@@ -10,6 +10,7 @@ class InstitutionResourceController extends Controller
     use \App\Traits\ApiResponse;
 
     private const TYPES = [
+        'profile',
         'tenders',
         'partners',
         'reports',
