@@ -77,9 +77,29 @@ class User extends Authenticatable implements JWTSubject
             || str_starts_with($this->email ?? '', 'corporate@');
     }
 
+    /**
+     * Check if user is an institution / school entity account.
+     */
+    public function isInstitution(): bool
+    {
+        $rawSub = $this->sub_role;
+        $subRole = is_object($rawSub) && isset($rawSub->value) 
+            ? strtolower(trim($rawSub->value)) 
+            : strtolower(trim((string)$rawSub));
+        $role = is_object($this->role) && isset($this->role->value)
+            ? strtolower(trim($this->role->value))
+            : strtolower(trim((string)$this->role));
+        
+        $keywords = ['institution', 'institusi', 'school', 'sekolah', 'kampus', 'campus', 'education', 'universitas', 'smk'];
+        return in_array($subRole, $keywords)
+            || in_array($role, $keywords)
+            || str_contains($this->username ?? '', 'institution')
+            || str_contains($this->email ?? '', 'institution@');
+    }
+
     public function getIsVerifiedAttribute($value): bool
     {
-        if ($this->isCorporate()) {
+        if ($this->isCorporate() || $this->isInstitution()) {
             return true;
         }
         return (bool) $value;
@@ -89,6 +109,9 @@ class User extends Authenticatable implements JWTSubject
     {
         if ($this->isCorporate()) {
             return $value ?: 'corporate';
+        }
+        if ($this->isInstitution()) {
+            return $value ?: 'institution';
         }
         return $value;
     }

@@ -1221,7 +1221,10 @@ class _UserProfileModalState extends State<UserProfileModal>
           title: 'Pimpinan & Kontak Kemitraan',
           icon: Icons.person_outline_rounded,
           items: [
-            _InfoRow(label: 'Pimpinan Institusi', value: '$headmaster\nNIP: $nip'),
+            _InfoRow(
+              label: 'Pimpinan Institusi',
+              value: (nip != null && nip.isNotEmpty) ? '$headmaster\nNIP: $nip' : headmaster,
+            ),
             _InfoRow(label: 'Telepon Resmi', value: phone),
             _InfoRow(label: 'Email Resmi', value: email),
           ],

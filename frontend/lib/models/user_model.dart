@@ -160,7 +160,7 @@ class UserModel {
     return govtKeywords.contains(r) || govtKeywords.contains(s);
   }
 
-  bool get isClientVerified => isCorporate || (isClient && isVerified);
+  bool get isClientVerified => isCorporate || isInstitution || (isClient && isVerified);
   bool get isCreatorVerified => isCreator && (isVerified || isCreatorApproved);
 
   factory UserModel.fromJson(Map<String, dynamic> json) {

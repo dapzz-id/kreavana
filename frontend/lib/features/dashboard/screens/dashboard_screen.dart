@@ -3686,6 +3686,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'status_color': '#D97706',
           'budget': 'Rp 8.000.000',
           'deadline': '26 Okt 2026',
+          'image_url': 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=200&q=80',
         },
         {
           'id': 'vnd_need_2',
@@ -3695,6 +3696,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'status_color': '#10B981',
           'budget': 'Rp 16.500.000',
           'deadline': '03 Nov 2026',
+          'image_url': 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=200&q=80',
         },
         {
           'id': 'vnd_need_3',
@@ -3704,6 +3706,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'status_color': '#2563EB',
           'budget': 'Rp 6.000.000',
           'deadline': '08 Nov 2026',
+          'image_url': 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=200&q=80',
         },
       ];
     }
@@ -3717,6 +3720,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'status_color': '#EA580C',
           'budget': 'Rp 7.500.000',
           'deadline': '25 Okt 2026',
+          'image_url': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
         },
         {
           'id': 'talent_need_2',
@@ -3726,6 +3730,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'status_color': '#8B5CF6',
           'budget': 'Rp 6.000.000',
           'deadline': '02 Nov 2026',
+          'image_url': 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=200&q=80',
         },
         {
           'id': 'talent_need_3',
@@ -3735,6 +3740,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'status_color': '#10B981',
           'budget': 'Rp 5.000.000',
           'deadline': '10 Nov 2026',
+          'image_url': 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=200&q=80',
         },
       ];
     }
@@ -3749,6 +3755,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'status_color': '#6366F1',
           'budget': 'Rp 8.500.000',
           'deadline': '28 Okt 2026',
+          'image_url': 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=200&q=80',
         },
         {
           'id': 'eo_need_2',
@@ -3758,6 +3765,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'status_color': '#F59E0B',
           'budget': 'Rp 14.000.000',
           'deadline': '05 Nov 2026',
+          'image_url': 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=200&q=80',
         },
         {
           'id': 'eo_need_3',
@@ -3767,6 +3775,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'status_color': '#10B981',
           'budget': 'Rp 6.000.000',
           'deadline': '10 Nov 2026',
+          'image_url': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
         },
       ];
     }
@@ -3780,6 +3789,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'status_color': '#EC4899',
           'budget': 'Rp 12.000.000',
           'deadline': '01 Nov 2026',
+          'image_url': 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=200&q=80',
         },
         {
           'id': 'wo_need_2',
@@ -3789,6 +3799,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'status_color': '#8B5CF6',
           'budget': 'Rp 9.500.000',
           'deadline': '08 Nov 2026',
+          'image_url': 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=200&q=80',
         },
       ];
     }
@@ -3802,6 +3813,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'status_color': '#06B6D4',
           'budget': 'Uang Saku & Sertifikat',
           'deadline': '15 Nov 2026',
+          'image_url': 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=200&q=80',
         },
         {
           'id': 'sch_need_2',
@@ -3811,6 +3823,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'status_color': '#10B981',
           'budget': 'Dana BOS & Industri',
           'deadline': '20 Nov 2026',
+          'image_url': 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=200&q=80',
         },
       ];
     }
@@ -3823,6 +3836,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         'status_color': '#7C3AED',
         'budget': 'Rp 4.500.000',
         'deadline': '30 Okt 2026',
+        'image_url': 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=200&q=80',
       },
       {
         'id': 'gen_need_2',
@@ -3832,6 +3846,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         'status_color': '#3B82F6',
         'budget': 'Rp 3.000.000',
         'deadline': '04 Nov 2026',
+        'image_url': 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=200&q=80',
       },
       {
         'id': 'gen_need_3',
@@ -3841,6 +3856,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         'status_color': '#10B981',
         'budget': 'Rp 2.500.000',
         'deadline': '12 Nov 2026',
+        'image_url': 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=200&q=80',
       },
     ];
   }
@@ -3932,6 +3948,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'deadline': '25 Okt 2026',
           'work_status': 'in_progress',
           'description': 'Dokumentasi lengkap foto video dan aftermovie gathering korporasi BUMN.',
+          'image_url': 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=200&q=80',
         },
         {
           'id': 'cnt_demo_2',
@@ -3942,6 +3959,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'deadline': '28 Okt 2026',
           'work_status': 'review',
           'description': 'Teaser video dan konten reels liputan pameran teknologi.',
+          'image_url': 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=200&q=80',
         },
         {
           'id': 'cnt_demo_3',
@@ -3952,6 +3970,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'deadline': '05 Nov 2026',
           'work_status': 'in_progress',
           'description': 'Penyediaan tata suara panggung konser dan sound engineering profesional.',
+          'image_url': 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=200&q=80',
         },
       ];
     }
@@ -3965,6 +3984,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         'deadline': '27 Okt 2026',
         'work_status': 'in_progress',
         'description': 'Produksi aset visual dan foto promosi kampanye akhir tahun.',
+        'image_url': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=200&q=80',
       },
       {
         'id': 'cnt_gen_2',
@@ -3975,6 +3995,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         'deadline': '02 Nov 2026',
         'work_status': 'review',
         'description': 'Redesain packaging dan branding visual identitas kemasan.',
+        'image_url': 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=200&q=80',
       },
     ];
   }
@@ -4223,6 +4244,50 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  String _resolveNeedImageUrl(Map<String, dynamic> need) {
+    final rawUrl = need['poster_url'] ??
+        need['image_url'] ??
+        need['cover_url'] ??
+        need['thumbnail_url'] ??
+        need['logo_url'] ??
+        need['banner_url'] ??
+        need['image'] ??
+        need['photo_url'];
+    if (rawUrl != null && rawUrl.toString().trim().isNotEmpty) {
+      return ApiService.resolveAssetUrl(rawUrl.toString().trim());
+    }
+
+    final title = (need['title'] ?? '').toString().toLowerCase();
+    final desc = (need['description'] ?? '').toString().toLowerCase();
+    final combined = '$title $desc';
+
+    if (combined.contains('tech') || combined.contains('startup') || combined.contains('pitch')) {
+      return 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=200&q=80';
+    } else if (combined.contains('music') || combined.contains('musik') || combined.contains('indie') || combined.contains('fest') || combined.contains('konser')) {
+      return 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=200&q=80';
+    } else if (combined.contains('gala') || combined.contains('dinner') || combined.contains('anniversary') || combined.contains('award') || combined.contains('resepsi')) {
+      return 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=200&q=80';
+    } else if (combined.contains('fashion') || combined.contains('model') || combined.contains('clothing')) {
+      return 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=200&q=80';
+    } else if (combined.contains('desain') || combined.contains('brand') || combined.contains('kemasan') || combined.contains('logo') || combined.contains('packaging')) {
+      return 'https://images.unsplash.com/photo-1542744094-3a31f272c490?auto=format&fit=crop&w=200&q=80';
+    } else if (combined.contains('video') || combined.contains('film') || combined.contains('shooting') || combined.contains('cinema') || combined.contains('tvc')) {
+      return 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=200&q=80';
+    } else if (combined.contains('sound') || combined.contains('audio') || combined.contains('podcast') || combined.contains('voice') || combined.contains('dubbing')) {
+      return 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=200&q=80';
+    } else if (combined.contains('wedding') || combined.contains('nikah') || combined.contains('pengantin') || combined.contains('mua')) {
+      return 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=200&q=80';
+    } else if (combined.contains('magang') || combined.contains('sekolah') || combined.contains('siswa') || combined.contains('animasi') || combined.contains('3d')) {
+      return 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=200&q=80';
+    } else if (combined.contains('lighting') || combined.contains('panggung') || combined.contains('stage')) {
+      return 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=200&q=80';
+    } else if (combined.contains('studio') || combined.contains('rig') || combined.contains('cyclorama')) {
+      return 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=200&q=80';
+    }
+
+    return 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=200&q=80';
+  }
+
   Widget _buildNeedItem(Map<String, dynamic> need, bool isDark) {
     Color statusColor;
     try {
@@ -4244,14 +4309,42 @@ class _DashboardScreenState extends State<DashboardScreen>
       onTap: () => _handleNeedItemClick(need),
       child: Row(
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF2D2A42) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              child: CachedNetworkImage(
+                imageUrl: _resolveNeedImageUrl(need),
+                width: 36,
+                height: 36,
+                fit: BoxFit.cover,
+                placeholder: (_, _) => Container(
+                  color: statusColor.withValues(alpha: 0.12),
+                  child: Center(
+                    child: SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        color: statusColor,
+                      ),
+                    ),
+                  ),
+                ),
+                errorWidget: (_, _, _) => Container(
+                  color: statusColor.withValues(alpha: 0.12),
+                  child: Icon(Icons.folder_outlined, color: statusColor, size: 16),
+                ),
+              ),
             ),
-            child: Icon(Icons.folder_outlined, color: statusColor, size: 16),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -5113,6 +5206,43 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  String _resolveContractImageUrl(Map<String, dynamic> contract) {
+    final rawUrl = contract['image_url'] ??
+        contract['poster_url'] ??
+        contract['cover_url'] ??
+        contract['thumbnail_url'] ??
+        contract['creator_avatar'] ??
+        contract['client_avatar'] ??
+        contract['logo_url'] ??
+        contract['banner_url'];
+    if (rawUrl != null && rawUrl.toString().trim().isNotEmpty) {
+      return ApiService.resolveAssetUrl(rawUrl.toString().trim());
+    }
+
+    final title = (contract['title'] ?? '').toString().toLowerCase();
+    final creator = (contract['creator_name'] ?? '').toString().toLowerCase();
+    final desc = (contract['description'] ?? '').toString().toLowerCase();
+    final combined = '$title $creator $desc';
+
+    if (combined.contains('kampanye') || combined.contains('digital') || combined.contains('marketing') || combined.contains('solusi brand')) {
+      return 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=200&q=80';
+    } else if (combined.contains('kopi') || combined.contains('senja') || combined.contains('kemasan') || combined.contains('identitas')) {
+      return 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=200&q=80';
+    } else if (combined.contains('audio') || combined.contains('sound') || combined.contains('skysound') || combined.contains('jingle')) {
+      return 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=200&q=80';
+    } else if (combined.contains('backdrop') || combined.contains('merchandise') || combined.contains('lanyard')) {
+      return 'https://images.unsplash.com/photo-1542744094-3a31f272c490?auto=format&fit=crop&w=200&q=80';
+    } else if (combined.contains('video') || combined.contains('film') || combined.contains('aftermovie') || combined.contains('cinematic') || combined.contains('andi')) {
+      return 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=200&q=80';
+    } else if (combined.contains('photo') || combined.contains('foto') || combined.contains('lensa') || combined.contains('rina')) {
+      return 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=200&q=80';
+    } else if (combined.contains('event') || combined.contains('expo') || combined.contains('gala') || combined.contains('dinner') || combined.contains('bumn') || combined.contains('gathering')) {
+      return 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=200&q=80';
+    }
+
+    return 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=200&q=80';
+  }
+
   Widget _buildRunningContractItem(Map<String, dynamic> c, bool isDark) {
     final title = c['title']?.toString() ?? 'Proyek Kontrak';
     final creatorName = c['creator_name']?.toString() ?? 'Kreator';
@@ -5153,14 +5283,42 @@ class _DashboardScreenState extends State<DashboardScreen>
       },
       child: Row(
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF2D2A42) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              child: CachedNetworkImage(
+                imageUrl: _resolveContractImageUrl(c),
+                width: 36,
+                height: 36,
+                fit: BoxFit.cover,
+                placeholder: (_, _) => Container(
+                  color: statusColor.withValues(alpha: 0.12),
+                  child: Center(
+                    child: SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        color: statusColor,
+                      ),
+                    ),
+                  ),
+                ),
+                errorWidget: (_, _, _) => Container(
+                  color: statusColor.withValues(alpha: 0.12),
+                  child: Icon(Icons.handshake_outlined, color: statusColor, size: 16),
+                ),
+              ),
             ),
-            child: Icon(Icons.handshake_outlined, color: statusColor, size: 16),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -6734,6 +6892,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               'sub': 'Bisnis, kontak, lokasi',
               'icon': Icons.app_registration_rounded,
               'color': const Color(0xFF2563EB),
+              'image_url': 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=200&q=80',
             },
             {
               'n': '2',
@@ -6741,6 +6900,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               'sub': 'Produk, alat, & tarif',
               'icon': Icons.inventory_2_outlined,
               'color': const Color(0xFFD97706),
+              'image_url': 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?auto=format&fit=crop&w=200&q=80',
             },
             {
               'n': '3',
@@ -6748,6 +6908,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               'sub': 'Jadwal sewa & slot event',
               'icon': Icons.calendar_month_outlined,
               'color': const Color(0xFF8B5CF6),
+              'image_url': 'https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=200&q=80',
             },
             {
               'n': '4',
@@ -6755,6 +6916,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               'sub': 'Pesanan klien/kreator/EO',
               'icon': Icons.chat_bubble_outline_rounded,
               'color': const Color(0xFFEA580C),
+              'image_url': 'https://images.unsplash.com/photo-1577563908411-5077b6dc7624?auto=format&fit=crop&w=200&q=80',
             },
             {
               'n': '5',
@@ -6762,6 +6924,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               'sub': 'Siapkan alat & tim',
               'icon': Icons.build_circle_outlined,
               'color': const Color(0xFF10B981),
+              'image_url': 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=200&q=80',
             },
             {
               'n': '6',
@@ -6769,6 +6932,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               'sub': 'Ulasan & testimoni',
               'icon': Icons.star_rounded,
               'color': const Color(0xFF0EA5E9),
+              'image_url': 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=200&q=80',
             },
           ]
         : _isTalentAndPerformer
@@ -6779,6 +6943,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               'sub': 'Isi data diri & jadwal',
               'icon': Icons.badge_outlined,
               'color': const Color(0xFF2563EB),
+              'image_url': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
             },
             {
               'n': '2',
@@ -6786,6 +6951,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               'sub': 'Foto, video & audio',
               'icon': Icons.smart_display_outlined,
               'color': const Color(0xFF8B5CF6),
+              'image_url': 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=200&q=80',
             },
             {
               'n': '3',
@@ -6793,6 +6959,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               'sub': 'Job, event, casting',
               'icon': Icons.search_rounded,
               'color': const Color(0xFFEC4899),
+              'image_url': 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=200&q=80',
             },
             {
               'n': '4',
@@ -6800,6 +6967,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               'sub': 'Chat & negosiasi aman',
               'icon': Icons.chat_bubble_outline_rounded,
               'color': const Color(0xFFEA580C),
+              'image_url': 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=200&q=80',
             },
             {
               'n': '5',
@@ -6807,6 +6975,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               'sub': 'Realisasi proyek',
               'icon': Icons.theater_comedy_rounded,
               'color': const Color(0xFF10B981),
+              'image_url': 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=200&q=80',
             },
             {
               'n': '6',
@@ -6814,6 +6983,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               'sub': 'Rating & ulasan klien',
               'icon': Icons.star_rounded,
               'color': const Color(0xFF0EA5E9),
+              'image_url': 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=200&q=80',
             },
           ]
         : _isCreator
@@ -6824,6 +6994,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   'sub': 'Isi data & niche',
                   'icon': Icons.person_outline,
                   'color': const Color(0xFF7C3AED),
+                  'image_url': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
                 },
                 {
                   'n': '2',
@@ -6831,6 +7002,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   'sub': 'Peluang sesuai niche',
                   'icon': Icons.auto_awesome,
                   'color': const Color(0xFFEAB308),
+                  'image_url': 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=200&q=80',
                 },
                 {
                   'n': '3',
@@ -6838,6 +7010,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   'sub': 'Kirim penawaran terbaik',
                   'icon': Icons.description_outlined,
                   'color': const Color(0xFF3B82F6),
+                  'image_url': 'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=200&q=80',
                 },
                 {
                   'n': '4',
@@ -6845,6 +7018,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   'sub': 'Produksi & publikasi',
                   'icon': Icons.event_note_outlined,
                   'color': const Color(0xFF7C3AED),
+                  'image_url': 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=200&q=80',
                 },
                 {
                   'n': '5',
@@ -6852,6 +7026,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   'sub': 'Ulasan & rating klien',
                   'icon': Icons.star_outline,
                   'color': const Color(0xFF10B981),
+                  'image_url': 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=200&q=80',
                 },
                 {
                   'n': '6',
@@ -6859,6 +7034,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   'sub': 'Peluang meningkat',
                   'icon': Icons.trending_up,
                   'color': const Color(0xFF14B8A6),
+                  'image_url': 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=200&q=80',
                 },
               ]
             : [
@@ -6868,6 +7044,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   'sub': 'Tulis brief',
                   'icon': Icons.edit_note,
                   'color': const Color(0xFF3B82F6),
+                  'image_url': 'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=200&q=80',
                 },
                 {
                   'n': '2',
@@ -6875,6 +7052,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   'sub': 'AI matching otomatis',
                   'icon': Icons.auto_awesome,
                   'color': const Color(0xFF7C3AED),
+                  'image_url': 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=200&q=80',
                 },
                 {
                   'n': '3',
@@ -6882,6 +7060,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   'sub': 'Bandingkan tawaran',
                   'icon': Icons.mail_outline,
                   'color': const Color(0xFF10B981),
+                  'image_url': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=200&q=80',
                 },
                 {
                   'n': '4',
@@ -6889,6 +7068,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   'sub': 'Setujui kolaborator',
                   'icon': Icons.person_add_outlined,
                   'color': const Color(0xFFF97316),
+                  'image_url': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
                 },
                 {
                   'n': '5',
@@ -6896,6 +7076,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   'sub': 'Review progres',
                   'icon': Icons.analytics_outlined,
                   'color': const Color(0xFF14B8A6),
+                  'image_url': 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=200&q=80',
                 },
                 {
                   'n': '6',
@@ -6903,6 +7084,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   'sub': 'Bangun ekosistem',
                   'icon': Icons.star_outline,
                   'color': const Color(0xFFEAB308),
+                  'image_url': 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=200&q=80',
                 },
               ];
 
@@ -6963,22 +7145,57 @@ class _DashboardScreenState extends State<DashboardScreen>
                               width: 44,
                               height: 44,
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    color.withValues(alpha: 0.2),
-                                    color.withValues(alpha: 0.05),
-                                  ],
-                                ),
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: color.withValues(alpha: 0.3),
+                                  color: color.withValues(alpha: 0.4),
+                                  width: 1.5,
                                 ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: color.withValues(alpha: 0.18),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                              child: Icon(
-                                (step['icon'] as IconData?) ??
-                                    Icons.image_outlined,
-                                color: color,
-                                size: 20,
+                              child: ClipOval(
+                                child: CachedNetworkImage(
+                                  imageUrl: (step['image_url'] ?? '').toString(),
+                                  width: 44,
+                                  height: 44,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, _) => Container(
+                                    color: color.withValues(alpha: 0.15),
+                                    child: Center(
+                                      child: SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 1.5,
+                                          color: color,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  errorWidget: (_, _, _) => Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          color.withValues(alpha: 0.2),
+                                          color.withValues(alpha: 0.05),
+                                        ],
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        (step['icon'] as IconData?) ??
+                                            Icons.image_outlined,
+                                        color: color,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),

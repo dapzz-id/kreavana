@@ -1429,7 +1429,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
-                        if (!_isGovernment && !_isSchool)
+                        if (!_isGovernment)
                           _buildNavRow(
                             icon: Icons.folder_outlined,
                             label: 'Proyek Saya',
@@ -1468,8 +1468,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             ),
                         ],
                         if (_isSchool) ...[
-                          if (effectiveUser.hasInstitutionPermission('program_magang') ||
-                              effectiveUser.hasInstitutionPermission('kegiatan_event') ||
+                          if (effectiveUser.hasInstitutionPermission('kegiatan_event') ||
                               effectiveUser.hasInstitutionPermission('mitra_industri') ||
                               effectiveUser.hasInstitutionPermission('karya_siswa')) ...[
                             if (!collapsed) ...[
@@ -1478,15 +1477,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             ] else ...[
                               const SizedBox(height: 8),
                             ],
-                            if (effectiveUser.hasInstitutionPermission('program_magang'))
-                              _buildNavRow(
-                                icon: Icons.work_outline,
-                                label: 'Program & Magang',
-                                onTap: () => _pushLink('proyek_saya'),
-                                isSelected: _isRouteActive('proyek_saya'),
-                                isDark: isDark,
-                                isCollapsed: collapsed,
-                              ),
                             if (effectiveUser.hasInstitutionPermission('kegiatan_event'))
                               _buildNavRow(
                                 icon: Icons.event_outlined,

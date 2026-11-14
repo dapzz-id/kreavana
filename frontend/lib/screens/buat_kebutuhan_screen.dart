@@ -134,7 +134,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   bool _isClientVerified = true;
 
   Future<void> _checkClientVerification() async {
-    if (_isCorporate || _currentUser?.isCorporate == true) {
+    if (_isCorporate || _currentUser?.isCorporate == true || _isSchool || _currentUser?.isInstitution == true) {
       if (mounted) setState(() => _isClientVerified = true);
       return;
     }
@@ -541,19 +541,6 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   @override
   void initState() {
     super.initState();
-    if (_isSchool) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          AppSweetAlert.error(
-            context,
-            'Fitur Buka Program Magang khusus untuk akun Corporate / Mitra Industri. Institusi Pendidikan tidak dapat membuka lowongan magang.',
-            title: 'Akses Ditolak (403)',
-          );
-          Navigator.of(context).pop();
-        }
-      });
-      return;
-    }
     if (widget.initialTitle != null) {
       _judulController.text = widget.initialTitle!;
     }
@@ -640,7 +627,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   }
 
   Future<void> _submit() async {
-    final isCorporateUser = _isCorporate || _currentUser?.isCorporate == true;
+    final isCorporateUser = _isCorporate || _currentUser?.isCorporate == true || _isSchool || _currentUser?.isInstitution == true;
     final isClient =
         _currentUser?.role == 'user' || _currentUser?.isClient == true;
     if (!isCorporateUser && isClient && !_isClientVerified) {
@@ -803,56 +790,6 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
     final isDark = theme.brightness == Brightness.dark;
     final isDesktop = MediaQuery.of(context).size.width > 900;
 
-    if (_isSchool) {
-      return Scaffold(
-        backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFF8F9FD),
-        appBar: AppBar(
-          title: const Text('Akses Ditolak'),
-          elevation: 0,
-          backgroundColor: isDark ? AppTheme.surfaceDark : Colors.white,
-        ),
-        body: Center(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 480),
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.block_rounded, size: 72, color: Colors.redAccent),
-                const SizedBox(height: 20),
-                const Text(
-                  'Akses Ditolak (403)',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Fitur Buka Program Magang khusus untuk akun Corporate / Mitra Industri. Institusi Pendidikan tidak dapat membuka lowongan magang.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.5,
-                    color: isDark ? AppTheme.textMuted : Colors.grey.shade700,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                  label: const Text('Kembali ke Dashboard'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryPurple,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
     final content = Scaffold(
       backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFF8F9FD),
       appBar: AppBar(
@@ -915,7 +852,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                     ),
                   ],
                 ),
-                if (!(_isCorporate || _currentUser?.isCorporate == true) &&
+                if (!(_isCorporate || _currentUser?.isCorporate == true || _isSchool || _currentUser?.isInstitution == true) &&
                     !_isClientVerified &&
                     (_currentUser?.role == 'user' ||
                         _currentUser?.isClient == true))

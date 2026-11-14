@@ -11,10 +11,10 @@ class TouchLastOnline
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::check()) {
-            $user = Auth::user();
-            // Update last_online every 5 seconds for real-time presence
-            if (!$user->last_online || now()->diffInSeconds(\Carbon\Carbon::parse($user->last_online)) > 5) {
+        $user = auth('api')->user() ?? $request->user();
+        if ($user) {
+            // Update last_online if more than 10 seconds since last recorded online
+            if (!$user->last_online || now()->diffInSeconds(\Carbon\Carbon::parse($user->last_online)) > 10) {
                 $user->update(['last_online' => now()]);
             }
         }

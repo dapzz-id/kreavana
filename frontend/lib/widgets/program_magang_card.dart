@@ -80,6 +80,7 @@ class ProgramMagangCard extends StatelessWidget {
     Key? key,
     VoidCallback? onTap,
     VoidCallback? onDetailPressed,
+    String buttonLabel = 'Lihat Detail Program →',
   }) {
     // 1. Category badge
     String cat = 'Magang';
@@ -157,6 +158,7 @@ class ProgramMagangCard extends StatelessWidget {
       requirementsCountLabel: '${reqs.length} Persyaratan',
       onTap: onTap,
       onDetailPressed: onDetailPressed ?? onTap,
+      buttonLabel: buttonLabel,
       opportunity: opp,
     );
   }
@@ -167,6 +169,7 @@ class ProgramMagangCard extends StatelessWidget {
     Key? key,
     VoidCallback? onTap,
     VoidCallback? onDetailPressed,
+    String buttonLabel = 'Lihat Detail Program →',
   }) {
     final meta = data['metadata'] as Map<String, dynamic>? ?? {};
     final statusRaw = (data['status'] ?? 'open').toString().toLowerCase();
@@ -223,6 +226,7 @@ class ProgramMagangCard extends StatelessWidget {
       requirementsCountLabel: '${reqs.length} Persyaratan',
       onTap: onTap,
       onDetailPressed: onDetailPressed ?? onTap,
+      buttonLabel: buttonLabel,
     );
   }
 

@@ -921,7 +921,7 @@ class _MainNavigationState extends State<MainNavigation> {
           isCollapsed: isCollapsed,
           isMobileDrawer: isMobileDrawer,
         ),
-      if (!_isGovernment && !_isSchool)
+      if (!_isGovernment)
         _buildSidebarItem(
           icon: Icons.folder_outlined,
           activeIcon: Icons.folder,
@@ -986,15 +986,6 @@ class _MainNavigationState extends State<MainNavigation> {
       ],
       if (_isSchool) ...[
         _buildSidebarLink(
-          icon: Icons.work_outline,
-          label: 'Program & Magang',
-          onTap: () => _navigateToScreenIndex(2),
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _currentIndex == 2 && _activeGovRoute == null,
-          isMobileDrawer: isMobileDrawer,
-        ),
-        _buildSidebarLink(
           icon: Icons.event_outlined,
           label: 'Kegiatan & Event',
           onTap: () => _navigateToScreenIndex(4),
@@ -1019,39 +1010,6 @@ class _MainNavigationState extends State<MainNavigation> {
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'karya_siswa',
-          isMobileDrawer: isMobileDrawer,
-        ),
-        if (!isCollapsed) ...[
-          const SizedBox(height: 18),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'PEMANTAUAN AKADEMIK',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white54 : Colors.grey.shade500,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-        ],
-        _buildSidebarLink(
-          icon: Icons.summarize_outlined,
-          label: 'Laporan Kegiatan',
-          onTap: () => _navigateToRoute(AppRoutes.laporanKegiatan),
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _activeGovRoute == 'laporan',
-          isMobileDrawer: isMobileDrawer,
-        ),
-        _buildSidebarLink(
-          icon: Icons.monitor_outlined,
-          label: 'Monitoring & Evaluasi',
-          onTap: () => _navigateToRoute(AppRoutes.monitoringEvaluasi),
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _activeGovRoute == 'monitoring_evaluasi',
           isMobileDrawer: isMobileDrawer,
         ),
         if (!isCollapsed) ...[

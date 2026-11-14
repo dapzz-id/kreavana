@@ -170,6 +170,8 @@ class DashboardService extends BaseService implements DashboardServiceInterface
                 'status_color' => $status['color'],
                 'budget' => $opp->budget_range,
                 'deadline' => $opp->deadline?->format('d M Y'),
+                'poster_url' => $opp->poster_url,
+                'banner_url' => $opp->banner_url,
                 'created_at' => $opp->created_at?->toIso8601String(),
             ];
         })->toArray();
@@ -218,9 +220,9 @@ class DashboardService extends BaseService implements DashboardServiceInterface
         $isCreator = $roleType === 'creator';
         $query = \App\Models\JobContract::query();
         if ($isCreator) {
-            $query->where('creator_id', $userId)->with(['client', 'creator']);
+            $query->where('creator_id', $userId)->with(['client', 'creator', 'opportunity']);
         } else {
-            $query->where('client_id', $userId)->with('creator');
+            $query->where('client_id', $userId)->with(['creator', 'opportunity']);
         }
 
         $contracts = $query
@@ -240,6 +242,8 @@ class DashboardService extends BaseService implements DashboardServiceInterface
                 'title' => $c->title,
                 'creator_name' => $partnerName,
                 'creator_avatar' => $partnerAvatar,
+                'poster_url' => $c->opportunity?->poster_url,
+                'banner_url' => $c->opportunity?->banner_url,
                 'agreed_price' => 'Rp ' . number_format($c->agreed_price ?? 0, 0, ',', '.'),
                 'escrow_amount' => 'Rp ' . number_format($c->escrow_amount ?? 0, 0, ',', '.'),
                 'work_status' => $workStatusStr,

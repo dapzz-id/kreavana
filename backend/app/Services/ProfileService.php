@@ -351,7 +351,7 @@ class ProfileService extends BaseService
 
         if ($isInstitution) {
             $data['is_institution'] = true;
-            $data['role_label'] = 'Institusi Pendidikan / Vokasi';
+            $data['role_label'] = 'Institusi Pendidikan / Vokasi' . ($user->sub_role_label ? ' - ' . $user->sub_role_label : '');
 
             $instResource = \App\Models\InstitutionResource::where('user_id', $userId)
                 ->where('resource_type', 'profile')
