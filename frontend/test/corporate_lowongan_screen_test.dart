@@ -233,5 +233,53 @@ void main() {
       // Verify preview displays Kompetitif / Sesuai Kesepakatan
       expect(find.text('Pratinjau: Kompetitif / Sesuai Kesepakatan'), findsOneWidget);
     });
+
+    testWidgets('Searchable specialization dropdown filters options and adds new custom role', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 1200));
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: CorporateVacancyFormDialog(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Tap the first specialization dropdown
+      final specField = find.byKey(const ValueKey('spec_dropdown_0'));
+      expect(specField, findsOneWidget);
+      await tester.ensureVisible(specField);
+      await tester.tap(specField);
+      await tester.pumpAndSettle();
+
+      // Verify Searchable Dialog is open
+      expect(find.text('Pilih Spesialisasi Keahlian'), findsOneWidget);
+
+      // Search for '3D'
+      final searchField = find.widgetWithText(TextFormField, 'Cari spesialisasi atau ketik opsi baru...');
+      expect(searchField, findsOneWidget);
+      await tester.enterText(searchField, '3D');
+      await tester.pumpAndSettle();
+
+      // Verify '3D Modeler & Texture Artist' is present
+      expect(find.text('3D Modeler & Texture Artist'), findsOneWidget);
+
+      // Search for a non-existent new role: 'AI Prompt Engineer'
+      await tester.enterText(searchField, 'AI Prompt Engineer');
+      await tester.pumpAndSettle();
+
+      // Verify "+ Tambahkan 'AI Prompt Engineer'" tile appears
+      final addTile = find.byKey(const ValueKey('btn_add_typed_spec_option'));
+      expect(addTile, findsOneWidget);
+      expect(find.text('Tambahkan "AI Prompt Engineer"'), findsOneWidget);
+
+      // Tap to add and select the new role
+      await tester.tap(addTile);
+      await tester.pumpAndSettle();
+
+      // Dialog should close and first specialization row should now have 'AI Prompt Engineer'
+      expect(find.text('AI Prompt Engineer'), findsWidgets);
+    });
   });
 }
