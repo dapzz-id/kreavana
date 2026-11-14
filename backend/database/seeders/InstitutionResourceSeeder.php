@@ -796,7 +796,8 @@ class InstitutionResourceSeeder extends Seeder
                 'status' => 'published',
                 'metadata' => [
                     'email' => 'sri.wahyuni@kreavana.sch.id',
-                    'role' => 'Editor',
+                    'role' => 'Karyawan / Staf',
+                    'permissions' => ['mitra_industri', 'dokumen_institusi', 'laporan_kegiatan'],
                     'department' => 'Waka Humas & Kemitraan IDUKA',
                     'is_online' => true,
                     'joined_at' => '12 Jan 2025',
@@ -810,7 +811,8 @@ class InstitutionResourceSeeder extends Seeder
                 'status' => 'published',
                 'metadata' => [
                     'email' => 'budi.santoso@kreavana.sch.id',
-                    'role' => 'Editor',
+                    'role' => 'Karyawan / Staf',
+                    'permissions' => ['program_magang', 'monitoring_evaluasi', 'laporan_kegiatan'],
                     'department' => 'Bursa Kerja Khusus & Penyaluran Karir',
                     'is_online' => false,
                     'joined_at' => '04 Feb 2025',
@@ -824,7 +826,8 @@ class InstitutionResourceSeeder extends Seeder
                 'status' => 'published',
                 'metadata' => [
                     'email' => 'ahmad.fauzi@kreavana.sch.id',
-                    'role' => 'Viewer',
+                    'role' => 'Karyawan / Staf',
+                    'permissions' => ['program_magang', 'monitoring_evaluasi'],
                     'department' => 'Pembimbing Praktik & Logbook Magang',
                     'is_online' => true,
                     'joined_at' => '18 Feb 2025',
@@ -838,7 +841,8 @@ class InstitutionResourceSeeder extends Seeder
                 'status' => 'published',
                 'metadata' => [
                     'email' => 'siti.rahma@kreavana.sch.id',
-                    'role' => 'Viewer',
+                    'role' => 'Karyawan / Staf',
+                    'permissions' => ['dokumen_institusi', 'pengumuman_institusi'],
                     'department' => 'Administrasi & Arsip Legal Instansi',
                     'is_online' => false,
                     'joined_at' => '01 Mar 2025',
@@ -852,7 +856,8 @@ class InstitutionResourceSeeder extends Seeder
                 'status' => 'published',
                 'metadata' => [
                     'email' => 'hendra.kusuma@kreavana.sch.id',
-                    'role' => 'Editor',
+                    'role' => 'Karyawan / Staf',
+                    'permissions' => ['karya_siswa', 'kegiatan_event'],
                     'department' => 'Divisi Kurasi & Portofolio Siswa',
                     'is_online' => true,
                     'joined_at' => '15 Mar 2025',

@@ -441,152 +441,18 @@ class _InstitutionWorkspaceScreenState
     if (!mounted) return;
     setState(() {
       final succeeded = response['status'] == true && response['data'] is List;
-      List<Map<String, dynamic>> records = succeeded
+      final List<Map<String, dynamic>> records = succeeded
           ? List<Map<String, dynamic>>.from(response['data'])
           : [];
-      if (records.isEmpty) {
-        records = _getFallbackSchoolRecords(widget.resourceType);
-      }
       _records = records;
-      _loadError = succeeded || records.isNotEmpty
+      _loadError = succeeded
           ? null
           : response['message']?.toString() ?? 'Data gagal dimuat dari server.';
       _isLoading = false;
     });
   }
 
-  List<Map<String, dynamic>> _getFallbackSchoolRecords(String type) {
-    switch (type) {
-      case 'announcements':
-        return [
-          {
-            'id': 101,
-            'resource_type': 'announcements',
-            'title': 'Pembukaan Pendaftaran Magang MBKM & Kemitraan Industri Batch Genap 2026',
-            'description': 'Pendaftaran program magang bersertifikat pada 24 studio dan agensi kreatif resmi dibuka bagi mahasiswa semester 5 ke atas dengan konversi 20 SKS.',
-            'status': 'published',
-            'metadata': {
-              'category': 'Akademik & Magang',
-              'valid_until': '2026-12-30',
-              'target_audience': 'Mahasiswa Aktif Semester 5-8',
-              'author': 'Pusat Karir & MBKM ISRK',
-            },
-          },
-          {
-            'id': 102,
-            'resource_type': 'announcements',
-            'title': 'Jadwal Pelaksanaan Sidang Terbuka & Showcase Karya Wisuda TA 2026',
-            'description': 'Seluruh karya tugas akhir animasi 3D, DKV, game, film pendek, dan audio mixing akan dipamerkan di hadapan kurator industri dan publik.',
-            'status': 'published',
-            'metadata': {
-              'category': 'Agenda & Showcase',
-              'valid_until': '2027-01-15',
-              'target_audience': 'Sivitas Akademika & Mitra Industri',
-              'author': 'Biro Akademik & Kemahasiswaan',
-            },
-          },
-          {
-            'id': 103,
-            'resource_type': 'announcements',
-            'title': 'Pengajuan Proposal Riset Terapan Kolaboratif DUDI Skema Kedaireka & Hibah Vokasi',
-            'description': 'Dosen dan mahasiswa diundang mengajukan usulan riset bersama studio animasi, pengembang software, dan agensi desain periklanan.',
-            'status': 'published',
-            'metadata': {
-              'category': 'Riset & Hibah',
-              'valid_until': '2026-11-20',
-              'target_audience': 'Dosen & Kelompok Riset Mahasiswa',
-              'author': 'LPPM ISRK',
-            },
-          },
-          {
-            'id': 104,
-            'resource_type': 'announcements',
-            'title': 'Pemberian Beasiswa Prestasi & Bebas Biaya Studio bagi Talenta Kreatif Berprestasi',
-            'description': 'Daftar nama 25 mahasiswa peraih penghargaan kompetisi tingkat nasional berhak menerima beasiswa bebas UKT dan akses lab workstation 24 jam.',
-            'status': 'published',
-            'metadata': {
-              'category': 'Beasiswa & Prestasi',
-              'valid_until': '2027-02-28',
-              'target_audience': 'Mahasiswa Berprestasi',
-              'author': 'Wakil Rektor Bidang Kemahasiswaan',
-            },
-          },
-        ];
-      case 'facilities':
-        return [
-          {
-            'id': 201,
-            'resource_type': 'facilities',
-            'title': 'Studio Animasi 3D & Optical Motion Capture Laboratory',
-            'description': 'Fasilitas berstandar industri dengan 16 kamera Vicon Optical, 30 unit Workstation RTX 4090, dan lisensi Unreal Engine 5 Enterprise.',
-            'status': 'active',
-            'metadata': {
-              'facilities': '16 Vicon Optic Cameras, MoCap Suits, 30x PC RTX 4090',
-              'terms': 'Pengajuan izin H-3 melalui Ketua Prodi Animasi.',
-              'manager': 'Kepala Lab Studio Animasi & Game ISRK',
-              'capacity': '40 Mahasiswa',
-            },
-          },
-          {
-            'id': 202,
-            'resource_type': 'facilities',
-            'title': 'Auditorium Pertunjukan & Screening Cinema 4K Dolby Atmos',
-            'description': 'Ruang screening film dan bioskop kampus dengan proyeksi 4K Laser Christie, tata suara Dolby Atmos 7.1.4, kapasitas 350 kursi ergonomis.',
-            'status': 'active',
-            'metadata': {
-              'facilities': 'Laser Christie 4K Projector, Dolby Atmos Processor, Layar Akustik 12x6m',
-              'terms': 'Peminjaman untuk pemutaran film dan seminar industri.',
-              'manager': 'UPT Sarana Pertunjukan & Acara Kampus',
-              'capacity': '350 Tempat Duduk',
-            },
-          },
-        ];
-      case 'monitoring':
-        return [
-          {
-            'id': 301,
-            'resource_type': 'monitoring',
-            'title': 'Tingkat Keterserapan Lulusan Vokasi dalam 3 Bulan Pasca Kelulusan',
-            'description': 'Pemantauan tracer study alumni yang bekerja di industri kreatif dengan gaji minimal 1.5x UMR.',
-            'status': 'in_progress',
-            'metadata': {
-              'indicator': 'IKU 1: Lulusan Mendapat Pekerjaan Layak',
-              'progress': 94,
-              'target_date': '2026-12-31',
-            },
-          },
-          {
-            'id': 302,
-            'resource_type': 'monitoring',
-            'title': 'Realisasi Program Magang Bersertifikat Industri (MBKM Mandiri)',
-            'description': 'Monitoring mahasiswa peserta magang pada 24 industri mitra.',
-            'status': 'in_progress',
-            'metadata': {
-              'indicator': 'IKU 2: Mahasiswa Mendapat Pengalaman di Luar Kampus',
-              'progress': 88,
-              'target_date': '2026-11-30',
-            },
-          },
-        ];
-      case 'budgets':
-        return [
-          {
-            'id': 401,
-            'resource_type': 'budgets',
-            'title': 'Hibah Program Revitalisasi Perguruan Tinggi Vokasi (Kemendikbudristek TA 2026)',
-            'description': 'Alokasi pengadaan peralatan laboratorium workstation animasi 3D dan render farm.',
-            'status': 'in_progress',
-            'metadata': {
-              'period': 'Tahun Anggaran 2026',
-              'allocation': 2500000000,
-              'realization': 1850000000,
-            },
-          },
-        ];
-      default:
-        return [];
-    }
-  }
+
 
   String _formatCurrency(num value) {
     final s = value.toStringAsFixed(0);
@@ -1831,29 +1697,19 @@ class _InstitutionWorkspaceScreenState
         ? (picRole.isNotEmpty ? '$picName ($picRole)' : picName)
         : (contact.isNotEmpty ? contact : 'Tim Kemitraan Industri');
 
-    // Smart MoU fallback
-    var mouNumber = meta['mou_number']?.toString() ?? '';
-    var mouPeriod = meta['mou_period']?.toString() ?? '';
-    if (mouNumber.isEmpty && title.toLowerCase().contains('google')) {
-      mouNumber = '012/MoU-ISRK/I/2026';
-      mouPeriod = '2026 - 2029 (Aktif)';
-    }
+    // MoU info
+    final mouNumber = meta['mou_number']?.toString() ?? '';
+    final mouPeriod = meta['mou_period']?.toString() ?? '';
     final mouDisplay = mouNumber.isNotEmpty
         ? (mouPeriod.isNotEmpty ? '$mouNumber • $mouPeriod' : mouNumber)
         : (status == 'active' || status == 'published' ? 'MoU Kerjasama DUDI Aktif' : 'Tahap Inisiasi Dokumen MoU');
 
-    // Smart Quota fallback
-    var quota = meta['internship_quota_yearly']?.toString() ?? '';
-    if (quota.isEmpty && title.toLowerCase().contains('google')) {
-      quota = '15';
-    }
+    // Quota info
+    final quota = meta['internship_quota_yearly']?.toString() ?? '';
     final quotaDisplay = quota.isNotEmpty ? '$quota Siswa/Tahun' : 'Tersedia Kuota PKL';
 
-    // Smart Website fallback
-    var website = meta['website']?.toString() ?? '';
-    if (website.isEmpty && title.toLowerCase().contains('google')) {
-      website = 'https://about.google';
-    }
+    // Website info
+    final website = meta['website']?.toString() ?? '';
 
     // Status styling
     final isPublishedOrActive = status == 'active' || status == 'published' || status == 'approved';
@@ -2469,16 +2325,8 @@ class _InstitutionWorkspaceScreenState
         meta['nomor_dokumen']?.toString() ??
         '';
     if (docNumber.isEmpty) {
-      if (titleLower.contains('mou') || titleLower.contains('kemitraan')) {
-        docNumber = '001/MOU-ISRK/DIR/2025';
-      } else if (titleLower.contains('ban-pt') || titleLower.contains('akreditasi')) {
-        docNumber = '412/SK/BAN-PT/Ak/PT/2024';
-      } else if (titleLower.contains('pedoman')) {
-        docNumber = '088/JUKNIS-VOKASI/2026';
-      } else {
-        final recId = record['id'];
-        docNumber = recId != null ? 'DOC-$recId' : '-';
-      }
+      final recId = record['id'];
+      docNumber = recId != null ? 'DOC-$recId' : '-';
     }
 
     // 4. Validity Date / Period
@@ -2487,27 +2335,17 @@ class _InstitutionWorkspaceScreenState
         meta['tanggal']?.toString() ??
         '';
     if (validUntil.isEmpty) {
-      if (titleLower.contains('mou') || titleLower.contains('kemitraan')) {
-        validUntil = 'Berlaku s/d 31 Des 2028';
-      } else if (titleLower.contains('ban-pt')) {
-        validUntil = 'Berlaku s/d 15 Agt 2029 (5 Tahun)';
-      } else if (titleLower.contains('pedoman')) {
-        validUntil = 'TA 2025/2026';
-      } else {
-        validUntil = 'Aktif & Sah Berlaku';
-      }
+      validUntil = '-';
     } else if (!validUntil.toLowerCase().contains('berlaku') && !validUntil.toLowerCase().contains('ta ')) {
       validUntil = 'Berlaku s/d $validUntil';
     }
 
     // 5. File format and size
     final fileFormat = meta['file_format']?.toString() ?? 'PDF';
-    final fileSize = meta['file_size']?.toString() ??
-        (titleLower.contains('pedoman') ? '48 Halaman' : '2.4 MB');
+    final fileSize = meta['file_size']?.toString() ?? '-';
 
     // 6. Grade / Predikat (for Accreditation)
-    final grade = meta['grade']?.toString() ??
-        (titleLower.contains('unggul') ? 'Predikat Unggul (A)' : '');
+    final grade = meta['grade']?.toString() ?? '';
 
     // 7. Status styling
     final isPublished = status == 'published' || status == 'active';
@@ -3266,61 +3104,20 @@ class _InstitutionWorkspaceScreenState
     final title = record['title']?.toString() ?? 'Karya & Portofolio Siswa';
     final desc = record['description']?.toString() ?? '';
 
-    // Smart student / creator name fallback
-    var creator = meta['creator_name']?.toString() ?? meta['creator']?.toString() ?? '';
-    if (creator.isEmpty) {
-      if (title.toLowerCase().contains('nusantara heritage')) {
-        creator = 'Arya Bagaskara & Tim Studio Animasi ISRK';
-      } else if (title.toLowerCase().contains('rempah nusantara')) {
-        creator = 'Nadia Safitri (Prodi DKV)';
-      } else if (title.toLowerCase().contains('kreasibudaya')) {
-        creator = 'Rian Pratama (Prodi Rekayasa Perangkat Lunak)';
-      } else {
-        creator = 'Siswa & Tim Vokasi Berbakat';
-      }
-    }
+    // Creator info
+    final creator = meta['creator_name']?.toString() ?? meta['creator']?.toString() ?? '-';
 
-    // Smart category / major
-    var category = meta['category']?.toString() ?? '';
-    if (category.isEmpty) {
-      if (title.toLowerCase().contains('animasi') || title.toLowerCase().contains('heritage')) {
-        category = 'Animasi 3D';
-      } else if (title.toLowerCase().contains('rempah') || title.toLowerCase().contains('kemasan') || title.toLowerCase().contains('branding')) {
-        category = 'Visual Branding & UI/UX';
-      } else if (title.toLowerCase().contains('flutter') || title.toLowerCase().contains('kreasibudaya') || title.toLowerCase().contains('mobile')) {
-        category = 'Mobile Engineering';
-      } else {
-        category = 'Kreatif Vokasi';
-      }
-    }
+    // Category info
+    final category = meta['category']?.toString() ?? 'Karya Siswa';
 
-    // Year / Angkatan
-    var year = meta['year']?.toString() ?? '';
-    if (year.isEmpty) {
-      if (title.toLowerCase().contains('kreasibudaya')) {
-        year = '2025';
-      } else {
-        year = '2026';
-      }
-    }
+    // Year
+    final year = meta['year']?.toString() ?? '';
 
     // Portfolio URL / Link
-    var portfolioUrl = meta['portfolio_url']?.toString() ?? meta['url']?.toString() ?? '';
-    if (portfolioUrl.isEmpty) {
-      if (title.toLowerCase().contains('nusantara heritage')) {
-        portfolioUrl = 'https://youtube.com/watch?v=demo-animasi-kreavana';
-      } else if (title.toLowerCase().contains('rempah nusantara')) {
-        portfolioUrl = 'https://behance.net/gallery/kreavana-student-showcase';
-      } else if (title.toLowerCase().contains('kreasibudaya')) {
-        portfolioUrl = 'https://github.com/kreavana-vokasi/kreasibudaya-mobile';
-      }
-    }
+    final portfolioUrl = meta['portfolio_url']?.toString() ?? meta['url']?.toString() ?? '';
 
     // Award
-    var award = meta['award']?.toString() ?? '';
-    if (award.isEmpty && title.toLowerCase().contains('nusantara heritage')) {
-      award = 'Best Animation Short Film Kreavana 2026';
-    }
+    final award = meta['award']?.toString() ?? '';
 
     // Discipline Color & Icon
     final catLower = category.toLowerCase();

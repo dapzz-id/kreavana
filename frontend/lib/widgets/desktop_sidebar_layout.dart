@@ -531,6 +531,43 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
 
     if (_isRouteActive(route)) return;
 
+    final effectiveUser = currentUserNotifier.value ?? widget.user;
+    if (_isSchool && effectiveUser.isInstitutionStaff) {
+      if (route == 'tim_hak_akses' || route == 'profil_instansi') {
+        AppSweetAlert.error(
+          context,
+          'Fitur ${route == 'tim_hak_akses' ? "Tim & Hak Akses" : "Profil Institusi"} hanya dapat diakses oleh Admin Institusi.',
+          title: 'Akses Ditolak (403)',
+        );
+        return;
+      }
+      final routeToPerm = <String, String>{
+        'proyek_saya': 'program_magang',
+        'agenda': 'kegiatan_event',
+        'mitra_komunitas': 'mitra_industri',
+        'partners': 'mitra_industri',
+        'karya_siswa': 'karya_siswa',
+        'showcases': 'karya_siswa',
+        'laporan': 'laporan_kegiatan',
+        'reports': 'laporan_kegiatan',
+        'monitoring_evaluasi': 'monitoring_evaluasi',
+        'monitoring': 'monitoring_evaluasi',
+        'dokumen_instansi': 'dokumen_institusi',
+        'documents': 'dokumen_institusi',
+        'pengumuman_publik': 'pengumuman_institusi',
+        'announcements': 'pengumuman_institusi',
+      };
+      final requiredPerm = routeToPerm[route];
+      if (requiredPerm != null && !effectiveUser.hasInstitutionPermission(requiredPerm)) {
+        AppSweetAlert.error(
+          context,
+          'Anda tidak memiliki izin untuk mengakses fitur ini. Hubungi Admin Institusi Anda.',
+          title: 'Akses Ditolak (403)',
+        );
+        return;
+      }
+    }
+
     // Routes that are in MainNavigation's IndexedStack — go to index instead
     switch (route) {
       case 'notifikasi':
@@ -1190,6 +1227,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     final isDark = theme.brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 900;
+    final effectiveUser = currentUserNotifier.value ?? widget.user;
 
     final hasAncestorSidebar =
         context.findAncestorWidgetOfExactType<DesktopSidebarLayout>() != null ||
@@ -1430,94 +1468,122 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             ),
                         ],
                         if (_isSchool) ...[
-                          if (!collapsed) ...[
-                            const SizedBox(height: 18),
-                            _buildSectionHeader('PENGELOLAAN SEKOLAH', isDark),
-                          ] else ...[
-                            const SizedBox(height: 8),
+                          if (effectiveUser.hasInstitutionPermission('program_magang') ||
+                              effectiveUser.hasInstitutionPermission('kegiatan_event') ||
+                              effectiveUser.hasInstitutionPermission('mitra_industri') ||
+                              effectiveUser.hasInstitutionPermission('karya_siswa')) ...[
+                            if (!collapsed) ...[
+                              const SizedBox(height: 18),
+                              _buildSectionHeader('PENGELOLAAN INSTITUSI', isDark),
+                            ] else ...[
+                              const SizedBox(height: 8),
+                            ],
+                            if (effectiveUser.hasInstitutionPermission('program_magang'))
+                              _buildNavRow(
+                                icon: Icons.work_outline,
+                                label: 'Program & Magang',
+                                onTap: () => _pushLink('proyek_saya'),
+                                isSelected: _isRouteActive('proyek_saya'),
+                                isDark: isDark,
+                                isCollapsed: collapsed,
+                              ),
+                            if (effectiveUser.hasInstitutionPermission('kegiatan_event'))
+                              _buildNavRow(
+                                icon: Icons.event_outlined,
+                                label: 'Kegiatan & Event',
+                                onTap: () => _pushLink('agenda'),
+                                isSelected: _isRouteActive('agenda'),
+                                isDark: isDark,
+                                isCollapsed: collapsed,
+                              ),
+                            if (effectiveUser.hasInstitutionPermission('mitra_industri'))
+                              _buildNavRow(
+                                icon: Icons.diversity_3_outlined,
+                                label: 'Mitra Industri & Sanggar',
+                                onTap: () => _pushLink('mitra_komunitas'),
+                                isSelected: _isRouteActive('mitra_komunitas'),
+                                isDark: isDark,
+                                isCollapsed: collapsed,
+                              ),
+                            if (effectiveUser.hasInstitutionPermission('karya_siswa'))
+                              _buildNavRow(
+                                icon: Icons.palette_outlined,
+                                label: 'Karya & Portofolio Siswa',
+                                onTap: () => _pushLink('karya_siswa'),
+                                isSelected: _isRouteActive('karya_siswa'),
+                                isDark: isDark,
+                                isCollapsed: collapsed,
+                              ),
                           ],
-                          _buildNavRow(
-                            icon: Icons.work_outline,
-                            label: 'Program & Magang',
-                            onTap: () => _pushLink('proyek_saya'),
-                            isSelected: _isRouteActive('proyek_saya'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                          ),
-                          _buildNavRow(
-                            icon: Icons.event_outlined,
-                            label: 'Kegiatan & Event',
-                            onTap: () => _pushLink('agenda'),
-                            isSelected: _isRouteActive('agenda'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                          ),
-                          _buildNavRow(
-                            icon: Icons.diversity_3_outlined,
-                            label: 'Mitra Industri & Sanggar',
-                            onTap: () => _pushLink('mitra_komunitas'),
-                            isSelected: _isRouteActive('mitra_komunitas'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                          ),
-                          _buildNavRow(
-                            icon: Icons.palette_outlined,
-                            label: 'Karya & Portofolio Siswa',
-                            onTap: () => _pushLink('karya_siswa'),
-                            isSelected: _isRouteActive('karya_siswa'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                          ),
-                          if (!collapsed) ...[
-                            const SizedBox(height: 18),
-                            _buildSectionHeader('PEMANTAUAN AKADEMIK', isDark),
-                          ] else ...[
-                            const SizedBox(height: 8),
+                          if (effectiveUser.hasInstitutionPermission('laporan_kegiatan') ||
+                              effectiveUser.hasInstitutionPermission('monitoring_evaluasi')) ...[
+                            if (!collapsed) ...[
+                              const SizedBox(height: 18),
+                              _buildSectionHeader('PEMANTAUAN AKADEMIK', isDark),
+                            ] else ...[
+                              const SizedBox(height: 8),
+                            ],
+                            if (effectiveUser.hasInstitutionPermission('laporan_kegiatan'))
+                              _buildNavRow(
+                                icon: Icons.summarize_outlined,
+                                label: 'Laporan Kegiatan',
+                                onTap: () => _pushLink('laporan'),
+                                isSelected: _isRouteActive('laporan'),
+                                isDark: isDark,
+                                isCollapsed: collapsed,
+                              ),
+                            if (effectiveUser.hasInstitutionPermission('monitoring_evaluasi'))
+                              _buildNavRow(
+                                icon: Icons.monitor_outlined,
+                                label: 'Monitoring & Evaluasi',
+                                onTap: () => _pushLink('monitoring_evaluasi'),
+                                isSelected: _isRouteActive('monitoring_evaluasi'),
+                                isDark: isDark,
+                                isCollapsed: collapsed,
+                              ),
                           ],
-                          _buildNavRow(
-                            icon: Icons.summarize_outlined,
-                            label: 'Laporan Kegiatan',
-                            onTap: () => _pushLink('laporan'),
-                            isSelected: _isRouteActive('laporan'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                          ),
-                          _buildNavRow(
-                            icon: Icons.monitor_outlined,
-                            label: 'Monitoring & Evaluasi',
-                            onTap: () => _pushLink('monitoring_evaluasi'),
-                            isSelected: _isRouteActive('monitoring_evaluasi'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                          ),
-                          if (!collapsed) ...[
-                            const SizedBox(height: 18),
-                            _buildSectionHeader('DATA & DOKUMEN', isDark),
-                          ] else ...[
-                            const SizedBox(height: 8),
+                          if (effectiveUser.hasInstitutionPermission('dokumen_institusi') ||
+                              effectiveUser.hasInstitutionPermission('pengumuman_institusi')) ...[
+                            if (!collapsed) ...[
+                              const SizedBox(height: 18),
+                              _buildSectionHeader('DATA & DOKUMEN', isDark),
+                            ] else ...[
+                              const SizedBox(height: 8),
+                            ],
+                            if (effectiveUser.hasInstitutionPermission('dokumen_institusi'))
+                              _buildNavRow(
+                                icon: Icons.folder_outlined,
+                                label: 'Dokumen & MoU',
+                                onTap: () => _pushLink('dokumen_instansi'),
+                                isSelected: _isRouteActive('dokumen_instansi'),
+                                isDark: isDark,
+                                isCollapsed: collapsed,
+                              ),
+                            if (effectiveUser.hasInstitutionPermission('pengumuman_institusi'))
+                              _buildNavRow(
+                                icon: Icons.campaign_outlined,
+                                label: 'Pengumuman Institusi',
+                                onTap: () => _pushLink('pengumuman_publik'),
+                                isSelected: _isRouteActive('pengumuman_publik'),
+                                isDark: isDark,
+                                isCollapsed: collapsed,
+                              ),
                           ],
-                          _buildNavRow(
-                            icon: Icons.folder_outlined,
-                            label: 'Dokumen & MoU',
-                            onTap: () => _pushLink('dokumen_instansi'),
-                            isSelected: _isRouteActive('dokumen_instansi'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                          ),
                           if (!collapsed) ...[
                             const SizedBox(height: 18),
                             _buildSectionHeader('PENGATURAN', isDark),
                           ] else ...[
                             const SizedBox(height: 8),
                           ],
-                          _buildNavRow(
-                            icon: Icons.account_balance_outlined,
-                            label: 'Profil Institusi',
-                            onTap: () => _pushLink('profil_instansi'),
-                            isSelected: _isRouteActive('profil_instansi'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                          ),
+                          if (effectiveUser.isInstitutionAdmin)
+                            _buildNavRow(
+                              icon: Icons.account_balance_outlined,
+                              label: 'Profil Institusi',
+                              onTap: () => _pushLink('profil_instansi'),
+                              isSelected: _isRouteActive('profil_instansi'),
+                              isDark: isDark,
+                              isCollapsed: collapsed,
+                            ),
                           _buildNavRow(
                             icon: Icons.settings_outlined,
                             label: 'Pengaturan Akun',
@@ -1526,14 +1592,15 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
-                          _buildNavRow(
-                            icon: Icons.admin_panel_settings_outlined,
-                            label: 'Tim & Hak Akses',
-                            onTap: () => _pushLink('tim_hak_akses'),
-                            isSelected: _isRouteActive('tim_hak_akses'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                          ),
+                          if (effectiveUser.isInstitutionAdmin)
+                            _buildNavRow(
+                              icon: Icons.admin_panel_settings_outlined,
+                              label: 'Tim & Hak Akses',
+                              onTap: () => _pushLink('tim_hak_akses'),
+                              isSelected: _isRouteActive('tim_hak_akses'),
+                              isDark: isDark,
+                              isCollapsed: collapsed,
+                            ),
                           if (!collapsed) _buildUpgradePromoCard(isDark),
                         ] else if (_isGovernment) ...[
                           if (!collapsed) ...[

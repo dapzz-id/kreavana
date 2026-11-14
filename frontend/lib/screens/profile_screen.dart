@@ -111,32 +111,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _initSchoolDefaults() {
-    final uname = _currentUser.username.toLowerCase();
-    final isSmk = uname.contains('smk') || uname.contains('sekolah');
-
-    _schoolNameController.text = _currentUser.name.isNotEmpty && _currentUser.name != 'Kreavana Demo Institution'
-        ? _currentUser.name
-        : (isSmk ? 'SMK Negeri 1 Kreasi Nusantara' : 'Institut Seni & Rekayasa Kreatif Nusantara (ISRK)');
-    _npsnController.text = isSmk ? '20108942' : '20401829';
-    _institutionTypeController.text = isSmk
-        ? 'Sekolah Menengah Kejuruan (SMK Vokasi)'
-        : 'Perguruan Tinggi Vokasi / Institut Seni & Desain';
-    _accreditationController.text = 'A (Unggul) - BAN-PT';
-    _permitNumberController.text = isSmk ? '421.5/128/Disdik/2019' : '842/E/O/2021';
-    _headmasterNameController.text = isSmk ? 'Drs. H. Hendra Setiawan, M.Pd.' : 'Prof. Dr. Ir. H. Bambang Sudarsono, M.Ds.';
-    _headmasterNipController.text = isSmk ? '19680315 199403 1 007' : '19740512 199903 1 004';
-    _schoolPhoneController.text = _currentUser.phone?.isNotEmpty == true
-        ? _currentUser.phone!
-        : (isSmk ? '(021) 8241-908' : '(021) 8849-201');
-    _schoolEmailController.text = isSmk ? 'info@smkn1kreasi.sch.id' : 'kemitraan@isrk.ac.id';
-    _websiteController.text = isSmk ? 'https://smkn1kreasi.sch.id' : 'https://isrk.ac.id';
-    _cityController.text = isSmk ? 'Kota Bekasi, Jawa Barat' : 'Jakarta Selatan, DKI Jakarta';
-    _addressController.text = isSmk
-        ? 'Jl. Kejuruan Kreatif No. 12, Bekasi, Jawa Barat'
-        : 'Jl. Pendidikan Kreatif No. 45, Kampus Budaya Vokasi Terpadu';
-    _descriptionController.text = isSmk
-        ? 'SMK Pusat Keunggulan bidang Animasi 3D, Desain Komunikasi Visual, dan Rekayasa Perangkat Lunak berbasis kurikulum industri.'
-        : 'Institut pendidikan tinggi vokasi seni, animasi 3D, DKV, dan rekayasa kreatif nusantara yang terakreditasi Unggul oleh BAN-PT dan berstandar internasional.';
+    _schoolNameController.text = _currentUser.name;
+    _schoolPhoneController.text = _currentUser.phone ?? '';
+    _schoolEmailController.text = _currentUser.email;
+    _cityController.text = _currentUser.location ?? '';
+    _addressController.text = _currentUser.location ?? '';
+    _descriptionController.text = _currentUser.bio ?? '';
+    _npsnController.text = '';
+    _institutionTypeController.text = '';
+    _accreditationController.text = '';
+    _permitNumberController.text = '';
+    _headmasterNameController.text = '';
+    _headmasterNipController.text = '';
+    _websiteController.text = '';
   }
 
   void _openPublicProfilePreview() {
@@ -1251,13 +1238,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final schoolName = _schoolNameController.text.trim().isNotEmpty
         ? _schoolNameController.text.trim()
         : _currentUser.name;
-    final npsn = _npsnController.text.trim().isNotEmpty ? _npsnController.text.trim() : '20401829';
+    final npsn = _npsnController.text.trim().isNotEmpty ? _npsnController.text.trim() : '-';
     final akreditasi = _accreditationController.text.trim().isNotEmpty
         ? _accreditationController.text.trim()
-        : 'A (Unggul)';
+        : '-';
     final jenjang = _institutionTypeController.text.trim().isNotEmpty
         ? _institutionTypeController.text.trim()
-        : 'Institut Seni & Desain';
+        : ((_currentUser.subRole != null && _currentUser.subRole!.isNotEmpty)
+            ? _currentUser.subRole!
+            : 'Institusi Pendidikan');
 
     return Container(
       padding: const EdgeInsets.all(28),
@@ -1831,7 +1820,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             keyboardType: TextInputType.emailAddress,
                             decoration: const InputDecoration(
                               labelText: 'Email Resmi Institusi *',
-                              hintText: 'kemitraan@isrk.ac.id',
+                              hintText: 'kemitraan@kampus.ac.id',
                               prefixIcon: Icon(Icons.email_outlined),
                             ),
                           ),
@@ -1854,7 +1843,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           keyboardType: TextInputType.emailAddress,
                           decoration: const InputDecoration(
                             labelText: 'Email Resmi Institusi *',
-                            hintText: 'kemitraan@isrk.ac.id',
+                            hintText: 'kemitraan@kampus.ac.id',
                             prefixIcon: Icon(Icons.email_outlined),
                           ),
                         ),
@@ -1879,7 +1868,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             controller: _websiteController,
                             decoration: const InputDecoration(
                               labelText: 'Website Resmi Institusi',
-                              hintText: 'https://isrk.ac.id',
+                              hintText: 'https://institusi.ac.id',
                               prefixIcon: Icon(Icons.language_outlined),
                             ),
                           ),
@@ -1903,7 +1892,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           controller: _websiteController,
                           decoration: const InputDecoration(
                             labelText: 'Website Resmi Institusi',
-                            hintText: 'https://isrk.ac.id',
+                            hintText: 'https://institusi.ac.id',
                             prefixIcon: Icon(Icons.language_outlined),
                           ),
                         ),

@@ -340,8 +340,70 @@ class ProfileService extends BaseService
             'is_following' => $authUser ? $this->followRepo->isFollowing($authUser->id, $userId) : false,
         ];
 
+        $subRoleLower = strtolower((string) ($data['sub_role'] ?? ''));
+        $roleLower = strtolower((string) $roleVal);
+        $unameLower = strtolower((string) $user->username);
+        $isInstitution = in_array($subRoleLower, ['school', 'sekolah', 'universitas', 'institution', 'kampus', 'smk', 'education', 'institusi', 'campus'])
+            || in_array($roleLower, ['school', 'institution', 'institusi'])
+            || str_contains($unameLower, 'institution')
+            || str_contains($unameLower, 'sekolah')
+            || str_contains($unameLower, 'smk');
+
+        if ($isInstitution) {
+            $data['is_institution'] = true;
+            $data['role_label'] = 'Institusi Pendidikan / Vokasi';
+
+            $instResource = \App\Models\InstitutionResource::where('user_id', $userId)
+                ->where('resource_type', 'profile')
+                ->first();
+
+            if ($instResource) {
+                $meta = is_array($instResource->metadata) ? $instResource->metadata : [];
+                $data['institution_profile'] = [
+                    'id' => $instResource->id,
+                    'title' => $instResource->title,
+                    'description' => $instResource->description,
+                    'npsn' => $meta['npsn'] ?? null,
+                    'institution_type' => $meta['institution_type'] ?? null,
+                    'accreditation' => $meta['accreditation'] ?? null,
+                    'permit_number' => $meta['permit_number'] ?? null,
+                    'headmaster_name' => $meta['headmaster_name'] ?? null,
+                    'headmaster_nip' => $meta['headmaster_nip'] ?? null,
+                    'official_phone' => $meta['official_phone'] ?? null,
+                    'official_email' => $meta['official_email'] ?? null,
+                    'website' => $meta['website'] ?? null,
+                    'city' => $meta['city'] ?? null,
+                    'address' => $meta['address'] ?? null,
+                ];
+            } else {
+                $data['institution_profile'] = [
+                    'id' => null,
+                    'title' => $user->name,
+                    'description' => $user->bio,
+                    'npsn' => null,
+                    'institution_type' => null,
+                    'accreditation' => null,
+                    'permit_number' => null,
+                    'headmaster_name' => null,
+                    'headmaster_nip' => null,
+                    'official_phone' => $user->phone,
+                    'official_email' => $user->email,
+                    'website' => null,
+                    'city' => $user->location,
+                    'address' => $user->location,
+                ];
+            }
+
+            $docs = \App\Models\InstitutionResource::where('user_id', $userId)
+                ->whereIn('resource_type', ['mou', 'document', 'announcements'])
+                ->where('status', 'published')
+                ->orderBy('created_at', 'desc')
+                ->get();
+            $data['institution_documents'] = $docs->toArray();
+        }
+
         if ($isCreator) {
-            // 1. Portofolio Pribadi (Karya dan item portofolio)
+            // 1. Portofolio Pribadi / Institusi (Karya dan item portofolio)
             $portfolio = \App\Models\PortfolioItem::where('user_id', $userId)
                 ->where(function ($q) {
                     $q->where('source', '!=', 'external')->orWhereNull('source');
@@ -384,80 +446,18 @@ class ProfileService extends BaseService
             $data['external_experience_text'] = $app?->experience;
             $data['portfolio_link'] = $app?->portfolio_link;
             $data['skill_description'] = $app?->skill_description;
-            $data['role_label'] = 'Kreator' . ($user->sub_role_label ? ' - ' . $user->sub_role_label : '');
-        } else {
-            $subRoleLower = strtolower((string) ($data['sub_role'] ?? ''));
-            $roleLower = strtolower((string) $roleVal);
-            $unameLower = strtolower((string) $user->username);
-            $isInstitution = in_array($subRoleLower, ['school', 'sekolah', 'universitas', 'institution', 'kampus', 'smk', 'education', 'institusi', 'campus'])
-                || in_array($roleLower, ['school', 'institution', 'institusi'])
-                || str_contains($unameLower, 'institution')
-                || str_contains($unameLower, 'sekolah')
-                || str_contains($unameLower, 'smk');
-
-            if ($isInstitution) {
-                $data['is_institution'] = true;
-                $data['role_label'] = 'Institusi Pendidikan / Vokasi';
-
-                $instResource = \App\Models\InstitutionResource::where('user_id', $userId)
-                    ->where('resource_type', 'profile')
-                    ->first();
-
-                if ($instResource) {
-                    $meta = is_array($instResource->metadata) ? $instResource->metadata : [];
-                    $data['institution_profile'] = [
-                        'id' => $instResource->id,
-                        'title' => $instResource->title,
-                        'description' => $instResource->description,
-                        'npsn' => $meta['npsn'] ?? null,
-                        'institution_type' => $meta['institution_type'] ?? null,
-                        'accreditation' => $meta['accreditation'] ?? null,
-                        'permit_number' => $meta['permit_number'] ?? null,
-                        'headmaster_name' => $meta['headmaster_name'] ?? null,
-                        'headmaster_nip' => $meta['headmaster_nip'] ?? null,
-                        'official_phone' => $meta['official_phone'] ?? null,
-                        'official_email' => $meta['official_email'] ?? null,
-                        'website' => $meta['website'] ?? null,
-                        'city' => $meta['city'] ?? null,
-                        'address' => $meta['address'] ?? null,
-                    ];
-                } else {
-                    $isSmk = str_contains($unameLower, 'smk') || str_contains($unameLower, 'sekolah');
-                    $data['institution_profile'] = [
-                        'id' => null,
-                        'title' => ($user->name && $user->name !== 'Kreavana Demo Institution') ? $user->name : ($isSmk ? 'SMK Negeri 1 Kreasi Nusantara' : 'Institut Seni & Rekayasa Kreatif Nusantara (ISRK)'),
-                        'description' => $isSmk ? 'SMK Pusat Keunggulan bidang Animasi 3D, Desain Komunikasi Visual, dan RPL berbasis industri kurikulum terpadu.' : 'Institut pendidikan tinggi vokasi seni, animasi 3D, DKV, dan rekayasa kreatif nusantara yang terakreditasi Unggul.',
-                        'npsn' => $isSmk ? '20108942' : '20401829',
-                        'institution_type' => $isSmk ? 'Sekolah Menengah Kejuruan (SMK Vokasi)' : 'Perguruan Tinggi Vokasi / Institut Seni & Desain',
-                        'accreditation' => 'A (Unggul) - BAN-PT',
-                        'permit_number' => $isSmk ? '421.5/128/Disdik/2019' : '842/E/O/2021',
-                        'headmaster_name' => $isSmk ? 'Drs. H. Hendra Setiawan, M.Pd.' : 'Prof. Dr. Ir. H. Bambang Sudarsono, M.Ds.',
-                        'headmaster_nip' => $isSmk ? '19680315 199403 1 007' : '19740512 199903 1 004',
-                        'official_phone' => $user->phone ?: ($isSmk ? '(021) 8241-908' : '(021) 8849-201'),
-                        'official_email' => $isSmk ? 'info@smkn1kreasi.sch.id' : 'kemitraan@isrk.ac.id',
-                        'website' => $isSmk ? 'https://smkn1kreasi.sch.id' : 'https://isrk.ac.id',
-                        'city' => $isSmk ? 'Kota Bekasi, Jawa Barat' : 'Jakarta Selatan, DKI Jakarta',
-                        'address' => $isSmk ? 'Jl. Kejuruan Kreatif No. 12, Bekasi, Jawa Barat' : 'Jl. Pendidikan Kreatif No. 45, Kampus Budaya Vokasi Terpadu',
-                    ];
-                }
-
-                $opps = \App\Models\Opportunity::where('posted_by', $userId)
-                    ->orderBy('created_at', 'desc')
-                    ->get(['id', 'title', 'description', 'budget_range', 'status', 'created_at', 'sub_role_slug']);
-                $data['proyek_klien'] = $opps->toArray();
-
-                $docs = \App\Models\InstitutionResource::where('user_id', $userId)
-                    ->whereIn('resource_type', ['mou', 'document', 'announcements'])
-                    ->where('status', 'published')
-                    ->orderBy('created_at', 'desc')
-                    ->get();
-                $data['institution_documents'] = $docs->toArray();
+            if (!$isInstitution) {
+                $data['role_label'] = 'Kreator' . ($user->sub_role_label ? ' - ' . $user->sub_role_label : '');
             } else {
-                // Klien: Proyek yang pernah dibuat/dipublikasikan di Kreavana
-                $opps = \App\Models\Opportunity::where('posted_by', $userId)
-                    ->orderBy('created_at', 'desc')
-                    ->get(['id', 'title', 'description', 'budget_range', 'status', 'created_at', 'sub_role_slug']);
-                $data['proyek_klien'] = $opps->toArray();
+                $data['role_label'] = 'Institusi Pendidikan / Vokasi' . ($user->sub_role_label ? ' - ' . $user->sub_role_label : '');
+            }
+        } else {
+            // Klien: Proyek yang pernah dibuat/dipublikasikan di Kreavana
+            $opps = \App\Models\Opportunity::where('posted_by', $userId)
+                ->orderBy('created_at', 'desc')
+                ->get(['id', 'title', 'description', 'budget_range', 'status', 'created_at', 'sub_role_slug']);
+            $data['proyek_klien'] = $opps->toArray();
+            if (!$isInstitution) {
                 $data['role_label'] = 'Klien / Pemilik Proyek';
             }
         }

@@ -114,8 +114,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
               'type': isComp ? 'Event' : 'Offline',
               'typeColor': isComp ? const Color(0xFFEF4444) : const Color(0xFF4338CA),
               'icon': isComp ? Icons.emoji_events_outlined : Icons.festival_outlined,
-              'location': meta['location']?.toString() ?? 'Kampus ISRK',
-              'organizer': widget.user?.name ?? 'Institut Seni & Rekayasa Kreatif',
+              'location': meta['location']?.toString() ?? (widget.user?.location ?? 'Kampus Institusi'),
+              'organizer': widget.user?.name ?? 'Institusi Penyelenggara',
             });
           }
         }
@@ -800,7 +800,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
 
                             // Organizer Subtitle
                             Text(
-                              'Penyelenggara: ${item['organizer'] ?? 'Institut Seni & Riset Kreatif (ISRK)'}',
+                              'Penyelenggara: ${item['organizer'] ?? (widget.user?.name ?? 'Institusi Penyelenggara')}',
                               style: TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w500,
@@ -1671,7 +1671,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                               'category': typeSel,
                               'event_date': '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}',
                               'event_end_date': '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}',
-                              'location': locCtrl.text.trim().isNotEmpty ? locCtrl.text.trim() : 'Kampus ISRK',
+                              'location': locCtrl.text.trim().isNotEmpty ? locCtrl.text.trim() : (widget.user?.location ?? 'Kampus Institusi'),
                               'registered_participants': 0,
                               'is_competition': typeSel.toLowerCase().contains('lomba') || titleCtrl.text.toLowerCase().contains('lomba'),
                             },

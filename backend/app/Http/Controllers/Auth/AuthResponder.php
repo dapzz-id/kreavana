@@ -53,6 +53,43 @@ trait AuthResponder
             $effectiveVerifType = 'institution';
         }
 
+        $institutionRole = 'admin';
+        $allInstitutionPermissions = [
+            'program_magang',
+            'kegiatan_event',
+            'mitra_industri',
+            'karya_siswa',
+            'laporan_kegiatan',
+            'monitoring_evaluasi',
+            'dokumen_institusi',
+            'pengumuman_institusi',
+        ];
+        $institutionPermissions = $allInstitutionPermissions;
+        $parentInstitutionId = $user?->id;
+
+        if ($user) {
+            $memberRecord = \App\Models\InstitutionResource::where('resource_type', 'members')
+                ->where(function ($q) use ($user) {
+                    $q->where('metadata->email', $user->email)
+                      ->orWhere('metadata->user_id', $user->id)
+                      ->orWhere('metadata->username', $user->username);
+                })->first();
+
+            if ($memberRecord && $memberRecord->user_id !== $user->id) {
+                $meta = is_array($memberRecord->metadata) ? $memberRecord->metadata : [];
+                $rawRole = strtolower((string) ($meta['role'] ?? 'Karyawan / Staf'));
+                $parentInstitutionId = $memberRecord->user_id;
+                if ($rawRole === 'admin') {
+                    $institutionRole = 'admin';
+                    $institutionPermissions = $allInstitutionPermissions;
+                } else {
+                    $institutionRole = 'staff';
+                    $rawPerms = $meta['permissions'] ?? [];
+                    $institutionPermissions = is_array($rawPerms) ? array_values($rawPerms) : [];
+                }
+            }
+        }
+
         $data = [
             'access_token' => $token,
             'token_type' => 'bearer',
@@ -70,6 +107,9 @@ trait AuthResponder
                 'verification_type' => $effectiveVerifType,
                 'balance' => $user->balance,
                 'subscription_tier' => $user->subscription_tier,
+                'institution_role' => $institutionRole,
+                'institution_permissions' => $institutionPermissions,
+                'parent_institution_id' => $parentInstitutionId,
             ] : null,
         ];
 
