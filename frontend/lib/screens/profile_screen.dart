@@ -15,6 +15,7 @@ import 'client_verification_page.dart';
 import '../widgets/app_breadcrumbs.dart';
 import '../widgets/auth_guard_dialog.dart';
 import '../widgets/app_sweet_alert.dart';
+import '../widgets/user_profile_modal.dart';
 import 'main_navigation.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -22,6 +23,8 @@ class ProfileScreen extends StatefulWidget {
   final ValueChanged<UserModel> onUserUpdated;
   final VoidCallback onLogout;
   final bool showSidebar;
+  final bool? isAccountProfileOnly;
+  final bool? isInstitutionProfileOnly;
 
   const ProfileScreen({
     super.key,
@@ -29,6 +32,8 @@ class ProfileScreen extends StatefulWidget {
     required this.onUserUpdated,
     required this.onLogout,
     this.showSidebar = true,
+    this.isAccountProfileOnly,
+    this.isInstitutionProfileOnly,
   });
 
   @override
@@ -39,6 +44,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = false;
   CreatorApplication? _latestApplication;
   late UserModel _currentUser;
+  int _schoolProfileTab = 1; // 0 = Profil Akun (PIC), 1 = Profil Institusi (Publik)
 
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -130,10 +136,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
         : 'Institut pendidikan tinggi vokasi seni, animasi 3D, DKV, dan rekayasa kreatif nusantara yang terakreditasi Unggul oleh BAN-PT dan berstandar internasional.';
   }
 
+  void _openPublicProfilePreview() {
+    UserProfileModal.show(
+      context,
+      userId: _currentUser.id ?? '',
+      initialName: _schoolNameController.text.trim().isNotEmpty
+          ? _schoolNameController.text.trim()
+          : _currentUser.name,
+      initialUsername: _currentUser.username,
+      initialAvatarUrl: _currentUser.avatarUrl,
+      initialRole: _currentUser.role,
+      currentUser: _currentUser,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     _currentUser = widget.user;
+    if (widget.isAccountProfileOnly == true) {
+      _schoolProfileTab = 0;
+    } else if (widget.isInstitutionProfileOnly == true) {
+      _schoolProfileTab = 1;
+    } else {
+      _schoolProfileTab = 1;
+    }
     if (_currentUser.isGuest) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -166,6 +193,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void didUpdateWidget(covariant ProfileScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.isAccountProfileOnly != oldWidget.isAccountProfileOnly ||
+        widget.isInstitutionProfileOnly != oldWidget.isInstitutionProfileOnly) {
+      if (widget.isAccountProfileOnly == true) {
+        setState(() => _schoolProfileTab = 0);
+      } else if (widget.isInstitutionProfileOnly == true) {
+        setState(() => _schoolProfileTab = 1);
+      }
+    }
     if (widget.user != oldWidget.user) {
       _currentUser = widget.user;
       if (_isSchool && _schoolNameController.text.isEmpty) {
@@ -481,11 +516,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
         toolbarHeight: 75,
         title: Text(
           _isSchool
-              ? 'Profil Institusi'
+              ? (_schoolProfileTab == 1 ? 'Profil Institusi' : 'Profil Akun (PIC)')
               : (_isGovernment ? 'Profil Instansi & Kedinasan' : 'Profil Pengguna'),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
+          if (_isSchool)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
+              child: OutlinedButton.icon(
+                onPressed: _openPublicProfilePreview,
+                icon: const Icon(Icons.visibility_outlined, size: 16),
+                label: const Text('Lihat Profil Publik'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF6366F1),
+                  side: const BorderSide(color: Color(0xFF6366F1)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: Colors.red),
             onPressed: () {
@@ -597,12 +648,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                     BreadcrumbItem(
                                       label: _isSchool
-                                          ? 'Profil Institusi'
+                                          ? (_schoolProfileTab == 1 ? 'Profil Institusi' : 'Profil Akun (PIC)')
                                           : (_isGovernment
                                               ? 'Profil Instansi'
                                               : 'Profil Saya'),
                                       icon: _isSchool
-                                          ? Icons.account_balance_rounded
+                                          ? (_schoolProfileTab == 1 ? Icons.account_balance_rounded : Icons.person_rounded)
                                           : (_isGovernment
                                               ? Icons.account_balance_rounded
                                               : Icons.person_rounded),
@@ -610,22 +661,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ],
                           ),
                           const SizedBox(height: 12),
+                          if (_isSchool) ...[
+                            _buildSchoolTabSelector(isDark),
+                            const SizedBox(height: 16),
+                          ],
                           isDesktop
                               ? Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     // Left Column - Profile Card
                                     Expanded(
-                                      flex: _isSchool ? 5 : 1,
-                                      child: _isSchool
+                                      flex: (_isSchool && _schoolProfileTab == 1) ? 5 : 1,
+                                      child: (_isSchool && _schoolProfileTab == 1)
                                           ? _buildSchoolProfileCard(theme, isDark)
                                           : _buildProfileCard(theme, isDark),
                                     ),
                                     const SizedBox(width: 24),
                                     // Right Column - Form only
                                     Expanded(
-                                      flex: _isSchool ? 7 : 1,
-                                      child: _isSchool
+                                      flex: (_isSchool && _schoolProfileTab == 1) ? 7 : 1,
+                                      child: (_isSchool && _schoolProfileTab == 1)
                                           ? _buildSchoolProfileForm(theme, isDark)
                                           : _buildProfileForm(theme, isDark),
                                     ),
@@ -633,11 +688,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 )
                               : Column(
                                   children: [
-                                    _isSchool
+                                    (_isSchool && _schoolProfileTab == 1)
                                         ? _buildSchoolProfileCard(theme, isDark)
                                         : _buildProfileCard(theme, isDark),
                                     const SizedBox(height: 24),
-                                    _isSchool
+                                    (_isSchool && _schoolProfileTab == 1)
                                         ? _buildSchoolProfileForm(theme, isDark)
                                         : _buildProfileForm(theme, isDark),
                                   ],
@@ -669,7 +724,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (isDesktop && widget.showSidebar && !_currentUser.isAdmin) {
       return DesktopSidebarLayout(
         user: _currentUser,
-        activeRoute: isGovOrSchool ? 'profil_instansi' : 'pengaturan',
+        activeRoute: isGovOrSchool
+            ? (_schoolProfileTab == 1 ? 'profil_instansi' : 'profil_akun')
+            : 'pengaturan',
         onUserUpdated: (u) {
           setState(() => _currentUser = u);
           widget.onUserUpdated(u);
@@ -679,6 +736,118 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     return content;
+  }
+
+  Widget _buildSchoolTabSelector(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1B38) : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade300,
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              onTap: () => setState(() => _schoolProfileTab = 0),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 11),
+                decoration: BoxDecoration(
+                  color: _schoolProfileTab == 0
+                      ? (isDark ? AppTheme.primaryPurple : Colors.white)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: _schoolProfileTab == 0
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.person_outline_rounded,
+                      size: 18,
+                      color: _schoolProfileTab == 0
+                          ? (isDark ? Colors.white : AppTheme.primaryPurple)
+                          : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Profil Akun (PIC / Pengelola)',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: _schoolProfileTab == 0
+                            ? (isDark ? Colors.white : AppTheme.primaryPurple)
+                            : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: InkWell(
+              onTap: () => setState(() => _schoolProfileTab = 1),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 11),
+                decoration: BoxDecoration(
+                  color: _schoolProfileTab == 1
+                      ? (isDark ? const Color(0xFF6366F1) : Colors.white)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: _schoolProfileTab == 1
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.account_balance_outlined,
+                      size: 18,
+                      color: _schoolProfileTab == 1
+                          ? (isDark ? Colors.white : const Color(0xFF6366F1))
+                          : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Profil Institusi (Publik)',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: _schoolProfileTab == 1
+                            ? (isDark ? Colors.white : const Color(0xFF6366F1))
+                            : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildProfileCard(ThemeData theme, bool isDark) {
@@ -839,7 +1008,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ? 'ADMINISTRATOR'
                   : _currentUser.role == 'creator'
                   ? 'CREATOR / MITRA'
-                  : 'KLIEN / USER',
+                  : (_isSchool ? 'PENGELOLA INSTITUSI / PIC' : 'KLIEN / USER'),
               style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -953,10 +1122,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Informasi Pribadi',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Text(
+            _isSchool ? 'Informasi Akun Pengelola (PIC)' : 'Informasi Pribadi',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
+          if (_isSchool) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Kelola nama PIC, nomor kontak pribadi, dan identitas akun login pengelola institusi.',
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           TextFormField(
             controller: _nameController,
@@ -1303,6 +1482,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _openPublicProfilePreview,
+              icon: const Icon(Icons.visibility_outlined, size: 16),
+              label: const Text('Lihat Tampilan Profil Publik'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF6366F1),
+                side: const BorderSide(color: Color(0xFF6366F1)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
           ),
         ],

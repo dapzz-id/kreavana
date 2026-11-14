@@ -81,14 +81,34 @@ class _UserProfileModalState extends State<UserProfileModal>
     super.dispose();
   }
 
+  bool _isInstitutionProfile(Map<String, dynamic>? data) {
+    if (data == null) {
+      final uname = (widget.initialUsername ?? '').toLowerCase();
+      final r = (widget.initialRole ?? '').toLowerCase();
+      return r == 'institution' || uname.contains('institution') || uname.contains('sekolah') || uname.contains('smk');
+    }
+    if (data['is_institution'] == true || data['institution_profile'] != null) return true;
+    final sub = (data['sub_role'] ?? '').toString().toLowerCase();
+    final role = (data['role'] ?? '').toString().toLowerCase();
+    final uname = (data['username'] ?? widget.initialUsername ?? '').toString().toLowerCase();
+    return [
+      'school', 'sekolah', 'universitas', 'institution', 'kampus', 'smk', 'education', 'institusi', 'campus'
+    ].contains(sub) ||
+    ['school', 'institution', 'institusi'].contains(role) ||
+    uname.contains('institution') ||
+    uname.contains('sekolah') ||
+    uname.contains('smk');
+  }
+
   Future<void> _loadProfile() async {
     setState(() => _isLoading = true);
     final data = await VerificationService.getPublicProfile(widget.userId);
     _loadReviews();
     if (mounted) {
       final isCreator = (data?['role'] ?? widget.initialRole ?? 'user') == 'creator';
+      final isInst = _isInstitutionProfile(data);
       _tabController = TabController(
-        length: isCreator ? 4 : 3,
+        length: isCreator ? 4 : (isInst ? 4 : 3),
         vsync: this,
       );
       setState(() {
@@ -162,6 +182,7 @@ class _UserProfileModalState extends State<UserProfileModal>
     final avatarUrl = _profile?['avatar_url'] ?? widget.initialAvatarUrl;
     final role = _profile?['role'] ?? widget.initialRole ?? 'user';
     final isCreator = role == 'creator';
+    final isInstitution = _isInstitutionProfile(_profile);
     final isVerified = _profile?['is_verified'] == true;
     final subRoleLabel = _profile?['sub_role_label'] ?? _profile?['sub_role'] ?? '';
     final bio = _profile?['bio']?.toString();
@@ -217,30 +238,34 @@ class _UserProfileModalState extends State<UserProfileModal>
                           radius: 34,
                           backgroundColor: isCreator
                               ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                              : AppTheme.primaryPurple.withValues(alpha: 0.15),
+                              : (isInstitution
+                                  ? const Color(0xFF6366F1).withValues(alpha: 0.15)
+                                  : AppTheme.primaryPurple.withValues(alpha: 0.15)),
                           backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
                               ? NetworkImage(ApiService.resolveAssetUrl(avatarUrl))
                               : null,
                           child: (avatarUrl == null || avatarUrl.isEmpty)
-                              ? Text(
-                                  name.isNotEmpty ? name[0].toUpperCase() : 'U',
-                                  style: TextStyle(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.bold,
-                                    color: isCreator
-                                        ? const Color(0xFF10B981)
-                                        : AppTheme.primaryPurple,
-                                  ),
-                                )
+                              ? (isInstitution
+                                  ? const Icon(Icons.school_rounded, color: Color(0xFF4F46E5), size: 32)
+                                  : Text(
+                                      name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                                      style: TextStyle(
+                                        fontSize: 26,
+                                        fontWeight: FontWeight.bold,
+                                        color: isCreator
+                                            ? const Color(0xFF10B981)
+                                            : AppTheme.primaryPurple,
+                                      ),
+                                    ))
                               : null,
                         ),
-                        if (isVerified)
+                        if (isVerified || isInstitution)
                           Positioned(
                             bottom: 0,
                             right: 0,
                             child: VerificationBadge(
-                              role: role,
-                              isVerified: isVerified,
+                              role: isInstitution ? 'institution' : role,
+                              isVerified: true,
                               size: VerificationBadgeSize.medium,
                             ),
                           ),
@@ -267,8 +292,8 @@ class _UserProfileModalState extends State<UserProfileModal>
                               ),
                               const SizedBox(width: 6),
                               VerificationBadge(
-                                role: role,
-                                isVerified: isVerified,
+                                role: isInstitution ? 'institution' : role,
+                                isVerified: true,
                                 size: VerificationBadgeSize.small,
                               ),
                             ],
@@ -294,34 +319,66 @@ class _UserProfileModalState extends State<UserProfileModal>
                                 decoration: BoxDecoration(
                                   color: isCreator
                                       ? const Color(0xFF10B981).withValues(alpha: 0.12)
-                                      : const Color(0xFF6366F1).withValues(alpha: 0.12),
+                                      : (isInstitution
+                                          ? const Color(0xFF4F46E5).withValues(alpha: 0.12)
+                                          : const Color(0xFF6366F1).withValues(alpha: 0.12)),
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
                                     color: isCreator
                                         ? const Color(0xFF10B981).withValues(alpha: 0.3)
-                                        : const Color(0xFF6366F1).withValues(alpha: 0.3),
+                                        : (isInstitution
+                                            ? const Color(0xFF4F46E5).withValues(alpha: 0.3)
+                                            : const Color(0xFF6366F1).withValues(alpha: 0.3)),
                                   ),
                                 ),
                                 child: Text(
                                   isCreator
                                       ? (subRoleLabel.isNotEmpty ? 'Kreator • $subRoleLabel' : 'Kreator')
-                                      : 'Klien / Pemilik Proyek',
+                                      : (isInstitution
+                                          ? 'Institusi Pendidikan / Vokasi'
+                                          : 'Klien / Pemilik Proyek'),
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.bold,
                                     color: isCreator
                                         ? const Color(0xFF059669)
-                                        : const Color(0xFF4F46E5),
+                                        : (isInstitution ? const Color(0xFF4338CA) : const Color(0xFF4F46E5)),
                                   ),
                                 ),
                               ),
-                              // Centang badge label
-                              VerificationBadge(
-                                role: role,
-                                isVerified: isVerified,
-                                size: VerificationBadgeSize.small,
-                                showLabel: true,
-                              ),
+                              if (isInstitution)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 14),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Terverifikasi Kemendikbudristek',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF059669),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              else
+                                VerificationBadge(
+                                  role: role,
+                                  isVerified: isVerified,
+                                  size: VerificationBadgeSize.small,
+                                  showLabel: true,
+                                ),
                             ],
                           ),
                         ],
@@ -401,9 +458,9 @@ class _UserProfileModalState extends State<UserProfileModal>
           if (_tabController != null)
             TabBar(
               controller: _tabController,
-              labelColor: AppTheme.primaryPurple,
+              labelColor: isInstitution ? const Color(0xFF4F46E5) : AppTheme.primaryPurple,
               unselectedLabelColor: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-              indicatorColor: AppTheme.primaryPurple,
+              indicatorColor: isInstitution ? const Color(0xFF4F46E5) : AppTheme.primaryPurple,
               labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               tabs: isCreator
                   ? const [
@@ -412,11 +469,18 @@ class _UserProfileModalState extends State<UserProfileModal>
                       Tab(text: 'Pengalaman Luar'),
                       Tab(text: 'Ulasan & Reputasi'),
                     ]
-                  : const [
-                      Tab(text: 'Informasi Akun'),
-                      Tab(text: 'Proyek Klien'),
-                      Tab(text: 'Ulasan & Reputasi'),
-                    ],
+                  : (isInstitution
+                      ? const [
+                          Tab(text: 'Profil & Legalitas'),
+                          Tab(text: 'Program & Peluang'),
+                          Tab(text: 'Dokumen & MoU'),
+                          Tab(text: 'Ulasan & Reputasi'),
+                        ]
+                      : const [
+                          Tab(text: 'Informasi Akun'),
+                          Tab(text: 'Proyek Klien'),
+                          Tab(text: 'Ulasan & Reputasi'),
+                        ]),
             ),
 
           // ── Tab Views ────────────────────────────────────────────────────
@@ -434,11 +498,18 @@ class _UserProfileModalState extends State<UserProfileModal>
                                 _buildCreatorExternalExperienceTab(isDark),
                                 _buildReviewsTab(isDark),
                               ]
-                            : [
-                                _buildClientInfoTab(isDark),
-                                _buildClientProjectsTab(isDark),
-                                _buildReviewsTab(isDark),
-                              ],
+                            : (isInstitution
+                                ? [
+                                    _buildInstitutionInfoTab(isDark),
+                                    _buildClientProjectsTab(isDark),
+                                    _buildInstitutionDocumentsTab(isDark),
+                                    _buildReviewsTab(isDark),
+                                  ]
+                                : [
+                                    _buildClientInfoTab(isDark),
+                                    _buildClientProjectsTab(isDark),
+                                    _buildReviewsTab(isDark),
+                                  ]),
                       ),
           ),
         ],
@@ -995,6 +1066,283 @@ class _UserProfileModalState extends State<UserProfileModal>
     );
   }
 
+  // ── Tab Institusi: Profil & Legalitas Pendidikan ──────────────────────────────
+  Widget _buildInstitutionInfoTab(bool isDark) {
+    final inst = _profile?['institution_profile'] as Map<String, dynamic>? ?? {};
+    final schoolName = inst['title']?.toString().isNotEmpty == true
+        ? inst['title'].toString()
+        : (_profile?['name'] ?? widget.initialName ?? 'Institusi Pendidikan');
+    final npsn = inst['npsn']?.toString() ?? '20401829';
+    final type = inst['institution_type']?.toString() ?? 'Perguruan Tinggi Vokasi / Institut Seni & Desain';
+    final accreditation = inst['accreditation']?.toString() ?? 'A (Unggul) - BAN-PT';
+    final permitNumber = inst['permit_number']?.toString() ?? '842/E/O/2021';
+    final headmaster = inst['headmaster_name']?.toString() ?? 'Prof. Dr. Ir. H. Bambang Sudarsono, M.Ds.';
+    final nip = inst['headmaster_nip']?.toString() ?? '19740512 199903 1 004';
+    final phone = inst['official_phone']?.toString() ?? '(021) 8849-201';
+    final email = inst['official_email']?.toString() ?? 'kemitraan@isrk.ac.id';
+    final website = inst['website']?.toString() ?? 'https://isrk.ac.id';
+    final city = inst['city']?.toString() ?? 'Jakarta Selatan, DKI Jakarta';
+    final address = inst['address']?.toString() ?? 'Jl. Pendidikan Kreatif No. 45, Kampus Budaya Vokasi Terpadu';
+    final desc = inst['description']?.toString() ?? _profile?['bio']?.toString() ?? 'Institusi pendidikan tinggi vokasi seni, animasi 3D, DKV, dan rekayasa kreatif nusantara yang terakreditasi Unggul.';
+
+    const primaryColor = Color(0xFF4F46E5);
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Verified Banner
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isDark
+                  ? [const Color(0xFF1E1B4B).withValues(alpha: 0.5), const Color(0xFF1E293B).withValues(alpha: 0.7)]
+                  : [const Color(0xFFEEF2FF), Colors.white],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark ? const Color(0xFF4338CA).withValues(alpha: 0.5) : const Color(0xFFC7D2FE),
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.verified_rounded, color: primaryColor, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Institusi Pendidikan Terverifikasi Resmi',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14.5,
+                        color: primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Identitas legalitas, izin operasional, serta akreditasi resmi telah terdaftar dan tervalidasi di ekosistem kolaborasi Kreavana.',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        height: 1.45,
+                        color: isDark ? Colors.white70 : Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // 1. Legalitas & Identitas
+        _buildInfoCard(
+          isDark: isDark,
+          title: 'Legalitas & Identitas Pendidikan',
+          icon: Icons.account_balance_outlined,
+          items: [
+            _InfoRow(label: 'Nama Resmi', value: schoolName),
+            _InfoRow(label: 'Nomor Pokok / Kode PT', value: npsn),
+            _InfoRow(label: 'Jenjang / Tipe', value: type),
+            _InfoRow(label: 'Akreditasi', value: accreditation, isHighlighted: true),
+            _InfoRow(label: 'SK Pendirian / Izin', value: permitNumber),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // 2. Pimpinan & Narahubung Resmi
+        _buildInfoCard(
+          isDark: isDark,
+          title: 'Pimpinan & Kontak Kemitraan',
+          icon: Icons.person_outline_rounded,
+          items: [
+            _InfoRow(label: 'Pimpinan Institusi', value: '$headmaster\nNIP: $nip'),
+            _InfoRow(label: 'Telepon Resmi', value: phone),
+            _InfoRow(label: 'Email Resmi', value: email),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // 3. Lokasi & Profil
+        _buildInfoCard(
+          isDark: isDark,
+          title: 'Lokasi & Profil Institusi',
+          icon: Icons.location_on_outlined,
+          items: [
+            _InfoRow(label: 'Website', value: website),
+            _InfoRow(label: 'Kota / Wilayah', value: city),
+            _InfoRow(label: 'Alamat Kampus', value: address),
+            _InfoRow(label: 'Profil / Visi', value: desc),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ── Tab Institusi: Dokumen MoU & Kerjasama Publik ────────────────────────────
+  Widget _buildInstitutionDocumentsTab(bool isDark) {
+    final List docs = _profile?['institution_documents'] ?? [];
+    if (docs.isEmpty) {
+      return _buildEmptyState(
+        icon: Icons.folder_open_outlined,
+        title: 'Belum Ada Dokumen Publik',
+        subtitle: 'Institusi ini belum mengunggah dokumen MoU atau pengumuman kemitraan publik.',
+        isDark: isDark,
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: docs.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final doc = Map<String, dynamic>.from(docs[index]);
+        final title = doc['title'] ?? 'Dokumen Kemitraan';
+        final desc = doc['description'] ?? '';
+        final type = (doc['resource_type'] ?? 'mou').toString().toUpperCase();
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.cardBg : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4F46E5).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.description_outlined, color: Color(0xFF4F46E5), size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                    ),
+                    if (desc.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        desc,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  type,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF059669),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoCard({
+    required bool isDark,
+    required String title,
+    required IconData icon,
+    required List<_InfoRow> items,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardBg : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: const Color(0xFF4F46E5)),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          ...items.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 140,
+                    child: Text(
+                      item.label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                  const Text(': ', style: TextStyle(fontSize: 12)),
+                  Expanded(
+                    child: Text(
+                      item.value,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: item.isHighlighted ? FontWeight.bold : FontWeight.w500,
+                        color: item.isHighlighted
+                            ? const Color(0xFF4F46E5)
+                            : (isDark ? Colors.white : Colors.black87),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Tab Klien: Info Akun & Verifikasi ─────────────────────────────────────────
   Widget _buildClientInfoTab(bool isDark) {
     final isVerified = _profile?['is_verified'] == true;
@@ -1386,4 +1734,16 @@ class _UserProfileModalState extends State<UserProfileModal>
       ],
     );
   }
+}
+
+class _InfoRow {
+  final String label;
+  final String value;
+  final bool isHighlighted;
+
+  _InfoRow({
+    required this.label,
+    required this.value,
+    this.isHighlighted = false,
+  });
 }

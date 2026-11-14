@@ -4,23 +4,10 @@ import 'upgrade_plan_modal.dart';
 import '../app/theme.dart';
 import '../app/subrole_theme_engine.dart';
 import '../models/user_model.dart';
-import '../features/auth/screens/login_screen.dart';
 import '../features/auth/services/auth_service.dart';
 import '../services/api_service.dart';
 import '../screens/main_navigation.dart';
 import '../screens/creator_service_screen.dart';
-import '../screens/tender_kolaborasi_screen.dart';
-import '../screens/mitra_komunitas_screen.dart';
-import '../screens/laporan_screen.dart';
-import '../screens/realisasi_anggaran_screen.dart';
-import '../screens/monitoring_evaluasi_screen.dart';
-import '../screens/dokumen_instansi_screen.dart';
-import '../screens/pengumuman_publik_screen.dart';
-import '../screens/profile_screen.dart';
-import '../screens/tim_hak_akses_screen.dart';
-import '../screens/institution_workspace_screen.dart';
-import '../screens/corporate_lowongan_screen.dart';
-import '../screens/buat_kebutuhan_screen.dart';
 import '../features/dashboard/screens/community_dashboard_screen.dart';
 import 'package:go_router/go_router.dart';
 import '../services/app_router.dart';
@@ -316,8 +303,14 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
           current == 'detail_karya_siswa';
     }
 
+    // Profil Akun (PIC / Personal)
+    if (t == 'profil_akun') {
+      return current == 'profil_akun' || (current == 'profil' && !_isSchool && !_isGovernment);
+    }
+
     // Profil Instansi / Profil
     if (t == 'profil_instansi' || t == 'profil') {
+      if (t == 'profil_instansi') return current == 'profil_instansi';
       return current == 'profil_instansi' ||
           current == 'profil' ||
           current == 'edit_profil';
@@ -413,6 +406,16 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
     context.go(targetRoute);
+  }
+
+  void _navigateToRoute(String path) {
+    if (_sidebarScrollController.hasClients) {
+      SidebarScrollManager.savedOffset = _sidebarScrollController.offset;
+    }
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+    context.go(path);
   }
 
   void _pushService(String serviceKey) {
@@ -570,18 +573,14 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         _goToMain(13);
         return;
     }
-    // Routes that push new screens (not in IndexedStack)
-    Widget? destination;
+    // Routes that push dedicated screens with unique URLs
     switch (route) {
       case 'lowongan_magang':
       case 'lowongan':
       case 'internships':
       case 'buka_lowongan':
-        destination = CorporateLowonganScreen(
-          user: widget.user,
-          onUserUpdated: widget.onUserUpdated,
-        );
-        break;
+        _navigateToRoute(AppRoutes.lowonganCorporate);
+        return;
       case 'tender_kolaborasi':
       case 'tenders':
       case 'pengadaan_vendor':
@@ -593,108 +592,55 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
           );
           return;
         }
-        destination = (_isCompany || _isGovernment)
-            ? InstitutionWorkspaceScreen(
-                user: widget.user,
-                resourceType: 'tenders',
-                onUserUpdated: widget.onUserUpdated,
-              )
-            : TenderKolaborasiScreen(user: widget.user);
-        break;
+        _navigateToRoute(AppRoutes.pengadaanVendor);
+        return;
       case 'mitra_komunitas':
       case 'partners':
-        destination = (_isSchool || _isCompany || _isGovernment)
-            ? InstitutionWorkspaceScreen(
-                user: widget.user,
-                resourceType: 'partners',
-                onUserUpdated: widget.onUserUpdated,
-              )
-            : MitraKomunitasScreen(user: widget.user);
-        break;
+        _navigateToRoute(AppRoutes.mitraIndustri);
+        return;
       case 'laporan':
       case 'reports':
-        destination = (_isSchool || _isCompany || _isGovernment)
-            ? InstitutionWorkspaceScreen(
-                user: widget.user,
-                resourceType: 'reports',
-                onUserUpdated: widget.onUserUpdated,
-              )
-            : LaporanScreen(user: widget.user);
-        break;
+        _navigateToRoute(AppRoutes.laporanKegiatan);
+        return;
       case 'realisasi_anggaran':
       case 'budgets':
-        destination = (_isSchool || _isCompany || _isGovernment)
-            ? InstitutionWorkspaceScreen(
-                user: widget.user,
-                resourceType: 'budgets',
-                onUserUpdated: widget.onUserUpdated,
-              )
-            : RealisasiAnggaranScreen(user: widget.user);
-        break;
+        _navigateToRoute(AppRoutes.realisasiAnggaran);
+        return;
       case 'monitoring_evaluasi':
       case 'monitoring':
-        destination = (_isSchool || _isCompany || _isGovernment)
-            ? InstitutionWorkspaceScreen(
-                user: widget.user,
-                resourceType: 'monitoring',
-                onUserUpdated: widget.onUserUpdated,
-              )
-            : MonitoringEvaluasiScreen(user: widget.user);
-        break;
+        _navigateToRoute(AppRoutes.monitoringEvaluasi);
+        return;
       case 'dokumen_instansi':
       case 'documents':
-        destination = (_isSchool || _isCompany || _isGovernment)
-            ? InstitutionWorkspaceScreen(
-                user: widget.user,
-                resourceType: 'documents',
-                onUserUpdated: widget.onUserUpdated,
-              )
-            : DokumenInstansiScreen(user: widget.user);
-        break;
+        _navigateToRoute(AppRoutes.dokumenInstitusi);
+        return;
       case 'pengumuman_publik':
       case 'announcements':
-        destination = (_isSchool || _isCompany || _isGovernment)
-            ? InstitutionWorkspaceScreen(
-                user: widget.user,
-                resourceType: 'announcements',
-                onUserUpdated: widget.onUserUpdated,
-              )
-            : PengumumanPublikScreen(user: widget.user);
-        break;
+        _navigateToRoute(AppRoutes.pengumumanInstitusi);
+        return;
+      case 'profil_akun':
+        _navigateToRoute(AppRoutes.profilAkun);
+        return;
       case 'profil_instansi':
-        destination = ProfileScreen(
-          user: widget.user,
-          onUserUpdated: widget.onUserUpdated ?? (_) {},
-          onLogout: _onLogout,
-        );
-        break;
+        _navigateToRoute(AppRoutes.profilInstitusi);
+        return;
       case 'tim_hak_akses':
-        destination = TimHakAksesScreen(user: widget.user);
-        break;
+        _navigateToRoute(AppRoutes.timHakAkses);
+        return;
       case 'karya_siswa':
       case 'showcases':
-        destination = InstitutionWorkspaceScreen(
-          user: widget.user,
-          resourceType: 'showcases',
-          onUserUpdated: widget.onUserUpdated,
-        );
-        break;
+        _navigateToRoute(AppRoutes.karyaSiswa);
+        return;
       case 'buat_kebutuhan':
-        destination = BuatKebutuhanScreen(user: widget.user);
-        break;
-    }
-    if (destination != null) {
-      _pushNoAnimation(destination);
+        _navigateToRoute(AppRoutes.buatKebutuhan);
+        return;
     }
   }
 
   void _onLogout() async {
     await AuthService.logout();
     if (mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
+      context.go(AppRoutes.login);
     }
   }
 
@@ -1540,6 +1486,14 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             const SizedBox(height: 8),
                           ],
                           _buildNavRow(
+                            icon: Icons.person_outline_rounded,
+                            label: 'Profil Akun (PIC)',
+                            onTap: () => _pushLink('profil_akun'),
+                            isSelected: _isRouteActive('profil_akun'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
+                          _buildNavRow(
                             icon: Icons.account_balance_outlined,
                             label: 'Profil Institusi',
                             onTap: () => _pushLink('profil_instansi'),
@@ -1669,6 +1623,14 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                           ] else ...[
                             const SizedBox(height: 8),
                           ],
+                          _buildNavRow(
+                            icon: Icons.person_outline_rounded,
+                            label: 'Profil Akun (PIC)',
+                            onTap: () => _pushLink('profil_akun'),
+                            isSelected: _isRouteActive('profil_akun'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
                           _buildNavRow(
                             icon: Icons.account_balance_outlined,
                             label: 'Profil Instansi',

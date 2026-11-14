@@ -24,3 +24,23 @@ Setiap pengembang maupun AI Assistant yang membuat, mengubah, atau memperbarui k
 - Jangan push ke branch `main` tanpa melakukan pull `main` terlebih dahulu.
 - Jangan pernah force-push (`git push -f`) ke `main`.
 - **ATURAN KHUSUS CLAUDE:** Jika menggunakan Claude (Anthropic / Claude Code), **JANGAN LAKUKAN OTOMATISASI PUSH KE BRANCH ATAU MAIN** agar Claude tidak tercatat berkontribusi di GitHub. Claude hanya boleh mengedit lokal; biarkan push dieksekusi secara manual oleh pengguna atau agen Antigravity.
+
+---
+
+## 🔒 Mandatory Rules: Page Routing & Permission Guards (1 Page = 1 Route & Strict RBAC)
+
+Lihat detail lengkap di `.agent/rules/page-routing-and-permissions.md` atau `.github/rules/page-routing-and-permissions.md`.
+
+1. **1 Page = 1 Dedicated URL Route**:
+   - Setiap screen/page di Kreavana WAJIB memiliki konstanta route di `AppRoutes` dan didaftarkan pada `appRouter`.
+   - Dilarang membuka page utama dengan `Navigator.push` tanpa mengubah URL browser.
+   - Semua navigasi WAJIB menggunakan `context.go(AppRoutes.<route>)` sehingga address bar browser selalu sinkron dan mendukung refresh (F5).
+2. **Strict Route Permissions & RBAC Guarding**:
+   - Seluruh route dilindungi secara terpusat di `appRouter.redirect`.
+   - Tamu (guest) dilarang mengakses route terproteksi (redirect ke `/login`).
+   - Admin routes (`/dashboard`, `/verifikasi`, `/resolusi`, `/admin-settings`) hanya untuk `isAdmin`.
+   - Institusi (`/profil-institusi`, `/karya-siswa`) hanya untuk `isInstitution` / `isAdmin`.
+   - Institusi DILARANG mengakses `/pengadaan-vendor` (khusus corporate/pemerintah).
+   - Corporate (`/lowongan-corporate`, `/pengadaan-vendor`) hanya untuk `isCorporate` / `isAdmin`.
+   - Workspace instansi/organisasi (`/tim-hak-akses`, `/dokumen-institusi`, `/pengumuman-institusi`, `/monitoring-evaluasi`, `/laporan-kegiatan`, `/mitra-industri`, `/realisasi-anggaran`) hanya untuk role organisasi resmi atau admin.
+

@@ -8,9 +8,7 @@ import '../features/auth/services/auth_service.dart';
 import '../services/profile_service.dart';
 import '../services/api_service.dart';
 import '../features/dashboard/screens/dashboard_screen.dart';
-import 'institution_workspace_screen.dart';
 import 'marketing_dashboard_screen.dart';
-import 'tim_hak_akses_screen.dart';
 import 'notifications_screen.dart';
 import 'profile_screen.dart';
 import 'explore_screen.dart';
@@ -44,7 +42,6 @@ import '../widgets/app_sweet_alert.dart';
 import '../widgets/sidebar_hover_tile.dart';
 import '../services/sidebar_scroll_manager.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'corporate_lowongan_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   final UserModel initialUser;
@@ -658,25 +655,20 @@ class _MainNavigationState extends State<MainNavigation> {
     if (index != null) _navigateToScreenIndex(index);
   }
 
-  void _pushGovScreen(Widget destination) {
+  void _navigateToRoute(String path) {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
     if (_sidebarScrollController.hasClients) {
       SidebarScrollManager.savedOffset = _sidebarScrollController.offset;
     }
-    Navigator.push(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => destination,
-        transitionDuration: Duration.zero,
-        reverseTransitionDuration: Duration.zero,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-            child,
-      ),
-    ).then((_) {
-      if (mounted) {
-        setState(() => _activeGovRoute = null);
-        SidebarScrollManager.restoreScroll(_sidebarScrollController);
-      }
+    setState(() {
+      _isMobileDrawerOpen = false;
+      _activeGovRoute = null;
     });
+    if (mounted) {
+      context.go(path);
+    }
   }
 
   List<Widget> _buildCreatorSidebarItems({
@@ -987,16 +979,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.diversity_3_outlined,
           label: 'Mitra Industri & Sanggar',
-          onTap: () {
-            setState(() => _activeGovRoute = 'mitra_komunitas');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'partners',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.mitraIndustri),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'mitra_komunitas',
@@ -1005,16 +988,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.palette_outlined,
           label: 'Karya & Portofolio Siswa',
-          onTap: () {
-            setState(() => _activeGovRoute = 'karya_siswa');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'showcases',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.karyaSiswa),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'karya_siswa',
@@ -1038,16 +1012,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.summarize_outlined,
           label: 'Laporan Kegiatan',
-          onTap: () {
-            setState(() => _activeGovRoute = 'laporan');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'reports',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.laporanKegiatan),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'laporan',
@@ -1056,16 +1021,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.monitor_outlined,
           label: 'Monitoring & Evaluasi',
-          onTap: () {
-            setState(() => _activeGovRoute = 'monitoring_evaluasi');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'monitoring',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.monitoringEvaluasi),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'monitoring_evaluasi',
@@ -1089,16 +1045,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.folder_outlined,
           label: 'Dokumen & MoU',
-          onTap: () {
-            setState(() => _activeGovRoute = 'dokumen_instansi');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'documents',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.dokumenInstitusi),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'dokumen_instansi',
@@ -1122,16 +1069,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.account_balance_outlined,
           label: 'Profil Institusi',
-          onTap: () {
-            setState(() => _activeGovRoute = 'profil_instansi');
-            _pushGovScreen(
-              ProfileScreen(
-                user: _currentUser,
-                onUserUpdated: _onUserUpdated,
-                onLogout: _onLogout,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.profilInstitusi),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'profil_instansi',
@@ -1149,10 +1087,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.admin_panel_settings_outlined,
           label: 'Tim & Hak Akses',
-          onTap: () {
-            setState(() => _activeGovRoute = 'tim_hak_akses');
-            _pushGovScreen(TimHakAksesScreen(user: _currentUser));
-          },
+          onTap: () => _navigateToRoute(AppRoutes.timHakAkses),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'tim_hak_akses',
@@ -1182,16 +1117,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.handshake_outlined,
           label: 'Tender & Kolaborasi',
-          onTap: () {
-            setState(() => _activeGovRoute = 'tender_kolaborasi');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'tenders',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.pengadaanVendor),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'tender_kolaborasi',
@@ -1209,16 +1135,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.diversity_3_outlined,
           label: 'Mitra & Komunitas',
-          onTap: () {
-            setState(() => _activeGovRoute = 'mitra_komunitas');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'partners',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.mitraIndustri),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'mitra_komunitas',
@@ -1242,16 +1159,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.summarize_outlined,
           label: 'Laporan Kegiatan',
-          onTap: () {
-            setState(() => _activeGovRoute = 'laporan');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'reports',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.laporanKegiatan),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'laporan',
@@ -1260,16 +1168,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.account_balance_outlined,
           label: 'Realisasi Anggaran',
-          onTap: () {
-            setState(() => _activeGovRoute = 'realisasi_anggaran');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'budgets',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.realisasiAnggaran),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'realisasi_anggaran',
@@ -1278,16 +1177,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.monitor_outlined,
           label: 'Monitoring & Evaluasi',
-          onTap: () {
-            setState(() => _activeGovRoute = 'monitoring_evaluasi');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'monitoring',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.monitoringEvaluasi),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'monitoring_evaluasi',
@@ -1311,16 +1201,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.folder_outlined,
           label: 'Dokumen Instansi',
-          onTap: () {
-            setState(() => _activeGovRoute = 'dokumen_instansi');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'documents',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.dokumenInstitusi),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'dokumen_instansi',
@@ -1329,16 +1210,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.campaign_outlined,
           label: 'Pengumuman Publik',
-          onTap: () {
-            setState(() => _activeGovRoute = 'pengumuman_publik');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'announcements',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.pengumumanInstitusi),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'pengumuman_publik',
@@ -1362,16 +1234,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.account_balance_outlined,
           label: 'Profil Instansi',
-          onTap: () {
-            setState(() => _activeGovRoute = 'profil_instansi');
-            _pushGovScreen(
-              ProfileScreen(
-                user: _currentUser,
-                onUserUpdated: _onUserUpdated,
-                onLogout: _onLogout,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.profilInstitusi),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'profil_instansi',
@@ -1389,10 +1252,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.admin_panel_settings_outlined,
           label: 'Tim & Hak Akses',
-          onTap: () {
-            setState(() => _activeGovRoute = 'tim_hak_akses');
-            _pushGovScreen(TimHakAksesScreen(user: _currentUser));
-          },
+          onTap: () => _navigateToRoute(AppRoutes.timHakAkses),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'tim_hak_akses',
@@ -1404,15 +1264,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.work_outline_rounded,
           label: 'Lowongan Kerja & Magang',
-          onTap: () {
-            setState(() => _activeGovRoute = 'lowongan_magang');
-            _pushGovScreen(
-              CorporateLowonganScreen(
-                user: _currentUser,
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.lowonganCorporate),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'lowongan_magang',
@@ -1421,16 +1273,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.assignment_outlined,
           label: 'Pengadaan & Tender (RFP)',
-          onTap: () {
-            setState(() => _activeGovRoute = 'tender_kolaborasi');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'tenders',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.pengadaanVendor),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'tender_kolaborasi',
@@ -1439,16 +1282,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.business_center_outlined,
           label: 'Mitra & Vendor B2B',
-          onTap: () {
-            setState(() => _activeGovRoute = 'mitra_komunitas');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'partners',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.mitraIndustri),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'mitra_komunitas',
@@ -1457,16 +1291,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.verified_outlined,
           label: 'Otorisasi PO & MoU',
-          onTap: () {
-            setState(() => _activeGovRoute = 'dokumen_instansi');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'documents',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.dokumenInstitusi),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'dokumen_instansi',
@@ -1475,16 +1300,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.account_balance_outlined,
           label: 'Alokasi Anggaran & Pajak',
-          onTap: () {
-            setState(() => _activeGovRoute = 'realisasi_anggaran');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'budgets',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.realisasiAnggaran),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'realisasi_anggaran',
@@ -1493,16 +1309,7 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.summarize_outlined,
           label: 'Laporan & Audit B2B',
-          onTap: () {
-            setState(() => _activeGovRoute = 'laporan');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'reports',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
+          onTap: () => _navigateToRoute(AppRoutes.laporanKegiatan),
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'laporan',
