@@ -1209,10 +1209,12 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
 
   late final List<SpecializationQuotaEntry> _specializations;
   late final List<String> _requirements;
+  late final List<Map<String, String>> _availableSpecializationOptions;
 
   @override
   void initState() {
     super.initState();
+    _availableSpecializationOptions = List<Map<String, String>>.from(kCorporateSpecializationOptions);
     _titleController = TextEditingController(text: 'Program Magang MBKM 3D Modeler Batch I 2026');
     _descriptionController = TextEditingController(
       text: 'Kerja sama penempatan talenta vokasi dan mahasiswa magang pada lini produksi kreatif berstandar industri internasional.',
@@ -1249,6 +1251,51 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
 
   void _onQuotaChanged() {
     if (mounted) setState(() {});
+  }
+
+  String _slugify(String text) {
+    return text
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+  }
+
+  Map<String, String> _addNewSpecializationOption(String label) {
+    final trimmed = label.trim();
+    if (trimmed.isEmpty) return _availableSpecializationOptions.first;
+    final existing = _availableSpecializationOptions.cast<Map<String, String>?>().firstWhere(
+      (opt) => opt!['label']!.toLowerCase() == trimmed.toLowerCase(),
+      orElse: () => null,
+    );
+    if (existing != null) {
+      return existing;
+    }
+    final generatedSlug = _slugify(trimmed);
+    final slug = generatedSlug.isEmpty ? 'role_${DateTime.now().millisecondsSinceEpoch}' : generatedSlug;
+    final newOpt = {'slug': slug, 'label': trimmed};
+    setState(() {
+      _availableSpecializationOptions.add(newOpt);
+    });
+    return newOpt;
+  }
+
+  Future<void> _openSpecializationSearchPicker(int specIndex) async {
+    final currentSlug = _specializations[specIndex].roleSlug;
+    final selected = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (ctx) => _SearchableSpecializationDialog(
+        currentSlug: currentSlug,
+        options: _availableSpecializationOptions,
+        onAddNewOption: (newLabel) => _addNewSpecializationOption(newLabel),
+      ),
+    );
+    if (selected != null) {
+      setState(() {
+        _specializations[specIndex].roleSlug = selected['slug']!;
+        _specializations[specIndex].roleLabel = selected['label']!;
+      });
+    }
   }
 
   @override
@@ -1302,7 +1349,7 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
       );
 
   void _onSpecializationChanged(int index, String newSlug) {
-    final match = kCorporateSpecializationOptions.firstWhere(
+    final match = _availableSpecializationOptions.firstWhere(
       (e) => e['slug'] == newSlug,
       orElse: () => {'slug': newSlug, 'label': newSlug},
     );
@@ -1314,9 +1361,9 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
 
   void _addSpecialization() {
     final usedSlugs = _specializations.map((s) => s.roleSlug).toSet();
-    final available = kCorporateSpecializationOptions.firstWhere(
+    final available = _availableSpecializationOptions.firstWhere(
       (e) => !usedSlugs.contains(e['slug']),
-      orElse: () => kCorporateSpecializationOptions.first,
+      orElse: () => _availableSpecializationOptions.first,
     );
 
     final newEntry = SpecializationQuotaEntry(
@@ -2315,29 +2362,40 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  // Specialization Dropdown
+                                // Specialization Dropdown Field (Searchable with Add Option)
                                   Expanded(
                                     flex: 3,
-                                    child: DropdownButtonFormField<String>(
-                                      initialValue: _specializations[i].roleSlug,
-                                      isExpanded: true,
-                                      decoration: _inputDecoration(
-                                        hint: 'Pilih Spesialisasi',
-                                        prefixIcon: Icons.work_outline_rounded,
+                                    child: InkWell(
+                                      key: ValueKey('spec_dropdown_$i'),
+                                      onTap: () => _openSpecializationSearchPicker(i),
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF8FAFC),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(color: const Color(0xFFCBD5E1)),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            const Icon(Icons.work_outline_rounded, size: 18, color: Color(0xFF2563EB)),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                _specializations[i].roleLabel,
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF0F172A),
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: Color(0xFF64748B)),
+                                          ],
+                                        ),
                                       ),
-                                      items: kCorporateSpecializationOptions.map((opt) {
-                                        return DropdownMenuItem<String>(
-                                          value: opt['slug'],
-                                          child: Text(
-                                            opt['label']!,
-                                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        );
-                                      }).toList(),
-                                      onChanged: (val) {
-                                        if (val != null) _onSpecializationChanged(i, val);
-                                      },
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -2383,17 +2441,51 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
                             ),
                           ],
 
-                          // Add Specialization Button
-                          OutlinedButton.icon(
-                            onPressed: _addSpecialization,
-                            icon: const Icon(Icons.add_rounded, size: 18),
-                            label: const Text('Tambah Spesialisasi Lain'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF2563EB),
-                              side: const BorderSide(color: Color(0xFF93C5FD)),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
+                          // Action buttons for specializations
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 8,
+                            children: [
+                              OutlinedButton.icon(
+                                onPressed: _addSpecialization,
+                                icon: const Icon(Icons.add_rounded, size: 18),
+                                label: const Text('Tambah Spesialisasi Lain'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF2563EB),
+                                  side: const BorderSide(color: Color(0xFF93C5FD)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                              OutlinedButton.icon(
+                                key: const ValueKey('btn_add_new_option_global'),
+                                onPressed: () async {
+                                  final newOpt = await showDialog<Map<String, String>>(
+                                    context: context,
+                                    builder: (ctx) => _SearchableSpecializationDialog(
+                                      currentSlug: '',
+                                      options: _availableSpecializationOptions,
+                                      onAddNewOption: (label) => _addNewSpecializationOption(label),
+                                    ),
+                                  );
+                                  if (newOpt != null) {
+                                    AppSweetAlert.success(
+                                      context,
+                                      'Spesialisasi "${newOpt['label']}" berhasil ditambahkan ke pilihan dropdown.',
+                                      title: 'Opsi Ditambahkan',
+                                    );
+                                  }
+                                },
+                                icon: const Icon(Icons.playlist_add_rounded, size: 18),
+                                label: const Text('Kelola / Tambah Opsi Dropdown'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF475569),
+                                  side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 16),
 
@@ -2668,6 +2760,345 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SearchableSpecializationDialog extends StatefulWidget {
+  final String currentSlug;
+  final List<Map<String, String>> options;
+  final Map<String, String> Function(String newLabel) onAddNewOption;
+
+  const _SearchableSpecializationDialog({
+    required this.currentSlug,
+    required this.options,
+    required this.onAddNewOption,
+  });
+
+  @override
+  State<_SearchableSpecializationDialog> createState() => _SearchableSpecializationDialogState();
+}
+
+class _SearchableSpecializationDialogState extends State<_SearchableSpecializationDialog> {
+  final TextEditingController _searchCtrl = TextEditingController();
+  final TextEditingController _customRoleCtrl = TextEditingController();
+  bool _isCreatingCustom = false;
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    _customRoleCtrl.dispose();
+    super.dispose();
+  }
+
+  void _submitNewCustomRole(String roleName) {
+    final clean = roleName.trim();
+    if (clean.isEmpty) return;
+    final created = widget.onAddNewOption(clean);
+    Navigator.of(context).pop(created);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final query = _searchCtrl.text.trim().toLowerCase();
+    final filtered = widget.options.where((opt) {
+      if (query.isEmpty) return true;
+      final labelMatch = opt['label']!.toLowerCase().contains(query);
+      final slugMatch = opt['slug']!.toLowerCase().contains(query);
+      return labelMatch || slugMatch;
+    }).toList();
+
+    final hasExactMatch = widget.options.any(
+      (opt) => opt['label']!.trim().toLowerCase() == query,
+    );
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      actionsPadding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.search_rounded, color: Color(0xFF2563EB), size: 22),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Pilih Spesialisasi Keahlian',
+                  style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Cari atau buat opsi spesialisasi baru',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.normal),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF64748B)),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 460,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Search Input Field
+            TextFormField(
+              controller: _searchCtrl,
+              autofocus: true,
+              onChanged: (_) => setState(() {}),
+              onFieldSubmitted: (val) {
+                if (val.trim().isNotEmpty && !hasExactMatch) {
+                  _submitNewCustomRole(val);
+                }
+              },
+              decoration: InputDecoration(
+                hintText: 'Cari spesialisasi atau ketik opsi baru...',
+                hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+                prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF2563EB)),
+                suffixIcon: _searchCtrl.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 16, color: Color(0xFF64748B)),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          setState(() {});
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // If user typed something that doesn't exist, show quick add banner
+            if (query.isNotEmpty && !hasExactMatch) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFF93C5FD)),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    key: const ValueKey('btn_add_typed_spec_option'),
+                    onTap: () => _submitNewCustomRole(_searchCtrl.text),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF2563EB),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.add, color: Colors.white, size: 14),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Tambahkan "${_searchCtrl.text.trim()}"',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF1D4ED8),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(height: 1),
+                                const Text(
+                                  'Klik untuk menambahkan opsi baru ini ke dropdown',
+                                  style: TextStyle(fontSize: 11, color: Color(0xFF3B82F6)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF2563EB)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+
+            // If creating custom via input form
+            if (_isCreatingCustom) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFCBD5E1)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Nama Spesialisasi Baru',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF334155)),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _customRoleCtrl,
+                            autofocus: true,
+                            decoration: InputDecoration(
+                              hintText: 'Misal: AI Prompt Engineer',
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onFieldSubmitted: (v) => _submitNewCustomRole(v),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: () => _submitNewCustomRole(_customRoleCtrl.text),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF2563EB),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Text('Simpan'),
+                        ),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 18),
+                          onPressed: () => setState(() => _isCreatingCustom = false),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Options List
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 280),
+              child: filtered.isEmpty && (query.isEmpty || hasExactMatch)
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: Text(
+                          'Tidak ada spesialisasi yang cocok.',
+                          style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: filtered.length,
+                      itemBuilder: (ctx, idx) {
+                        final opt = filtered[idx];
+                        final isSelected = opt['slug'] == widget.currentSlug;
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 4),
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFFEFF6FF) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                            border: isSelected
+                                ? Border.all(color: const Color(0xFFBFDBFE))
+                                : null,
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: ListTile(
+                            dense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                            leading: Icon(
+                              isSelected ? Icons.check_circle_rounded : Icons.work_outline_rounded,
+                              size: 18,
+                              color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                            ),
+                            title: Text(
+                              opt['label']!,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                color: isSelected ? const Color(0xFF1D4ED8) : const Color(0xFF0F172A),
+                              ),
+                            ),
+                            trailing: isSelected
+                                ? const Text(
+                                    'Terpilih',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF2563EB),
+                                    ),
+                                  )
+                                : null,
+                            onTap: () {
+                              Navigator.of(context).pop(opt);
+                            },
+                          ),
+                        ),
+                      );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        if (!_isCreatingCustom)
+          TextButton.icon(
+            key: const ValueKey('btn_open_custom_role_form'),
+            onPressed: () {
+              setState(() {
+                _isCreatingCustom = true;
+                _customRoleCtrl.text = _searchCtrl.text.trim();
+              });
+            },
+            icon: const Icon(Icons.add_rounded, size: 16),
+            label: const Text('Tambah Opsi Kustom Baru'),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFF2563EB)),
+          ),
+        OutlinedButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Batal'),
+        ),
+      ],
     );
   }
 }
