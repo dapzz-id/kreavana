@@ -19,6 +19,7 @@ import '../screens/pengumuman_publik_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/tim_hak_akses_screen.dart';
 import '../screens/institution_workspace_screen.dart';
+import '../screens/corporate_lowongan_screen.dart';
 import '../screens/buat_kebutuhan_screen.dart';
 import '../features/dashboard/screens/community_dashboard_screen.dart';
 import 'package:go_router/go_router.dart';
@@ -168,6 +169,14 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     final current = widget.activeRoute.toLowerCase().trim();
     final t = target.toLowerCase().trim();
     if (current == t) return true;
+
+    // Lowongan Kerja & Magang
+    if (t == 'lowongan_magang' || t == 'lowongan' || t == 'internships') {
+      return current == 'lowongan_magang' ||
+          current == 'lowongan' ||
+          current == 'internships' ||
+          current == 'buka_lowongan';
+    }
 
     // Proyek / Kebutuhan (Add, Edit, View Detail, Manage Pelamar)
     if (t == 'proyek_saya' || t == 'proyek') {
@@ -561,6 +570,15 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     // Routes that push new screens (not in IndexedStack)
     Widget? destination;
     switch (route) {
+      case 'lowongan_magang':
+      case 'lowongan':
+      case 'internships':
+      case 'buka_lowongan':
+        destination = CorporateLowonganScreen(
+          user: widget.user,
+          onUserUpdated: widget.onUserUpdated,
+        );
+        break;
       case 'tender_kolaborasi':
       case 'tenders':
       case 'pengadaan_vendor':
@@ -1686,6 +1704,14 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                           ] else ...[
                             const SizedBox(height: 8),
                           ],
+                          _buildNavRow(
+                            icon: Icons.work_outline_rounded,
+                            label: 'Lowongan Kerja & Magang',
+                            onTap: () => _pushLink('lowongan_magang'),
+                            isSelected: _isRouteActive('lowongan_magang'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
                           _buildNavRow(
                             icon: Icons.assignment_outlined,
                             label: 'Pengadaan & Tender (RFP)',

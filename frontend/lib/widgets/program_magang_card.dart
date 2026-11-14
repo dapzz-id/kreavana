@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../models/opportunity_model.dart';
 
 class ProgramMagangCard extends StatelessWidget {
@@ -36,6 +35,10 @@ class ProgramMagangCard extends StatelessWidget {
     this.opportunity,
   });
 
+  static const _monthsId = [
+    '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+  ];
+
   /// Formats raw date string (e.g. "2026-09-21" or "2026-12-23") to "21 Sep 2026" / "d MMM yyyy"
   static String formatDateDisplay(
     String? rawDate, {
@@ -52,14 +55,19 @@ class ProgramMagangCard extends StatelessWidget {
     try {
       final parsed = DateTime.tryParse(trimmed);
       if (parsed != null) {
-        return DateFormat('d MMM yyyy', 'id_ID').format(parsed);
+        final m = parsed.month >= 1 && parsed.month <= 12 ? _monthsId[parsed.month] : 'Jan';
+        return '${parsed.day} $m ${parsed.year}';
       }
     } catch (_) {}
 
     if (RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(trimmed)) {
       try {
-        final parsed = DateTime.parse(trimmed.substring(0, 10));
-        return DateFormat('d MMM yyyy', 'id_ID').format(parsed);
+        final parts = trimmed.substring(0, 10).split('-');
+        final y = parts[0];
+        final mInt = int.tryParse(parts[1]) ?? 1;
+        final dInt = int.tryParse(parts[2]) ?? 1;
+        final m = mInt >= 1 && mInt <= 12 ? _monthsId[mInt] : 'Jan';
+        return '$dInt $m $y';
       } catch (_) {}
     }
 

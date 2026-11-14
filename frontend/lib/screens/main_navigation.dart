@@ -43,6 +43,7 @@ import '../widgets/feature_disabled_view.dart';
 import '../widgets/app_sweet_alert.dart';
 import '../widgets/sidebar_hover_tile.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'corporate_lowongan_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   final UserModel initialUser;
@@ -1427,6 +1428,23 @@ class _MainNavigationState extends State<MainNavigation> {
         if (!isMobileDrawer)
           _buildUpgradePromoCard(isDark, isCollapsed: isCollapsed),
       ] else if (_isCompany) ...[
+        _buildSidebarLink(
+          icon: Icons.work_outline_rounded,
+          label: 'Lowongan Kerja & Magang',
+          onTap: () {
+            setState(() => _activeGovRoute = 'lowongan_magang');
+            _pushGovScreen(
+              CorporateLowonganScreen(
+                user: _currentUser,
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'lowongan_magang',
+          isMobileDrawer: isMobileDrawer,
+        ),
         _buildSidebarLink(
           icon: Icons.assignment_outlined,
           label: 'Pengadaan & Tender (RFP)',
