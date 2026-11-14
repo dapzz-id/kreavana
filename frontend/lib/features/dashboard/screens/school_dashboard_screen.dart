@@ -17,6 +17,7 @@ import '../../auth/services/auth_service.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../../widgets/app_bar_badge.dart';
 import '../../../widgets/app_sweet_alert.dart';
+import '../../../widgets/program_magang_card.dart';
 import '../../../services/school_pdf_service.dart';
 
 class SchoolDashboardScreen extends StatefulWidget {
@@ -1827,93 +1828,11 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
 
         // Opportunity Cards
         ...filteredOpps.map((opp) {
-          final meta = opp['metadata'] as Map<String, dynamic>? ?? {};
-          final partner = meta['industry_partner']?.toString() ?? 'Mitra Industri';
-          final duration = meta['duration']?.toString() ?? '6 Bulan';
-          final allowance = meta['allowance']?.toString() ??
-              (meta['budget'] != null ? 'Rp ${meta['budget']}' : 'Dibiayai Industri');
-          final quota = meta['quota']?.toString() ?? '5-10 Mahasiswa';
-          final applicants = meta['applicants_count']?.toString() ?? '12';
-
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: _schoolColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.work_outline, color: _schoolColor, size: 22),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              opp['title'] ?? '',
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: _schoolColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              partner,
-                              style: const TextStyle(color: _schoolColor, fontSize: 10.5, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        opp['description'] ?? '',
-                        style: TextStyle(fontSize: 11.5, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-                      ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 14,
-                        runSpacing: 4,
-                        children: [
-                          _buildSmallInfo(Icons.timer_outlined, duration),
-                          _buildSmallInfo(Icons.monetization_on_outlined, allowance),
-                          _buildSmallInfo(Icons.groups, 'Kuota: $quota'),
-                          _buildSmallInfo(Icons.assignment_ind_outlined, '$applicants Pendaftar'),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: () => _showOpportunityDetail(opp),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _schoolColor,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  ),
-                  child: const Text('Kelola', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                ),
-              ],
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: ProgramMagangCard.fromMap(
+              opp,
+              onDetailPressed: () => _showOpportunityDetail(opp),
             ),
           );
         }),
@@ -3670,29 +3589,67 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
       // Opportunities
       {
         'resource_type': 'tenders',
-        'title': 'Program Magang MBKM: 3D Character & Environment Modeler',
-        'description': 'Kesempatan magang bersertifikat selama 6 bulan di studio animasi untuk pengerjaan aset serial animasi 3D.',
+        'title': 'Program Magang MBKM 3D Modeler Batch I 2026',
+        'description':
+            'Kerja sama penempatan 10 siswa vokasi magang pada produksi serial animasi nusantara.',
         'status': 'open',
         'metadata': {
-          'category': 'Magang PKL / MBKM',
+          'category': 'Magang',
           'industry_partner': 'PT Studio Animasi Nusantara',
+          'period': '14 Jan – 14 Feb 2027',
+          'quota_text': '4 dari 10 posisi',
           'quota': '10 Mahasiswa',
           'allowance': 'Rp 3.500.000 / bulan',
           'duration': '6 Bulan',
-          'applicants_count': 24,
+          'applicants_count': 6,
+          'requirements': [
+            'Siswa SMK jurusan terkait',
+            'Menguasai dasar 3D Modeling',
+            'Memiliki portofolio karya',
+          ],
+        },
+      },
+      {
+        'resource_type': 'tenders',
+        'title': 'Program Magang MBKM UI/UX & Digital Product Design',
+        'description':
+            'Kerja sama penempatan 8 siswa vokasi magang pada perancangan produk digital kreatif.',
+        'status': 'open',
+        'metadata': {
+          'category': 'Magang',
+          'industry_partner': 'PT Teknologi Kreatif Nusantara',
+          'period': '1 Feb – 1 Mar 2027',
+          'quota_text': '3 dari 8 posisi',
+          'quota': '8 Mahasiswa',
+          'allowance': 'Rp 3.000.000 / bulan',
+          'duration': '6 Bulan',
+          'applicants_count': 5,
+          'requirements': [
+            'Siswa SMK / Mahasiswa DKV & RPL',
+            'Menguasai Figma & Design System',
+            'Memiliki portofolio studi kasus',
+          ],
         },
       },
       {
         'resource_type': 'tenders',
         'title': 'Riset Terapan: Penerapan Fotogrametri 3D untuk Cagar Budaya',
-        'description': 'Hibah penelitian kolaboratif dosen dan mahasiswa bersama instansi kebudayaan dalam mendokumentasikan artefak bersejarah.',
+        'description':
+            'Hibah penelitian kolaboratif dosen dan mahasiswa bersama instansi kebudayaan dalam mendokumentasikan artefak bersejarah.',
         'status': 'in_progress',
         'metadata': {
-          'category': 'Riset Kolaboratif Industri',
+          'category': 'Riset Kolaboratif',
           'industry_partner': 'Balai Pelestarian Kebudayaan',
+          'period': '15 Feb – 15 Okt 2027',
+          'quota_text': '2 dari 5 posisi',
           'budget': 65000000,
           'duration': '8 Bulan',
           'applicants_count': 4,
+          'requirements': [
+            'Dosen & Mahasiswa Program Studi Terkait',
+            'Memahami fotogrametri & pemodelan 3D',
+            'Bersedia melakukan survei lapangan',
+          ],
         },
       },
       // Partners

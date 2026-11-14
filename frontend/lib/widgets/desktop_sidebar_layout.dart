@@ -1428,7 +1428,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                           ],
                           _buildNavRow(
                             icon: Icons.work_outline,
-                            label: 'Program Magang Industri',
+                            label: 'Program & Magang',
                             onTap: () => _pushLink('proyek_saya'),
                             isSelected: _isRouteActive('proyek_saya'),
                             isDark: isDark,

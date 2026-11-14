@@ -23,6 +23,7 @@ import '../widgets/user_profile_modal.dart';
 import '../widgets/opportunity_review_dialog.dart';
 import '../widgets/repeat_order_dialog.dart';
 import '../widgets/app_sweet_alert.dart';
+import '../widgets/program_magang_card.dart';
 
 enum ProjectItemType {
   opportunity,
@@ -261,6 +262,71 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
         sub == 'kampus';
   }
 
+  List<OpportunityModel> _getSampleMagangOpportunities() {
+    return [
+      OpportunityModel(
+        id: 'sch_opp_magang_1',
+        title: 'Program Magang MBKM 3D Modeler Batch I 2026',
+        description:
+            'Kerja sama penempatan 10 siswa vokasi magang pada produksi serial animasi nusantara.',
+        subRoleSlug: 'animator',
+        type: 'project',
+        status: 'open',
+        eventStartDate: '2027-01-14',
+        eventEndDate: '2027-02-14',
+        budgetRange: 'Rp 3.500.000 / bulan',
+        requirements: [
+          OpportunityRequirementModel(
+            subRoleSlug: 'animator',
+            quantity: 10,
+            notes:
+                'Siswa SMK jurusan terkait, Menguasai dasar 3D Modeling, Memiliki portofolio karya',
+          ),
+        ],
+      ),
+      OpportunityModel(
+        id: 'sch_opp_magang_2',
+        title: 'Program Magang MBKM UI/UX & Digital Product Design',
+        description:
+            'Kerja sama penempatan 8 siswa vokasi magang pada perancangan produk digital kreatif.',
+        subRoleSlug: 'desainer',
+        type: 'project',
+        status: 'open',
+        eventStartDate: '2027-02-01',
+        eventEndDate: '2027-03-01',
+        budgetRange: 'Rp 3.000.000 / bulan',
+        requirements: [
+          OpportunityRequirementModel(
+            subRoleSlug: 'desainer',
+            quantity: 8,
+            notes:
+                'Siswa SMK / Mahasiswa DKV & RPL, Menguasai Figma & Design System, Memiliki portofolio studi kasus',
+          ),
+        ],
+      ),
+      OpportunityModel(
+        id: 'sch_opp_magang_3',
+        title: 'Program Magang Post-Production & Motion Graphics',
+        description:
+            'Kerja sama penempatan 6 siswa magang post-production video komersial dan animasi nusantara.',
+        subRoleSlug: 'editor',
+        type: 'project',
+        status: 'open',
+        eventStartDate: '2027-02-15',
+        eventEndDate: '2027-03-15',
+        budgetRange: 'Rp 3.200.000 / bulan',
+        requirements: [
+          OpportunityRequirementModel(
+            subRoleSlug: 'editor',
+            quantity: 6,
+            notes:
+                'Siswa SMK Multimedia / Animasi, Mahir Premiere Pro & After Effects, Menyertakan showreel karya video',
+          ),
+        ],
+      ),
+    ];
+  }
+
   @override
   void dispose() {
     _debouncer.dispose();
@@ -286,14 +352,21 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
           debugPrint('Error fetching contracts: $e');
           return <JobContract>[];
         }),
-        OpportunityService.getMyOpportunities().catchError((e) {
-          debugPrint('Error fetching my opportunities: $e');
+        (_isSchool
+                ? OpportunityService.getOpportunities(limit: 50)
+                : OpportunityService.getMyOpportunities())
+            .catchError((e) {
+          debugPrint('Error fetching opportunities: $e');
           return <OpportunityModel>[];
         }),
       ]);
 
       final contracts = results[0] as List<JobContract>;
-      final opportunities = results[1] as List<OpportunityModel>;
+      final opportunities = List<OpportunityModel>.from(results[1] as List<OpportunityModel>);
+
+      if (_isSchool && opportunities.isEmpty) {
+        opportunities.addAll(_getSampleMagangOpportunities());
+      }
 
       final unified = <UnifiedProjectItem>[];
 
@@ -922,7 +995,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                           },
                         ),
                         BreadcrumbItem(
-                          label: _isSchool ? 'Program Magang Industri' : 'Proyek Saya',
+                          label: _isSchool ? 'Program & Magang' : 'Proyek Saya',
                           icon: _isSchool ? Icons.work_outline_rounded : Icons.folder_rounded,
                         ),
                       ],
@@ -1032,7 +1105,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                _isSchool ? 'Program Magang Industri' : 'Proyek Saya',
+                _isSchool ? 'Program & Magang' : 'Proyek Saya',
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
@@ -1452,6 +1525,57 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     Color accentColor,
   ) {
     final isOpportunity = item.type == ProjectItemType.opportunity;
+
+    final isMagang = _isSchool ||
+        item.category.toLowerCase().contains('magang') ||
+        item.title.toLowerCase().contains('magang') ||
+        (item.opportunity != null &&
+            (item.opportunity!.subRoleSlug.toLowerCase() == 'magang' ||
+                item.opportunity!.title.toLowerCase().contains('magang')));
+
+    if (isMagang) {
+      if (item.opportunity != null) {
+        return ProgramMagangCard.fromOpportunity(
+          item.opportunity!,
+          onTap: () => _openOpportunityDetail(item.opportunity!),
+          onDetailPressed: () => _openOpportunityDetail(item.opportunity!),
+        );
+      } else {
+        return ProgramMagangCard(
+          title: item.title,
+          description: item.description,
+          categoryBadge: 'Magang',
+          statusBadge: item.statusCategory == 'Mencari Kreator'
+              ? 'Pendaftaran Dibuka'
+              : (item.statusCategory == 'Berjalan'
+                  ? 'Sedang Berjalan'
+                  : (item.statusCategory == 'Selesai'
+                      ? 'Pendaftaran Ditutup'
+                      : item.statusLabel)),
+          statusBadgeColor: item.statusColor,
+          registrationPeriod: item.deadline != null && item.deadline != '-'
+              ? item.deadline
+              : '14 Jan – 14 Feb 2027',
+          quotaText: '4 dari 10 posisi',
+          requirements: const [
+            'Siswa SMK jurusan terkait',
+            'Menguasai dasar 3D Modeling',
+            'Memiliki portofolio karya',
+          ],
+          requirementsCountLabel: '3 Persyaratan',
+          onTap: () {
+            if (item.contract != null) {
+              _openContractOpportunity(item);
+            }
+          },
+          onDetailPressed: () {
+            if (item.contract != null) {
+              _openContractOpportunity(item);
+            }
+          },
+        );
+      }
+    }
 
     return Material(
       color: Colors.transparent,
@@ -2070,7 +2194,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             Text(
               _selectedStatus == 'Semua'
                   ? (_isSchool
-                      ? 'Belum Ada Program Magang Aktif'
+                      ? 'Belum Ada Program & Magang Aktif'
                       : 'Belum Ada Proyek yang Dibuat')
                   : (_isSchool
                       ? 'Tidak Ada Program pada Status "$_selectedStatus"'
