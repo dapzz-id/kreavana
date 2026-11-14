@@ -246,6 +246,9 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   bool _handledInitialTarget = false;
   final _debouncer = Debouncer(milliseconds: 300);
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  int _currentPage = 1;
+  static const int _pageSize = 6;
 
   List<UnifiedProjectItem> _allItems = [];
 
@@ -355,6 +358,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   void dispose() {
     _debouncer.dispose();
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -977,6 +981,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
         onRefresh: _fetchRealtimeProjects,
         color: accentColor,
         child: SingleChildScrollView(
+          controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           child: Padding(
             padding: EdgeInsets.fromLTRB(
@@ -1052,8 +1057,43 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                       _buildErrorState(accentColor, isDark)
                     else if (filtered.isEmpty)
                       _buildEmptyState(isDark)
-                    else
-                      _buildProjectsGrid(filtered, isDark, isDesktop, screenWidth, accentColor),
+                    else ...[
+                      Builder(
+                        builder: (context) {
+                          final totalItems = filtered.length;
+                          final totalPages = (totalItems / _pageSize).ceil();
+                          final safePage = _currentPage.clamp(1, totalPages);
+                          final startIdx = (safePage - 1) * _pageSize;
+                          final endIdx =
+                              (startIdx + _pageSize).clamp(0, totalItems);
+                          final pagedItems =
+                              filtered.sublist(startIdx, endIdx);
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _buildProjectsGrid(
+                                pagedItems,
+                                isDark,
+                                isDesktop,
+                                screenWidth,
+                                accentColor,
+                              ),
+                              const SizedBox(height: 20),
+                              _buildPaginationBar(
+                                isDark: isDark,
+                                accentColor: accentColor,
+                                currentPage: safePage,
+                                totalPages: totalPages,
+                                startItem: startIdx + 1,
+                                endItem: endIdx,
+                                totalItems: totalItems,
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1264,7 +1304,10 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
-        setState(() => _selectedStatus = m['status'] as String);
+        setState(() {
+          _selectedStatus = m['status'] as String;
+          _currentPage = 1;
+        });
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -1363,7 +1406,10 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
       controller: _searchController,
       onChanged: (v) {
         _debouncer.run(() {
-          setState(() => _searchQuery = v);
+          setState(() {
+            _searchQuery = v;
+            _currentPage = 1;
+          });
         });
       },
       decoration: InputDecoration(
@@ -1378,7 +1424,10 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                 icon: const Icon(Icons.close_rounded, size: 18),
                 onPressed: () {
                   _searchController.clear();
-                  setState(() => _searchQuery = '');
+                  setState(() {
+                    _searchQuery = '';
+                    _currentPage = 1;
+                  });
                 },
               )
             : null,
@@ -1458,7 +1507,12 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                 fontSize: 12,
               ),
               onSelected: (val) {
-                if (val) setState(() => _selectedStatus = key);
+                if (val) {
+                  setState(() {
+                    _selectedStatus = key;
+                    _currentPage = 1;
+                  });
+                }
               },
             ),
           );
@@ -1494,38 +1548,161 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     double screenWidth,
     Color accentColor,
   ) {
-    if (isDesktop) {
-      // 2-column responsive layout for clean desktop readability
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          const double spacing = 16.0;
-          final bool isTwoCol = constraints.maxWidth >= 680;
-          final double cardWidth = isTwoCol
-              ? (constraints.maxWidth - spacing) / 2 - 0.5
-              : constraints.maxWidth;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isTwoCol = constraints.maxWidth >= 760;
 
-          return Wrap(
-            spacing: spacing,
-            runSpacing: spacing,
-            children: items.map((item) {
-              return SizedBox(
-                width: cardWidth,
-                child: _buildUnifiedCard(item, isDark, accentColor),
-              );
-            }).toList(),
+        if (!isTwoCol) {
+          return Column(
+            children: items
+                .map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: _buildUnifiedCard(item, isDark, accentColor),
+                  ),
+                )
+                .toList(),
           );
-        },
+        }
+
+        final rows = <Widget>[];
+        for (int i = 0; i < items.length; i += 2) {
+          final first = items[i];
+          final second = i + 1 < items.length ? items[i + 1] : null;
+          rows.add(
+            Padding(
+              padding: EdgeInsets.only(bottom: i + 2 < items.length ? 16 : 0),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _buildUnifiedCard(first, isDark, accentColor),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: second != null
+                          ? _buildUnifiedCard(second, isDark, accentColor)
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        return Column(children: rows);
+      },
+    );
+  }
+
+  void _goToPage(int page) {
+    setState(() => _currentPage = page);
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
       );
     }
+  }
 
-    // Mobile: vertical column
-    return Column(
-      children: items.map((item) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 14),
-          child: _buildUnifiedCard(item, isDark, accentColor),
-        );
-      }).toList(),
+  Widget _buildPaginationBar({
+    required bool isDark,
+    required Color accentColor,
+    required int currentPage,
+    required int totalPages,
+    required int startItem,
+    required int endItem,
+    required int totalItems,
+  }) {
+    final textSecondary = isDark ? AppTheme.textMuted : Colors.grey.shade600;
+    final cardBorder = isDark ? AppTheme.inputBorder : Colors.grey.shade200;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardBg : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: cardBorder),
+      ),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text(
+            'Menampilkan $startItem–$endItem dari $totalItems proyek',
+            style: TextStyle(fontSize: 13, color: textSecondary),
+          ),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                onPressed: currentPage > 1
+                    ? () => _goToPage(currentPage - 1)
+                    : null,
+                icon: const Icon(Icons.chevron_left_rounded, size: 18),
+                label: const Text('Sebelumnya', style: TextStyle(fontSize: 12)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  side: BorderSide(color: cardBorder),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              ...List.generate(totalPages, (idx) {
+                final page = idx + 1;
+                final isActive = page == currentPage;
+                return InkWell(
+                  onTap: () => _goToPage(page),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: isActive ? accentColor : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isActive ? accentColor : cardBorder,
+                      ),
+                    ),
+                    child: Text(
+                      '$page',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                        color: isActive
+                            ? Colors.white
+                            : (isDark ? Colors.white70 : Colors.black87),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+              OutlinedButton.icon(
+                onPressed: currentPage < totalPages
+                    ? () => _goToPage(currentPage + 1)
+                    : null,
+                icon: const Icon(Icons.chevron_right_rounded, size: 18),
+                label: const Text('Berikutnya', style: TextStyle(fontSize: 12)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  side: BorderSide(color: cardBorder),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

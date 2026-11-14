@@ -488,50 +488,53 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
 
   // ── Tab Selector ───────────────────────────────────────────────────────────
   Widget _buildSchoolTabSelector(bool isDark, Color accentColor) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEEF2FF),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE0E7FF),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEEF2FF),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE0E7FF),
+          ),
         ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildTabChip(
-            label: 'Lamaran & Kemitraan Magang',
-            count: _schoolMyItems.length,
-            isSelected: _schoolTab == SchoolMagangTab.myApplications,
-            isDark: isDark,
-            accentColor: accentColor,
-            onTap: () {
-              if (_schoolTab != SchoolMagangTab.myApplications) {
-                setState(() {
-                  _schoolTab = SchoolMagangTab.myApplications;
-                  _currentPage = 1;
-                });
-              }
-            },
-          ),
-          const SizedBox(width: 4),
-          _buildTabChip(
-            label: 'Cari Lowongan Magang',
-            count: _schoolExploreItems.length,
-            isSelected: _schoolTab == SchoolMagangTab.exploreVacancies,
-            isDark: isDark,
-            accentColor: accentColor,
-            onTap: () {
-              if (_schoolTab != SchoolMagangTab.exploreVacancies) {
-                setState(() {
-                  _schoolTab = SchoolMagangTab.exploreVacancies;
-                  _currentPage = 1;
-                });
-              }
-            },
-          ),
-        ],
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildTabChip(
+              label: 'Lamaran & Kemitraan Magang',
+              count: _schoolMyItems.length,
+              isSelected: _schoolTab == SchoolMagangTab.myApplications,
+              isDark: isDark,
+              accentColor: accentColor,
+              onTap: () {
+                if (_schoolTab != SchoolMagangTab.myApplications) {
+                  setState(() {
+                    _schoolTab = SchoolMagangTab.myApplications;
+                    _currentPage = 1;
+                  });
+                }
+              },
+            ),
+            const SizedBox(width: 4),
+            _buildTabChip(
+              label: 'Cari Lowongan Magang',
+              count: _schoolExploreItems.length,
+              isSelected: _schoolTab == SchoolMagangTab.exploreVacancies,
+              isDark: isDark,
+              accentColor: accentColor,
+              onTap: () {
+                if (_schoolTab != SchoolMagangTab.exploreVacancies) {
+                  setState(() {
+                    _schoolTab = SchoolMagangTab.exploreVacancies;
+                    _currentPage = 1;
+                  });
+                }
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -613,14 +616,16 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = isDesktop ? 5 : 2;
+        final w = constraints.maxWidth;
+        final crossAxisCount = w > 1050 ? 5 : (w > 650 ? 3 : 2);
+        final ratio = w > 1050 ? 1.85 : (w > 650 ? 2.1 : 1.75);
         return GridView.count(
           crossAxisCount: crossAxisCount,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: isDesktop ? 1.9 : 1.7,
+          childAspectRatio: ratio,
           children: [
             _buildMetricCard(
               title: 'Total Program',
@@ -882,51 +887,66 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
     Color accentColor,
   ) {
     final isExplore = _schoolTab == SchoolMagangTab.exploreVacancies;
+    final buttonText =
+        isExplore ? 'Detail & Lamar Magang →' : 'Lihat Detail Program →';
 
-    if (isDesktop) {
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final crossAxisCount = constraints.maxWidth > 1200 ? 2 : 1;
-          return GridView.builder(
-            itemCount: items.length,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              mainAxisExtent: 390,
-            ),
-            itemBuilder: (context, index) {
-              final opp = items[index];
-              return ProgramMagangCard.fromOpportunity(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isTwoColumn = constraints.maxWidth > 820;
+        if (isTwoColumn) {
+          final rows = <Widget>[];
+          for (int i = 0; i < items.length; i += 2) {
+            final first = items[i];
+            final second = i + 1 < items.length ? items[i + 1] : null;
+            rows.add(
+              Padding(
+                padding: EdgeInsets.only(bottom: i + 2 < items.length ? 16 : 0),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: ProgramMagangCard.fromOpportunity(
+                          first,
+                          buttonLabel: buttonText,
+                          onTap: () => _openOpportunityDetail(first),
+                          onDetailPressed: () => _openOpportunityDetail(first),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: second != null
+                            ? ProgramMagangCard.fromOpportunity(
+                                second,
+                                buttonLabel: buttonText,
+                                onTap: () => _openOpportunityDetail(second),
+                                onDetailPressed: () => _openOpportunityDetail(second),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+          return Column(children: rows);
+        }
+
+        return Column(
+          children: items.map((opp) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: ProgramMagangCard.fromOpportunity(
                 opp,
-                buttonLabel: isExplore
-                    ? 'Detail & Lamar Magang →'
-                    : 'Lihat Detail Program →',
+                buttonLabel: buttonText,
                 onTap: () => _openOpportunityDetail(opp),
                 onDetailPressed: () => _openOpportunityDetail(opp),
-              );
-            },
-          );
-        },
-      );
-    }
-
-    return Column(
-      children: items.map((opp) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 14),
-          child: ProgramMagangCard.fromOpportunity(
-            opp,
-            buttonLabel: isExplore
-                ? 'Detail & Lamar Magang →'
-                : 'Lihat Detail Program →',
-            onTap: () => _openOpportunityDetail(opp),
-            onDetailPressed: () => _openOpportunityDetail(opp),
-          ),
+              ),
+            );
+          }).toList(),
         );
-      }).toList(),
+      },
     );
   }
 
@@ -944,6 +964,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
     final displayEnd = endIndex > totalItems ? totalItems : endIndex;
 
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
@@ -952,8 +973,11 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
           color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 12,
+        runSpacing: 10,
         children: [
           Text(
             'Menampilkan $displayStart – $displayEnd dari $totalItems program',
@@ -964,6 +988,7 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
             ),
           ),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
                 tooltip: 'Halaman Sebelumnya',

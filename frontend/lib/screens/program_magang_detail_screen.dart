@@ -93,6 +93,8 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
   bool _isLoading = false;
   String _selectedStudentFilter = 'Semua';
   final TextEditingController _searchController = TextEditingController();
+  int _studentPage = 1;
+  static const int _studentPageSize = 6;
 
   // Status institusi pada event magang ini: 'approved', 'pending', 'not_applied'
   late String _schoolPartnershipStatus;
@@ -497,6 +499,10 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
 
                 setState(() {
                   _students.add(newStudent);
+                  _selectedStudentFilter = 'Semua';
+                  _searchController.clear();
+                  _studentPage =
+                      ((_students.length - 1) ~/ _studentPageSize) + 1;
                   // IMPORTANT: Jika sekolah sudah approved, status sekolah TETAP approved!
                   // Hanya jika sekolah belum melamar sama sekali, baru menjadi 'pending'.
                   if (_schoolPartnershipStatus == 'not_applied') {
@@ -859,9 +865,10 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
               : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
         ),
       ),
-      child: Row(
-        children: [
-          Container(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 600;
+          final iconBox = Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: (_corporateRequestsAdditional
@@ -879,50 +886,83 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                   : const Color(0xFF64748B),
               size: 20,
             ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
+          );
+          final textContent = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _corporateRequestsAdditional
+                    ? 'Permintaan Tambahan Siswa dari Corporate ($_corporateRequestedCount Siswa)'
+                    : 'Permintaan Tambahan Siswa: Tidak Ada Permintaan Khusus',
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.bold,
+                  color: _corporateRequestsAdditional
+                      ? (isDark
+                          ? const Color(0xFFC4B5FD)
+                          : const Color(0xFF5B21B6))
+                      : (isDark ? Colors.white : const Color(0xFF0F172A)),
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                _corporateRequestsAdditional
+                    ? '$_corporateRequestNote Siswa baru yang diajukan akan masuk dalam status Pending.'
+                    : 'Saat ini Corporate belum meminta tambahan siswa baru. Anda tetap dapat mengajukan siswa tambahan jika kuota masih tersedia.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? Colors.white70 : Colors.grey.shade700,
+                ),
+              ),
+            ],
+          );
+          final actionButton = _corporateRequestsAdditional
+              ? ElevatedButton(
+                  onPressed: () =>
+                      _openSubmitStudentDialog(isAdditionalStudent: true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF7C3AED),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('Kirim Siswa Tambahan',
+                      style: TextStyle(fontSize: 12)),
+                )
+              : null;
+
+          if (isNarrow) {
+            return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _corporateRequestsAdditional
-                      ? 'Permintaan Tambahan Siswa dari Corporate ($_corporateRequestedCount Siswa)'
-                      : 'Permintaan Tambahan Siswa: Tidak Ada Permintaan Khusus',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.bold,
-                    color: _corporateRequestsAdditional
-                        ? (isDark ? const Color(0xFFC4B5FD) : const Color(0xFF5B21B6))
-                        : (isDark ? Colors.white : const Color(0xFF0F172A)),
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    iconBox,
+                    const SizedBox(width: 12),
+                    Expanded(child: textContent),
+                  ],
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  _corporateRequestsAdditional
-                      ? '$_corporateRequestNote Siswa baru yang diajukan akan masuk dalam status Pending.'
-                      : 'Saat ini Corporate belum meminta tambahan siswa baru. Anda tetap dapat mengajukan siswa tambahan jika kuota masih tersedia.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? Colors.white70 : Colors.grey.shade700,
-                  ),
-                ),
+                if (actionButton != null) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(width: double.infinity, child: actionButton),
+                ],
               ],
-            ),
-          ),
-          if (_corporateRequestsAdditional) ...[
-            const SizedBox(width: 12),
-            ElevatedButton(
-              onPressed: () => _openSubmitStudentDialog(isAdditionalStudent: true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7C3AED),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: const Text('Kirim Siswa Tambahan', style: TextStyle(fontSize: 12)),
-            ),
-          ],
-        ],
+            );
+          }
+
+          return Row(
+            children: [
+              iconBox,
+              const SizedBox(width: 14),
+              Expanded(child: textContent),
+              if (actionButton != null) ...[
+                const SizedBox(width: 12),
+                actionButton,
+              ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -1042,9 +1082,10 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
     required String value,
     required bool isDark,
   }) {
-    return Container(
-      width: 220,
-      padding: const EdgeInsets.all(14),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 165, maxWidth: 240),
+      child: Container(
+        padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(12),
@@ -1077,6 +1118,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -1087,9 +1129,17 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
     final rejected = _students.where((s) => s.status == 'Ditolak').length;
 
     final filtered = _filteredStudents;
+    final totalItems = filtered.length;
+    final totalPages =
+        totalItems == 0 ? 1 : (totalItems / _studentPageSize).ceil();
+    final safePage = _studentPage.clamp(1, totalPages);
+    final startIdx = (safePage - 1) * _studentPageSize;
+    final endIdx = (startIdx + _studentPageSize).clamp(0, totalItems);
+    final pagedStudents =
+        totalItems == 0 ? <SchoolMagangStudent>[] : filtered.sublist(startIdx, endIdx);
 
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isDesktop ? 20 : 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1108,22 +1158,21 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
           const SizedBox(height: 16),
 
           // Search + filter + button
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    hintText: 'Cari nama siswa, kelas, atau posisi...',
-                    prefixIcon: const Icon(Icons.search_rounded, size: 18),
-                    isDense: true,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final searchField = TextField(
+                controller: _searchController,
+                onChanged: (_) => setState(() => _studentPage = 1),
+                decoration: InputDecoration(
+                  hintText: 'Cari nama siswa, kelas, atau posisi...',
+                  prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                  isDense: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              ElevatedButton.icon(
+              );
+              final addButton = ElevatedButton.icon(
                 onPressed: () => _openSubmitStudentDialog(
                   isAdditionalStudent: _schoolPartnershipStatus == 'approved',
                 ),
@@ -1132,15 +1181,39 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                   _schoolPartnershipStatus == 'approved'
                       ? 'Tambah Siswa'
                       : 'Ajukan Siswa',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: accentColor,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-              ),
-            ],
+              );
+
+              if (constraints.maxWidth < 560) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    searchField,
+                    const SizedBox(height: 10),
+                    addButton,
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(child: searchField),
+                  const SizedBox(width: 12),
+                  addButton,
+                ],
+              );
+            },
           ),
           const SizedBox(height: 12),
 
@@ -1154,7 +1227,10 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                   child: ChoiceChip(
                     label: Text(f),
                     selected: sel,
-                    onSelected: (_) => setState(() => _selectedStudentFilter = f),
+                    onSelected: (_) => setState(() {
+                      _selectedStudentFilter = f;
+                      _studentPage = 1;
+                    }),
                     selectedColor: accentColor,
                     labelStyle: TextStyle(
                       fontSize: 12,
@@ -1168,7 +1244,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
           ),
           const SizedBox(height: 16),
 
-          if (filtered.isEmpty)
+          if (pagedStudents.isEmpty)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
@@ -1199,8 +1275,117 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                 ],
               ),
             )
-          else
-            ...filtered.map((s) => _buildStudentCard(s, isDark)),
+          else ...[
+            ...pagedStudents.map((s) => _buildStudentCard(s, isDark)),
+            const SizedBox(height: 12),
+            _buildStudentPaginationBar(
+              isDark: isDark,
+              accentColor: accentColor,
+              currentPage: safePage,
+              totalPages: totalPages,
+              startItem: startIdx + 1,
+              endItem: endIdx,
+              totalItems: totalItems,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStudentPaginationBar({
+    required bool isDark,
+    required Color accentColor,
+    required int currentPage,
+    required int totalPages,
+    required int startItem,
+    required int endItem,
+    required int totalItems,
+  }) {
+    final textSecondary = isDark ? Colors.white60 : Colors.grey.shade600;
+    final cardBorder = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cardBorder),
+      ),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 10,
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text(
+            'Menampilkan $startItem–$endItem dari $totalItems siswa',
+            style: TextStyle(fontSize: 12.5, color: textSecondary),
+          ),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                onPressed: currentPage > 1
+                    ? () => setState(() => _studentPage = currentPage - 1)
+                    : null,
+                icon: const Icon(Icons.chevron_left_rounded, size: 16),
+                label: const Text('Sebelumnya', style: TextStyle(fontSize: 12)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  side: BorderSide(color: cardBorder),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              ...List.generate(totalPages, (idx) {
+                final page = idx + 1;
+                final isActive = page == currentPage;
+                return InkWell(
+                  onTap: () => setState(() => _studentPage = page),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: isActive ? accentColor : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isActive ? accentColor : cardBorder,
+                      ),
+                    ),
+                    child: Text(
+                      '$page',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isActive
+                            ? Colors.white
+                            : (isDark ? Colors.white70 : const Color(0xFF334155)),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+              OutlinedButton.icon(
+                onPressed: currentPage < totalPages
+                    ? () => setState(() => _studentPage = currentPage + 1)
+                    : null,
+                icon: const Icon(Icons.chevron_right_rounded, size: 16),
+                label: const Text('Berikutnya', style: TextStyle(fontSize: 12)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  side: BorderSide(color: cardBorder),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -1261,6 +1446,7 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
                 radius: 20,
@@ -1278,14 +1464,16 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
                           s.name,
                           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                         ),
-                        if (s.isAdditional) ...[
-                          const SizedBox(width: 8),
+                        if (s.isAdditional)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
@@ -1301,10 +1489,26 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                               ),
                             ),
                           ),
-                        ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: statusBg,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            s.status == 'Pending' && s.isAdditional
+                                ? 'Pending (Menunggu Corporate)'
+                                : s.status,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: statusColor,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
                       '${s.majorClass} • ${s.role} • Diajukan: ${s.appliedDate}',
                       style: TextStyle(
@@ -1313,23 +1517,6 @@ class _ProgramMagangDetailScreenState extends State<ProgramMagangDetailScreen>
                       ),
                     ),
                   ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: statusBg,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  s.status == 'Pending' && s.isAdditional
-                      ? 'Pending (Menunggu Corporate)'
-                      : s.status,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: statusColor,
-                  ),
                 ),
               ),
             ],
