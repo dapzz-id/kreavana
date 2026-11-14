@@ -1102,12 +1102,33 @@ class _InstitutionWorkspaceScreenState
         ];
         break;
       case 'reports':
-        final pubCount = records.where((r) => r['status'] == 'published').length;
+        final pubCount = records.where((r) => r['status'] == 'published' || r['status'] == 'active').length;
         kpis = [
-          {'title': 'Total Laporan Audit', 'value': records.length.toString(), 'icon': Icons.summarize_outlined, 'color': _isSchool ? const Color(0xFF7C3AED) : const Color(0xFF2563EB)},
-          {'title': 'Audit Published', 'value': pubCount.toString(), 'icon': Icons.task_alt_rounded, 'color': const Color(0xFF10B981)},
-          {'title': 'Status Draft', 'value': (records.length - pubCount).toString(), 'icon': Icons.edit_note_rounded, 'color': const Color(0xFFF59E0B)},
-          {'title': 'Efisiensi Pengadaan', 'value': '24.8% Terhemat', 'icon': Icons.insights_rounded, 'color': const Color(0xFF8B5CF6)},
+          {'title': 'Total Laporan Kinerja', 'value': records.length.toString(), 'icon': Icons.summarize_outlined, 'color': _isSchool ? const Color(0xFF7C3AED) : const Color(0xFF2563EB)},
+          {'title': 'Laporan Terbit & Sah', 'value': pubCount.toString(), 'icon': Icons.task_alt_rounded, 'color': const Color(0xFF10B981)},
+          {'title': 'Draf Evaluasi', 'value': (records.length - pubCount).toString(), 'icon': Icons.edit_note_rounded, 'color': const Color(0xFFF59E0B)},
+          {'title': 'Capaian Mutu & IKU', 'value': '98.2% Optimal', 'icon': Icons.insights_rounded, 'color': const Color(0xFF8B5CF6)},
+        ];
+        break;
+      case 'monitoring':
+        final compCount = records.where((r) => r['status'] == 'completed').length;
+        final inProgCount = records.where((r) => r['status'] == 'in_progress').length;
+        double sumProgress = 0;
+        int countWithProgress = 0;
+        for (final r in records) {
+          final m = _metadata(r);
+          final p = double.tryParse(m['progress']?.toString() ?? '');
+          if (p != null) {
+            sumProgress += p;
+            countWithProgress++;
+          }
+        }
+        final avgProgress = countWithProgress > 0 ? (sumProgress / countWithProgress) : 0;
+        kpis = [
+          {'title': 'Total Agenda Monev', 'value': records.length.toString(), 'icon': Icons.track_changes_rounded, 'color': _isSchool ? const Color(0xFF7C3AED) : const Color(0xFF2563EB)},
+          {'title': 'Rata-rata Capaian', 'value': '${avgProgress.toStringAsFixed(0)}%', 'icon': Icons.trending_up_rounded, 'color': const Color(0xFF10B981)},
+          {'title': 'Sedang Berjalan', 'value': inProgCount.toString(), 'icon': Icons.speed_rounded, 'color': const Color(0xFF2563EB)},
+          {'title': 'Target Tuntas (100%)', 'value': '$compCount Program', 'icon': Icons.task_alt_rounded, 'color': const Color(0xFF8B5CF6)},
         ];
         break;
       case 'showcases':
@@ -3024,115 +3045,1140 @@ class _InstitutionWorkspaceScreenState
     );
   }
 
+  (Color, List<Color>, IconData, String?) _resolveReportTheme(String title, Map<String, dynamic> meta) {
+    final t = title.toLowerCase();
+    final cat = (meta['category'] ?? '').toString().toLowerCase();
+
+    if (t.contains('akreditasi') || t.contains('ban-pt') || cat.contains('akreditasi')) {
+      return (
+        const Color(0xFF059669), // Emerald
+        const [Color(0xFF059669), Color(0xFF10B981)],
+        Icons.verified_rounded,
+        'assets/ban_pt.png',
+      );
+    }
+    if (t.contains('mbkm') || t.contains('magang') || cat.contains('mbkm') || cat.contains('magang')) {
+      return (
+        const Color(0xFF4F46E5), // Indigo
+        const [Color(0xFF4F46E5), Color(0xFF6366F1)],
+        Icons.school_rounded,
+        'assets/kampus_merdeka.png',
+      );
+    }
+    if (t.contains('survei') || t.contains('kepuasan') || cat.contains('survei') || cat.contains('kepuasan')) {
+      return (
+        const Color(0xFF0D9488), // Teal
+        const [Color(0xFF0D9488), Color(0xFF14B8A6)],
+        Icons.rate_review_rounded,
+        null,
+      );
+    }
+    if (t.contains('anggaran') || t.contains('keuangan') || t.contains('ekonomi') || cat.contains('keuangan')) {
+      return (
+        const Color(0xFFD97706), // Amber
+        const [Color(0xFFD97706), Color(0xFFF59E0B)],
+        Icons.account_balance_wallet_rounded,
+        null,
+      );
+    }
+    return (
+      const Color(0xFF2563EB), // Royal Blue
+      const [Color(0xFF2563EB), Color(0xFF38BDF8)],
+      Icons.summarize_rounded,
+      'assets/kemendikbud.png',
+    );
+  }
+
+  Widget _buildReportMetricPill({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required String value,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1B32) : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? const Color(0xFF2F2B4A) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            '$label: ',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+            ),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildReportCard(Map<String, dynamic> record, bool isDark) {
     final meta = _metadata(record);
-    final status = record['status']?.toString() ?? 'published';
-    final col = _statusColor(status);
+    final status = record['status']?.toString().toLowerCase() ?? 'published';
+    final title = record['title']?.toString() ?? 'Laporan Akuntabilitas & Kinerja';
+    final desc = record['description']?.toString() ?? '';
+    final category = meta['category']?.toString() ?? 'Laporan Kinerja & Evaluasi';
+    final period = meta['period']?.toString() ?? 'TA 2025/2026';
+    final signatory = meta['signatory']?.toString() ??
+        meta['author']?.toString() ??
+        'Biro Penjaminan Mutu & Kerjasama';
+
+    final (catColor, catGradient, catIcon, assetPath) = _resolveReportTheme(title, meta);
+    final isPublished = status == 'published' || status == 'active';
+    final statusBg = isPublished
+        ? (isDark ? const Color(0xFF064E3B).withValues(alpha: 0.4) : const Color(0xFFECFDF5))
+        : (isDark ? const Color(0xFF78350F).withValues(alpha: 0.4) : const Color(0xFFFFFBEB));
+    final statusBorder = isPublished ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A);
+    final statusTextCol = isPublished ? const Color(0xFF059669) : const Color(0xFFD97706);
+    final statusLabel = isPublished ? 'Tervalidasi / Terbit' : 'Draf Inisiasi';
+
+    // Key metrics chips list
+    final metricBadges = <Widget>[];
+
+    if (meta['total_interns'] != null || meta['beneficiaries'] != null) {
+      final val = meta['total_interns'] ?? meta['beneficiaries'];
+      metricBadges.add(
+        _buildReportMetricPill(
+          icon: Icons.groups_rounded,
+          color: const Color(0xFF4F46E5),
+          label: 'Peserta Magang',
+          value: '$val Mahasiswa',
+          isDark: isDark,
+        ),
+      );
+    }
+
+    if (meta['completion_rate'] != null) {
+      metricBadges.add(
+        _buildReportMetricPill(
+          icon: Icons.task_alt_rounded,
+          color: const Color(0xFF059669),
+          label: 'Kelulusan',
+          value: meta['completion_rate'].toString(),
+          isDark: isDark,
+        ),
+      );
+    }
+
+    if (meta['partner_satisfaction'] != null || meta['satisfaction_score'] != null || meta['satisfaction_rate'] != null) {
+      final val = meta['partner_satisfaction']?.toString() ??
+          (meta['satisfaction_score'] != null ? '${meta['satisfaction_score']}%' : meta['satisfaction_rate']?.toString() ?? '');
+      metricBadges.add(
+        _buildReportMetricPill(
+          icon: Icons.star_rounded,
+          color: const Color(0xFFD97706),
+          label: 'Skor Kepuasan Mitra',
+          value: val,
+          isDark: isDark,
+        ),
+      );
+    }
+
+    if (meta['employment_offer_rate'] != null) {
+      metricBadges.add(
+        _buildReportMetricPill(
+          icon: Icons.handshake_rounded,
+          color: const Color(0xFF2563EB),
+          label: 'Tawaran Kerja Langsung',
+          value: meta['employment_offer_rate'].toString(),
+          isDark: isDark,
+        ),
+      );
+    } else if (meta['economic_impact'] != null) {
+      metricBadges.add(
+        _buildReportMetricPill(
+          icon: Icons.trending_up_rounded,
+          color: const Color(0xFF2563EB),
+          label: 'Dampak Ekonomi',
+          value: meta['economic_impact'].toString(),
+          isDark: isDark,
+        ),
+      );
+    }
+
+    if (meta['criteria_met'] != null) {
+      metricBadges.add(
+        _buildReportMetricPill(
+          icon: Icons.fact_check_rounded,
+          color: const Color(0xFF059669),
+          label: 'Standar Mutu',
+          value: meta['criteria_met'].toString(),
+          isDark: isDark,
+        ),
+      );
+    }
+
+    if (meta['status_accreditation'] != null) {
+      metricBadges.add(
+        _buildReportMetricPill(
+          icon: Icons.military_tech_rounded,
+          color: const Color(0xFFD97706),
+          label: 'Predikat BAN-PT',
+          value: meta['status_accreditation'].toString(),
+          isDark: isDark,
+        ),
+      );
+    }
+
+    if (meta['key_strengths'] != null) {
+      metricBadges.add(
+        _buildReportMetricPill(
+          icon: Icons.bolt_rounded,
+          color: const Color(0xFF7C3AED),
+          label: 'Keunggulan Utama',
+          value: meta['key_strengths'].toString(),
+          isDark: isDark,
+        ),
+      );
+    }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.cardBg : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: isDark ? const Color(0xFF161426) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+          color: isDark ? const Color(0xFF2B2844) : const Color(0xFFE2E8F0),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.25 : 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header: Logo/Avatar + Category, Period, Status + Actions
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Official Emblem / Logo / Icon Box
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF201D35) : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF383457) : const Color(0xFFE2E8F0),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: assetPath != null
+                            ? Padding(
+                                padding: const EdgeInsets.all(7),
+                                child: Image.asset(
+                                  assetPath,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, _, _) => Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(colors: catGradient),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Center(child: Icon(catIcon, color: Colors.white, size: 24)),
+                                  ),
+                                ),
+                              )
+                            : Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(colors: catGradient),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Center(child: Icon(catIcon, color: Colors.white, size: 22)),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    // Title, Category & Period Pills
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              // Category Pill
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: catColor.withValues(alpha: isDark ? 0.2 : 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: catColor.withValues(alpha: isDark ? 0.4 : 0.25),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(catIcon, size: 12, color: catColor),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      category,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: isDark ? const Color(0xFFE2E8F0) : catColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Period Pill
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF201D35) : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: isDark ? const Color(0xFF383457) : const Color(0xFFE2E8F0),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.calendar_today_rounded,
+                                      size: 11.5,
+                                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      period,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Status Badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: statusBg,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: statusBorder),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: statusTextCol,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      statusLabel,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: statusTextCol,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 16.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Action Menu
+                    PopupMenuButton<String>(
+                      icon: Icon(Icons.more_vert_rounded, color: isDark ? const Color(0xFF94A3B8) : Colors.grey.shade500),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      onSelected: (value) {
+                        if (value == 'open') {
+                          _openOfficialDocument(record);
+                        } else if (value == 'edit') {
+                          _openEditor(record);
+                        } else if (value == 'delete') {
+                          _deleteRecord(record);
+                        }
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(
+                          value: 'open',
+                          child: Row(
+                            children: [
+                              Icon(Icons.open_in_new_rounded, size: 16, color: Color(0xFF2563EB)),
+                              SizedBox(width: 8),
+                              Text('Buka Laporan Lengkap'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_rounded, size: 16, color: Color(0xFF64748B)),
+                              SizedBox(width: 8),
+                              Text('Edit Data Laporan'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text('Hapus Permanen'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                child: Text(
-                  meta['category'] ?? 'Audit B2B',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF8B5CF6)),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isDark ? AppTheme.cardDark2 : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  meta['period'] ?? 'Periode 2026',
-                  style: TextStyle(fontSize: 11, color: isDark ? AppTheme.textMuted : Colors.grey.shade700),
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: col.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(_statusLabel(status), style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: col)),
-              ),
-              PopupMenuButton<String>(
-                onSelected: (value) => value == 'edit' ? _openEditor(record) : _deleteRecord(record),
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'edit', child: Text('Edit Laporan')),
-                  PopupMenuItem(value: 'delete', child: Text('Hapus Permanen')),
+                if (desc.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    desc,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: isDark ? AppTheme.textMuted : const Color(0xFF475569),
+                    ),
+                  ),
                 ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            record['title']?.toString() ?? '',
-            style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.bold),
-          ),
-          if ((record['description']?.toString() ?? '').isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Text(
-              record['description'].toString(),
-              style: TextStyle(fontSize: 13, height: 1.4, color: isDark ? AppTheme.textMuted : Colors.grey.shade700),
-            ),
-          ],
-          if ((meta['result'] ?? '').isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.verified_rounded, size: 18, color: Color(0xFF10B981)),
-                  const SizedBox(width: 8),
-                  Expanded(
+                // Key Metrics Highlight Strip
+                if (metricBadges.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E1B32) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF2F2B4D) : const Color(0xFFE2E8F0),
+                      ),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Hasil Utama & Temuan Audit:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
-                        const SizedBox(height: 2),
-                        Text(meta['result'], style: TextStyle(fontSize: 12.5, color: isDark ? Colors.white70 : Colors.black87)),
+                        Row(
+                          children: [
+                            Icon(Icons.insights_rounded, size: 14, color: catColor),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Indikator Capaian & Ringkasan Evaluasi:',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: metricBadges,
+                        ),
                       ],
                     ),
                   ),
                 ],
+                if ((meta['result'] ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: isDark ? 0.15 : 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.25)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.verified_rounded, size: 18, color: Color(0xFF10B981)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Hasil Utama & Temuan Audit:',
+                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                meta['result'],
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  height: 1.4,
+                                  color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          // Footer Action Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF141224) : const Color(0xFFF8FAFC),
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+              border: Border(
+                top: BorderSide(color: isDark ? const Color(0xFF2B2844) : const Color(0xFFE2E8F0)),
               ),
             ),
-          ],
+            child: Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.verified_user_outlined,
+                        size: 14,
+                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Otorisasi: $signatory',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                InkWell(
+                  onTap: () => _openOfficialDocument(record),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: catColor.withValues(alpha: isDark ? 0.25 : 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: catColor.withValues(alpha: 0.35)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.open_in_new_rounded, size: 14, color: isDark ? Colors.white : catColor),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Buka Laporan Lengkap',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : catColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _isTargetNear(String? dateStr) {
+    if (dateStr == null || dateStr.trim().isEmpty) return false;
+    try {
+      final dt = DateTime.tryParse(dateStr.trim());
+      if (dt == null) return false;
+      final now = DateTime.now();
+      final diff = dt.difference(DateTime(now.year, now.month, now.day)).inDays;
+      return diff >= 0 && diff <= 30;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  String _formatDateIndo(String? dateStr) {
+    if (dateStr == null || dateStr.trim().isEmpty) return '-';
+    try {
+      final parsed = DateTime.tryParse(dateStr.trim());
+      if (parsed == null) return dateStr;
+      const months = [
+        '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      ];
+      final m = parsed.month >= 1 && parsed.month <= 12 ? months[parsed.month] : '${parsed.month}';
+      return '${parsed.day} $m ${parsed.year}';
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  String _formatDeadlineCountdown(String? dateStr) {
+    if (dateStr == null || dateStr.trim().isEmpty) return 'Belum Diatur';
+    try {
+      final dt = DateTime.tryParse(dateStr.trim());
+      if (dt == null) return dateStr;
+      final now = DateTime.now();
+      final diff = dt.difference(DateTime(now.year, now.month, now.day)).inDays;
+      if (diff > 0) {
+        return 'Sisa $diff Hari';
+      } else if (diff == 0) {
+        return 'Hari Ini';
+      } else {
+        return 'Lewat ${-diff} Hari';
+      }
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  Widget _buildMonitoringCard(Map<String, dynamic> record, bool isDark) {
+    final meta = _metadata(record);
+    final title = record['title']?.toString() ?? 'Program Monitoring & Evaluasi';
+    final desc = record['description']?.toString() ?? '';
+    final status = record['status']?.toString().toLowerCase() ?? 'in_progress';
+    final indicator = meta['indicator']?.toString() ?? 'Indikator Capaian Kinerja (IKU)';
+    final category = meta['category']?.toString() ?? '';
+    final targetDate = meta['target_date']?.toString() ?? '';
+    final rawProgress = meta['progress'];
+    final double progress = (rawProgress is num)
+        ? rawProgress.toDouble().clamp(0, 100)
+        : (double.tryParse(rawProgress?.toString() ?? '') ?? 0).clamp(0, 100);
+
+    final bool isCompleted = progress >= 100 || status == 'completed';
+    final bool isNearDeadline = targetDate.isNotEmpty && _isTargetNear(targetDate);
+
+    // Color accents based on progress
+    final Color progressColor;
+    final List<Color> progressGradient;
+    final IconData statusIcon;
+
+    if (isCompleted) {
+      progressColor = const Color(0xFF059669); // Emerald
+      progressGradient = const [Color(0xFF059669), Color(0xFF10B981)];
+      statusIcon = Icons.task_alt_rounded;
+    } else if (progress >= 75) {
+      progressColor = const Color(0xFF2563EB); // Royal Blue
+      progressGradient = const [Color(0xFF2563EB), Color(0xFF38BDF8)];
+      statusIcon = Icons.trending_up_rounded;
+    } else if (progress >= 40) {
+      progressColor = const Color(0xFF7C3AED); // Indigo/Purple
+      progressGradient = const [Color(0xFF7C3AED), Color(0xFF8B5CF6)];
+      statusIcon = Icons.speed_rounded;
+    } else {
+      progressColor = const Color(0xFFD97706); // Amber
+      progressGradient = const [Color(0xFFD97706), Color(0xFFF59E0B)];
+      statusIcon = Icons.pending_actions_rounded;
+    }
+
+    final statusBg = isCompleted
+        ? (isDark ? const Color(0xFF064E3B).withValues(alpha: 0.4) : const Color(0xFFECFDF5))
+        : (isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.4) : const Color(0xFFEFF6FF));
+    final statusBorder = isCompleted ? const Color(0xFFA7F3D0) : const Color(0xFFBFDBFE);
+    final statusTextCol = isCompleted ? const Color(0xFF059669) : const Color(0xFF2563EB);
+    final statusLabel = isCompleted ? 'Selesai / Tercapai' : 'Sedang Berjalan';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF161426) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? const Color(0xFF2B2844) : const Color(0xFFE2E8F0),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: isDark ? 0.25 : 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Row: Status Icon Box + Indicator Pill + Status Badge + Actions
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Squircle Progress Indicator Icon Box
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: progressGradient,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: progressColor.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Icon(statusIcon, color: Colors.white, size: 26),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    // Header Details: Indicator, Category, Title
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              // Indicator Pill
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2563EB).withValues(alpha: isDark ? 0.2 : 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: const Color(0xFF2563EB).withValues(alpha: isDark ? 0.4 : 0.25),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.flag_rounded, size: 12, color: Color(0xFF2563EB)),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      indicator,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Category Pill (if present)
+                              if (category.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? const Color(0xFF201D35) : const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isDark ? const Color(0xFF383457) : const Color(0xFFE2E8F0),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    category,
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                    ),
+                                  ),
+                                ),
+                              // Status Badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: statusBg,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: statusBorder),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: statusTextCol,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      statusLabel,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: statusTextCol,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 16.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Action Popup Menu
+                    PopupMenuButton<String>(
+                      icon: Icon(Icons.more_vert_rounded, color: isDark ? const Color(0xFF94A3B8) : Colors.grey.shade500),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          _openEditor(record);
+                        } else if (value == 'delete') {
+                          _deleteRecord(record);
+                        }
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_note_rounded, size: 16, color: Color(0xFF2563EB)),
+                              SizedBox(width: 8),
+                              Text('Update Progres & Target'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text('Hapus Agenda Monev'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                if (desc.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    desc,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: isDark ? AppTheme.textMuted : const Color(0xFF475569),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 14),
+                // Visual Progress Tracker & Timeline Section
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E1B32) : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF2F2B4D) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header Row of Progress Section
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.insights_rounded, size: 16, color: progressColor),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Realisasi Capaian Target',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: progressColor.withValues(alpha: isDark ? 0.2 : 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  isCompleted ? 'Target Tercapai' : (progress >= 75 ? 'On Track' : 'Akselerasi Diperlukan'),
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: progressColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            '${progress.toStringAsFixed(0)}%',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: progressColor,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      // Linear Progress Bar
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          height: 10,
+                          width: double.infinity,
+                          color: isDark ? const Color(0xFF2C2846) : const Color(0xFFE2E8F0),
+                          child: FractionallySizedBox(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: (progress / 100).clamp(0.02, 1.0),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: progressGradient,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // Milestone / Deadline details
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (targetDate.isNotEmpty) ...[
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.event_available_rounded,
+                                  size: 14,
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Target: ${_formatDateIndo(targetDate)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: isCompleted
+                                    ? const Color(0xFF059669).withValues(alpha: isDark ? 0.2 : 0.1)
+                                    : (isNearDeadline
+                                        ? const Color(0xFFD97706).withValues(alpha: isDark ? 0.2 : 0.1)
+                                        : const Color(0xFF2563EB).withValues(alpha: isDark ? 0.2 : 0.1)),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: isCompleted
+                                      ? const Color(0xFF059669).withValues(alpha: isDark ? 0.4 : 0.25)
+                                      : (isNearDeadline
+                                          ? const Color(0xFFD97706).withValues(alpha: isDark ? 0.4 : 0.25)
+                                          : const Color(0xFF2563EB).withValues(alpha: isDark ? 0.4 : 0.25)),
+                                ),
+                              ),
+                              child: Text(
+                                isCompleted ? '✅ Capaian Tuntas' : _formatDeadlineCountdown(targetDate),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: isCompleted
+                                      ? const Color(0xFF059669)
+                                      : (isNearDeadline ? const Color(0xFFD97706) : const Color(0xFF2563EB)),
+                                ),
+                              ),
+                            ),
+                          ],
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.hub_outlined,
+                                size: 13,
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Evaluasi Terintegrasi SPMI',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Footer Action Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF141224) : const Color(0xFFF8FAFC),
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+              border: Border(
+                top: BorderSide(color: isDark ? const Color(0xFF2B2844) : const Color(0xFFE2E8F0)),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.shield_outlined,
+                        size: 14,
+                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Sistem Pengendalian Mutu & Akreditasi Vokasi',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                InkWell(
+                  onTap: () => _openEditor(record),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: progressColor.withValues(alpha: isDark ? 0.25 : 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: progressColor.withValues(alpha: 0.35)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.edit_note_rounded, size: 15, color: isDark ? Colors.white : progressColor),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Update Progres & Capaian',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : progressColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -3777,6 +4823,8 @@ class _InstitutionWorkspaceScreenState
         return _buildReportCard(record, isDark);
       case 'showcases':
         return _buildShowcaseCard(record, isDark);
+      case 'monitoring':
+        return _buildMonitoringCard(record, isDark);
     }
 
     // Default card for non-corporate or other types

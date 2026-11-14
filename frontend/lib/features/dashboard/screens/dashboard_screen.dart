@@ -2171,7 +2171,13 @@ class _DashboardScreenState extends State<DashboardScreen>
       case 'Mitra Magang Industri':
       case 'Review Karya':
       case 'Review Karya Siswa':
-        _openInstitutionWorkspace();
+      case 'Direktori Talenta':
+      case 'Karya & Portofolio Siswa':
+        if (widget.user.isSchool || widget.user.isInstitution) {
+          context.go(AppRoutes.karyaSiswa);
+        } else {
+          _openInstitutionWorkspace();
+        }
         break;
       case 'Buka Magang':
       case 'Buka Program Magang':
@@ -2283,6 +2289,8 @@ class _DashboardScreenState extends State<DashboardScreen>
       case 'Program Magang':
       case 'Program & Magang':
       case 'Program dan Magang':
+      case 'program & magang':
+      case 'program magang':
         if (widget.user.isGuest) {
           AuthGuardDialog.show(context, actionName: 'mengakses manajemen proyek');
           return;
