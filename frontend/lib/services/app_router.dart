@@ -361,13 +361,16 @@ final GoRouter appRouter = GoRouter(
       }
     }
 
-    // 5. Rute Explore & Peluang Proyek DILARANG untuk Institusi Pendidikan & Corporate (Perusahaan)
-    // Sesuai aturan arsitektur: role yang tidak memiliki fitur Explore tidak boleh mengakses URL tersebut
+    // 5. Rute Peluang Proyek khusus kreator pelamar (tidak untuk institusi/corporate)
+    // Sesuai aturan arsitektur: akun Corporate tidak memiliki akses ke fitur Explore
     if (!isAdmin && user != null && !user.isGuest) {
-      if (currentPath == AppRoutes.explore || currentPath == AppRoutes.peluangProyek) {
+      if (currentPath == AppRoutes.peluangProyek) {
         if (user.isInstitution || user.isCorporate) {
           return AppRoutes.notFound;
         }
+      }
+      if (currentPath == AppRoutes.explore && user.isCorporate) {
+        return AppRoutes.notFound;
       }
     }
 

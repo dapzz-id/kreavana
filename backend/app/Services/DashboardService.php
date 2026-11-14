@@ -395,6 +395,7 @@ class DashboardService extends BaseService implements DashboardServiceInterface
                 'location' => $city,
                 'starting_price' => 'Rp ' . number_format($minPrice, 0, ',', '.'),
                 'portfolio_images' => $portfolioImages,
+                'phone' => $user->phone ?? '081298765432',
             ];
         })->toArray();
     }

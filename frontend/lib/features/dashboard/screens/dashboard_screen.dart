@@ -31,6 +31,9 @@ import '../../../screens/direct_message_screen.dart';
 import '../../../services/chat_service.dart';
 import '../../../app/app_animations.dart';
 import '../../../widgets/app_sweet_alert.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
+import '../../../screens/explore_screen.dart';
 class _RoleDashboardConfig {
   final String badge;
   final String greeting;
@@ -101,6 +104,26 @@ class _DashboardScreenState extends State<DashboardScreen>
       _currentRole == 'creator' ||
       widget.user.role == 'creator' ||
       widget.user.isCreator;
+
+  bool get _isInstitution {
+    if (widget.user.isInstitution) return true;
+    final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
+    final role = widget.user.role.toLowerCase().trim();
+    final verif = widget.user.verificationType?.toLowerCase().trim() ?? '';
+    final uname = widget.user.username.toLowerCase().trim();
+    return (role == 'user' || role == 'creator' || role == 'institution' || role == 'school') &&
+        (sub == 'institution' ||
+            sub == 'institusi' ||
+            sub == 'school' ||
+            sub == 'education' ||
+            sub == 'campus' ||
+            sub == 'sekolah' ||
+            sub == 'kampus' ||
+            verif == 'institution' ||
+            uname.contains('institution') ||
+            uname.contains('sekolah') ||
+            uname.contains('smk'));
+  }
 
   bool get _isTalentAndPerformer {
     final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
@@ -2322,7 +2345,12 @@ class _DashboardScreenState extends State<DashboardScreen>
           AuthGuardDialog.show(context, actionName: 'mencari kreator');
           return;
         }
-        context.go(AppRoutes.explore);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ExploreScreen(user: widget.user),
+          ),
+        );
         break;
 
       // ── Tab Agenda ──
@@ -3638,30 +3666,87 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ),
                     ),
                     const SizedBox(height: 6),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 28,
-                      child: OutlinedButton(
-                        onPressed: openProfile,
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          side: BorderSide(
-                            color: AppTheme.primaryPurple.withValues(alpha: 0.4),
+                    if (_isInstitution)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 28,
+                              child: OutlinedButton(
+                                onPressed: openProfile,
+                                style: OutlinedButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  side: BorderSide(
+                                    color: AppTheme.primaryPurple.withValues(alpha: 0.4),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  foregroundColor: AppTheme.primaryPurple,
+                                ),
+                                child: const Text(
+                                  'Profil',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: SizedBox(
+                              height: 28,
+                              child: ElevatedButton.icon(
+                                onPressed: () => _contactCreatorDirectly(context, vendor),
+                                icon: const Icon(Icons.chat_bubble_outline_rounded, size: 12),
+                                style: ElevatedButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  backgroundColor: const Color(0xFF25D366),
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                label: const Text(
+                                  'Chat',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
-                          foregroundColor: AppTheme.primaryPurple,
-                        ),
-                        child: const Text(
-                          'Lihat Profil',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
+                        ],
+                      )
+                    else
+                      SizedBox(
+                        width: double.infinity,
+                        height: 28,
+                        child: OutlinedButton(
+                          onPressed: openProfile,
+                          style: OutlinedButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            side: BorderSide(
+                              color: AppTheme.primaryPurple.withValues(alpha: 0.4),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            foregroundColor: AppTheme.primaryPurple,
+                          ),
+                          child: const Text(
+                            'Lihat Profil',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -3669,6 +3754,209 @@ class _DashboardScreenState extends State<DashboardScreen>
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _contactCreatorDirectly(
+    BuildContext context,
+    Map<String, dynamic> creator,
+  ) async {
+    final rawPhone = creator['phone']?.toString() ??
+        creator['contact']?.toString() ??
+        creator['whatsapp']?.toString() ??
+        '081298765432';
+    final name = creator['name']?.toString() ?? 'Kreator';
+
+    String cleanPhone = rawPhone.replaceAll(RegExp(r'\D'), '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '62${cleanPhone.substring(1)}';
+    } else if (!cleanPhone.startsWith('62')) {
+      cleanPhone = '62$cleanPhone';
+    }
+
+    final message = Uri.encodeComponent(
+      'Halo $name, saya dari Institusi Kreavana ingin berdiskusi mengenai proyek kolaborasi.',
+    );
+    final waUri = Uri.parse('https://wa.me/$cleanPhone?text=$message');
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Mengarahkan ke kontak WhatsApp $name ($cleanPhone)...'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    try {
+      final launched = await launchUrl(waUri, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        final fallbackLaunched = await launchUrl(waUri);
+        if (!fallbackLaunched && context.mounted) {
+          _showCreatorContactDialog(context, name, cleanPhone, rawPhone);
+        }
+      }
+    } catch (_) {
+      if (context.mounted) {
+        _showCreatorContactDialog(context, name, cleanPhone, rawPhone);
+      }
+    }
+  }
+
+  void _showCreatorContactDialog(
+    BuildContext context,
+    String name,
+    String cleanPhone,
+    String displayPhone,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF1E1B2E) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          title: Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.15),
+                child: const Icon(Icons.person, color: AppTheme.primaryPurple, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const Text(
+                      'Kontak Kreator Rekomendasi',
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF161426) : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF2B2844) : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.perm_phone_msg_rounded, size: 22, color: AppTheme.primaryPurple),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Nomor Kontak Langsung', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                          const SizedBox(height: 2),
+                          SelectableText(
+                            displayPhone,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.copy_rounded, size: 18),
+                      tooltip: 'Salin Nomor',
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: displayPhone));
+                        Navigator.pop(dialogCtx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Nomor $displayPhone berhasil disalin'),
+                            backgroundColor: Colors.green.shade700,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(dialogCtx);
+                        final uri = Uri.parse('tel:$cleanPhone');
+                        try {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        } catch (_) {
+                          Clipboard.setData(ClipboardData(text: displayPhone));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Nomor $displayPhone telah disalin')),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.call_rounded, size: 16),
+                      label: const Text('Panggil', style: TextStyle(fontSize: 12)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: AppTheme.primaryPurple),
+                        foregroundColor: AppTheme.primaryPurple,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(dialogCtx);
+                        final message = Uri.encodeComponent(
+                          'Halo $name, saya dari Institusi Kreavana ingin berdiskusi mengenai proyek kolaborasi.',
+                        );
+                        final waUri = Uri.parse('https://wa.me/$cleanPhone?text=$message');
+                        try {
+                          await launchUrl(waUri, mode: LaunchMode.externalApplication);
+                        } catch (_) {
+                          Clipboard.setData(ClipboardData(text: displayPhone));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Nomor $displayPhone telah disalin')),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
+                      label: const Text('WhatsApp', style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF25D366),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -7551,26 +7839,38 @@ class _DashboardScreenState extends State<DashboardScreen>
       return _buildUpgradeForRecommendationsCard(isDark);
     }
 
-    final topCreators = [
-      {
-        'name': 'Dimas Arya',
-        'role': 'Videographer & FPV',
-        'rating': '5.0 (24)',
-        'avatar': 'videocam',
-      },
-      {
-        'name': 'Kevin Jonathan',
-        'role': 'Photographer & Editor',
-        'rating': '5.0 (18)',
-        'avatar': 'camera',
-      },
-      {
-        'name': 'Andi Editor Pro',
-        'role': 'Motion & 3D Editor',
-        'rating': '4.9 (31)',
-        'avatar': 'palette',
-      },
-    ];
+    final List<Map<String, dynamic>> topCreators = _vendorRecommendations.isNotEmpty
+        ? _vendorRecommendations.take(3).map((v) => {
+            'id': v['id']?.toString(),
+            'name': v['name']?.toString() ?? 'Kreator',
+            'role': v['category']?.toString() ?? 'Kreator Spesialis',
+            'rating': '${v['rating'] ?? '5.0'} (${v['review_count'] ?? '20'})',
+            'avatar': 'camera',
+            'phone': v['phone']?.toString() ?? '081298765432',
+          }).toList()
+        : [
+            {
+              'name': 'Dimas Arya',
+              'role': 'Videographer & FPV',
+              'rating': '5.0 (24)',
+              'avatar': 'videocam',
+              'phone': '081298765432',
+            },
+            {
+              'name': 'Kevin Jonathan',
+              'role': 'Photographer & Editor',
+              'rating': '5.0 (18)',
+              'avatar': 'camera',
+              'phone': '081387654321',
+            },
+            {
+              'name': 'Andi Editor Pro',
+              'role': 'Motion & 3D Editor',
+              'rating': '4.9 (31)',
+              'avatar': 'palette',
+              'phone': '081901234567',
+            },
+          ];
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -7610,7 +7910,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ],
               ),
               InkWell(
-                onTap: () => _navigateTo('Lihat Semua Top Kreator'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ExploreScreen(user: widget.user),
+                    ),
+                  );
+                },
                 borderRadius: BorderRadius.circular(6),
                 child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -7652,57 +7959,74 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          c['name']!,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          c['role']!,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 12),
-                            const SizedBox(width: 3),
-                            Text(
-                              c['rating']!,
-                              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600),
+                    child: InkWell(
+                      onTap: () => _contactCreatorDirectly(context, c),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            c['name']!,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
                             ),
-                          ],
-                        ),
-                      ],
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            c['role']!,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: isDark ? AppTheme.textMuted : AppTheme.textMutedLight,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 12),
+                              const SizedBox(width: 3),
+                              Text(
+                                c['rating']!,
+                                style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   InkWell(
-                    onTap: () => _navigateTo('Pesan'),
+                    onTap: () => _contactCreatorDirectly(context, c),
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryPurple.withValues(alpha: 0.1),
+                        color: const Color(0xFF25D366).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'Chat',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryPurple,
+                        border: Border.all(
+                          color: const Color(0xFF25D366).withValues(alpha: 0.3),
                         ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            size: 12,
+                            color: Color(0xFF16A34A),
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'Chat',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF16A34A),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

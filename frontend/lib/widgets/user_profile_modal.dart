@@ -7,6 +7,7 @@ import '../services/chat_service.dart';
 import '../services/verification_service.dart';
 import '../screens/direct_message_screen.dart';
 import 'verification_badge.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class UserProfileModal extends StatefulWidget {
   final String userId;
@@ -143,6 +144,25 @@ class _UserProfileModalState extends State<UserProfileModal>
   }
 
   void _openChat() async {
+    final phone = _profile?['phone']?.toString();
+    final isInstitution = widget.currentUser?.isInstitution == true || widget.currentUser?.isSchool == true;
+    if (isInstitution && phone != null && phone.trim().isNotEmpty) {
+      String cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
+      if (cleanPhone.startsWith('0')) {
+        cleanPhone = '62${cleanPhone.substring(1)}';
+      } else if (!cleanPhone.startsWith('62')) {
+        cleanPhone = '62$cleanPhone';
+      }
+      final name = _profile?['name']?.toString() ?? widget.initialName ?? 'Kreator';
+      final msg = Uri.encodeComponent('Halo $name, saya dari Institusi Kreavana ingin berdiskusi mengenai proyek kolaborasi.');
+      final waUri = Uri.parse('https://wa.me/$cleanPhone?text=$msg');
+      try {
+        if (await launchUrl(waUri, mode: LaunchMode.externalApplication)) {
+          return;
+        }
+      } catch (_) {}
+    }
+
     final rootNav = Navigator.of(context, rootNavigator: true);
     try {
       final res = await ChatService.startPersonalChat(widget.userId);
