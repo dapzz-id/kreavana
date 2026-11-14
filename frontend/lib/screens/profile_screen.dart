@@ -1400,7 +1400,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 15),
                 SizedBox(width: 6),
                 Text(
-                  'Terverifikasi Kemendikbudristek',
+                  'Terverifikasi',
                   style: TextStyle(
                     color: Color(0xFF10B981),
                     fontWeight: FontWeight.w700,

@@ -362,7 +362,7 @@ class _UserProfileModalState extends State<UserProfileModal>
                                       Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 14),
                                       SizedBox(width: 4),
                                       Text(
-                                        'Terverifikasi Kemendikbudristek',
+                                        'Terverifikasi',
                                         style: TextStyle(
                                           fontSize: 11.5,
                                           fontWeight: FontWeight.bold,
