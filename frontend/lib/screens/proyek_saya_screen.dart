@@ -378,10 +378,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
           debugPrint('Error fetching contracts: $e');
           return <JobContract>[];
         }),
-        (_isSchool
-                ? OpportunityService.getOpportunities(limit: 50)
-                : OpportunityService.getMyOpportunities())
-            .catchError((e) {
+        OpportunityService.getMyOpportunities().catchError((e) {
           debugPrint('Error fetching opportunities: $e');
           return <OpportunityModel>[];
         }),
@@ -389,10 +386,6 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
 
       final contracts = results[0] as List<JobContract>;
       final opportunities = List<OpportunityModel>.from(results[1] as List<OpportunityModel>);
-
-      if (_isSchool && opportunities.isEmpty) {
-        opportunities.addAll(_getSampleMagangOpportunities());
-      }
 
       final unified = <UnifiedProjectItem>[];
 
@@ -561,17 +554,8 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   }
 
   Future<void> _openBuatKebutuhan() async {
-    if (_isSchool) {
-      AppSweetAlert.error(
-        context,
-        'Fitur Buka Program Magang khusus untuk akun Corporate / Mitra Industri. Institusi Pendidikan tidak dapat membuka lowongan magang.',
-        title: 'Akses Ditolak (403)',
-      );
-      return;
-    }
-
-    // Akun corporate tidak memerlukan verifikasi KTP sama sekali
-    if (_isCorporate) {
+    // Akun corporate dan institution tidak memerlukan verifikasi KTP individual
+    if (_isCorporate || _isSchool || _currentUser?.isInstitution == true) {
       if (!mounted) return;
       final result = await context.push<bool>(AppRoutes.buatKebutuhan);
 
@@ -1014,9 +998,9 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                             }
                           },
                         ),
-                        BreadcrumbItem(
-                          label: _isSchool ? 'Program & Magang' : 'Proyek Saya',
-                          icon: _isSchool ? Icons.work_outline_rounded : Icons.folder_rounded,
+                        const BreadcrumbItem(
+                          label: 'Proyek Saya',
+                          icon: Icons.folder_rounded,
                         ),
                       ],
                     ),
@@ -1064,7 +1048,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               ),
         ),
       ),
-      floatingActionButton: (!isDesktop && !_isSchool)
+      floatingActionButton: !isDesktop
           ? FloatingActionButton.extended(
               heroTag: 'proyek_saya_fab_mobile',
               onPressed: _openBuatKebutuhan,
@@ -1124,9 +1108,9 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                _isSchool ? 'Program & Magang' : 'Proyek Saya',
-                style: const TextStyle(
+              const Text(
+                'Proyek Saya',
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
@@ -1134,9 +1118,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                _isSchool
-                    ? 'Pantau program magang industri dan kemitraan siswa bersama studio mitra.'
-                    : 'Pantau kebutuhan terbuka, proposal kreator, dan progres kontrak kerja Anda.',
+                'Pantau kebutuhan terbuka, proposal kreator, dan progres kontrak kerja Anda.',
                 style: TextStyle(
                   fontSize: 13,
                   color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
@@ -1157,7 +1139,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         ),
-        if (isDesktop && !_isSchool) ...[
+        if (isDesktop) ...[
           const SizedBox(width: 12),
           ElevatedButton.icon(
             onPressed: _openBuatKebutuhan,
@@ -1197,21 +1179,21 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     final List<Map<String, dynamic>> metricData = [
       {
         'status': 'Semua',
-        'label': _isSchool ? 'Total Program' : 'Total Proyek',
+        'label': 'Total Proyek',
         'value': total.toString(),
-        'icon': _isSchool ? Icons.work_outline_rounded : Icons.folder_special_rounded,
+        'icon': Icons.folder_special_rounded,
         'color': const Color(0xFF6366F1),
       },
       {
         'status': 'Mencari Kreator',
-        'label': _isSchool ? 'Buka Pendaftaran' : 'Mencari Kreator',
+        'label': 'Mencari Kreator',
         'value': mencariKreator.toString(),
         'icon': Icons.campaign_rounded,
         'color': const Color(0xFF8B5CF6),
       },
       {
         'status': 'Berjalan',
-        'label': _isSchool ? 'Magang Berjalan' : 'Kontrak Berjalan',
+        'label': 'Kontrak Berjalan',
         'value': berjalan.toString(),
         'icon': Icons.trending_up_rounded,
         'color': const Color(0xFF10B981),
@@ -1354,12 +1336,12 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
       {'key': 'Semua', 'label': 'Semua', 'count': total},
       {
         'key': 'Mencari Kreator',
-        'label': _isSchool ? 'Buka Pendaftaran' : 'Mencari Kreator',
+        'label': 'Mencari Kreator',
         'count': mencariKreator,
       },
       {
         'key': 'Berjalan',
-        'label': _isSchool ? 'Magang Berjalan' : 'Berjalan',
+        'label': 'Berjalan',
         'count': berjalan,
       },
       {'key': 'Menunggu', 'label': 'Menunggu', 'count': menunggu},
@@ -1374,9 +1356,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
         });
       },
       decoration: InputDecoration(
-        hintText: _isSchool
-            ? 'Cari program, lowongan magang, atau nama industri mitra...'
-            : 'Cari proyek, kebutuhan, atau nama kreator...',
+        hintText: 'Cari proyek, kebutuhan, atau nama kreator...',
         hintStyle: TextStyle(
           fontSize: 13,
           color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
@@ -1546,8 +1526,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   ) {
     final isOpportunity = item.type == ProjectItemType.opportunity;
 
-    final isMagang = _isSchool ||
-        item.category.toLowerCase().contains('magang') ||
+    final isMagang = item.category.toLowerCase().contains('magang') ||
         item.title.toLowerCase().contains('magang') ||
         (item.opportunity != null &&
             (item.opportunity!.subRoleSlug.toLowerCase() == 'magang' ||
@@ -2214,12 +2193,8 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             const SizedBox(height: 18),
             Text(
               _selectedStatus == 'Semua'
-                  ? (_isSchool
-                      ? 'Belum Ada Program & Magang Aktif'
-                      : 'Belum Ada Proyek yang Dibuat')
-                  : (_isSchool
-                      ? 'Tidak Ada Program pada Status "$_selectedStatus"'
-                      : 'Tidak Ada Proyek pada Status "$_selectedStatus"'),
+                  ? 'Belum Ada Proyek yang Dibuat'
+                  : 'Tidak Ada Proyek pada Status "$_selectedStatus"',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -2227,31 +2202,27 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              _isSchool
-                  ? 'Program magang dibuka langsung oleh mitra korporat dan industri. Pantau program dan pelamar magang dari mitra industri di sini.'
-                  : 'Publikasikan kebutuhan proyek Anda sekarang untuk menerima proposal dari kreator terverifikasi.',
+              'Publikasikan kebutuhan proyek Anda sekarang untuk menerima proposal dari kreator terverifikasi.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
                 color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
               ),
             ),
-            if (!_isSchool) ...[
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: _openBuatKebutuhan,
-                icon: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
-                label: const Text(
-                  'Buat Kebutuhan Baru',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryPurple,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: _openBuatKebutuhan,
+              icon: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+              label: const Text(
+                'Buat Kebutuhan Baru',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
-            ],
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryPurple,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
           ],
         ),
       ),

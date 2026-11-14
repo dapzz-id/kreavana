@@ -79,13 +79,14 @@ class OpportunityController extends Controller
                 ? strtolower(trim($rawSub->value)) 
                 : strtolower(trim((string)$rawSub));
 
-            if (in_array($subRole, ['institution', 'institusi', 'school', 'sekolah', 'kampus', 'campus', 'education'])) {
-                return $this->errorResponse('Institusi Pendidikan tidak memiliki akses untuk membuka lowongan magang atau proyek. Program magang hanya dapat dibuka oleh akun Corporate / Mitra Industri.', 403);
+            // Lowongan magang resmi khusus dibuka oleh akun Corporate / Mitra Industri
+            if ($request->input('sub_role_slug') === 'magang' && in_array($subRole, ['institution', 'institusi', 'school', 'sekolah', 'kampus', 'campus', 'education'])) {
+                return $this->errorResponse('Program magang hanya dapat dibuka oleh akun Corporate / Mitra Industri.', 403);
             }
         }
 
-        // Akun Corporate tidak memerlukan verifikasi KTP untuk membuka lowongan/proyek
-        if ($user && $user->role->value === 'user' && !$user->isCorporate() && !$user->is_verified) {
+        // Akun Corporate dan Institusi tidak memerlukan verifikasi KTP individual untuk mempublikasikan proyek
+        if ($user && $user->role->value === 'user' && !$user->isCorporate() && !$user->isInstitution() && !$user->is_verified) {
             return $this->errorResponse('Klien wajib melakukan verifikasi KTP terlebih dahulu sebelum mempublikasikan kebutuhan proyek.', 403);
         }
 

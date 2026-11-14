@@ -921,7 +921,7 @@ class _MainNavigationState extends State<MainNavigation> {
           isCollapsed: isCollapsed,
           isMobileDrawer: isMobileDrawer,
         ),
-      if (!_isGovernment && !_isSchool)
+      if (!_isGovernment)
         _buildSidebarItem(
           icon: Icons.folder_outlined,
           activeIcon: Icons.folder,
@@ -985,15 +985,6 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarSectionHeader('LAINNYA', isDark),
       ],
       if (_isSchool) ...[
-        _buildSidebarLink(
-          icon: Icons.work_outline,
-          label: 'Program & Magang',
-          onTap: () => _navigateToScreenIndex(2),
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _currentIndex == 2 && _activeGovRoute == null,
-          isMobileDrawer: isMobileDrawer,
-        ),
         _buildSidebarLink(
           icon: Icons.event_outlined,
           label: 'Kegiatan & Event',
