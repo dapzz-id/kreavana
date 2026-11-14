@@ -240,6 +240,11 @@ class ProyekSayaScreen extends StatefulWidget {
   State<ProyekSayaScreen> createState() => _ProyekSayaScreenState();
 }
 
+enum SchoolMagangTab {
+  myApplications,
+  exploreVacancies,
+}
+
 class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   bool _isLoading = false;
   String? _errorMessage;
@@ -248,8 +253,24 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   bool _handledInitialTarget = false;
   final _debouncer = Debouncer(milliseconds: 300);
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
+  SchoolMagangTab _schoolTab = SchoolMagangTab.myApplications;
+  List<UnifiedProjectItem> _schoolMyItems = [];
+  List<UnifiedProjectItem> _schoolExploreItems = [];
+  int _currentPage = 1;
+  static const int _pageSize = 6;
 
   List<UnifiedProjectItem> _allItems = [];
+
+  List<UnifiedProjectItem> get _activeItems {
+    if (_isSchool) {
+      return _schoolTab == SchoolMagangTab.myApplications
+          ? _schoolMyItems
+          : _schoolExploreItems;
+    }
+    return _allItems;
+  }
 
   UserModel? get _currentUser => widget.user ?? currentUserNotifier.value;
 
@@ -358,6 +379,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   void dispose() {
     _debouncer.dispose();
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -379,21 +401,49 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
           debugPrint('Error fetching contracts: $e');
           return <JobContract>[];
         }),
-        (_isSchool
-                ? OpportunityService.getOpportunities(limit: 50)
-                : OpportunityService.getMyOpportunities())
-            .catchError((e) {
-          debugPrint('Error fetching opportunities: $e');
+        OpportunityService.getMyOpportunities().catchError((e) {
+          debugPrint('Error fetching my opportunities: $e');
           return <OpportunityModel>[];
         }),
+        (_isSchool
+            ? OpportunityService.getOpportunities(limit: 50).catchError((e) {
+                debugPrint('Error fetching explore opportunities: $e');
+                return <OpportunityModel>[];
+              })
+            : Future.value(<OpportunityModel>[])),
       ]);
 
       final contracts = results[0] as List<JobContract>;
-      final opportunities = List<OpportunityModel>.from(results[1] as List<OpportunityModel>);
+      final myOpportunities = List<OpportunityModel>.from(results[1] as List<OpportunityModel>);
+      final exploreOpportunities = List<OpportunityModel>.from(results[2] as List<OpportunityModel>);
 
       if (_isSchool) {
-        // Prioritize and filter for magang / corporate internship opportunities for the institution view
-        final magangOpportunities = opportunities.where((opp) {
+        // ── 1. Data Lamar Magang / Kemitraan Magang Sekolah Sendiri ──
+        final myUnified = <UnifiedProjectItem>[];
+        for (final opp in myOpportunities) {
+          myUnified.add(UnifiedProjectItem.fromOpportunity(opp));
+        }
+        for (final contract in contracts) {
+          myUnified.add(UnifiedProjectItem.fromContract(
+            contract,
+            currentUserId: widget.user?.id,
+          ));
+        }
+        if (myUnified.isEmpty) {
+          for (final opp in _getSampleMagangOpportunities()) {
+            myUnified.add(UnifiedProjectItem.fromOpportunity(opp));
+          }
+        }
+        myUnified.sort((a, b) {
+          if (a.createdAt == null && b.createdAt == null) return 0;
+          if (a.createdAt == null) return 1;
+          if (b.createdAt == null) return -1;
+          return b.createdAt!.compareTo(a.createdAt!);
+        });
+
+        // ── 2. Data Cari Magang (Seluruh Lowongan Magang Corporate di Platform) ──
+        // Filter and prioritize corporate/magang internship opportunities
+        final filteredExplore = exploreOpportunities.where((opp) {
           final isExplicitMagang = opp.subRoleSlug.toLowerCase().contains('magang') ||
               opp.title.toLowerCase().contains('magang') ||
               opp.title.toLowerCase().contains('intern') ||
@@ -412,39 +462,48 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
           return isExplicitMagang || isCorporatePoster;
         }).toList();
 
-        if (magangOpportunities.isEmpty) {
-          magangOpportunities.addAll(_getSampleMagangOpportunities());
+        final exploreUnified = <UnifiedProjectItem>[];
+        for (final opp in (filteredExplore.isNotEmpty ? filteredExplore : exploreOpportunities)) {
+          exploreUnified.add(UnifiedProjectItem.fromOpportunity(opp));
         }
+        if (exploreUnified.isEmpty) {
+          for (final opp in _getSampleMagangOpportunities()) {
+            exploreUnified.add(UnifiedProjectItem.fromOpportunity(opp));
+          }
+        }
+        exploreUnified.sort((a, b) {
+          if (a.createdAt == null && b.createdAt == null) return 0;
+          if (a.createdAt == null) return 1;
+          if (b.createdAt == null) return -1;
+          return b.createdAt!.compareTo(a.createdAt!);
+        });
 
-        opportunities
-          ..clear()
-          ..addAll(magangOpportunities);
+        _schoolMyItems = myUnified;
+        _schoolExploreItems = exploreUnified;
+        _allItems = myUnified;
+      } else {
+        final unified = <UnifiedProjectItem>[];
+        for (final opp in myOpportunities) {
+          unified.add(UnifiedProjectItem.fromOpportunity(opp));
+        }
+        for (final contract in contracts) {
+          unified.add(UnifiedProjectItem.fromContract(
+            contract,
+            currentUserId: widget.user?.id,
+          ));
+        }
+        unified.sort((a, b) {
+          if (a.createdAt == null && b.createdAt == null) return 0;
+          if (a.createdAt == null) return 1;
+          if (b.createdAt == null) return -1;
+          return b.createdAt!.compareTo(a.createdAt!);
+        });
+
+        _allItems = unified;
       }
-
-      final unified = <UnifiedProjectItem>[];
-
-      for (final opp in opportunities) {
-        unified.add(UnifiedProjectItem.fromOpportunity(opp));
-      }
-
-      for (final contract in contracts) {
-        unified.add(UnifiedProjectItem.fromContract(
-          contract,
-          currentUserId: widget.user?.id,
-        ));
-      }
-
-      // Sort by creation date descending
-      unified.sort((a, b) {
-        if (a.createdAt == null && b.createdAt == null) return 0;
-        if (a.createdAt == null) return 1;
-        if (b.createdAt == null) return -1;
-        return b.createdAt!.compareTo(a.createdAt!);
-      });
 
       if (mounted) {
         setState(() {
-          _allItems = unified;
           _errorMessage = null;
         });
 
@@ -979,8 +1038,8 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     final isDesktop = MediaQuery.of(context).size.width > 900;
     final screenWidth = MediaQuery.of(context).size.width;
 
-    // Filter by status category
-    final filtered = _allItems.where((item) {
+    // Filter by status category from _activeItems
+    final filtered = _activeItems.where((item) {
       if (_selectedStatus != 'Semua' && item.statusCategory != _selectedStatus) {
         return false;
       }
@@ -996,12 +1055,27 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
       return true;
     }).toList();
 
-    // Counts
-    final totalCount = _allItems.length;
-    final mencariKreatorCount = _allItems.where((i) => i.statusCategory == 'Mencari Kreator').length;
-    final berjalanCount = _allItems.where((i) => i.statusCategory == 'Berjalan').length;
-    final menungguCount = _allItems.where((i) => i.statusCategory == 'Menunggu').length;
-    final selesaiCount = _allItems.where((i) => i.statusCategory == 'Selesai').length;
+    // Counts based on active view mode
+    final totalCount = _activeItems.length;
+    final mencariKreatorCount = _activeItems.where((i) => i.statusCategory == 'Mencari Kreator').length;
+    final berjalanCount = _activeItems.where((i) => i.statusCategory == 'Berjalan').length;
+    final menungguCount = _activeItems.where((i) => i.statusCategory == 'Menunggu').length;
+    final selesaiCount = _activeItems.where((i) => i.statusCategory == 'Selesai').length;
+
+    // Pagination calculations
+    final totalItems = filtered.length;
+    final totalPages = (totalItems / _pageSize).ceil().clamp(1, 9999);
+    if (_currentPage > totalPages) {
+      _currentPage = totalPages;
+    }
+    if (_currentPage < 1) {
+      _currentPage = 1;
+    }
+    final startIndex = (totalItems == 0) ? 0 : (_currentPage - 1) * _pageSize;
+    final endIndex = (startIndex + _pageSize > totalItems) ? totalItems : startIndex + _pageSize;
+    final paginatedItems = (totalItems == 0)
+        ? <UnifiedProjectItem>[]
+        : filtered.sublist(startIndex, endIndex);
 
     final scaffold = Scaffold(
       backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFF7F8FC),
@@ -1009,6 +1083,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
         onRefresh: _fetchRealtimeProjects,
         color: accentColor,
         child: SingleChildScrollView(
+          controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           child: Padding(
             padding: EdgeInsets.fromLTRB(
@@ -1050,7 +1125,13 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
 
                     // ── Header Desktop & Mobile ──
                     _buildHeader(isDark, isDesktop, accentColor),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 18),
+
+                    // ── Tab Switcher for School: Lamaran Saya vs Cari Magang ──
+                    if (_isSchool) ...[
+                      _buildSchoolTabSelector(isDark, accentColor),
+                      const SizedBox(height: 16),
+                    ],
 
                     // ── KPI Summary Cards ──
                     _buildSummaryMetrics(
@@ -1084,24 +1165,74 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                       _buildErrorState(accentColor, isDark)
                     else if (filtered.isEmpty)
                       _buildEmptyState(isDark)
-                    else
-                      _buildProjectsGrid(filtered, isDark, isDesktop, screenWidth, accentColor),
+                    else ...[
+                      _buildProjectsGrid(paginatedItems, isDark, isDesktop, screenWidth, accentColor),
+                      if (totalItems > 0)
+                        _buildPaginationBar(
+                          currentPage: _currentPage,
+                          totalPages: totalPages,
+                          totalItems: totalItems,
+                          startIndex: startIndex,
+                          endIndex: endIndex,
+                          isDark: isDark,
+                          accentColor: accentColor,
+                          itemLabel: _isSchool ? 'program magang' : 'proyek',
+                          onPageChanged: (newPage) {
+                            setState(() => _currentPage = newPage);
+                            if (_scrollController.hasClients) {
+                              _scrollController.animateTo(
+                                320,
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeOut,
+                              );
+                            }
+                          },
+                        ),
+                    ],
                   ],
                 ),
               ),
         ),
       ),
-      floatingActionButton: (!isDesktop && !_isSchool)
-          ? FloatingActionButton.extended(
-              heroTag: 'proyek_saya_fab_mobile',
-              onPressed: _openBuatKebutuhan,
-              backgroundColor: accentColor,
-              icon: const Icon(Icons.add_rounded, color: Colors.white),
-              label: const Text(
-                'Buat Kebutuhan',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            )
+      floatingActionButton: (!isDesktop)
+          ? (_isSchool
+              ? FloatingActionButton.extended(
+                  heroTag: 'proyek_saya_fab_school',
+                  backgroundColor: AppTheme.primaryPurple,
+                  onPressed: () {
+                    setState(() {
+                      _schoolTab = _schoolTab == SchoolMagangTab.myApplications
+                          ? SchoolMagangTab.exploreVacancies
+                          : SchoolMagangTab.myApplications;
+                      _currentPage = 1;
+                      _selectedStatus = 'Semua';
+                      _searchQuery = '';
+                      _searchController.clear();
+                    });
+                  },
+                  icon: Icon(
+                    _schoolTab == SchoolMagangTab.myApplications
+                        ? Icons.search_rounded
+                        : Icons.assignment_turned_in_rounded,
+                    color: Colors.white,
+                  ),
+                  label: Text(
+                    _schoolTab == SchoolMagangTab.myApplications
+                        ? 'Cari Magang'
+                        : 'Lamaran Saya',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                )
+              : FloatingActionButton.extended(
+                  heroTag: 'proyek_saya_fab_mobile',
+                  onPressed: _openBuatKebutuhan,
+                  backgroundColor: accentColor,
+                  icon: const Icon(Icons.add_rounded, color: Colors.white),
+                  label: const Text(
+                    'Buat Kebutuhan',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ))
           : null,
     );
 
@@ -1152,7 +1283,11 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                _isSchool ? 'Program & Magang' : 'Proyek Saya',
+                _isSchool
+                    ? (_schoolTab == SchoolMagangTab.myApplications
+                        ? 'Program & Magang'
+                        : 'Cari Lowongan Magang Corporate')
+                    : 'Proyek Saya',
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
@@ -1162,7 +1297,9 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               const SizedBox(height: 4),
               Text(
                 _isSchool
-                    ? 'Pantau program magang industri dan kemitraan siswa bersama studio mitra.'
+                    ? (_schoolTab == SchoolMagangTab.myApplications
+                        ? 'Pantau data lamaran magang dan kemitraan aktif institusi bersama mitra corporate.'
+                        : 'Jelajahi dan ajukan penempatan magang siswa pada lowongan corporate yang terbuka.')
                     : 'Pantau kebutuhan terbuka, proposal kreator, dan progres kontrak kerja Anda.',
                 style: TextStyle(
                   fontSize: 13,
@@ -1206,6 +1343,67 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               ),
             ),
           ),
+        ] else if (isDesktop && _isSchool) ...[
+          const SizedBox(width: 12),
+          if (_schoolTab == SchoolMagangTab.myApplications)
+            ElevatedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _schoolTab = SchoolMagangTab.exploreVacancies;
+                  _currentPage = 1;
+                  _selectedStatus = 'Semua';
+                  _searchQuery = '';
+                  _searchController.clear();
+                });
+              },
+              icon: const Icon(Icons.search_rounded, size: 18, color: Colors.white),
+              label: const Text(
+                'Cari Lowongan Magang',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryPurple,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            )
+          else
+            OutlinedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _schoolTab = SchoolMagangTab.myApplications;
+                  _currentPage = 1;
+                  _selectedStatus = 'Semua';
+                  _searchQuery = '';
+                  _searchController.clear();
+                });
+              },
+              icon: const Icon(Icons.assignment_turned_in_rounded, size: 18),
+              label: const Text(
+                'Lihat Lamaran Magang Saya',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.primaryPurple,
+                side: BorderSide(
+                  color: AppTheme.primaryPurple.withValues(alpha: 0.5),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
         ],
       ],
     );
@@ -1298,7 +1496,10 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
-        setState(() => _selectedStatus = m['status'] as String);
+        setState(() {
+          _selectedStatus = m['status'] as String;
+          _currentPage = 1;
+        });
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -1397,12 +1598,17 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
       controller: _searchController,
       onChanged: (v) {
         _debouncer.run(() {
-          setState(() => _searchQuery = v);
+          setState(() {
+            _searchQuery = v;
+            _currentPage = 1;
+          });
         });
       },
       decoration: InputDecoration(
         hintText: _isSchool
-            ? 'Cari program, lowongan magang, atau nama industri mitra...'
+            ? (_schoolTab == SchoolMagangTab.myApplications
+                ? 'Cari program magang, mitra corporate, atau status...'
+                : 'Cari lowongan magang industri, posisi, atau mitra...')
             : 'Cari proyek, kebutuhan, atau nama kreator...',
         hintStyle: TextStyle(
           fontSize: 13,
@@ -1414,7 +1620,10 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                 icon: const Icon(Icons.close_rounded, size: 18),
                 onPressed: () {
                   _searchController.clear();
-                  setState(() => _searchQuery = '');
+                  setState(() {
+                    _searchQuery = '';
+                    _currentPage = 1;
+                  });
                 },
               )
             : null,
@@ -1494,7 +1703,12 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                 fontSize: 12,
               ),
               onSelected: (val) {
-                if (val) setState(() => _selectedStatus = key);
+                if (val) {
+                  setState(() {
+                    _selectedStatus = key;
+                    _currentPage = 1;
+                  });
+                }
               },
             ),
           );
@@ -1565,6 +1779,348 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     );
   }
 
+  // ── School Tab Selector (Lamaran Magang Saya vs Cari Lowongan Magang) ──────
+  Widget _buildSchoolTabSelector(bool isDark, Color accentColor) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardBg : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
+      ),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          _buildSchoolTabChip(
+            label: 'Lamaran Magang Saya',
+            count: _schoolMyItems.length,
+            icon: Icons.assignment_turned_in_rounded,
+            isSelected: _schoolTab == SchoolMagangTab.myApplications,
+            accentColor: accentColor,
+            isDark: isDark,
+            onTap: () {
+              if (_schoolTab != SchoolMagangTab.myApplications) {
+                setState(() {
+                  _schoolTab = SchoolMagangTab.myApplications;
+                  _currentPage = 1;
+                  _selectedStatus = 'Semua';
+                  _searchQuery = '';
+                  _searchController.clear();
+                });
+              }
+            },
+          ),
+          _buildSchoolTabChip(
+            label: 'Cari Lowongan Magang',
+            count: _schoolExploreItems.length,
+            icon: Icons.travel_explore_rounded,
+            isSelected: _schoolTab == SchoolMagangTab.exploreVacancies,
+            accentColor: accentColor,
+            isDark: isDark,
+            onTap: () {
+              if (_schoolTab != SchoolMagangTab.exploreVacancies) {
+                setState(() {
+                  _schoolTab = SchoolMagangTab.exploreVacancies;
+                  _currentPage = 1;
+                  _selectedStatus = 'Semua';
+                  _searchQuery = '';
+                  _searchController.clear();
+                });
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSchoolTabChip({
+    required String label,
+    required int count,
+    required IconData icon,
+    required bool isSelected,
+    required Color accentColor,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(9),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? (isDark ? accentColor.withValues(alpha: 0.25) : Colors.white)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+            border: isSelected
+                ? Border.all(
+                    color: isDark ? accentColor : Colors.grey.shade300,
+                    width: 1,
+                  )
+                : null,
+            boxShadow: isSelected && !isDark
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: isSelected
+                    ? (isDark ? Colors.white : accentColor)
+                    : (isDark ? Colors.white54 : Colors.grey.shade600),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected
+                      ? (isDark ? Colors.white : Colors.black87)
+                      : (isDark ? Colors.white60 : Colors.grey.shade700),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? accentColor.withValues(alpha: 0.15)
+                      : (isDark ? Colors.white10 : Colors.grey.shade200),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  count.toString(),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected
+                        ? accentColor
+                        : (isDark ? Colors.white60 : Colors.grey.shade600),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Pagination Control ─────────────────────────────────────────────────────
+  Widget _buildPaginationBar({
+    required int currentPage,
+    required int totalPages,
+    required int totalItems,
+    required int startIndex,
+    required int endIndex,
+    required bool isDark,
+    required Color accentColor,
+    required ValueChanged<int> onPageChanged,
+    String itemLabel = 'data',
+  }) {
+    final textMuted = isDark ? AppTheme.textMuted : Colors.grey.shade600;
+    final cardBg = isDark ? AppTheme.cardBg : Colors.white;
+    final borderColor = isDark ? AppTheme.inputBorder : Colors.grey.shade200;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 24, bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isSmall = constraints.maxWidth < 600;
+
+          final infoText = Text(
+            'Menampilkan ${totalItems == 0 ? 0 : startIndex + 1} - $endIndex dari $totalItems $itemLabel',
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
+              color: textMuted,
+            ),
+          );
+
+          final navButtons = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Previous Button
+              OutlinedButton.icon(
+                onPressed: currentPage > 1 ? () => onPageChanged(currentPage - 1) : null,
+                icon: const Icon(Icons.chevron_left_rounded, size: 18),
+                label: const Text('Sebelumnya', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  side: BorderSide(
+                    color: currentPage > 1 ? borderColor : Colors.grey.withValues(alpha: 0.2),
+                  ),
+                  foregroundColor: currentPage > 1 ? (isDark ? Colors.white : Colors.black87) : Colors.grey,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Page Numbers
+              ..._buildPageNumbers(
+                currentPage: currentPage,
+                totalPages: totalPages,
+                accentColor: accentColor,
+                isDark: isDark,
+                borderColor: borderColor,
+                onPageChanged: onPageChanged,
+              ),
+
+              const SizedBox(width: 8),
+              // Next Button
+              OutlinedButton.icon(
+                onPressed: currentPage < totalPages ? () => onPageChanged(currentPage + 1) : null,
+                label: const Text('Selanjutnya', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                icon: const Icon(Icons.chevron_right_rounded, size: 18),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  side: BorderSide(
+                    color: currentPage < totalPages ? borderColor : Colors.grey.withValues(alpha: 0.2),
+                  ),
+                  foregroundColor: currentPage < totalPages ? (isDark ? Colors.white : Colors.black87) : Colors.grey,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ],
+          );
+
+          if (isSmall) {
+            return Column(
+              children: [
+                infoText,
+                const SizedBox(height: 12),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: navButtons,
+                ),
+              ],
+            );
+          }
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              infoText,
+              navButtons,
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  List<Widget> _buildPageNumbers({
+    required int currentPage,
+    required int totalPages,
+    required Color accentColor,
+    required bool isDark,
+    required Color borderColor,
+    required ValueChanged<int> onPageChanged,
+  }) {
+    final widgets = <Widget>[];
+
+    int startPage = (currentPage - 2).clamp(1, totalPages);
+    int endPage = (startPage + 4).clamp(1, totalPages);
+    if (endPage - startPage < 4) {
+      startPage = (endPage - 4).clamp(1, totalPages);
+    }
+
+    if (startPage > 1) {
+      widgets.add(_buildPageNumberButton(1, currentPage == 1, accentColor, isDark, borderColor, onPageChanged));
+      if (startPage > 2) {
+        widgets.add(const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: Text('...', style: TextStyle(fontSize: 12, color: Colors.grey)),
+        ));
+      }
+    }
+
+    for (int p = startPage; p <= endPage; p++) {
+      widgets.add(_buildPageNumberButton(p, currentPage == p, accentColor, isDark, borderColor, onPageChanged));
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        widgets.add(const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: Text('...', style: TextStyle(fontSize: 12, color: Colors.grey)),
+        ));
+      }
+      widgets.add(_buildPageNumberButton(totalPages, currentPage == totalPages, accentColor, isDark, borderColor, onPageChanged));
+    }
+
+    return widgets;
+  }
+
+  Widget _buildPageNumberButton(
+    int page,
+    bool isSelected,
+    Color accentColor,
+    bool isDark,
+    Color borderColor,
+    ValueChanged<int> onPageChanged,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => onPageChanged(page),
+        child: Container(
+          width: 34,
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isSelected ? accentColor : (isDark ? AppTheme.surfaceDark : Colors.transparent),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isSelected ? accentColor : borderColor,
+            ),
+          ),
+          child: Text(
+            page.toString(),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              color: isSelected
+                  ? Colors.white
+                  : (isDark ? Colors.white70 : Colors.black87),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ── Unified Project Card ───────────────────────────────────────────────────
   Widget _buildUnifiedCard(
     UnifiedProjectItem item,
@@ -1592,6 +2148,9 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
       if (item.opportunity != null) {
         return ProgramMagangCard.fromOpportunity(
           item.opportunity!,
+          buttonLabel: _isSchool && _schoolTab == SchoolMagangTab.exploreVacancies
+              ? 'Detail & Lamar Magang →'
+              : 'Lihat Detail Program →',
           onTap: () => _openOpportunityDetail(item.opportunity!),
           onDetailPressed: () => _openOpportunityDetail(item.opportunity!),
         );
@@ -1619,6 +2178,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             'Memiliki portofolio karya',
           ],
           requirementsCountLabel: '3 Persyaratan',
+          buttonLabel: 'Detail Kontrak Kemitraan →',
           onTap: () {
             if (item.contract != null) {
               _openContractOpportunity(item);
@@ -2250,7 +2810,9 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             Text(
               _selectedStatus == 'Semua'
                   ? (_isSchool
-                      ? 'Belum Ada Program & Magang Aktif'
+                      ? (_schoolTab == SchoolMagangTab.myApplications
+                          ? 'Belum Ada Data Lamaran Magang'
+                          : 'Belum Ada Lowongan Magang Tersedia')
                       : 'Belum Ada Proyek yang Dibuat')
                   : (_isSchool
                       ? 'Tidak Ada Program pada Status "$_selectedStatus"'
@@ -2263,7 +2825,9 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             const SizedBox(height: 8),
             Text(
               _isSchool
-                  ? 'Program magang dibuka langsung oleh mitra korporat dan industri. Pantau program dan pelamar magang dari mitra industri di sini.'
+                  ? (_schoolTab == SchoolMagangTab.myApplications
+                      ? 'Belum ada data lamaran atau kemitraan magang aktif ke mitra corporate. Anda dapat mencari dan melamar lowongan magang industri yang sedang buka.'
+                      : 'Saat ini belum ada lowongan magang corporate yang sesuai kriteria pencarian Anda.')
                   : 'Publikasikan kebutuhan proyek Anda sekarang untuk menerima proposal dari kreator terverifikasi.',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -2271,7 +2835,30 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                 color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
               ),
             ),
-            if (!_isSchool) ...[
+            if (_isSchool && _schoolTab == SchoolMagangTab.myApplications) ...[
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _schoolTab = SchoolMagangTab.exploreVacancies;
+                    _currentPage = 1;
+                    _selectedStatus = 'Semua';
+                    _searchQuery = '';
+                    _searchController.clear();
+                  });
+                },
+                icon: const Icon(Icons.search_rounded, color: Colors.white, size: 18),
+                label: const Text(
+                  'Cari Lowongan Magang Industri',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryPurple,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ] else if (!_isSchool) ...[
               const SizedBox(height: 20),
               ElevatedButton.icon(
                 onPressed: _openBuatKebutuhan,
