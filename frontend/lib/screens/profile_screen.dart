@@ -433,7 +433,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         AppSweetAlert.success(
           context,
-          'Data legalitas, NPSN, dan profil institusi berhasil diperbarui.',
+          'Data legalitas, nomor pokok institusi, dan profil berhasil diperbarui.',
           title: 'Profil Institusi Disimpan',
         );
       }
@@ -1243,7 +1243,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildSchoolStat('NPSN', npsn, isDark),
+                _buildSchoolStat('NPSN / Kode PT', npsn, isDark),
                 Container(height: 36, width: 1, color: isDark ? Colors.white12 : Colors.grey.shade300),
                 _buildSchoolStat('Akreditasi', akreditasi.split(' ').first, isDark),
                 Container(height: 36, width: 1, color: isDark ? Colors.white12 : Colors.grey.shade300),
@@ -1379,7 +1379,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Kelola data legalitas, NPSN, akreditasi, pimpinan, dan narahubung resmi institusi.',
+                      'Kelola data legalitas, nomor pokok institusi (NPSN / Kode PT), akreditasi, pimpinan, dan narahubung resmi institusi.',
                       style: TextStyle(
                         fontSize: 13,
                         color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -1400,8 +1400,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           TextFormField(
             controller: _schoolNameController,
             decoration: const InputDecoration(
-              labelText: 'Nama Resmi Institusi / Sekolah *',
-              hintText: 'Contoh: Institut Seni & Rekayasa Kreatif Nusantara',
+              labelText: 'Nama Resmi Institusi Pendidikan *',
+              hintText: 'Contoh: SMK Negeri 1 Kreasi / Institut Seni & Rekayasa Kreatif',
               prefixIcon: Icon(Icons.school_outlined),
             ),
           ),
@@ -1416,10 +1416,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Expanded(
                           child: TextFormField(
                             controller: _npsnController,
-                            keyboardType: TextInputType.number,
+                            keyboardType: TextInputType.text,
                             decoration: const InputDecoration(
-                              labelText: 'NPSN (Nomor Pokok Sekolah Nasional) *',
-                              hintText: 'Contoh: 20401829',
+                              labelText: 'Nomor Pokok / Kode Institusi (NPSN / Kode PT) *',
+                              hintText: 'NPSN untuk sekolah atau Kode PT untuk kampus (misal: 20401829 / 001001)',
                               prefixIcon: Icon(Icons.pin_outlined),
                             ),
                           ),
@@ -1441,10 +1441,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         TextFormField(
                           controller: _npsnController,
-                          keyboardType: TextInputType.number,
+                          keyboardType: TextInputType.text,
                           decoration: const InputDecoration(
-                            labelText: 'NPSN (Nomor Pokok Sekolah Nasional) *',
-                            hintText: 'Contoh: 20401829',
+                            labelText: 'Nomor Pokok / Kode Institusi (NPSN / Kode PT) *',
+                            hintText: 'NPSN untuk sekolah atau Kode PT untuk kampus (misal: 20401829 / 001001)',
                             prefixIcon: Icon(Icons.pin_outlined),
                           ),
                         ),
@@ -1531,8 +1531,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: TextFormField(
                             controller: _headmasterNameController,
                             decoration: const InputDecoration(
-                              labelText: 'Nama Kepala Sekolah / Rektor *',
-                              hintText: 'Nama lengkap beserta gelar',
+                              labelText: 'Nama Pimpinan Institusi (Rektor / Kepala Sekolah / Direktur) *',
+                              hintText: 'Nama lengkap pimpinan beserta gelar',
                               prefixIcon: Icon(Icons.person_outline_rounded),
                             ),
                           ),
@@ -1542,8 +1542,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: TextFormField(
                             controller: _headmasterNipController,
                             decoration: const InputDecoration(
-                              labelText: 'NIP / Identitas Pimpinan',
-                              hintText: '19740512 199903 1 004',
+                              labelText: 'NIP / NIDN / Identitas Pimpinan',
+                              hintText: 'NIP untuk ASN atau NIDN/NIK Pimpinan',
                               prefixIcon: Icon(Icons.badge_outlined),
                             ),
                           ),
@@ -1555,8 +1555,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         TextFormField(
                           controller: _headmasterNameController,
                           decoration: const InputDecoration(
-                            labelText: 'Nama Kepala Sekolah / Rektor *',
-                            hintText: 'Nama lengkap beserta gelar',
+                            labelText: 'Nama Pimpinan Institusi (Rektor / Kepala Sekolah / Direktur) *',
+                            hintText: 'Nama lengkap pimpinan beserta gelar',
                             prefixIcon: Icon(Icons.person_outline_rounded),
                           ),
                         ),
@@ -1564,8 +1564,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         TextFormField(
                           controller: _headmasterNipController,
                           decoration: const InputDecoration(
-                            labelText: 'NIP / Identitas Pimpinan',
-                            hintText: '19740512 199903 1 004',
+                            labelText: 'NIP / NIDN / Identitas Pimpinan',
+                            hintText: 'NIP untuk ASN atau NIDN/NIK Pimpinan',
                             prefixIcon: Icon(Icons.badge_outlined),
                           ),
                         ),
@@ -1585,7 +1585,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: TextFormField(
                             controller: _schoolPhoneController,
                             decoration: const InputDecoration(
-                              labelText: 'Telepon Resmi Sekolah / TU *',
+                              labelText: 'Telepon Resmi Institusi / Narahubung *',
                               hintText: '(021) 8849-201',
                               prefixIcon: Icon(Icons.phone_outlined),
                             ),
@@ -1610,7 +1610,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         TextFormField(
                           controller: _schoolPhoneController,
                           decoration: const InputDecoration(
-                            labelText: 'Telepon Resmi Sekolah / TU *',
+                            labelText: 'Telepon Resmi Institusi / Narahubung *',
                             hintText: '(021) 8849-201',
                             prefixIcon: Icon(Icons.phone_outlined),
                           ),
@@ -1632,7 +1632,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 24),
 
           // ── SEKSI 3: LOKASI & DESKRIPSI ───────────────────────────────────
-          _buildFormSectionHeader('3. LOKASI & PROFIL KAMPUS', Icons.place_outlined, isDark),
+          _buildFormSectionHeader('3. LOKASI & PROFIL INSTITUSI', Icons.place_outlined, isDark),
           const SizedBox(height: 14),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -1691,7 +1691,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           TextFormField(
             controller: _addressController,
             decoration: const InputDecoration(
-              labelText: 'Alamat Lengkap Kampus / Sekolah',
+              labelText: 'Alamat Lengkap Institusi / Kampus',
               hintText: 'Jl. Pendidikan Kreatif No. 45, Kampus Budaya Vokasi Terpadu',
               prefixIcon: Icon(Icons.map_outlined),
             ),
@@ -1701,8 +1701,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             controller: _descriptionController,
             maxLines: 3,
             decoration: const InputDecoration(
-              labelText: 'Visi & Profil Singkat Sekolah',
-              hintText: 'Visi, misi, dan keunggulan program vokasi sekolah...',
+              labelText: 'Visi & Profil Singkat Institusi',
+              hintText: 'Visi, misi, dan keunggulan program pendidikan/vokasi institusi...',
               prefixIcon: Icon(Icons.description_outlined),
             ),
           ),
