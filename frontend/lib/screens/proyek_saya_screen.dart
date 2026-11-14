@@ -99,6 +99,7 @@ class UnifiedProjectItem {
     if (opp.createdAt != null) {
       created = DateTime.tryParse(opp.createdAt!);
     }
+    created ??= DateTime.now();
 
     String categoryFormatted = opp.subRoleSlug.replaceAll('_', ' ');
     if (categoryFormatted.isNotEmpty) {
@@ -390,8 +391,34 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
       final contracts = results[0] as List<JobContract>;
       final opportunities = List<OpportunityModel>.from(results[1] as List<OpportunityModel>);
 
-      if (_isSchool && opportunities.isEmpty) {
-        opportunities.addAll(_getSampleMagangOpportunities());
+      if (_isSchool) {
+        // Prioritize and filter for magang / corporate internship opportunities for the institution view
+        final magangOpportunities = opportunities.where((opp) {
+          final isExplicitMagang = opp.subRoleSlug.toLowerCase().contains('magang') ||
+              opp.title.toLowerCase().contains('magang') ||
+              opp.title.toLowerCase().contains('intern') ||
+              (opp.description != null &&
+                  (opp.description!.toLowerCase().contains('magang') ||
+                      opp.description!.toLowerCase().contains('intern'))) ||
+              opp.requirements.any((r) =>
+                  r.subRoleSlug.toLowerCase().contains('magang') ||
+                  (r.notes != null &&
+                      (r.notes!.toLowerCase().contains('magang') ||
+                          r.notes!.toLowerCase().contains('kuota'))));
+
+          final isCorporatePoster = opp.poster?.selectedSubRole?.toLowerCase() == 'corporate' ||
+              opp.poster?.role.toLowerCase() == 'corporate';
+
+          return isExplicitMagang || isCorporatePoster;
+        }).toList();
+
+        if (magangOpportunities.isEmpty) {
+          magangOpportunities.addAll(_getSampleMagangOpportunities());
+        }
+
+        opportunities
+          ..clear()
+          ..addAll(magangOpportunities);
       }
 
       final unified = <UnifiedProjectItem>[];
@@ -1550,8 +1577,16 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
         item.category.toLowerCase().contains('magang') ||
         item.title.toLowerCase().contains('magang') ||
         (item.opportunity != null &&
-            (item.opportunity!.subRoleSlug.toLowerCase() == 'magang' ||
-                item.opportunity!.title.toLowerCase().contains('magang')));
+            (item.opportunity!.subRoleSlug.toLowerCase().contains('magang') ||
+                item.opportunity!.title.toLowerCase().contains('magang') ||
+                item.opportunity!.title.toLowerCase().contains('intern') ||
+                (item.opportunity!.description != null &&
+                    item.opportunity!.description!.toLowerCase().contains('magang')) ||
+                item.opportunity!.requirements.any((r) =>
+                    r.subRoleSlug.toLowerCase().contains('magang') ||
+                    (r.notes != null &&
+                        (r.notes!.toLowerCase().contains('magang') ||
+                            r.notes!.toLowerCase().contains('kuota'))))));
 
     if (isMagang) {
       if (item.opportunity != null) {

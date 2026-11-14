@@ -106,7 +106,10 @@ class CorporateVacancyItem {
     final isMagang = opp.subRoleSlug.toLowerCase().contains('magang') ||
         opp.title.toLowerCase().contains('magang') ||
         opp.title.toLowerCase().contains('intern') ||
-        (opp.description != null && opp.description!.toLowerCase().contains('magang'));
+        (opp.description != null && opp.description!.toLowerCase().contains('magang')) ||
+        opp.requirements.any((r) =>
+            r.subRoleSlug.toLowerCase().contains('magang') ||
+            (r.notes != null && (r.notes!.toLowerCase().contains('magang') || r.notes!.toLowerCase().contains('kuota'))));
 
     final statusText = isOpen
         ? 'Pendaftaran Dibuka'
@@ -131,9 +134,36 @@ class CorporateVacancyItem {
       defaultFallback: '21 Sep 2026',
     );
 
-    final reqList = opp.requirements
-        .map((r) => r.notes?.isNotEmpty == true ? r.notes! : r.subRoleSlug.replaceAll('_', ' '))
-        .toList();
+    // Calculate quota and specifications from requirements
+    int totalQuota = 0;
+    final specBreakdowns = <String>[];
+    final reqList = <String>[];
+
+    for (final r in opp.requirements) {
+      if (r.subRoleSlug == 'kualifikasi') {
+        if (r.notes != null && r.notes!.isNotEmpty) {
+          reqList.add(r.notes!);
+        }
+      } else {
+        final q = r.quantity;
+        if (q > 0) {
+          totalQuota += q;
+          final roleName = r.notes?.isNotEmpty == true
+              ? r.notes!.split('(').first.replaceFirst('Spesialisasi ', '').trim()
+              : r.subRoleSlug.replaceAll('_', ' ');
+          specBreakdowns.add('$roleName: $q');
+        }
+      }
+    }
+
+    if (reqList.isEmpty) {
+      for (final r in opp.requirements) {
+        if (r.notes != null && r.notes!.isNotEmpty && !r.notes!.startsWith('Spesialisasi ')) {
+          reqList.add(r.notes!);
+        }
+      }
+    }
+
     if (reqList.isEmpty) {
       reqList.addAll([
         'Talenta kreatif terverifikasi',
@@ -141,6 +171,12 @@ class CorporateVacancyItem {
         'Siap bekerja sesuai timeline & briefing',
       ]);
     }
+
+    final calculatedQuotaText = isMagang
+        ? '${opp.applicationsCount} dari ${totalQuota > 0 ? totalQuota : 10} posisi'
+        : (totalQuota > 0
+            ? '$totalQuota posisi (${specBreakdowns.join(' • ')})'
+            : 'Tersedia 1-2 posisi');
 
     return CorporateVacancyItem(
       id: opp.id ?? 'opp_${DateTime.now().millisecondsSinceEpoch}',
@@ -153,7 +189,7 @@ class CorporateVacancyItem {
       statusBadgeColor: statusColor,
       statusBadgeBg: statusBg,
       registrationPeriod: regPeriod,
-      quotaText: isMagang ? '${opp.applicationsCount} dari 10 posisi' : 'Tersedia 1-2 posisi',
+      quotaText: calculatedQuotaText,
       allowance: opp.budgetRange ?? (isMagang ? 'Rp 3.500.000 / bulan' : 'Budget Fleksibel'),
       requirements: reqList,
       applicantsCount: opp.applicationsCount,
@@ -386,13 +422,13 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
 
   List<CorporateVacancyItem> get _allVacancies {
     final Map<String, CorporateVacancyItem> map = {};
-    // Add presets first
-    for (final item in _presetVacancies) {
-      map[item.id] = item;
-    }
-    // Add/overwrite with fetched items from server
+    // Add real items created or fetched from server FIRST so user vacancies appear at the top
     for (final item in _fetchedItems) {
       map[item.id] = item;
+    }
+    // Add preset vacancies if not already overridden
+    for (final item in _presetVacancies) {
+      map.putIfAbsent(item.id, () => item);
     }
     return map.values.toList();
   }
@@ -439,6 +475,7 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
 
     if (newVacancy != null && mounted) {
       setState(() {
+        _fetchedItems.removeWhere((it) => it.id == newVacancy.id);
         _fetchedItems.insert(0, newVacancy);
       });
       AppSweetAlert.success(
@@ -446,6 +483,8 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
         'Lowongan "${newVacancy.title}" dengan kuota ${newVacancy.quotaText} berhasil dipublikasikan!',
         title: 'Lowongan Berhasil Dibuka',
       );
+      // Synchronize with server to ensure persistent state
+      _fetchVacancies();
     }
   }
 
@@ -1348,17 +1387,6 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
         defaultFallback: '21 Sep 2026',
       );
 
-  void _onSpecializationChanged(int index, String newSlug) {
-    final match = _availableSpecializationOptions.firstWhere(
-      (e) => e['slug'] == newSlug,
-      orElse: () => {'slug': newSlug, 'label': newSlug},
-    );
-    setState(() {
-      _specializations[index].roleSlug = match['slug']!;
-      _specializations[index].roleLabel = match['label']!;
-    });
-  }
-
   void _addSpecialization() {
     final usedSlugs = _specializations.map((s) => s.roleSlug).toSet();
     final available = _availableSpecializationOptions.firstWhere(
@@ -1469,7 +1497,9 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
     final title = _titleController.text.trim();
     final description = _descriptionController.text.trim();
     final allowance = currentAllowanceText;
-    final deadlineIso = _selectedDeadline.toIso8601String();
+    final deadlineDate = _selectedDeadline;
+    final deadlineFormatted =
+        '${deadlineDate.year}-${deadlineDate.month.toString().padLeft(2, '0')}-${deadlineDate.day.toString().padLeft(2, '0')}';
     final formattedDeadline = _formattedDeadline;
 
     // Requirement payload for API
@@ -1489,18 +1519,22 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
       });
     }
 
+    OpportunityModel? createdModel;
     try {
-      await OpportunityService.createOpportunity(
+      final res = await OpportunityService.createOpportunity(
         title: title,
-        subRoleSlug: _specializations.first.roleSlug,
-        type: isMagang ? 'magang' : 'job',
+        subRoleSlug: isMagang ? 'magang' : _specializations.first.roleSlug,
+        type: 'project',
         description: description,
         budgetRange: allowance,
-        deadline: deadlineIso,
+        deadline: deadlineFormatted,
         requirements: reqPayload,
       );
-    } catch (_) {
-      // Offline/local mock resilience
+      if (res['status'] == true && res['data'] is OpportunityModel) {
+        createdModel = res['data'] as OpportunityModel;
+      }
+    } catch (e) {
+      debugPrint('Error creating opportunity vacancy: $e');
     }
 
     final quotaBreakdown = _specializations
@@ -1513,7 +1547,7 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
         : '$totalQuota posisi ($quotaBreakdown)';
 
     final newVacancy = CorporateVacancyItem(
-      id: 'corp_vac_${DateTime.now().millisecondsSinceEpoch}',
+      id: createdModel?.id ?? 'corp_vac_${DateTime.now().millisecondsSinceEpoch}',
       title: title,
       description: description,
       category: _category,
@@ -1527,6 +1561,7 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
       allowance: allowance,
       requirements: List<String>.from(_requirements),
       applicantsCount: 0,
+      opportunity: createdModel,
       applicants: const [],
     );
 
@@ -2468,11 +2503,11 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
                                       onAddNewOption: (label) => _addNewSpecializationOption(label),
                                     ),
                                   );
-                                  if (newOpt != null) {
+                                  if (newOpt != null && context.mounted) {
                                     AppSweetAlert.success(
                                       context,
-                                      'Spesialisasi "${newOpt['label']}" berhasil ditambahkan ke pilihan dropdown.',
-                                      title: 'Opsi Ditambahkan',
+                                      'Spesialisasi "${newOpt['label']}" berhasil disimpan ke pilihan dropdown.',
+                                      title: 'Opsi Tersimpan',
                                     );
                                   }
                                 },
@@ -3102,340 +3137,3 @@ class _SearchableSpecializationDialogState extends State<_SearchableSpecializati
     );
   }
 }
-
-
-  const _SearchableSpecializationDialog({
-    required this.currentSlug,
-    required this.options,
-    required this.onAddNewOption,
-  });
-
-  @override
-  State<_SearchableSpecializationDialog> createState() => _SearchableSpecializationDialogState();
-}
-
-class _SearchableSpecializationDialogState extends State<_SearchableSpecializationDialog> {
-  final TextEditingController _searchCtrl = TextEditingController();
-  final TextEditingController _customRoleCtrl = TextEditingController();
-  bool _isCreatingCustom = false;
-
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    _customRoleCtrl.dispose();
-    super.dispose();
-  }
-
-  void _submitNewCustomRole(String roleName) {
-    final clean = roleName.trim();
-    if (clean.isEmpty) return;
-    final created = widget.onAddNewOption(clean);
-    Navigator.of(context).pop(created);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final query = _searchCtrl.text.trim().toLowerCase();
-    final filtered = widget.options.where((opt) {
-      if (query.isEmpty) return true;
-      final labelMatch = opt['label']!.toLowerCase().contains(query);
-      final slugMatch = opt['slug']!.toLowerCase().contains(query);
-      return labelMatch || slugMatch;
-    }).toList();
-
-    final hasExactMatch = widget.options.any(
-      (opt) => opt['label']!.trim().toLowerCase() == query,
-    );
-
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      actionsPadding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-      title: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.search_rounded, color: Color(0xFF2563EB), size: 22),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Pilih Spesialisasi Keahlian',
-                  style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'Cari atau buat opsi spesialisasi baru',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.normal),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF64748B)),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ],
-      ),
-      content: SizedBox(
-        width: 460,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Search Input Field
-            TextFormField(
-              controller: _searchCtrl,
-              autofocus: true,
-              onChanged: (_) => setState(() {}),
-              onFieldSubmitted: (val) {
-                if (val.trim().isNotEmpty && !hasExactMatch) {
-                  _submitNewCustomRole(val);
-                }
-              },
-              decoration: InputDecoration(
-                hintText: 'Cari spesialisasi atau ketik opsi baru...',
-                hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-                prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF2563EB)),
-                suffixIcon: _searchCtrl.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 16, color: Color(0xFF64748B)),
-                        onPressed: () {
-                          _searchCtrl.clear();
-                          setState(() {});
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: const Color(0xFFF8FAFC),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // If user typed something that doesn't exist, show quick add banner
-            if (query.isNotEmpty && !hasExactMatch) ...[
-              Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF93C5FD)),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    key: const ValueKey('btn_add_typed_spec_option'),
-                    onTap: () => _submitNewCustomRole(_searchCtrl.text),
-                    borderRadius: BorderRadius.circular(10),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF2563EB),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.add, color: Colors.white, size: 14),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Tambahkan "${_searchCtrl.text.trim()}"',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF1D4ED8),
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                const SizedBox(height: 1),
-                                const Text(
-                                  'Klik untuk menambahkan opsi baru ini ke dropdown',
-                                  style: TextStyle(fontSize: 11, color: Color(0xFF3B82F6)),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF2563EB)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-
-            // If creating custom via input form
-            if (_isCreatingCustom) ...[
-              Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFCBD5E1)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Nama Spesialisasi Baru',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF334155)),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _customRoleCtrl,
-                            autofocus: true,
-                            decoration: InputDecoration(
-                              hintText: 'Misal: AI Prompt Engineer',
-                              filled: true,
-                              fillColor: Colors.white,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            onFieldSubmitted: (v) => _submitNewCustomRole(v),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        FilledButton(
-                          onPressed: () => _submitNewCustomRole(_customRoleCtrl.text),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF2563EB),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                          child: const Text('Simpan'),
-                        ),
-                        const SizedBox(width: 4),
-                        IconButton(
-                          icon: const Icon(Icons.close_rounded, size: 18),
-                          onPressed: () => setState(() => _isCreatingCustom = false),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-            // Options List
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 280),
-              child: filtered.isEmpty && (query.isEmpty || hasExactMatch)
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
-                      child: Center(
-                        child: Text(
-                          'Tidak ada spesialisasi yang cocok.',
-                          style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: filtered.length,
-                      itemBuilder: (ctx, idx) {
-                        final opt = filtered[idx];
-                        final isSelected = opt['slug'] == widget.currentSlug;
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 4),
-                          decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFFEFF6FF) : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
-                            border: isSelected
-                                ? Border.all(color: const Color(0xFFBFDBFE))
-                                : null,
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: ListTile(
-                            dense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                            leading: Icon(
-                              isSelected ? Icons.check_circle_rounded : Icons.work_outline_rounded,
-                              size: 18,
-                              color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF64748B),
-                            ),
-                            title: Text(
-                              opt['label']!,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                                color: isSelected ? const Color(0xFF1D4ED8) : const Color(0xFF0F172A),
-                              ),
-                            ),
-                            trailing: isSelected
-                                ? const Text(
-                                    'Terpilih',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF2563EB),
-                                    ),
-                                  )
-                                : null,
-                            onTap: () {
-                              Navigator.of(context).pop(opt);
-                            },
-                          ),
-                        ),
-                      );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        if (!_isCreatingCustom)
-          TextButton.icon(
-            key: const ValueKey('btn_open_custom_role_form'),
-            onPressed: () {
-              setState(() {
-                _isCreatingCustom = true;
-                _customRoleCtrl.text = _searchCtrl.text.trim();
-              });
-            },
-            icon: const Icon(Icons.add_rounded, size: 16),
-            label: const Text('Tambah Opsi Kustom Baru'),
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFF2563EB)),
-          ),
-        OutlinedButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Batal'),
-        ),
-      ],
-    );
-  }
-}
-
-

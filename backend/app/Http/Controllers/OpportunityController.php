@@ -85,7 +85,8 @@ class OpportunityController extends Controller
         }
 
         // Akun Corporate tidak memerlukan verifikasi KTP untuk membuka lowongan/proyek
-        if ($user && $user->role->value === 'user' && !$user->isCorporate() && !$user->is_verified) {
+        $roleVal = $user && is_object($user->role) && isset($user->role->value) ? $user->role->value : ($user ? (string) $user->role : '');
+        if ($user && $roleVal === 'user' && !$user->isCorporate() && !$user->is_verified) {
             return $this->errorResponse('Klien wajib melakukan verifikasi KTP terlebih dahulu sebelum mempublikasikan kebutuhan proyek.', 403);
         }
 
