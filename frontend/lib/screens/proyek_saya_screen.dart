@@ -251,8 +251,34 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
 
   List<UnifiedProjectItem> _allItems = [];
 
+  UserModel? get _currentUser => widget.user ?? currentUserNotifier.value;
+
+  bool get _isCorporate {
+    final u = _currentUser;
+    if (u == null) return false;
+    if (u.isCorporate) return true;
+    final sub = (u.subRole ?? '').toLowerCase().trim();
+    final role = u.role.toLowerCase().trim();
+    const corporateKeywords = [
+      'corporate',
+      'company',
+      'enterprise',
+      'business',
+      'perusahaan',
+      'bisnis',
+      'b2b',
+      'agency',
+      'industri',
+      'mitra_industri',
+    ];
+    return corporateKeywords.contains(sub) ||
+        corporateKeywords.contains(role) ||
+        u.username.toLowerCase() == 'corporate_demo' ||
+        u.email.toLowerCase().startsWith('corporate@');
+  }
+
   bool get _isSchool {
-    final sub = (widget.user?.subRole ?? '').toLowerCase().trim();
+    final sub = (_currentUser?.subRole ?? '').toLowerCase().trim();
     return sub == 'institution' ||
         sub == 'institusi' ||
         sub == 'school' ||
@@ -545,12 +571,25 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
       return;
     }
 
-    // Check if client is verified (Akun corporate tidak memerlukan verifikasi KTP)
-    final isCorporate = widget.user?.isCorporate == true;
-    final isClient =
-        widget.user?.role == 'user' || widget.user?.isClient == true;
-    if (isClient && !isCorporate) {
-      bool isVerified = widget.user?.isVerified == true;
+    // Akun corporate tidak memerlukan verifikasi KTP sama sekali
+    if (_isCorporate) {
+      if (!mounted) return;
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: _currentUser)),
+      );
+
+      if (result == true) {
+        _fetchRealtimeProjects();
+      }
+      return;
+    }
+
+    // Check if client is verified
+    final u = _currentUser;
+    final isClient = u?.role == 'user' || u?.isClient == true;
+    if (isClient) {
+      bool isVerified = u?.isVerified == true || u?.isClientVerified == true;
       if (!isVerified) {
         // Double check latest status from server
         try {
@@ -607,7 +646,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
           final res = await Navigator.push<bool>(
             context,
             MaterialPageRoute(
-              builder: (_) => ClientVerificationPage(user: widget.user),
+              builder: (_) => ClientVerificationPage(user: _currentUser),
             ),
           );
           if (res == true && mounted) {
@@ -629,7 +668,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     if (!mounted) return;
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: widget.user)),
+      MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: _currentUser)),
     );
 
     if (result == true) {

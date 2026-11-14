@@ -102,16 +102,30 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
         sub == 'campus';
   }
 
+  UserModel? get _currentUser => widget.user ?? currentUserNotifier.value;
+
   bool get _isCorporate {
-    if (widget.user?.isCorporate == true) return true;
-    final sub = (widget.user?.subRole ?? '').toLowerCase().trim();
-    final role = (widget.user?.role ?? '').toLowerCase().trim();
-    return sub == 'company' ||
-        sub == 'business' ||
-        sub == 'corporate' ||
-        sub == 'perusahaan' ||
-        role == 'company' ||
-        role == 'corporate';
+    final u = _currentUser;
+    if (u == null) return false;
+    if (u.isCorporate) return true;
+    final sub = (u.subRole ?? '').toLowerCase().trim();
+    final role = u.role.toLowerCase().trim();
+    const corporateKeywords = [
+      'corporate',
+      'company',
+      'enterprise',
+      'business',
+      'perusahaan',
+      'bisnis',
+      'b2b',
+      'agency',
+      'industri',
+      'mitra_industri',
+    ];
+    return corporateKeywords.contains(sub) ||
+        corporateKeywords.contains(role) ||
+        u.username.toLowerCase() == 'corporate_demo' ||
+        u.email.toLowerCase().startsWith('corporate@');
   }
 
   bool get _isMagangProgram => _isCorporate && widget.initialKategori == 'magang';
@@ -120,17 +134,17 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   bool _isClientVerified = true;
 
   Future<void> _checkClientVerification() async {
-    if (_isCorporate || widget.user?.isCorporate == true) {
+    if (_isCorporate || _currentUser?.isCorporate == true) {
       if (mounted) setState(() => _isClientVerified = true);
       return;
     }
     final isClient =
-        widget.user?.role == 'user' || widget.user?.isClient == true;
+        _currentUser?.role == 'user' || _currentUser?.isClient == true;
     if (!isClient) {
       if (mounted) setState(() => _isClientVerified = true);
       return;
     }
-    if (widget.user?.isVerified == true) {
+    if (_currentUser?.isVerified == true || _currentUser?.isClientVerified == true) {
       if (mounted) setState(() => _isClientVerified = true);
       return;
     }
@@ -143,7 +157,7 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
       }
     } catch (_) {
       if (mounted) {
-        setState(() => _isClientVerified = widget.user?.isVerified ?? false);
+        setState(() => _isClientVerified = _currentUser?.isVerified ?? false);
       }
     }
   }
@@ -626,9 +640,9 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
   }
 
   Future<void> _submit() async {
-    final isCorporateUser = _isCorporate || widget.user?.isCorporate == true;
+    final isCorporateUser = _isCorporate || _currentUser?.isCorporate == true;
     final isClient =
-        widget.user?.role == 'user' || widget.user?.isClient == true;
+        _currentUser?.role == 'user' || _currentUser?.isClient == true;
     if (!isCorporateUser && isClient && !_isClientVerified) {
       final shouldVerify = await showDialog<bool>(
         context: context,
@@ -901,10 +915,10 @@ class _BuatKebutuhanScreenState extends State<BuatKebutuhanScreen> {
                     ),
                   ],
                 ),
-                if (!(_isCorporate || widget.user?.isCorporate == true) &&
+                if (!(_isCorporate || _currentUser?.isCorporate == true) &&
                     !_isClientVerified &&
-                    (widget.user?.role == 'user' ||
-                        widget.user?.isClient == true))
+                    (_currentUser?.role == 'user' ||
+                        _currentUser?.isClient == true))
                   Container(
                     margin: const EdgeInsets.only(top: 14, bottom: 14),
                     padding: const EdgeInsets.all(16),

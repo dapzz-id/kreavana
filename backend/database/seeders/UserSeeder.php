@@ -70,6 +70,9 @@ class UserSeeder extends Seeder
                 'role' => RoleType::User,
                 'sub_role' => 'corporate',
                 'is_creator_approved' => 0,
+                'is_verified' => 1,
+                'verification_type' => 'corporate',
+                'verified_at' => now(),
                 'email_verified_at' => now(),
             ]
         );
