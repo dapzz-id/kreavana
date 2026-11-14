@@ -4,12 +4,13 @@ import '../models/user_model.dart';
 import '../models/opportunity_model.dart';
 import '../services/opportunity_service.dart';
 import '../services/user_store.dart';
+import '../services/app_router.dart';
 import '../widgets/app_breadcrumbs.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import '../widgets/program_magang_card.dart';
 import '../widgets/app_sweet_alert.dart';
 import '../utils/currency_formatter.dart';
-import 'detail_kebutuhan_screen.dart';
+import 'corporate_vacancy_detail_screen.dart';
 
 class CorporateApplicant {
   final String name;
@@ -421,24 +422,26 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
   }
 
   void _openDetailLowongan(CorporateVacancyItem item) {
-    if (item.opportunity != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => DetailKebutuhanScreen(
-            opportunity: item.opportunity!,
-            user: _currentUser,
-          ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        settings: RouteSettings(
+          name: '${AppRoutes.detailLowonganCorporate}?id=${item.id}',
         ),
-      );
-      return;
-    }
-
-    // Modal dialog with applicants review
-    showDialog(
-      context: context,
-      builder: (ctx) => _VacancyDetailDialog(item: item),
-    );
+        builder: (_) => CorporateVacancyDetailScreen(
+          item: item,
+          vacancyId: item.id,
+          user: _currentUser,
+          onUserUpdated: (u) {
+            currentUserNotifier.value = u;
+            widget.onUserUpdated?.call(u);
+            if (mounted) setState(() {});
+          },
+        ),
+      ),
+    ).then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   // ── Build Method ────────────────────────────────────────────────────────
@@ -1107,334 +1110,6 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2563EB),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Vacancy Detail Dialog ──────────────────────────────────────────────────
-class _VacancyDetailDialog extends StatelessWidget {
-  final CorporateVacancyItem item;
-
-  const _VacancyDetailDialog({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 650, maxHeight: 720),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Modal Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDBEAFE),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      item.categoryLabel,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2563EB),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: item.statusBadgeBg,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      item.statusLabel,
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
-                        color: item.statusBadgeColor,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 20),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-
-            // Modal Body
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      item.description,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        color: isDark ? Colors.white70 : Colors.grey.shade700,
-                        height: 1.45,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-
-                    // Info boxes
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark ? Colors.white10 : Colors.grey.shade200,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Periode Pendaftaran',
-                                  style: TextStyle(fontSize: 11.5, color: Colors.grey.shade500),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  item.registrationPeriod,
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Alokasi / Kuota',
-                                  style: TextStyle(fontSize: 11.5, color: Colors.grey.shade500),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  item.quotaText,
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Uang Saku / Gaji',
-                                  style: TextStyle(fontSize: 11.5, color: Colors.grey.shade500),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  item.allowance,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF16A34A),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-
-                    // Requirements
-                    const Text(
-                      'Syarat & Kualifikasi',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    ...item.requirements.map(
-                      (r) => Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
-                            Expanded(
-                              child: Text(
-                                r,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: isDark ? Colors.white70 : Colors.grey.shade800,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Applicants section
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Daftar Pelamar (${item.applicants.length})',
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                        ),
-                        if (item.applicants.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFDCFCE7),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              'Kemitraan Terverifikasi',
-                              style: TextStyle(fontSize: 11, color: Color(0xFF16A34A), fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-
-                    if (item.applicants.isEmpty)
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          'Belum ada pelamar baru pada lowongan ini.',
-                          style: TextStyle(fontSize: 12.5, color: Colors.grey.shade500),
-                        ),
-                      )
-                    else
-                      ...item.applicants.map((app) {
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: isDark ? Colors.white10 : Colors.grey.shade200,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                backgroundColor: const Color(0xFF2563EB).withValues(alpha: 0.15),
-                                child: Text(
-                                  app.name.isNotEmpty ? app.name[0] : 'U',
-                                  style: const TextStyle(
-                                    color: Color(0xFF2563EB),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      app.name,
-                                      style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
-                                    ),
-                                    Text(
-                                      app.institution,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: isDark ? Colors.white60 : Colors.grey.shade600,
-                                      ),
-                                    ),
-                                    if (app.note.isNotEmpty) ...[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        app.note,
-                                        style: const TextStyle(fontSize: 11.5, fontStyle: FontStyle.italic),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: app.status == 'Diterima'
-                                      ? const Color(0xFFDCFCE7)
-                                      : (app.status == 'Interview'
-                                          ? const Color(0xFFDBEAFE)
-                                          : const Color(0xFFFEF3C7)),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  app.status,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: app.status == 'Diterima'
-                                        ? const Color(0xFF16A34A)
-                                        : (app.status == 'Interview'
-                                            ? const Color(0xFF2563EB)
-                                            : const Color(0xFFD97706)),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                  ],
-                ),
-              ),
-            ),
-
-            // Modal Footer
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade50,
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Tutup'),
-                  ),
-                ],
               ),
             ),
           ],
