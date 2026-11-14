@@ -38,10 +38,7 @@ class UserModel {
     'kegiatan_event',
     'mitra_industri',
     'karya_siswa',
-    'laporan_kegiatan',
-    'monitoring_evaluasi',
     'dokumen_institusi',
-    'pengumuman_institusi',
   ];
 
   UserModel({

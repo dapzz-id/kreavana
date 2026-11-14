@@ -84,28 +84,10 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
       'icon': Icons.palette_outlined,
     },
     {
-      'slug': 'laporan_kegiatan',
-      'name': 'Laporan Kegiatan',
-      'desc': 'Akses dan input laporan berkala, monitoring program, & rekap.',
-      'icon': Icons.summarize_outlined,
-    },
-    {
-      'slug': 'monitoring_evaluasi',
-      'name': 'Monitoring & Evaluasi',
-      'desc': 'Pantau presensi, penilaian pembimbing, & evaluasi siswa.',
-      'icon': Icons.monitor_outlined,
-    },
-    {
       'slug': 'dokumen_institusi',
       'name': 'Dokumen & MoU',
       'desc': 'Akses berkas legalitas, SK, surat perjanjian, & naskah kerjasama.',
       'icon': Icons.folder_outlined,
-    },
-    {
-      'slug': 'pengumuman_institusi',
-      'name': 'Pengumuman Institusi',
-      'desc': 'Buat dan siarkan pengumuman resmi ke seluruh civitas & publik.',
-      'icon': Icons.campaign_outlined,
     },
   ];
 
