@@ -440,8 +440,15 @@ class _InstitutionWorkspaceScreenState
   }
 
   Map<String, dynamic> _metadata(Map<String, dynamic> record) {
-    final raw = record['metadata'];
-    return raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
+    final raw = record['metadata'] ?? record['meta'];
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    if (raw is String && raw.trim().startsWith('{')) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      } catch (_) {}
+    }
+    return <String, dynamic>{};
   }
 
   Future<void> _loadRecords() async {
@@ -5704,11 +5711,6 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
   late String _status;
   bool _isSaving = false;
 
-  // Tag Fields State (Dynamic Tags on Enter)
-  final Map<String, List<String>> _fieldTags = {};
-  final Map<String, TextEditingController> _tagInputControllers = {};
-  final Map<String, FocusNode> _tagFocusNodes = {};
-
   // Corporate Search State
   Map<String, dynamic>? _selectedCorporate;
   List<Map<String, dynamic>> _corporateList = [];
@@ -5722,53 +5724,6 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
   String? _mouFilename;
   String? _mouFilesize;
   bool _isUploadingMou = false;
-
-  bool _isTagField(_WorkspaceField field) {
-    final key = field.key.toLowerCase();
-    return key.contains('category') || key.contains('kategori') || key.contains('spesialisasi') || key.contains('tag');
-  }
-
-  void _addTag(String fieldKey) {
-    final inputCtrl = _tagInputControllers[fieldKey];
-    if (inputCtrl == null) return;
-    final raw = inputCtrl.text.trim();
-    if (raw.isEmpty) return;
-
-    final currentList = List<String>.from(_fieldTags[fieldKey] ?? <String>[]);
-    final candidates = raw
-        .split(',')
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty);
-
-    bool added = false;
-    for (final c in candidates) {
-      if (!currentList.any((t) => t.toLowerCase() == c.toLowerCase())) {
-        currentList.add(c);
-        added = true;
-      }
-    }
-
-    if (added) {
-      setState(() {
-        _fieldTags[fieldKey] = currentList;
-        inputCtrl.clear();
-        _controllers[fieldKey]?.text = currentList.join(', ');
-      });
-    } else {
-      inputCtrl.clear();
-    }
-
-    _tagFocusNodes[fieldKey]?.requestFocus();
-  }
-
-  void _removeTag(String fieldKey, String tag) {
-    final currentList = List<String>.from(_fieldTags[fieldKey] ?? <String>[]);
-    setState(() {
-      currentList.removeWhere((t) => t.toLowerCase() == tag.toLowerCase());
-      _fieldTags[fieldKey] = currentList;
-      _controllers[fieldKey]?.text = currentList.join(', ');
-    });
-  }
 
   @override
   void initState() {
@@ -5808,7 +5763,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
       }
 
       // Category smart fallback
-      var cat = meta['category']?.toString() ?? existing['category']?.toString() ?? '';
+      var cat = meta['category']?.toString() ?? existing['category']?.toString() ?? meta['bidang']?.toString() ?? meta['spesialisasi']?.toString() ?? '';
       if (cat.isEmpty) {
         if (t.contains('google')) {
           cat = 'Teknologi Cloud & AI';
@@ -5817,112 +5772,121 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
         } else {
           cat = 'Mitra Industri Kreatif & Vokasi';
         }
-        meta['category'] = cat;
       }
+      meta['category'] = cat;
 
       // Contact smart fallback
-      var cnt = meta['contact']?.toString() ?? meta['email']?.toString() ?? existing['contact']?.toString() ?? '';
+      var cnt = meta['contact']?.toString() ?? meta['email']?.toString() ?? existing['contact']?.toString() ?? existing['email']?.toString() ?? '';
       if (cnt.isEmpty) {
         if (t.contains('google')) {
           cnt = 'kemitraan.id@google.com';
         } else if (t.contains('animasi') || t.contains('nusantara')) {
           cnt = 'kemitraan@animasinusantara.id';
+        } else {
+          cnt = 'kemitraan@industri.id';
         }
-        meta['contact'] = cnt;
       }
+      meta['contact'] = cnt;
 
       // PIC name smart fallback
-      var pic = meta['pic_name']?.toString() ?? existing['pic_name']?.toString() ?? '';
+      var pic = meta['pic_name']?.toString() ?? meta['pic']?.toString() ?? existing['pic_name']?.toString() ?? existing['pic']?.toString() ?? '';
       if (pic.isEmpty) {
         if (t.contains('google')) {
           pic = 'Jessica Wijaya';
         } else if (t.contains('animasi') || t.contains('nusantara')) {
           pic = 'Hendra Gunawan, S.Sn.';
+        } else {
+          pic = 'Tim Kemitraan Industri';
         }
-        meta['pic_name'] = pic;
       }
+      meta['pic_name'] = pic;
 
       // PIC role smart fallback
-      var role = meta['pic_role']?.toString() ?? existing['pic_role']?.toString() ?? '';
+      var role = meta['pic_role']?.toString() ?? meta['jabatan']?.toString() ?? existing['pic_role']?.toString() ?? existing['jabatan']?.toString() ?? '';
       if (role.isEmpty) {
         if (t.contains('google')) {
           role = 'Education & Ecosystem Lead';
         } else if (t.contains('animasi') || t.contains('nusantara')) {
           role = 'Studio Director';
+        } else {
+          role = 'Koordinator Kemitraan';
         }
-        meta['pic_role'] = role;
       }
+      meta['pic_role'] = role;
 
       // Phone smart fallback
-      var ph = meta['phone']?.toString() ?? existing['phone']?.toString() ?? '';
+      var ph = meta['phone']?.toString() ?? meta['telepon']?.toString() ?? meta['whatsapp']?.toString() ?? existing['phone']?.toString() ?? '';
       if (ph.isEmpty) {
         if (t.contains('google')) {
           ph = '+62 21-5085-8000';
         } else if (t.contains('animasi') || t.contains('nusantara')) {
           ph = '+62 812-3456-7890';
+        } else {
+          ph = '+62 812-9876-5432';
         }
-        meta['phone'] = ph;
       }
+      meta['phone'] = ph;
 
       // MoU number smart fallback
-      var mouN = meta['mou_number']?.toString() ?? existing['mou_number']?.toString() ?? '';
+      var mouN = meta['mou_number']?.toString() ?? meta['nomor_mou']?.toString() ?? existing['mou_number']?.toString() ?? '';
       if (mouN.isEmpty) {
         if (t.contains('google')) {
           mouN = '012/MoU-ISRK/I/2026';
         } else if (t.contains('animasi') || t.contains('nusantara')) {
           mouN = '042/MoU-ISRK/IV/2025';
+        } else {
+          mouN = '028/MoU-ISRK/VI/2025';
         }
-        meta['mou_number'] = mouN;
       }
+      meta['mou_number'] = mouN;
 
       // MoU period smart fallback
-      var mouP = meta['mou_period']?.toString() ?? existing['mou_period']?.toString() ?? '';
+      var mouP = meta['mou_period']?.toString() ?? meta['masa_berlaku']?.toString() ?? existing['mou_period']?.toString() ?? '';
       if (mouP.isEmpty) {
         if (t.contains('google')) {
           mouP = '2026 - 2029 (Aktif)';
         } else if (t.contains('animasi') || t.contains('nusantara')) {
           mouP = '2025 - 2028 (Aktif)';
+        } else {
+          mouP = '2025 - 2028 (Aktif)';
         }
-        meta['mou_period'] = mouP;
       }
+      meta['mou_period'] = mouP;
 
       // Quota smart fallback
-      var q = meta['internship_quota_yearly']?.toString() ?? existing['internship_quota_yearly']?.toString() ?? '';
+      var q = meta['internship_quota_yearly']?.toString() ?? meta['quota']?.toString() ?? meta['kuota']?.toString() ?? existing['internship_quota_yearly']?.toString() ?? '';
       if (q.isEmpty) {
         if (t.contains('google') || t.contains('animasi') || t.contains('nusantara')) {
           q = '15';
+        } else {
+          q = '10';
         }
-        meta['internship_quota_yearly'] = q;
       }
+      meta['internship_quota_yearly'] = q;
 
       // Website smart fallback
-      var web = meta['website']?.toString() ?? existing['website']?.toString() ?? '';
+      var web = meta['website']?.toString() ?? meta['web']?.toString() ?? meta['url']?.toString() ?? existing['website']?.toString() ?? '';
       if (web.isEmpty) {
         if (t.contains('google')) {
           web = 'https://about.google';
         } else if (t.contains('animasi') || t.contains('nusantara')) {
           web = 'https://animasinusantara.id';
+        } else {
+          web = 'https://kreavana.id';
         }
-        meta['website'] = web;
       }
+      meta['website'] = web;
     }
 
     _controllers = {
       for (final f in widget.fields)
-        f.key: TextEditingController(text: (meta[f.key] ?? existing?[f.key])?.toString() ?? ''),
+        f.key: TextEditingController(
+          text: (meta[f.key] ??
+                 existing?[f.key] ??
+                 (f.key == 'contact' ? (meta['email'] ?? existing?['email']) : null) ??
+                 '').toString(),
+        ),
     };
-
-    for (final f in widget.fields) {
-      if (_isTagField(f)) {
-        final existingVal = (meta[f.key] ?? existing?[f.key])?.toString() ?? '';
-        final parsed = existingVal.isNotEmpty
-            ? existingVal.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList()
-            : <String>[];
-        _fieldTags[f.key] = parsed;
-        _tagInputControllers[f.key] = TextEditingController();
-        _tagFocusNodes[f.key] = FocusNode();
-      }
-    }
 
     final currentStatus = existing?['status']?.toString();
     _status = (currentStatus != null && widget.statuses.contains(currentStatus))
@@ -5954,12 +5918,6 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     _corpSearchController.dispose();
     for (final c in _controllers.values) {
       c.dispose();
-    }
-    for (final c in _tagInputControllers.values) {
-      c.dispose();
-    }
-    for (final fn in _tagFocusNodes.values) {
-      fn.dispose();
     }
     super.dispose();
   }
@@ -6050,16 +6008,6 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
   }
 
   Future<void> _submit() async {
-    // Automatically commit any pending tag input before validating
-    for (final f in widget.fields) {
-      if (_isTagField(f)) {
-        final inputCtrl = _tagInputControllers[f.key];
-        if (inputCtrl != null && inputCtrl.text.trim().isNotEmpty) {
-          _addTag(f.key);
-        }
-      }
-    }
-
     if (!_formKey.currentState!.validate() || _isSaving) return;
 
     final isPartnerResource = widget.resourceType == 'partners';
@@ -6196,9 +6144,15 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     if (key.contains('category') || key.contains('spesialisasi')) {
       return {
         'label': '${field.label} *',
-        'caption': 'Ketik bidang spesialisasi / kategori lalu tekan Enter untuk membuat tag.',
-        'hint': 'Ketik kategori lalu tekan Enter (contoh: Animasi 3D)...',
-        'chips': <String>[],
+        'caption': 'Bidang keahlian atau spesialisasi industri mitra.',
+        'hint': field.hint ?? 'Contoh: Teknologi Cloud & AI, Studio Animasi, Agensi Desain',
+        'chips': <String>[
+          'Teknologi Cloud & AI',
+          'Studio Animasi & Game',
+          'Production House & Video',
+          'Branding & Desain Grafis',
+          'Software & Web Dev',
+        ],
       };
     }
     if (key == 'pic_name' || key.contains('pic_name')) {
@@ -6545,113 +6499,15 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
 
   Widget _buildFieldWidget(_WorkspaceField field, {double? minHeaderHeight}) {
     final meta = _getFieldMeta(field);
-
-    if (_isTagField(field)) {
-      final inputCtrl = _tagInputControllers[field.key] ?? _controllers[field.key]!;
-      final focusNode = _tagFocusNodes[field.key];
-      final currentTags = _fieldTags[field.key] ?? <String>[];
-
-      return _buildFieldWithHeader(
-        label: meta['label'] as String,
-        caption: meta['caption'] as String,
-        minHeaderHeight: minHeaderHeight,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextFormField(
-              controller: inputCtrl,
-              focusNode: focusNode,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) => _addTag(field.key),
-              onChanged: (val) {
-                if (val.contains(',')) {
-                  _addTag(field.key);
-                }
-              },
-              decoration: _inputDecoration(
-                hint: meta['hint'] as String,
-                prefixIcon: _getFieldIcon(field),
-                suffixIcon: Tooltip(
-                  message: 'Tekan Enter untuk membuat tag',
-                  child: IconButton(
-                    icon: Icon(Icons.keyboard_return_rounded, size: 18, color: _accentPrimary),
-                    onPressed: () => _addTag(field.key),
-                  ),
-                ),
-              ),
-              validator: (val) {
-                final tags = _fieldTags[field.key] ?? [];
-                final pending = val?.trim() ?? '';
-                if (tags.isEmpty && pending.isEmpty) {
-                  return '${(meta['label'] as String).replaceAll('*', '').trim()} wajib diisi minimal 1';
-                }
-                return null;
-              },
-            ),
-            if (currentTags.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: currentTags.map((tag) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1.5),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          tag,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1E293B),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        InkWell(
-                          borderRadius: BorderRadius.circular(10),
-                          onTap: () => _removeTag(field.key, tag),
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF1F5F9),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.close_rounded,
-                              size: 13,
-                              color: Color(0xFF64748B),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ],
-        ),
-      );
-    }
-
     final ctrl = _controllers[field.key]!;
+    final chips = (meta['chips'] as List<dynamic>?)?.cast<String>() ?? const <String>[];
+
     return _buildFieldWithHeader(
       label: meta['label'] as String,
       caption: meta['caption'] as String,
       minHeaderHeight: minHeaderHeight,
+      chips: chips,
+      targetController: ctrl,
       child: TextFormField(
         controller: ctrl,
         style: TextStyle(
