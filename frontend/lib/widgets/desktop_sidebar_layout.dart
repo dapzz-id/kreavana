@@ -569,6 +569,10 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
       case 'pengaturan_akun':
         _goToMain(8);
         return;
+      case 'profil':
+      case 'profil_akun':
+        _goToMain(9);
+        return;
       case 'kapasitas_jadwal':
         _goToMain(13);
         return;
@@ -1099,49 +1103,62 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
             )
           : Row(
               children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: isDark
-                      ? const Color(0xFF2D2A3E)
-                      : Colors.grey.shade200,
-                  backgroundImage:
-                      widget.user.avatarUrl != null &&
-                              widget.user.avatarUrl!.isNotEmpty
-                          ? NetworkImage(
-                              ApiService.resolveAssetUrl(
-                                widget.user.avatarUrl!,
-                              ),
-                            )
-                          : const AssetImage('assets/brandlogo.png')
-                                as ImageProvider,
-                ),
-                const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        widget.user.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
+                  child: InkWell(
+                    onTap: () => _pushLink((_isSchool || _isGovernment) ? 'profil_akun' : 'profil'),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 18,
+                            backgroundColor: isDark
+                                ? const Color(0xFF2D2A3E)
+                                : Colors.grey.shade200,
+                            backgroundImage:
+                                widget.user.avatarUrl != null &&
+                                        widget.user.avatarUrl!.isNotEmpty
+                                    ? NetworkImage(
+                                        ApiService.resolveAssetUrl(
+                                          widget.user.avatarUrl!,
+                                        ),
+                                      )
+                                    : const AssetImage('assets/brandlogo.png')
+                                          as ImageProvider,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  widget.user.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                Text(
+                                  '@${widget.user.username}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isDark
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        '@${widget.user.username}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
                 IconButton(
