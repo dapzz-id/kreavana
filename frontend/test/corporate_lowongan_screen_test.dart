@@ -166,12 +166,44 @@ void main() {
       final quotaFields = find.widgetWithText(TextFormField, '10');
       expect(quotaFields, findsAtLeastNWidgets(1));
 
-      // Enter text into the first quota field
+      // Scroll to quota field and enter text
+      await tester.ensureVisible(quotaFields.first);
       await tester.enterText(quotaFields.first, '15');
       await tester.pump();
 
       // Verify updated total quota (15 + 10 = 25)
       expect(find.text('Total Kuota Terakumulasi: 25 Posisi'), findsOneWidget);
+    });
+
+    testWidgets('Displays salary range inputs by default and can toggle to fixed', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 1000));
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: CorporateVacancyFormDialog(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Verify Rentang Gaji and Nominal Tetap options are present
+      final tetapBtn = find.text('Nominal Tetap');
+      expect(find.text('Rentang Gaji'), findsOneWidget);
+      expect(tetapBtn, findsOneWidget);
+
+      // Verify default salary range preview
+      expect(find.text('Pratinjau: Rp 2.500.000 - Rp 3.500.000 / bulan'), findsOneWidget);
+      expect(find.text('s/d'), findsOneWidget);
+
+      // Toggle to Nominal Tetap
+      await tester.ensureVisible(tetapBtn);
+      await tester.tap(tetapBtn);
+      await tester.pump();
+
+      // Verify updated preview in fixed mode
+      expect(find.text('Pratinjau: Rp 2.500.000 / bulan'), findsOneWidget);
+      expect(find.text('s/d'), findsNothing);
     });
   });
 }

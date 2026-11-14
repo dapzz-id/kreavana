@@ -302,6 +302,7 @@ class SchoolDummySeeder extends Seeder
                 'status' => 'published',
                 'metadata' => [
                     'category' => 'Teknologi Cloud & AI',
+                    'logo_asset' => 'assets/partners/google.png',
                     'mou_number' => '012/MoU-ISRK/I/2026',
                     'mou_period' => '2026 - 2029 (Aktif)',
                     'pic_name' => 'Jessica Wijaya',
@@ -322,6 +323,7 @@ class SchoolDummySeeder extends Seeder
                 'status' => 'published',
                 'metadata' => [
                     'category' => 'Studio Animasi & Game',
+                    'logo_asset' => 'assets/partners/animasi_nusantara.png',
                     'mou_number' => '042/MoU-ISRK/IV/2025',
                     'mou_period' => '2025 - 2028 (Aktif)',
                     'pic_name' => 'Hendra Gunawan, S.Sn.',
@@ -342,6 +344,7 @@ class SchoolDummySeeder extends Seeder
                 'status' => 'published',
                 'metadata' => [
                     'category' => 'Creative & Digital Agency',
+                    'logo_asset' => 'assets/partners/pixel_creative.png',
                     'mou_number' => '088/MoU-ISRK/VII/2025',
                     'mou_period' => '2025 - 2027 (Aktif)',
                     'pic_name' => 'Maya Angelia, M.Ds.',
@@ -362,6 +365,7 @@ class SchoolDummySeeder extends Seeder
                 'status' => 'published',
                 'metadata' => [
                     'category' => 'Sound & Music Production',
+                    'logo_asset' => 'assets/partners/svara_audio.png',
                     'mou_number' => '015/MoU-ISRK/I/2025',
                     'mou_period' => '2025 - 2028 (Aktif)',
                     'pic_name' => 'Bimo Setiawan',
@@ -382,6 +386,7 @@ class SchoolDummySeeder extends Seeder
                 'status' => 'published',
                 'metadata' => [
                     'category' => 'Broadcasting & Production House',
+                    'logo_asset' => 'assets/partners/cakrawala_media.png',
                     'mou_number' => '102/MoU-ISRK/X/2024',
                     'mou_period' => '2024 - 2027 (Aktif)',
                     'pic_name' => 'Dian Safitri, S.I.Kom.',
@@ -402,6 +407,7 @@ class SchoolDummySeeder extends Seeder
                 'status' => 'published',
                 'metadata' => [
                     'category' => 'Organisasi & Asosiasi Profesi',
+                    'logo_asset' => 'assets/partners/adgi.png',
                     'mou_number' => '029/MoU-ISRK/II/2025',
                     'mou_period' => '2025 - 2029 (Aktif)',
                     'pic_name' => 'Rian Santoso',
@@ -422,6 +428,7 @@ class SchoolDummySeeder extends Seeder
                 'status' => 'published',
                 'metadata' => [
                     'category' => 'Komunitas Kreator & Game Dev',
+                    'logo_asset' => 'assets/partners/game_guild.png',
                     'mou_number' => '054/MoU-ISRK/V/2025',
                     'mou_period' => '2025 - 2027 (Aktif)',
                     'pic_name' => 'Kevin Anggoro',
