@@ -62,7 +62,6 @@ trait AuthResponder
             'laporan_kegiatan',
             'monitoring_evaluasi',
             'dokumen_institusi',
-            'pengumuman_institusi',
         ];
         $institutionPermissions = $allInstitutionPermissions;
         $parentInstitutionId = $user?->id;

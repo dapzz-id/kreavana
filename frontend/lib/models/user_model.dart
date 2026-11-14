@@ -41,7 +41,6 @@ class UserModel {
     'laporan_kegiatan',
     'monitoring_evaluasi',
     'dokumen_institusi',
-    'pengumuman_institusi',
   ];
 
   UserModel({

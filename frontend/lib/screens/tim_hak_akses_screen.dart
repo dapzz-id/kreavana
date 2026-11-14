@@ -101,12 +101,6 @@ class _TimHakAksesScreenState extends State<TimHakAksesScreen> {
       'desc': 'Akses berkas legalitas, SK, surat perjanjian, & naskah kerjasama.',
       'icon': Icons.folder_outlined,
     },
-    {
-      'slug': 'pengumuman_institusi',
-      'name': 'Pengumuman Institusi',
-      'desc': 'Buat dan siarkan pengumuman resmi ke seluruh civitas & publik.',
-      'icon': Icons.campaign_outlined,
-    },
   ];
 
   Future<void> _fetchTeamMembers() async {

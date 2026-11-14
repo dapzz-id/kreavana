@@ -1542,32 +1542,21 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                                 isCollapsed: collapsed,
                               ),
                           ],
-                          if (effectiveUser.hasInstitutionPermission('dokumen_institusi') ||
-                              effectiveUser.hasInstitutionPermission('pengumuman_institusi')) ...[
+                          if (effectiveUser.hasInstitutionPermission('dokumen_institusi')) ...[
                             if (!collapsed) ...[
                               const SizedBox(height: 18),
                               _buildSectionHeader('DATA & DOKUMEN', isDark),
                             ] else ...[
                               const SizedBox(height: 8),
                             ],
-                            if (effectiveUser.hasInstitutionPermission('dokumen_institusi'))
-                              _buildNavRow(
-                                icon: Icons.folder_outlined,
-                                label: 'Dokumen & MoU',
-                                onTap: () => _pushLink('dokumen_instansi'),
-                                isSelected: _isRouteActive('dokumen_instansi'),
-                                isDark: isDark,
-                                isCollapsed: collapsed,
-                              ),
-                            if (effectiveUser.hasInstitutionPermission('pengumuman_institusi'))
-                              _buildNavRow(
-                                icon: Icons.campaign_outlined,
-                                label: 'Pengumuman Institusi',
-                                onTap: () => _pushLink('pengumuman_publik'),
-                                isSelected: _isRouteActive('pengumuman_publik'),
-                                isDark: isDark,
-                                isCollapsed: collapsed,
-                              ),
+                            _buildNavRow(
+                              icon: Icons.folder_outlined,
+                              label: 'Dokumen & MoU',
+                              onTap: () => _pushLink('dokumen_instansi'),
+                              isSelected: _isRouteActive('dokumen_instansi'),
+                              isDark: isDark,
+                              isCollapsed: collapsed,
+                            ),
                           ],
                           if (!collapsed) ...[
                             const SizedBox(height: 18),
