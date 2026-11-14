@@ -62,6 +62,79 @@ class CorporateTestSeeder extends Seeder
             ]
         );
 
+        // 2.2 Corporate Internship Programs (Magang MBKM / DUDI)
+        $magang1 = Opportunity::firstOrCreate(
+            ['title' => 'Program Magang MBKM 3D Modeler Batch I 2026'],
+            [
+                'id' => Str::uuid(),
+                'description' => 'Kerja sama penempatan 10 siswa vokasi magang pada produksi serial animasi nusantara berstandar industri internasional.',
+                'sub_role_slug' => 'animator',
+                'type' => 'project',
+                'location' => 'Surabaya, Jawa Timur',
+                'deadline' => Carbon::now()->addDays(90),
+                'budget_range' => 'Rp 3.500.000 / bulan',
+                'status' => 'open',
+                'posted_by' => $corpUser->id,
+                'created_at' => Carbon::now()->subDays(2),
+            ]
+        );
+        \App\Models\OpportunityRequirement::firstOrCreate(
+            ['opportunity_id' => $magang1->id, 'sub_role_slug' => 'animator'],
+            [
+                'quantity' => 10,
+                'notes' => 'Spesialisasi 3D Modeler & Animator (10 kuota)',
+                'payment_scheme' => 'monthly',
+            ]
+        );
+
+        $magang2 = Opportunity::firstOrCreate(
+            ['title' => 'Program Magang MBKM UI/UX & Digital Product Design'],
+            [
+                'id' => Str::uuid(),
+                'description' => 'Peluang magang intensif perancangan komponen modular desain sistem B2B enterprise, user journey research, dan prototipe aplikasi.',
+                'sub_role_slug' => 'desain_grafis',
+                'type' => 'project',
+                'location' => 'Jakarta Selatan, DKI Jakarta',
+                'deadline' => Carbon::now()->addDays(60),
+                'budget_range' => 'Rp 4.000.000 / bulan',
+                'status' => 'open',
+                'posted_by' => $corpUser->id,
+                'created_at' => Carbon::now()->subDays(3),
+            ]
+        );
+        \App\Models\OpportunityRequirement::firstOrCreate(
+            ['opportunity_id' => $magang2->id, 'sub_role_slug' => 'desain_grafis'],
+            [
+                'quantity' => 5,
+                'notes' => 'Spesialisasi UI/UX Designer (5 kuota)',
+                'payment_scheme' => 'monthly',
+            ]
+        );
+
+        $magang3 = Opportunity::firstOrCreate(
+            ['title' => 'Program Magang Motion Graphic & Video Editor'],
+            [
+                'id' => Str::uuid(),
+                'description' => 'Magang kerja sama vokasi industri kreatif untuk pembuatan aset visual grafis gerak, storyboard TVC, dan promosi digital.',
+                'sub_role_slug' => 'videographer',
+                'type' => 'project',
+                'location' => 'Bandung, Jawa Barat',
+                'deadline' => Carbon::now()->addDays(45),
+                'budget_range' => 'Rp 3.200.000 / bulan',
+                'status' => 'open',
+                'posted_by' => $corpUser->id,
+                'created_at' => Carbon::now()->subDays(4),
+            ]
+        );
+        \App\Models\OpportunityRequirement::firstOrCreate(
+            ['opportunity_id' => $magang3->id, 'sub_role_slug' => 'videographer'],
+            [
+                'quantity' => 5,
+                'notes' => 'Spesialisasi Motion Graphic & Editor (5 kuota)',
+                'payment_scheme' => 'monthly',
+            ]
+        );
+
         // 2.5 Opportunity Applications
         // The EO applied for Gala Dinner
         \App\Models\OpportunityApplication::firstOrCreate(

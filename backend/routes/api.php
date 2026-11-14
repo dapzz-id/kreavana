@@ -187,6 +187,9 @@ Route::middleware(['auth:api', 'user.not_suspended'])->group(function () {
     Route::prefix('opportunities')->middleware('module:opportunities_enabled')->group(function () {
         Route::get('my', [OpportunityController::class, 'myOpportunities']);
         Route::post('/', [OpportunityController::class, 'store'])->middleware('permission:create_opportunity');
+        Route::put('{id}', [OpportunityController::class, 'update']);
+        Route::delete('{id}', [OpportunityController::class, 'destroy']);
+        Route::post('{id}/status', [OpportunityController::class, 'updateStatus']);
         Route::post('report', [OpportunityController::class, 'submitReport'])->middleware('permission:submit_report');
         Route::get('{id}/reviews', [OpportunityReviewController::class, 'getOpportunityReviews']);
         Route::post('{id}/reviews', [OpportunityReviewController::class, 'store']);

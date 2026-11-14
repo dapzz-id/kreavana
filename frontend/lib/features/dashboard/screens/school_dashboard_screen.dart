@@ -80,7 +80,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
       final results = await Future.wait([
         ApiService.get('institution/resources'),
         JobContractService.getUserContracts().catchError((_) => <JobContract>[]),
-        OpportunityService.getMyOpportunities().catchError((_) => <OpportunityModel>[]),
+        OpportunityService.getOpportunities(limit: 50).catchError((_) => <OpportunityModel>[]),
       ]);
 
       if (!mounted) return;
@@ -99,7 +99,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
         }
       }
 
-      // 2. Map Opportunities from Buat Program & Magang / Buat Kebutuhan into resources
+      // 2. Map Opportunities from Database into resources & tenders
       for (final opp in myOpportunities) {
         final startStr = opp.eventStartDate ?? opp.eventDate ?? opp.deadline ?? opp.createdAt;
         final DateTime start = startStr != null ? (DateTime.tryParse(startStr) ?? DateTime.now()) : DateTime.now();
@@ -134,6 +134,20 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
           });
         }
 
+        int calculatedQuota = 0;
+        for (final r in opp.requirements) {
+          if (r.subRoleSlug != 'kualifikasi' && r.quantity > 0) {
+            calculatedQuota += r.quantity;
+          }
+        }
+        final quotaText = calculatedQuota > 0 ? '$calculatedQuota Mahasiswa' : '10 Mahasiswa';
+
+        final isMagang = opp.subRoleSlug.toLowerCase().contains('magang') ||
+            opp.title.toLowerCase().contains('magang') ||
+            opp.title.toLowerCase().contains('pkl') ||
+            opp.title.toLowerCase().contains('mbkm') ||
+            (opp.description != null && opp.description!.toLowerCase().contains('magang'));
+
         // Also map to tenders / program magang
         loadedResources.add({
           'id': 'opp_tender_${opp.id}',
@@ -142,9 +156,9 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
           'description': opp.description ?? 'Program kemitraan magang & proyek siswa.',
           'status': opp.status,
           'metadata': {
-            'category': 'Program Magang / PKL',
-            'industry_partner': 'Studio Mitra Kreavana',
-            'quota': '10 Mahasiswa',
+            'category': isMagang ? 'Program Magang / PKL' : 'Proyek Industri',
+            'industry_partner': opp.poster?.name ?? 'Mitra Industri Kreavana',
+            'quota': quotaText,
             'allowance': opp.budgetRange ?? 'Sesuai Ketentuan MBKM',
             'duration': '3 - 6 Bulan',
             'applicants_count': opp.applicationsCount,

@@ -1,43 +1,36 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/opportunity_model.dart';
 import '../models/opportunity_application_model.dart';
 import '../models/job_contract.dart';
 import 'api_service.dart';
 
+class _CacheEntry<T> {
+  final T data;
+  final DateTime timestamp;
+  _CacheEntry(this.data) : timestamp = DateTime.now();
+
+  bool isFresh(Duration maxAge) => DateTime.now().difference(timestamp) < maxAge;
+}
+
 class OpportunityService {
-  static final List<OpportunityModel> _userCreatedLocations = [];
+  // ── In-Memory Read Cache ────────────────────────────────────────────────────
+  // Cache HANYA digunakan setelah data berhasil diterima dari database server,
+  // untuk mengurangi beban server pada pemanggilan GET berulang.
+  // Tidak ada data palsu atau mutasi lokal yang disimpan di sini.
+  static final Map<String, _CacheEntry<List<OpportunityModel>>> _opportunitiesCache = {};
+  static _CacheEntry<List<OpportunityModel>>? _myOpportunitiesCache;
+  static final Map<String, _CacheEntry<List<OpportunityModel>>> _mapLocationsCache = {};
+  static final Map<String, _CacheEntry<OpportunityModel>> _detailCache = {};
 
-  static Future<void> _loadLocalLocations() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('user_created_map_locations');
-      if (raw != null && raw.isNotEmpty) {
-        final decoded = jsonDecode(raw);
-        if (decoded is List && decoded.isNotEmpty) {
-          _userCreatedLocations.clear();
-          for (final item in decoded) {
-            try {
-              _userCreatedLocations.add(OpportunityModel.fromJson(item));
-            } catch (_) {}
-          }
-        }
-      }
-    } catch (_) {}
-  }
+  static const Duration _cacheDuration = Duration(seconds: 45);
 
-  static Future<void> _saveLocalLocations() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final encodedList = _userCreatedLocations
-          .map((item) => item.toJson())
-          .toList();
-      await prefs.setString(
-        'user_created_map_locations',
-        jsonEncode(encodedList),
-      );
-    } catch (_) {}
+  /// Menghapus seluruh cache memori saat terjadi mutasi data (create, update, delete)
+  /// agar pembacaan berikutnya langsung mengambil data terbaru dari database server.
+  static void clearCache() {
+    _opportunitiesCache.clear();
+    _myOpportunitiesCache = null;
+    _mapLocationsCache.clear();
+    _detailCache.clear();
   }
 
   static Future<List<OpportunityModel>> getOpportunities({
@@ -48,6 +41,14 @@ class OpportunityService {
     String? search,
     bool forceRefresh = false,
   }) async {
+    final cacheKey = 'opps_${subRole}_${subRoles?.join(",")}_${type}_${limit}_${search}';
+    if (!forceRefresh && _opportunitiesCache.containsKey(cacheKey)) {
+      final entry = _opportunitiesCache[cacheKey]!;
+      if (entry.isFresh(_cacheDuration)) {
+        return entry.data;
+      }
+    }
+
     final queryParams = <String, String>{
       'limit': limit.toString(),
     };
@@ -77,6 +78,8 @@ class OpportunityService {
         final list = (result['data'] as List)
             .map((item) => OpportunityModel.fromJson(item))
             .toList();
+        // Simpan ke cache hanya setelah menerima respons valid dari database
+        _opportunitiesCache[cacheKey] = _CacheEntry(list);
         return list;
       }
     } catch (_) {}
@@ -84,13 +87,27 @@ class OpportunityService {
     return [];
   }
 
-  static Future<List<OpportunityModel>> getMyOpportunities() async {
+  static Future<List<OpportunityModel>> getMyOpportunities({bool forceRefresh = false}) async {
+    if (!forceRefresh && _myOpportunitiesCache != null && _myOpportunitiesCache!.isFresh(_cacheDuration)) {
+      return _myOpportunitiesCache!.data;
+    }
+
     try {
       final result = await ApiService.get('opportunities/my');
       if (result['status'] == true && result['data'] != null) {
-        final list = (result['data'] as List)
-            .map((item) => OpportunityModel.fromJson(item))
-            .toList();
+        final list = <OpportunityModel>[];
+        for (final item in (result['data'] as List)) {
+          try {
+            if (item is Map<String, dynamic>) {
+              list.add(OpportunityModel.fromJson(item));
+            } else if (item is Map) {
+              list.add(OpportunityModel.fromJson(Map<String, dynamic>.from(item)));
+            }
+          } catch (e) {
+            debugPrint('Error parsing OpportunityModel item: $e');
+          }
+        }
+        _myOpportunitiesCache = _CacheEntry(list);
         return list;
       }
     } catch (_) {}
@@ -103,8 +120,15 @@ class OpportunityService {
     double? lat,
     double? lng,
     double? radiusKm,
+    bool forceRefresh = false,
   }) async {
-    await _loadLocalLocations();
+    final cacheKey = 'map_${subRole}_${lat}_${lng}_${radiusKm}';
+    if (!forceRefresh && _mapLocationsCache.containsKey(cacheKey)) {
+      final entry = _mapLocationsCache[cacheKey]!;
+      if (entry.isFresh(_cacheDuration)) {
+        return entry.data;
+      }
+    }
 
     final queryParams = <String, String>{};
     if (subRole != 'all') {
@@ -118,7 +142,6 @@ class OpportunityService {
       }
     }
 
-    List<OpportunityModel> remoteList = [];
     try {
       final result = await ApiService.get(
         'opportunities/map',
@@ -128,30 +151,15 @@ class OpportunityService {
       if (result['status'] == true &&
           result['data'] != null &&
           (result['data'] as List).isNotEmpty) {
-        remoteList = (result['data'] as List)
+        final list = (result['data'] as List)
             .map((item) => OpportunityModel.fromJson(item))
             .toList();
+        _mapLocationsCache[cacheKey] = _CacheEntry(list);
+        return list;
       }
     } catch (_) {}
 
-    final seenIds = <String>{};
-    final combined = <OpportunityModel>[];
-
-    for (final loc in remoteList) {
-      if (loc.id != null && seenIds.add(loc.id!)) {
-        combined.add(loc);
-      }
-    }
-    for (final loc in _userCreatedLocations) {
-      if (loc.id != null && seenIds.add(loc.id!)) {
-        combined.add(loc);
-      }
-    }
-
-    if (subRole != 'all') {
-      return combined.where((o) => o.subRoleSlug == subRole).toList();
-    }
-    return combined;
+    return [];
   }
 
   static Future<OpportunityModel?> getDetail(String id) async {
@@ -247,6 +255,10 @@ class OpportunityService {
       }
 
       final response = await ApiService.post(endpoint, body);
+
+      if (response['status'] == true) {
+        clearCache();
+      }
 
       return {
         'status': response['status'] == true,
@@ -390,63 +402,116 @@ class OpportunityService {
           e is Map && e['message'] != null ? e['message'] as String : e.toString();
     }
 
-    final newModel = apiResult ??
-        OpportunityModel(
-          id: 'local_${DateTime.now().millisecondsSinceEpoch}',
-          title: title,
-          description: description,
-          posterUrl: posterUrl,
-          bannerUrl: bannerUrl,
-          subRoleSlug: subRoleSlug,
-          type: type,
-          location: location ?? 'Indonesia',
-          latitude: latitude ?? -6.2088,
-          longitude: longitude ?? 106.8456,
-          locationCategory: locationCategory ?? 'urban',
-          address: address,
-          deadline: deadline,
-          eventDate: eventDate,
-          eventStartDate: eventStartDate,
-          eventEndDate: eventEndDate,
-          eventStartTime: eventStartTime,
-          eventEndTime: eventEndTime,
-          budgetRange: budgetRange,
-          meetingDate: meetingDate,
-          meetingTime: meetingTime,
-          meetingLocation: meetingLocation,
-          meetingLat: meetingLat,
-          meetingLng: meetingLng,
-          meetingNotes: meetingNotes,
-          meetingStatus: (budgetRange != null && (budgetRange.contains('100.000.000') || budgetRange.contains('MoU Fisik') || budgetRange.contains('tanda tangan basah')))
-              ? 'pending_marketing_review'
-              : 'not_required',
-          escrowStatus: (budgetRange != null && (budgetRange.contains('100.000.000') || budgetRange.contains('MoU Fisik') || budgetRange.contains('tanda tangan basah')))
-              ? 'none'
-              : 'pending_deposit',
-          signatureType: (budgetRange != null && (budgetRange.contains('100.000.000') || budgetRange.contains('MoU Fisik') || budgetRange.contains('tanda tangan basah')))
-              ? 'wet_signature'
-              : 'dynamic_electronic',
-          status: 'open',
-          poster: poster,
-          externalRating: externalRating,
-          externalRatingSource: externalRatingSource,
-          externalProofUrl: externalProofUrl,
-        );
-
+    // Jika gagal ke database server: DILARANG menyimpan ke memori / cache lokal!
     if (apiResult == null) {
-      await _loadLocalLocations();
-      _userCreatedLocations.insert(0, newModel);
-      await _saveLocalLocations();
+      return {
+        'status': false,
+        'message': errorMessage ?? 'Gagal menyimpan data ke database server. Pastikan server aktif dan coba lagi.',
+        'data': null,
+      };
     }
 
+    // Berhasil masuk database: bersihkan cache baca agar view berikutnya langsung membaca data riil terbaru
+    clearCache();
+
     return {
-      'status': apiResult != null,
-      'message': apiResult != null
-          ? 'Peluang proyek berhasil dipublikasikan!'
-          : (errorMessage ?? 'Gagal menyimpan ke server. Data tersimpan lokal sementara.'),
-      'data': newModel,
-      'is_local': apiResult == null,
+      'status': true,
+      'message': 'Peluang proyek berhasil dipublikasikan dan tersimpan di database!',
+      'data': apiResult,
     };
+  }
+
+  static Future<Map<String, dynamic>> updateOpportunity({
+    required String id,
+    String? title,
+    String? description,
+    String? subRoleSlug,
+    String? location,
+    String? address,
+    String? deadline,
+    String? budgetRange,
+    String? status,
+    List<Map<String, dynamic>>? requirements,
+  }) async {
+    try {
+      final res = await ApiService.put('opportunities/$id', {
+        if (title != null) 'title': title,
+        if (description != null) 'description': description,
+        if (subRoleSlug != null) 'sub_role_slug': subRoleSlug,
+        if (location != null) 'location': location,
+        if (address != null) 'address': address,
+        if (deadline != null) 'deadline': deadline,
+        if (budgetRange != null) 'budget_range': budgetRange,
+        if (status != null) 'status': status,
+        if (requirements != null) 'requirements': requirements,
+      });
+
+      if (res['status'] == true && res['data'] != null) {
+        clearCache();
+        return {
+          'status': true,
+          'message': res['message'] ?? 'Lowongan berhasil diperbarui di database.',
+          'data': OpportunityModel.fromJson(res['data']),
+        };
+      }
+      return {
+        'status': false,
+        'message': res['message']?.toString() ?? 'Gagal memperbarui lowongan di database.',
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateStatus(String id, String status) async {
+    try {
+      final res = await ApiService.post('opportunities/$id/status', {
+        'status': status,
+      });
+
+      if (res['status'] == true && res['data'] != null) {
+        clearCache();
+        return {
+          'status': true,
+          'message': res['message'] ?? 'Status lowongan berhasil diperbarui di database.',
+          'data': OpportunityModel.fromJson(res['data']),
+        };
+      }
+      return {
+        'status': false,
+        'message': res['message']?.toString() ?? 'Gagal memperbarui status di database.',
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> deleteOpportunity(String id) async {
+    try {
+      final res = await ApiService.delete('opportunities/$id');
+      if (res['status'] == true) {
+        clearCache();
+        return {
+          'status': true,
+          'message': res['message'] ?? 'Lowongan berhasil dihapus dari database.',
+        };
+      }
+      return {
+        'status': false,
+        'message': res['message']?.toString() ?? 'Gagal menghapus lowongan dari database.',
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString(),
+      };
+    }
   }
 
   static Future<Map<String, dynamic>> startEvent(

@@ -135,6 +135,89 @@ class OpportunityService extends BaseService
         });
     }
 
+    public function updateOpportunity(string $opportunityId, string $userId, array $data, $userRole = null): array
+    {
+        return DB::transaction(function () use ($opportunityId, $userId, $data, $userRole) {
+            $opp = Opportunity::where('id', $opportunityId)->lockForUpdate()->firstOrFail();
+
+            if ($opp->posted_by !== $userId && $userRole !== 'admin') {
+                abort(403, 'Anda tidak memiliki hak untuk mengubah lowongan ini.');
+            }
+
+            $fillable = [
+                'title', 'description', 'sub_role_slug', 'location', 'address',
+                'deadline', 'budget_range', 'status'
+            ];
+
+            foreach ($fillable as $field) {
+                if (array_key_exists($field, $data)) {
+                    $opp->{$field} = $data[$field];
+                }
+            }
+            $opp->save();
+
+            if (isset($data['requirements']) && is_array($data['requirements'])) {
+                $opp->requirements()->delete();
+                foreach ($data['requirements'] as $req) {
+                    if (!empty($req['sub_role_slug'])) {
+                        OpportunityRequirement::create([
+                            'opportunity_id' => $opp->id,
+                            'sub_role_slug' => $req['sub_role_slug'],
+                            'quantity' => (int) ($req['quantity'] ?? 1),
+                            'notes' => $req['notes'] ?? null,
+                            'payment_scheme' => $req['payment_scheme'] ?? 'full_at_end',
+                        ]);
+                    }
+                }
+            }
+
+            Cache::increment('opportunities_version');
+
+            return $this->formatOpportunity($this->opportunityRepo->findWithUser($opp->id), true);
+        });
+    }
+
+    public function updateStatus(string $opportunityId, string $userId, string $status, $userRole = null): array
+    {
+        return DB::transaction(function () use ($opportunityId, $userId, $status, $userRole) {
+            $opp = Opportunity::where('id', $opportunityId)->lockForUpdate()->firstOrFail();
+
+            if ($opp->posted_by !== $userId && $userRole !== 'admin') {
+                abort(403, 'Anda tidak memiliki hak untuk mengubah status lowongan ini.');
+            }
+
+            $validStatuses = ['open', 'closed', 'in_progress', 'cancelled'];
+            if (!in_array($status, $validStatuses)) {
+                abort(422, 'Status tidak valid.');
+            }
+
+            $opp->status = $status;
+            $opp->save();
+
+            Cache::increment('opportunities_version');
+
+            return $this->formatOpportunity($this->opportunityRepo->findWithUser($opp->id), true);
+        });
+    }
+
+    public function deleteOpportunity(string $opportunityId, string $userId, $userRole = null): bool
+    {
+        return DB::transaction(function () use ($opportunityId, $userId, $userRole) {
+            $opp = Opportunity::where('id', $opportunityId)->firstOrFail();
+
+            if ($opp->posted_by !== $userId && $userRole !== 'admin') {
+                abort(403, 'Anda tidak memiliki hak untuk menghapus lowongan ini.');
+            }
+
+            $opp->requirements()->delete();
+            $opp->delete();
+
+            Cache::increment('opportunities_version');
+
+            return true;
+        });
+    }
+
     public function applyToOpportunity(string $creatorId, string $opportunityId, array $data): array
     {
         return DB::transaction(function () use ($creatorId, $opportunityId, $data) {

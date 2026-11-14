@@ -24,6 +24,7 @@ class MultiCapabilityOpportunityTest extends TestCase
 
         $this->client = User::factory()->create([
             'role' => RoleType::User,
+            'is_verified' => true,
         ]);
         $this->clientToken = JWTAuth::fromUser($this->client);
     }

@@ -196,16 +196,7 @@ class CorporateVacancyItem {
       requirements: reqList,
       applicantsCount: opp.applicationsCount,
       opportunity: opp,
-      applicants: [
-        CorporateApplicant(
-          name: 'Ahmad Rizki Fauzan',
-          institution: isMagang ? 'SMK Negeri 1 Surabaya' : 'Universitas Telkom',
-          role: opp.subRoleSlug.replaceAll('_', ' ').toUpperCase(),
-          appliedDate: '02 Mar 2026',
-          status: 'Menunggu Review',
-          note: 'Portofolio lengkap dan surat rekomendasi industri.',
-        ),
-      ],
+      applicants: const [],
     );
   }
 }
@@ -406,16 +397,25 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
     super.dispose();
   }
 
-  Future<void> _fetchVacancies() async {
+  Future<void> _fetchVacancies({bool forceRefresh = false}) async {
     setState(() => _isLoading = true);
     try {
-      final opps = await OpportunityService.getMyOpportunities();
+      final opps = await OpportunityService.getMyOpportunities(forceRefresh: forceRefresh);
       if (mounted) {
+        final parsed = <CorporateVacancyItem>[];
+        for (final o in opps) {
+          try {
+            parsed.add(CorporateVacancyItem.fromOpportunity(o));
+          } catch (e) {
+            debugPrint('Error mapping opportunity ${o.id} to CorporateVacancyItem: $e');
+          }
+        }
         setState(() {
-          _fetchedItems = opps.map((o) => CorporateVacancyItem.fromOpportunity(o)).toList();
+          _fetchedItems = parsed;
         });
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Error fetching vacancies in CorporateLowonganScreen: $e');
       // Fallback to presets if network is unavailable
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -482,11 +482,11 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
       });
       AppSweetAlert.success(
         context,
-        'Lowongan "${newVacancy.title}" dengan kuota ${newVacancy.quotaText} berhasil dipublikasikan!',
+        'Lowongan "${newVacancy.title}" dengan kuota ${newVacancy.quotaText} berhasil dipublikasikan dan tersimpan di database!',
         title: 'Lowongan Berhasil Dibuka',
       );
       // Synchronize with server to ensure persistent state
-      _fetchVacancies();
+      _fetchVacancies(forceRefresh: true);
     }
   }
 
@@ -1586,7 +1586,6 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
     final deadlineDate = _selectedDeadline;
     final deadlineFormatted =
         '${deadlineDate.year}-${deadlineDate.month.toString().padLeft(2, '0')}-${deadlineDate.day.toString().padLeft(2, '0')}';
-    final formattedDeadline = _formattedDeadline;
 
     // Requirement payload for API
     final reqPayload = <Map<String, dynamic>>[];
@@ -1618,41 +1617,26 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
       );
       if (res['status'] == true && res['data'] is OpportunityModel) {
         createdModel = res['data'] as OpportunityModel;
+      } else {
+        final errMsg = res['message']?.toString() ?? 'Gagal menyimpan data ke database server.';
+        if (mounted) {
+          setState(() => _isSaving = false);
+          AppSweetAlert.error(context, errMsg, title: 'Gagal Mempublikasikan');
+        }
+        return;
       }
     } catch (e) {
-      debugPrint('Error creating opportunity vacancy: $e');
+      if (mounted) {
+        setState(() => _isSaving = false);
+        AppSweetAlert.error(context, 'Terjadi kesalahan saat menghubungi server: $e', title: 'Koneksi Gagal');
+      }
+      return;
     }
-
-    final quotaBreakdown = _specializations
-        .where((s) => s.quota > 0)
-        .map((s) => '${s.roleLabel}: ${s.quota}')
-        .join(' • ');
-
-    final quotaText = isMagang
-        ? '0 dari $totalQuota posisi'
-        : '$totalQuota posisi ($quotaBreakdown)';
-
-    final newVacancy = CorporateVacancyItem(
-      id: createdModel?.id ?? 'corp_vac_${DateTime.now().millisecondsSinceEpoch}',
-      title: title,
-      description: description,
-      category: _category,
-      categoryLabel: isMagang ? 'Magang' : 'Pekerjaan',
-      status: 'open',
-      statusLabel: 'Pendaftaran Dibuka',
-      statusBadgeColor: const Color(0xFF16A34A),
-      statusBadgeBg: const Color(0xFFDCFCE7),
-      registrationPeriod: formattedDeadline,
-      quotaText: quotaText,
-      allowance: allowance,
-      requirements: List<String>.from(_requirements),
-      applicantsCount: 0,
-      opportunity: createdModel,
-      applicants: const [],
-    );
 
     if (!mounted) return;
     setState(() => _isSaving = false);
+
+    final newVacancy = CorporateVacancyItem.fromOpportunity(createdModel);
     Navigator.of(context).pop(newVacancy);
   }
 

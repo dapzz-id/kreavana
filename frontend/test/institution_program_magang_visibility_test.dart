@@ -161,5 +161,91 @@ void main() {
       expect(allList.first.title, equals('Program Magang MBKM 3D Modeler Batch I 2026'));
       expect(allList.last.id, equals('corp_magang_1'));
     });
+
+    test('ProyekSayaScreen excludes magang and vacancy cards for corporate role', () {
+      final magangOpp = OpportunityModel(
+        id: 'opp-magang-pv',
+        title: 'Program Magang PV Electric Batch I 2027',
+        description: 'Kerja sama penempatan talenta vokasi dan mahasiswa magang.',
+        subRoleSlug: 'magang',
+        status: 'open',
+        requirements: [
+          OpportunityRequirementModel(
+            subRoleSlug: 'videographer',
+            quantity: 10,
+            notes: 'Spesialisasi Videographer (10 kuota)',
+          ),
+          OpportunityRequirementModel(
+            subRoleSlug: 'kualifikasi',
+            quantity: 1,
+            notes: 'Siswa SMK vokasi atau Mahasiswa aktif',
+          ),
+        ],
+      );
+
+      final corporateProjectOpp = OpportunityModel(
+        id: 'opp-corp-branding',
+        title: 'Pengadaan Rebranding Brand & Visual Identity 2026',
+        description: 'Paket komprehensif redesign visual identity enterprise.',
+        subRoleSlug: 'desain_grafis',
+        status: 'open',
+        requirements: [
+          OpportunityRequirementModel(
+            subRoleSlug: 'desain_grafis',
+            quantity: 1,
+            notes: 'Desainer berpengalaman enterprise',
+          ),
+        ],
+      );
+
+      final allOpportunities = [magangOpp, corporateProjectOpp];
+
+      // Simulate the corporate exclusion logic in ProyekSayaScreen
+      bool isCorporateVacancyOrMagang(OpportunityModel opp) {
+        final sub = opp.subRoleSlug.toLowerCase().trim();
+        final title = opp.title.toLowerCase().trim();
+        final desc = (opp.description ?? '').toLowerCase().trim();
+
+        if (sub.contains('magang') || sub.contains('intern') || sub == 'lowongan') {
+          return true;
+        }
+        if (title.contains('magang') ||
+            title.contains('intern') ||
+            title.contains('pkl') ||
+            title.contains('mbkm') ||
+            title.startsWith('lowongan ') ||
+            title.contains('lowongan kerja') ||
+            title.contains('buka lowongan')) {
+          return true;
+        }
+        if (desc.contains('posisi magang') ||
+            desc.contains('siswa vokasi') ||
+            desc.contains('mahasiswa magang') ||
+            desc.contains('tempat pkl') ||
+            desc.contains('penempatan magang')) {
+          return true;
+        }
+        return opp.requirements.any((r) {
+          final rSub = r.subRoleSlug.toLowerCase();
+          final notes = (r.notes ?? '').toLowerCase();
+          return rSub.contains('magang') ||
+              rSub == 'kualifikasi' ||
+              notes.contains('kuota') ||
+              notes.contains('spesialisasi') ||
+              notes.contains('siswa smk') ||
+              notes.contains('vokasi') ||
+              notes.contains('mahasiswa aktif');
+        });
+      }
+
+      final filteredForCorporate = allOpportunities
+          .where((opp) => !isCorporateVacancyOrMagang(opp))
+          .toList();
+
+      expect(filteredForCorporate.length, equals(1));
+      expect(filteredForCorporate.first.id, equals('opp-corp-branding'));
+      expect(filteredForCorporate.first.title, equals('Pengadaan Rebranding Brand & Visual Identity 2026'));
+      expect(filteredForCorporate.any((o) => o.id == 'opp-magang-pv'), isFalse);
+    });
   });
 }

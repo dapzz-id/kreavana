@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../models/user_model.dart';
 import '../services/app_router.dart';
+import '../services/opportunity_service.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import '../widgets/app_breadcrumbs.dart';
 import '../widgets/app_sweet_alert.dart';
+import '../widgets/program_magang_card.dart';
 import 'corporate_lowongan_screen.dart';
 
 class CorporateVacancyDetailScreen extends StatefulWidget {
@@ -40,6 +42,47 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _initVacancy();
+    _fetchRealApplications();
+  }
+
+  Future<void> _fetchRealApplications() async {
+    final oppId = _currentVacancy.opportunity?.id ?? _currentVacancy.id;
+    if (oppId.isEmpty || oppId.startsWith('corp_magang_') || oppId.startsWith('corp_vac_detail')) {
+      return;
+    }
+
+    try {
+      final apps = await OpportunityService.getOpportunityApplications(oppId);
+      if (mounted) {
+        if (apps.isNotEmpty) {
+          final mapped = apps.map((a) {
+            final statusLower = a.status.toLowerCase();
+            String statusLabel = 'Menunggu Review';
+            if (statusLower == 'approved') statusLabel = 'Diterima';
+            if (statusLower == 'rejected') statusLabel = 'Ditolak';
+            if (statusLower == 'interview') statusLabel = 'Interview';
+
+            return CorporateApplicant(
+              name: a.creator?.name ?? 'Pelamar',
+              institution: a.creator?.subRole ?? (_currentVacancy.category == 'magang' ? 'Institusi Vokasi' : 'Umum'),
+              role: a.subRoleSlug.replaceAll('_', ' ').toUpperCase(),
+              appliedDate: a.createdAt != null
+                  ? ProgramMagangCard.formatDateDisplay(a.createdAt)
+                  : 'Hari ini',
+              status: statusLabel,
+              note: a.pitchMessage,
+            );
+          }).toList();
+          setState(() {
+            _applicants = mapped;
+          });
+        } else {
+          setState(() {
+            _applicants = [];
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   void _initVacancy() {
@@ -443,8 +486,25 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
     );
   }
 
-  void _toggleVacancyStatus() {
+  Future<void> _toggleVacancyStatus() async {
     final isCurrentlyOpen = _currentVacancy.status.toLowerCase() == 'open';
+    final targetStatus = isCurrentlyOpen ? 'closed' : 'open';
+
+    final oppId = _currentVacancy.opportunity?.id ?? _currentVacancy.id;
+    if (oppId.isNotEmpty && !oppId.startsWith('corp_magang_') && !oppId.startsWith('corp_vac_')) {
+      final res = await OpportunityService.updateStatus(oppId, targetStatus);
+      if (res['status'] != true) {
+        if (!mounted) return;
+        AppSweetAlert.error(
+          context,
+          res['message']?.toString() ?? 'Gagal memperbarui status lowongan di database server.',
+          title: 'Gagal Memperbarui Status',
+        );
+        return;
+      }
+    }
+
+    if (!mounted) return;
     setState(() {
       _currentVacancy = CorporateVacancyItem(
         id: _currentVacancy.id,
@@ -452,7 +512,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
         description: _currentVacancy.description,
         category: _currentVacancy.category,
         categoryLabel: _currentVacancy.categoryLabel,
-        status: isCurrentlyOpen ? 'closed' : 'open',
+        status: targetStatus,
         statusLabel: isCurrentlyOpen ? 'Pendaftaran Ditutup' : 'Pendaftaran Dibuka',
         statusBadgeColor: isCurrentlyOpen ? const Color(0xFF64748B) : const Color(0xFF16A34A),
         statusBadgeBg: isCurrentlyOpen ? const Color(0xFFF1F5F9) : const Color(0xFFDCFCE7),
@@ -465,9 +525,9 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
         opportunity: _currentVacancy.opportunity,
       );
     });
-    AppSweetAlert.info(
+    AppSweetAlert.success(
       context,
-      'Status lowongan diubah menjadi "${_currentVacancy.statusLabel}".',
+      'Status lowongan berhasil diperbarui di database menjadi "${_currentVacancy.statusLabel}".',
       title: 'Status Lowongan Diperbarui',
     );
   }

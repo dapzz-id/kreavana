@@ -97,6 +97,64 @@ class OpportunityController extends Controller
         return $this->successResponse('Peluang berhasil dibuat.', $opp, 201);
     }
 
+    public function update(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        if (!$user) {
+            return $this->errorResponse('Unauthenticated.', 401);
+        }
+
+        $validated = $request->validate([
+            'title' => 'sometimes|required|string|max:200',
+            'description' => 'nullable|string',
+            'sub_role_slug' => 'nullable|string|max:50',
+            'location' => 'nullable|string|max:100',
+            'address' => 'nullable|string|max:255',
+            'deadline' => 'nullable|date',
+            'budget_range' => 'nullable|string|max:100',
+            'status' => 'nullable|string|in:open,closed,in_progress,cancelled',
+            'requirements' => 'nullable|array',
+            'requirements.*.sub_role_slug' => 'required_with:requirements|string|max:50',
+            'requirements.*.quantity' => 'nullable|integer|min:1|max:50',
+            'requirements.*.notes' => 'nullable|string|max:255',
+        ]);
+
+        $roleVal = is_object($user->role) && isset($user->role->value) ? $user->role->value : (string) $user->role;
+        $opp = $this->opportunityService->updateOpportunity($id, $user->id, $validated, $roleVal);
+
+        return $this->successResponse('Peluang berhasil diperbarui.', $opp);
+    }
+
+    public function updateStatus(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        if (!$user) {
+            return $this->errorResponse('Unauthenticated.', 401);
+        }
+
+        $validated = $request->validate([
+            'status' => 'required|string|in:open,closed,in_progress,cancelled',
+        ]);
+
+        $roleVal = is_object($user->role) && isset($user->role->value) ? $user->role->value : (string) $user->role;
+        $opp = $this->opportunityService->updateStatus($id, $user->id, $validated['status'], $roleVal);
+
+        return $this->successResponse('Status peluang berhasil diperbarui.', $opp);
+    }
+
+    public function destroy(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        if (!$user) {
+            return $this->errorResponse('Unauthenticated.', 401);
+        }
+
+        $roleVal = is_object($user->role) && isset($user->role->value) ? $user->role->value : (string) $user->role;
+        $this->opportunityService->deleteOpportunity($id, $user->id, $roleVal);
+
+        return $this->successResponse('Peluang berhasil dihapus dari database.');
+    }
+
     public function apply(Request $request, string $id)
     {
         $user = Auth::guard('api')->user();

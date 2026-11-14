@@ -288,6 +288,71 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
         sub == 'kampus';
   }
 
+  bool _isCorporateVacancyOrMagangOpportunity(OpportunityModel opp) {
+    final sub = opp.subRoleSlug.toLowerCase().trim();
+    final title = opp.title.toLowerCase().trim();
+    final desc = (opp.description ?? '').toLowerCase().trim();
+
+    // 1. Explicit slug
+    if (sub.contains('magang') || sub.contains('intern') || sub == 'lowongan') {
+      return true;
+    }
+
+    // 2. Title keywords
+    if (title.contains('magang') ||
+        title.contains('intern') ||
+        title.contains('pkl') ||
+        title.contains('mbkm') ||
+        title.startsWith('lowongan ') ||
+        title.contains('lowongan kerja') ||
+        title.contains('buka lowongan')) {
+      return true;
+    }
+
+    // 3. Description keywords
+    if (desc.contains('posisi magang') ||
+        desc.contains('siswa vokasi') ||
+        desc.contains('mahasiswa magang') ||
+        desc.contains('tempat pkl') ||
+        desc.contains('penempatan magang')) {
+      return true;
+    }
+
+    // 4. Requirements structure specific to corporate vacancies (multi-specialization with kuota, or kualifikasi)
+    final hasVacancyRequirements = opp.requirements.any((r) {
+      final rSub = r.subRoleSlug.toLowerCase();
+      final notes = (r.notes ?? '').toLowerCase();
+      return rSub.contains('magang') ||
+          rSub == 'kualifikasi' ||
+          notes.contains('kuota') ||
+          notes.contains('spesialisasi') ||
+          notes.contains('siswa smk') ||
+          notes.contains('vokasi') ||
+          notes.contains('mahasiswa aktif');
+    });
+
+    return hasVacancyRequirements;
+  }
+
+  bool _isCorporateVacancyOrMagangItem(UnifiedProjectItem item) {
+    if (item.opportunity != null) {
+      return _isCorporateVacancyOrMagangOpportunity(item.opportunity!);
+    }
+    final cat = item.category.toLowerCase().trim();
+    final title = item.title.toLowerCase().trim();
+    final desc = (item.description ?? '').toLowerCase().trim();
+    return cat.contains('magang') ||
+        cat.contains('intern') ||
+        title.contains('magang') ||
+        title.contains('intern') ||
+        title.contains('pkl') ||
+        title.contains('mbkm') ||
+        title.contains('lowongan') ||
+        desc.contains('magang') ||
+        desc.contains('intern') ||
+        desc.contains('siswa vokasi');
+  }
+
   List<OpportunityModel> _getSampleMagangOpportunities() {
     return [
       OpportunityModel(
@@ -407,7 +472,8 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                           r.notes!.toLowerCase().contains('kuota'))));
 
           final isCorporatePoster = opp.poster?.selectedSubRole?.toLowerCase() == 'corporate' ||
-              opp.poster?.role.toLowerCase() == 'corporate';
+              opp.poster?.role.toLowerCase() == 'corporate' ||
+              opp.poster?.verificationType?.toLowerCase() == 'corporate';
 
           return isExplicitMagang || isCorporatePoster;
         }).toList();
@@ -419,6 +485,11 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
         opportunities
           ..clear()
           ..addAll(magangOpportunities);
+      } else if (_isCorporate) {
+        // Pada akun corporate, lowongan magang & lowongan kerja dikelola di halaman
+        // khusus "Lowongan Kerja & Magang" (/lowongan-corporate).
+        // Jangan tampilkan kartu magang/kerja di halaman "Proyek Saya".
+        opportunities.removeWhere((opp) => _isCorporateVacancyOrMagangOpportunity(opp));
       }
 
       final unified = <UnifiedProjectItem>[];
@@ -432,6 +503,10 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
           contract,
           currentUserId: widget.user?.id,
         ));
+      }
+
+      if (_isCorporate) {
+        unified.removeWhere((item) => _isCorporateVacancyOrMagangItem(item));
       }
 
       // Sort by creation date descending
@@ -981,6 +1056,10 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
 
     // Filter by status category
     final filtered = _allItems.where((item) {
+      if (_isCorporate && _isCorporateVacancyOrMagangItem(item)) {
+        return false;
+      }
+
       if (_selectedStatus != 'Semua' && item.statusCategory != _selectedStatus) {
         return false;
       }
@@ -1573,20 +1652,21 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   ) {
     final isOpportunity = item.type == ProjectItemType.opportunity;
 
-    final isMagang = _isSchool ||
-        item.category.toLowerCase().contains('magang') ||
-        item.title.toLowerCase().contains('magang') ||
-        (item.opportunity != null &&
-            (item.opportunity!.subRoleSlug.toLowerCase().contains('magang') ||
-                item.opportunity!.title.toLowerCase().contains('magang') ||
-                item.opportunity!.title.toLowerCase().contains('intern') ||
-                (item.opportunity!.description != null &&
-                    item.opportunity!.description!.toLowerCase().contains('magang')) ||
-                item.opportunity!.requirements.any((r) =>
-                    r.subRoleSlug.toLowerCase().contains('magang') ||
-                    (r.notes != null &&
-                        (r.notes!.toLowerCase().contains('magang') ||
-                            r.notes!.toLowerCase().contains('kuota'))))));
+    final isMagang = !_isCorporate &&
+        (_isSchool ||
+            item.category.toLowerCase().contains('magang') ||
+            item.title.toLowerCase().contains('magang') ||
+            (item.opportunity != null &&
+                (item.opportunity!.subRoleSlug.toLowerCase().contains('magang') ||
+                    item.opportunity!.title.toLowerCase().contains('magang') ||
+                    item.opportunity!.title.toLowerCase().contains('intern') ||
+                    (item.opportunity!.description != null &&
+                        item.opportunity!.description!.toLowerCase().contains('magang')) ||
+                    item.opportunity!.requirements.any((r) =>
+                        r.subRoleSlug.toLowerCase().contains('magang') ||
+                        (r.notes != null &&
+                            (r.notes!.toLowerCase().contains('magang') ||
+                                r.notes!.toLowerCase().contains('kuota')))))));
 
     if (isMagang) {
       if (item.opportunity != null) {
