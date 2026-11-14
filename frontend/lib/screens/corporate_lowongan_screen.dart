@@ -108,7 +108,10 @@ class CorporateVacancyItem {
     final isMagang = opp.subRoleSlug.toLowerCase().contains('magang') ||
         opp.title.toLowerCase().contains('magang') ||
         opp.title.toLowerCase().contains('intern') ||
-        (opp.description != null && opp.description!.toLowerCase().contains('magang'));
+        (opp.description != null && opp.description!.toLowerCase().contains('magang')) ||
+        opp.requirements.any((r) =>
+            r.subRoleSlug.toLowerCase().contains('magang') ||
+            (r.notes != null && (r.notes!.toLowerCase().contains('magang') || r.notes!.toLowerCase().contains('kuota'))));
 
     final statusText = isOpen
         ? 'Pendaftaran Dibuka'
@@ -133,9 +136,36 @@ class CorporateVacancyItem {
       defaultFallback: '21 Sep 2026',
     );
 
-    final reqList = opp.requirements
-        .map((r) => r.notes?.isNotEmpty == true ? r.notes! : r.subRoleSlug.replaceAll('_', ' '))
-        .toList();
+    // Calculate quota and specifications from requirements
+    int totalQuota = 0;
+    final specBreakdowns = <String>[];
+    final reqList = <String>[];
+
+    for (final r in opp.requirements) {
+      if (r.subRoleSlug == 'kualifikasi') {
+        if (r.notes != null && r.notes!.isNotEmpty) {
+          reqList.add(r.notes!);
+        }
+      } else {
+        final q = r.quantity;
+        if (q > 0) {
+          totalQuota += q;
+          final roleName = r.notes?.isNotEmpty == true
+              ? r.notes!.split('(').first.replaceFirst('Spesialisasi ', '').trim()
+              : r.subRoleSlug.replaceAll('_', ' ');
+          specBreakdowns.add('$roleName: $q');
+        }
+      }
+    }
+
+    if (reqList.isEmpty) {
+      for (final r in opp.requirements) {
+        if (r.notes != null && r.notes!.isNotEmpty && !r.notes!.startsWith('Spesialisasi ')) {
+          reqList.add(r.notes!);
+        }
+      }
+    }
+
     if (reqList.isEmpty) {
       reqList.addAll([
         'Talenta kreatif terverifikasi',
@@ -143,6 +173,12 @@ class CorporateVacancyItem {
         'Siap bekerja sesuai timeline & briefing',
       ]);
     }
+
+    final calculatedQuotaText = isMagang
+        ? '${opp.applicationsCount} dari ${totalQuota > 0 ? totalQuota : 10} posisi'
+        : (totalQuota > 0
+            ? '$totalQuota posisi (${specBreakdowns.join(' • ')})'
+            : 'Tersedia 1-2 posisi');
 
     return CorporateVacancyItem(
       id: opp.id ?? 'opp_${DateTime.now().millisecondsSinceEpoch}',
@@ -155,7 +191,7 @@ class CorporateVacancyItem {
       statusBadgeColor: statusColor,
       statusBadgeBg: statusBg,
       registrationPeriod: regPeriod,
-      quotaText: isMagang ? '${opp.applicationsCount} dari 10 posisi' : 'Tersedia 1-2 posisi',
+      quotaText: calculatedQuotaText,
       allowance: opp.budgetRange ?? (isMagang ? 'Rp 3.500.000 / bulan' : 'Budget Fleksibel'),
       requirements: reqList,
       applicantsCount: opp.applicationsCount,
@@ -388,13 +424,13 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
 
   List<CorporateVacancyItem> get _allVacancies {
     final Map<String, CorporateVacancyItem> map = {};
-    // Add presets first
-    for (final item in _presetVacancies) {
-      map[item.id] = item;
-    }
-    // Add/overwrite with fetched items from server
+    // Add real items created or fetched from server FIRST so user vacancies appear at the top
     for (final item in _fetchedItems) {
       map[item.id] = item;
+    }
+    // Add preset vacancies if not already overridden
+    for (final item in _presetVacancies) {
+      map.putIfAbsent(item.id, () => item);
     }
     return map.values.toList();
   }
@@ -441,6 +477,7 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
 
     if (newVacancy != null && mounted) {
       setState(() {
+        _fetchedItems.removeWhere((it) => it.id == newVacancy.id);
         _fetchedItems.insert(0, newVacancy);
       });
       AppSweetAlert.success(
@@ -448,6 +485,8 @@ class _CorporateLowonganScreenState extends State<CorporateLowonganScreen> {
         'Lowongan "${newVacancy.title}" dengan kuota ${newVacancy.quotaText} berhasil dipublikasikan!',
         title: 'Lowongan Berhasil Dibuka',
       );
+      // Synchronize with server to ensure persistent state
+      _fetchVacancies();
     }
   }
 
@@ -1434,17 +1473,6 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
         defaultFallback: '21 Sep 2026',
       );
 
-  void _onSpecializationChanged(int index, String newSlug) {
-    final match = _availableSpecializationOptions.firstWhere(
-      (e) => e['slug'] == newSlug,
-      orElse: () => {'slug': newSlug, 'label': newSlug},
-    );
-    setState(() {
-      _specializations[index].roleSlug = match['slug']!;
-      _specializations[index].roleLabel = match['label']!;
-    });
-  }
-
   void _addSpecialization() {
     final usedSlugs = _specializations.map((s) => s.roleSlug).toSet();
     final available = _availableSpecializationOptions.firstWhere(
@@ -1555,7 +1583,9 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
     final title = _titleController.text.trim();
     final description = _descriptionController.text.trim();
     final allowance = currentAllowanceText;
-    final deadlineIso = _selectedDeadline.toIso8601String();
+    final deadlineDate = _selectedDeadline;
+    final deadlineFormatted =
+        '${deadlineDate.year}-${deadlineDate.month.toString().padLeft(2, '0')}-${deadlineDate.day.toString().padLeft(2, '0')}';
     final formattedDeadline = _formattedDeadline;
 
     // Requirement payload for API
@@ -1575,18 +1605,22 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
       });
     }
 
+    OpportunityModel? createdModel;
     try {
-      await OpportunityService.createOpportunity(
+      final res = await OpportunityService.createOpportunity(
         title: title,
-        subRoleSlug: _specializations.first.roleSlug,
-        type: isMagang ? 'magang' : 'job',
+        subRoleSlug: isMagang ? 'magang' : _specializations.first.roleSlug,
+        type: 'project',
         description: description,
         budgetRange: allowance,
-        deadline: deadlineIso,
+        deadline: deadlineFormatted,
         requirements: reqPayload,
       );
-    } catch (_) {
-      // Offline/local mock resilience
+      if (res['status'] == true && res['data'] is OpportunityModel) {
+        createdModel = res['data'] as OpportunityModel;
+      }
+    } catch (e) {
+      debugPrint('Error creating opportunity vacancy: $e');
     }
 
     final quotaBreakdown = _specializations
@@ -1599,7 +1633,7 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
         : '$totalQuota posisi ($quotaBreakdown)';
 
     final newVacancy = CorporateVacancyItem(
-      id: 'corp_vac_${DateTime.now().millisecondsSinceEpoch}',
+      id: createdModel?.id ?? 'corp_vac_${DateTime.now().millisecondsSinceEpoch}',
       title: title,
       description: description,
       category: _category,
@@ -1613,6 +1647,7 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
       allowance: allowance,
       requirements: List<String>.from(_requirements),
       applicantsCount: 0,
+      opportunity: createdModel,
       applicants: const [],
     );
 
@@ -2554,7 +2589,7 @@ class _CorporateVacancyFormDialogState extends State<CorporateVacancyFormDialog>
                                       onAddNewOption: (label) => _addNewSpecializationOption(label),
                                     ),
                                   );
-                                  if (newOpt != null && mounted) {
+                                  if (newOpt != null && mounted && context.mounted) {
                                     setState(() {
                                       _availableSpecializationOptions = CorporateSpecializationRegistry.options;
                                     });

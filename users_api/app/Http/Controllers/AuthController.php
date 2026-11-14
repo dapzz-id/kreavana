@@ -34,6 +34,18 @@ class AuthController
             'device_id' => 'nullable|string',
             'device_name' => 'nullable|string',
             'platform' => 'nullable|string|in:ios,android,web,windows,macos,linux',
+        ], [
+            'username.required' => 'Username wajib diisi.',
+            'username.unique' => 'Username ini sudah digunakan. Silakan pilih username lain.',
+            'username.alpha_dash' => 'Username hanya boleh berisi huruf, angka, tanda hubung (-), dan garis bawah (_).',
+            'username.min' => 'Username minimal 3 karakter.',
+            'email.required' => 'Alamat email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
+            'email.unique' => 'Alamat email ini sudah terdaftar. Silakan gunakan email lain atau masuk ke akun Anda.',
+            'password.required' => 'Kata sandi wajib diisi.',
+            'password.min' => 'Kata sandi minimal 8 karakter.',
+            'full_name.required' => 'Nama lengkap wajib diisi.',
+            'phone.unique' => 'Nomor telepon ini sudah digunakan.',
         ]);
 
         if ($validator->fails()) {

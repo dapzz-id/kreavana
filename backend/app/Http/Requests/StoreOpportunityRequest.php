@@ -13,6 +13,29 @@ class StoreOpportunityRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $type = $this->input('type');
+        if ($type !== null) {
+            $normalized = strtolower(trim((string) $type));
+            if (in_array($normalized, ['magang', 'job', 'pekerjaan', 'project', 'proyek', 'internship', 'pekerjaan kreatif', 'magang industri'])) {
+                $this->merge(['type' => 'project']);
+            } elseif (in_array($normalized, ['location', 'lokasi'])) {
+                $this->merge(['type' => 'location']);
+            }
+        }
+
+        $deadline = $this->input('deadline');
+        if ($deadline && is_string($deadline)) {
+            try {
+                $parsed = \Carbon\Carbon::parse($deadline)->format('Y-m-d');
+                $this->merge(['deadline' => $parsed]);
+            } catch (\Throwable $e) {
+                // leave as is for validator
+            }
+        }
+    }
+
     public function rules(): array
     {
         return [

@@ -32,9 +32,18 @@ class AuthController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:100',
-            'username' => 'required|string|max:50|unique:users',
-            'email' => 'required|string|email|max:150|unique:users',
+            'username' => 'required|string|max:50|unique:users,username',
+            'email' => 'required|string|email|max:150|unique:users,email',
             'password' => 'required|string|min:6',
+        ], [
+            'name.required' => 'Nama lengkap wajib diisi.',
+            'username.required' => 'Username wajib diisi.',
+            'username.unique' => 'Username ini sudah digunakan. Silakan pilih username lain.',
+            'email.required' => 'Alamat email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
+            'email.unique' => 'Alamat email ini sudah terdaftar. Silakan gunakan email lain atau masuk ke akun Anda.',
+            'password.required' => 'Kata sandi wajib diisi.',
+            'password.min' => 'Kata sandi minimal 6 karakter.',
         ]);
 
         $user = $this->authService->register([
