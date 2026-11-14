@@ -797,7 +797,7 @@ class InstitutionResourceSeeder extends Seeder
                 'metadata' => [
                     'email' => 'sri.wahyuni@kreavana.sch.id',
                     'role' => 'Karyawan / Staf',
-                    'permissions' => ['mitra_industri', 'dokumen_institusi', 'laporan_kegiatan'],
+                    'permissions' => ['mitra_industri', 'dokumen_institusi'],
                     'department' => 'Waka Humas & Kemitraan IDUKA',
                     'is_online' => true,
                     'joined_at' => '12 Jan 2025',
@@ -812,7 +812,7 @@ class InstitutionResourceSeeder extends Seeder
                 'metadata' => [
                     'email' => 'budi.santoso@kreavana.sch.id',
                     'role' => 'Karyawan / Staf',
-                    'permissions' => ['program_magang', 'monitoring_evaluasi', 'laporan_kegiatan'],
+                    'permissions' => ['program_magang', 'kegiatan_event'],
                     'department' => 'Bursa Kerja Khusus & Penyaluran Karir',
                     'is_online' => false,
                     'joined_at' => '04 Feb 2025',
@@ -827,7 +827,7 @@ class InstitutionResourceSeeder extends Seeder
                 'metadata' => [
                     'email' => 'ahmad.fauzi@kreavana.sch.id',
                     'role' => 'Karyawan / Staf',
-                    'permissions' => ['program_magang', 'monitoring_evaluasi'],
+                    'permissions' => ['program_magang', 'karya_siswa'],
                     'department' => 'Pembimbing Praktik & Logbook Magang',
                     'is_online' => true,
                     'joined_at' => '18 Feb 2025',
