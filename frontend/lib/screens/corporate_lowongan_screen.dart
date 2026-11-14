@@ -20,6 +20,8 @@ class CorporateApplicant {
   final String status; // 'Menunggu Review', 'Interview', 'Diterima', 'Ditolak'
   final String portfolioUrl;
   final String note;
+  final bool isReplacement;
+  final String? replacedApplicantName;
 
   const CorporateApplicant({
     required this.name,
@@ -29,7 +31,33 @@ class CorporateApplicant {
     required this.status,
     this.portfolioUrl = 'https://kreavana.id/portfolio',
     this.note = '',
+    this.isReplacement = false,
+    this.replacedApplicantName,
   });
+
+  CorporateApplicant copyWith({
+    String? name,
+    String? institution,
+    String? role,
+    String? appliedDate,
+    String? status,
+    String? portfolioUrl,
+    String? note,
+    bool? isReplacement,
+    String? replacedApplicantName,
+  }) {
+    return CorporateApplicant(
+      name: name ?? this.name,
+      institution: institution ?? this.institution,
+      role: role ?? this.role,
+      appliedDate: appliedDate ?? this.appliedDate,
+      status: status ?? this.status,
+      portfolioUrl: portfolioUrl ?? this.portfolioUrl,
+      note: note ?? this.note,
+      isReplacement: isReplacement ?? this.isReplacement,
+      replacedApplicantName: replacedApplicantName ?? this.replacedApplicantName,
+    );
+  }
 }
 
 class CorporateVacancyItem {

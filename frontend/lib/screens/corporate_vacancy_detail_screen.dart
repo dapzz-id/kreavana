@@ -32,6 +32,8 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
   String _selectedApplicantFilter = 'Semua';
   final TextEditingController _applicantSearchController = TextEditingController();
   late List<CorporateApplicant> _applicants;
+  final Map<String, String> _institutionStatuses = {}; // 'approved', 'rejected', 'pending'
+  final Set<String> _collapsedInstitutions = {};
 
   @override
   void initState() {
@@ -76,12 +78,28 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
             note: 'Showreel modeling hard-surface sangat rapi dan proporsional.',
           ),
           CorporateApplicant(
+            name: 'Bagas Kurniawan',
+            institution: 'SMKN 4 Bandung - Animasi',
+            role: '3D Texture Artist',
+            appliedDate: '11 Feb 2026',
+            status: 'Menunggu Review',
+            note: 'Paham UV unwrapping dan texturing di Substance Painter.',
+          ),
+          CorporateApplicant(
             name: 'Siti Nurhaliza',
             institution: 'Politeknik Negeri Media Kreatif',
             role: '3D Texture & Lookdev',
             appliedDate: '11 Feb 2026',
             status: 'Menunggu Review',
             note: 'Mahir Substance Painter dan render engine Blender Cycles.',
+          ),
+          CorporateApplicant(
+            name: 'Nadya Putri',
+            institution: 'Politeknik Negeri Media Kreatif',
+            role: 'Concept Artist',
+            appliedDate: '13 Feb 2026',
+            status: 'Menunggu Review',
+            note: 'Portofolio visual development environment nusantara.',
           ),
           CorporateApplicant(
             name: 'Reza Pratama',
@@ -112,18 +130,303 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
     super.dispose();
   }
 
+  String _getInstitutionBaseName(String fullInstitution) {
+    if (fullInstitution.contains(' - ')) {
+      return fullInstitution.split(' - ').first.trim();
+    }
+    return fullInstitution.trim();
+  }
+
+  String _getInstitutionStatus(String instName) {
+    return _institutionStatuses[instName] ?? 'pending';
+  }
+
+  void _approveInstitution(String instName) {
+    setState(() {
+      _institutionStatuses[instName] = 'approved';
+    });
+    AppSweetAlert.success(
+      context,
+      'Kemitraan institusi $instName berhasil disetujui. Anda dapat meninjau dan menerima berkas siswa dari institusi ini.',
+      title: 'Institusi Disetujui',
+    );
+  }
+
+  void _confirmRejectInstitution(String instName, int count) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEE2E2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 22),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Tolak Kemitraan Institusi?',
+                  style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Anda yakin ingin menolak institusi "$instName"?\n\n'
+            'Perhatian: Menolak institusi akan secara otomatis menolak seluruh ($count) siswa magang/kerja dari institusi ini.',
+            style: const TextStyle(fontSize: 13.5, color: Color(0xFF334155), height: 1.45),
+          ),
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Batal'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                setState(() {
+                  _institutionStatuses[instName] = 'rejected';
+                  for (int i = 0; i < _applicants.length; i++) {
+                    if (_getInstitutionBaseName(_applicants[i].institution) == instName) {
+                      _applicants[i] = _applicants[i].copyWith(status: 'Ditolak');
+                    }
+                  }
+                });
+                AppSweetAlert.error(
+                  context,
+                  'Institusi $instName telah ditolak. Seluruh ($count) siswa magang dari institusi ini otomatis ditolak.',
+                  title: 'Institusi & Seluruh Siswa Ditolak',
+                );
+              },
+              icon: const Icon(Icons.cancel_rounded, size: 16),
+              label: const Text('Ya, Tolak Institusi'),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _toggleInstitutionCollapse(String instName) {
+    setState(() {
+      if (_collapsedInstitutions.contains(instName)) {
+        _collapsedInstitutions.remove(instName);
+      } else {
+        _collapsedInstitutions.add(instName);
+      }
+    });
+  }
+
+  void _showProposeReplacementDialog(CorporateApplicant rejectedApp) {
+    final nameCtrl = TextEditingController();
+    final roleCtrl = TextEditingController(text: rejectedApp.role);
+    final majorCtrl = TextEditingController(
+      text: rejectedApp.institution.contains(' - ')
+          ? rejectedApp.institution.split(' - ').last.trim()
+          : 'Animasi & Multimedia',
+    );
+    final portfolioCtrl = TextEditingController(text: 'https://kreavana.id/portofolio/siswa-baru');
+    final noteCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          actionsPadding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF2563EB), size: 22),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ajukan Siswa Magang Pengganti',
+                      style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Wajib diverifikasi & disetujui pihak Corporate',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.normal),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 520,
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFFDE68A)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.info_outline_rounded, size: 18, color: Color(0xFFD97706)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Menggantikan: ${rejectedApp.name} (${rejectedApp.institution}) yang sebelumnya berstatus Ditolak.',
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF92400E), height: 1.4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Nama Siswa Pengganti *', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: nameCtrl,
+                      decoration: InputDecoration(
+                        hintText: 'Contoh: Muhammad Farhan',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      ),
+                      validator: (val) {
+                        if (val == null || val.trim().isEmpty) return 'Nama siswa wajib diisi';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    const Text('Posisi / Spesialisasi *', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: roleCtrl,
+                      decoration: InputDecoration(
+                        hintText: 'Contoh: Junior 3D Modeler',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      ),
+                      validator: (val) {
+                        if (val == null || val.trim().isEmpty) return 'Posisi wajib diisi';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    const Text('Jurusan / Peminatan', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: majorCtrl,
+                      decoration: InputDecoration(
+                        hintText: 'Contoh: Animasi 3D',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text('Tautan Portofolio / CV', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: portfolioCtrl,
+                      decoration: InputDecoration(
+                        hintText: 'https://...',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text('Catatan Rekomendasi Institusi', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: noteCtrl,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        hintText: 'Siswa berprestasi kompetensi 3D dengan portofolio terverifikasi...',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Batal'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                if (formKey.currentState?.validate() ?? false) {
+                  final instBase = _getInstitutionBaseName(rejectedApp.institution);
+                  final newApplicant = CorporateApplicant(
+                    name: nameCtrl.text.trim(),
+                    institution: majorCtrl.text.trim().isNotEmpty
+                        ? '$instBase - ${majorCtrl.text.trim()}'
+                        : rejectedApp.institution,
+                    role: roleCtrl.text.trim(),
+                    appliedDate: 'Hari ini',
+                    status: 'Menunggu Persetujuan Corporate',
+                    portfolioUrl: portfolioCtrl.text.trim(),
+                    note: noteCtrl.text.trim().isNotEmpty
+                        ? noteCtrl.text.trim()
+                        : 'Kandidat pengganti yang diajukan institusi menggantikan ${rejectedApp.name}.',
+                    isReplacement: true,
+                    replacedApplicantName: rejectedApp.name,
+                  );
+                  setState(() {
+                    _applicants.add(newApplicant);
+                    _collapsedInstitutions.remove(instBase);
+                  });
+                  Navigator.of(ctx).pop();
+                  AppSweetAlert.success(
+                    context,
+                    'Siswa pengganti ${newApplicant.name} berhasil diajukan untuk $instBase menggantikan ${rejectedApp.name}. Menunggu persetujuan Corporate.',
+                    title: 'Pengajuan Berhasil',
+                  );
+                }
+              },
+              icon: const Icon(Icons.send_rounded, size: 16),
+              label: const Text('Kirim Pengajuan'),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _updateApplicantStatus(int index, String newStatus) {
     setState(() {
-      final old = _applicants[index];
-      _applicants[index] = CorporateApplicant(
-        name: old.name,
-        institution: old.institution,
-        role: old.role,
-        appliedDate: old.appliedDate,
-        status: newStatus,
-        portfolioUrl: old.portfolioUrl,
-        note: old.note,
-      );
+      _applicants[index] = _applicants[index].copyWith(status: newStatus);
     });
     AppSweetAlert.success(
       context,
@@ -822,6 +1125,13 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
   Widget _buildApplicantsManagementTab(bool isDesktop, bool isDark) {
     final filtered = _filteredApplicants;
 
+    // Group filtered applicants by institution base name
+    final Map<String, List<CorporateApplicant>> grouped = {};
+    for (final app in filtered) {
+      final inst = _getInstitutionBaseName(app.institution);
+      grouped.putIfAbsent(inst, () => []).add(app);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -900,7 +1210,7 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
         ),
         const SizedBox(height: 16),
 
-        // List of applicants
+        // List of applicants grouped by institution
         if (filtered.isEmpty)
           Container(
             width: double.infinity,
@@ -930,201 +1240,575 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: filtered.length,
+            itemCount: grouped.keys.length,
             itemBuilder: (context, index) {
-              final app = filtered[index];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CircleAvatar(
-                          radius: 22,
-                          backgroundColor: const Color(0xFF2563EB).withValues(alpha: 0.12),
-                          child: Text(
-                            app.name.isNotEmpty ? app.name[0] : 'U',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Color(0xFF2563EB),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                app.name,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                app.institution,
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 6,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFEFF6FF),
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: const Color(0xFFBFDBFE)),
-                                    ),
-                                    child: Text(
-                                      app.role,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFF2563EB),
-                                      ),
-                                    ),
-                                  ),
-                                  Text(
-                                    'Melamar: ${app.appliedDate}',
-                                    style: TextStyle(
-                                      fontSize: 11.5,
-                                      color: Colors.grey.shade500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        _buildApplicantStatusBadge(app.status),
-                      ],
-                    ),
-                    if (app.note.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.notes_rounded, size: 14, color: Color(0xFF64748B)),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                app.note,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade700,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 14),
-                    const Divider(height: 1, color: Color(0xFFE2E8F0)),
-                    const SizedBox(height: 12),
-
-                    // Actions Bar for Applicant
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            AppSweetAlert.info(
-                              context,
-                              'Tautan Portofolio: ${app.portfolioUrl}',
-                              title: 'Portofolio Pelamar',
-                            );
-                          },
-                          icon: const Icon(Icons.launch_rounded, size: 14),
-                          label: const Text('Portofolio'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF2563EB),
-                            side: const BorderSide(color: Color(0xFF93C5FD)),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                        ),
-                        PopupMenuButton<String>(
-                          onSelected: (val) {
-                            final rawIdx = _applicants.indexOf(app);
-                            if (rawIdx != -1) {
-                              _updateApplicantStatus(rawIdx, val);
-                            }
-                          },
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          itemBuilder: (ctx) => [
-                            const PopupMenuItem(value: 'Menunggu Review', child: Text('Menunggu Review')),
-                            const PopupMenuItem(value: 'Interview', child: Text('Jadwalkan Interview')),
-                            const PopupMenuItem(value: 'Diterima', child: Text('Terima Magang / Kerja')),
-                            const PopupMenuItem(value: 'Ditolak', child: Text('Tolak Berkas')),
-                          ],
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFCBD5E1)),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.edit_note_rounded, size: 15, color: Color(0xFF475569)),
-                                SizedBox(width: 6),
-                                Text(
-                                  'Ubah Status',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF334155),
-                                  ),
-                                ),
-                                SizedBox(width: 4),
-                                Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: Color(0xFF475569)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
+              final instName = grouped.keys.elementAt(index);
+              final instApplicants = grouped[instName]!;
+              return _buildInstitutionGroupCard(instName, instApplicants, isDesktop, isDark);
             },
           ),
       ],
+    );
+  }
+
+  // ── Institution Group Card ──────────────────────────────────────────────────
+  Widget _buildInstitutionGroupCard(
+    String instName,
+    List<CorporateApplicant> instApplicants,
+    bool isDesktop,
+    bool isDark,
+  ) {
+    final instStatus = _getInstitutionStatus(instName);
+    // If search or filter is active, force expand so matching items are visible
+    final hasSearchOrFilter = _applicantSearchController.text.isNotEmpty || _selectedApplicantFilter != 'Semua';
+    final isExpanded = hasSearchOrFilter || !_collapsedInstitutions.contains(instName);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: instStatus == 'rejected'
+              ? const Color(0xFFFECACA)
+              : instStatus == 'approved'
+                  ? const Color(0xFFBBF7D0)
+                  : const Color(0xFFE2E8F0),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Institution Header Card (Clickable to expand/collapse)
+          InkWell(
+            onTap: () => _toggleInstitutionCollapse(instName),
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Row(
+                children: [
+                  // Institution Icon
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: instStatus == 'rejected'
+                          ? const Color(0xFFFEE2E2)
+                          : const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.account_balance_rounded,
+                      color: instStatus == 'rejected'
+                          ? const Color(0xFFDC2626)
+                          : const Color(0xFF2563EB),
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+
+                  // Institution Name & Badges
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                instName,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildInstitutionStatusBadge(instStatus),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        Wrap(
+                          spacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '${instApplicants.length} Siswa Diajukan',
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF475569),
+                                ),
+                              ),
+                            ),
+                            Text(
+                              isExpanded ? 'Klik untuk menutup daftar' : 'Klik untuk melihat daftar anak',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Actions on right: Setujui and Tolak buttons & Chevron
+                  Wrap(
+                    spacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      // Tombol Setujui
+                      OutlinedButton.icon(
+                        key: ValueKey('btn_approve_inst_$instName'),
+                        onPressed: () => _approveInstitution(instName),
+                        icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
+                        label: const Text('Setujui'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF16A34A),
+                          side: const BorderSide(color: Color(0xFF86EFAC)),
+                          backgroundColor: instStatus == 'approved'
+                              ? const Color(0xFFDCFCE7)
+                              : Colors.transparent,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+
+                      // Tombol Tolak
+                      OutlinedButton.icon(
+                        key: ValueKey('btn_reject_inst_$instName'),
+                        onPressed: () => _confirmRejectInstitution(instName, instApplicants.length),
+                        icon: const Icon(Icons.cancel_outlined, size: 16),
+                        label: const Text('Tolak'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFDC2626),
+                          side: const BorderSide(color: Color(0xFFFCA5A5)),
+                          backgroundColor: instStatus == 'rejected'
+                              ? const Color(0xFFFEE2E2)
+                              : Colors.transparent,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+
+                      // Chevron indicator
+                      Icon(
+                        isExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        color: const Color(0xFF64748B),
+                        size: 24,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Accordion Body: List of Students
+          if (isExpanded) ...[
+            const Divider(height: 1, color: Color(0xFFE2E8F0)),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B).withValues(alpha: 0.5) : const Color(0xFFF8FAFC),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(16),
+                  bottomRight: Radius.circular(16),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (instStatus == 'rejected')
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFECACA)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFFDC2626)),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Institusi ini telah ditolak. Seluruh anak magang dari institusi ini otomatis ditolak. Anda atau institusi dapat mengajukan siswa pengganti.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFFB91C1C),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // Student cards
+                  ...instApplicants.map((app) {
+                    return _buildApplicantCard(app, isDark);
+                  }),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ── Individual Applicant Card ───────────────────────────────────────────────
+  Widget _buildApplicantCard(CorporateApplicant app, bool isDark) {
+    final rawIdx = _applicants.indexOf(app);
+    final isRejected = app.status == 'Ditolak';
+    final isReplacement = app.isReplacement;
+    final isPendingCorporate = app.status == 'Menunggu Persetujuan Corporate' ||
+        (isReplacement && app.status == 'Menunggu Review');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isReplacement
+              ? const Color(0xFFDDD6FE)
+              : isRejected
+                  ? const Color(0xFFFECACA)
+                  : const Color(0xFFE2E8F0),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Banner for Replacement Candidate
+          if (isReplacement) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F3FF),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFDDD6FE)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.swap_horiz_rounded, size: 16, color: Color(0xFF7C3AED)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Siswa Pengganti • Menggantikan ${app.replacedApplicantName ?? "kandidat sebelumnya"} (Wajib Disetujui Corporate)',
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF6D28D9),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: isReplacement
+                    ? const Color(0xFF7C3AED).withValues(alpha: 0.12)
+                    : const Color(0xFF2563EB).withValues(alpha: 0.12),
+                child: Text(
+                  app.name.isNotEmpty ? app.name[0] : 'U',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: isReplacement ? const Color(0xFF7C3AED) : const Color(0xFF2563EB),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      app.name,
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      app.institution,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFBFDBFE)),
+                          ),
+                          child: Text(
+                            app.role,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF2563EB),
+                            ),
+                          ),
+                        ),
+                        Text(
+                          'Melamar: ${app.appliedDate}',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              _buildApplicantStatusBadge(app.status),
+            ],
+          ),
+          if (app.note.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.notes_rounded, size: 14, color: Color(0xFF64748B)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      app.note,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+          const SizedBox(height: 10),
+
+          // Actions Bar for Applicant
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () {
+                  AppSweetAlert.info(
+                    context,
+                    'Tautan Portofolio: ${app.portfolioUrl}',
+                    title: 'Portofolio Pelamar',
+                  );
+                },
+                icon: const Icon(Icons.launch_rounded, size: 13),
+                label: const Text('Portofolio'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF2563EB),
+                  side: const BorderSide(color: Color(0xFF93C5FD)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  textStyle: const TextStyle(fontSize: 12),
+                ),
+              ),
+
+              // Quick approval buttons for replacement student
+              if (isPendingCorporate && rawIdx != -1) ...[
+                FilledButton.icon(
+                  onPressed: () => _updateApplicantStatus(rawIdx, 'Diterima'),
+                  icon: const Icon(Icons.check_rounded, size: 14),
+                  label: const Text('Setujui Pengganti'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF16A34A),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _updateApplicantStatus(rawIdx, 'Ditolak'),
+                  icon: const Icon(Icons.close_rounded, size: 14),
+                  label: const Text('Tolak'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFDC2626),
+                    side: const BorderSide(color: Color(0xFFFCA5A5)),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    textStyle: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
+
+              PopupMenuButton<String>(
+                onSelected: (val) {
+                  if (rawIdx != -1) {
+                    _updateApplicantStatus(rawIdx, val);
+                  }
+                },
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                itemBuilder: (ctx) => [
+                  const PopupMenuItem(value: 'Menunggu Review', child: Text('Menunggu Review')),
+                  const PopupMenuItem(value: 'Interview', child: Text('Jadwalkan Interview')),
+                  const PopupMenuItem(value: 'Diterima', child: Text('Terima Magang / Kerja')),
+                  const PopupMenuItem(value: 'Ditolak', child: Text('Tolak Berkas')),
+                ],
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.edit_note_rounded, size: 14, color: Color(0xFF475569)),
+                      SizedBox(width: 4),
+                      Text(
+                        'Ubah Status',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF334155),
+                        ),
+                      ),
+                      SizedBox(width: 2),
+                      Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: Color(0xFF475569)),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Button to propose replacement student if rejected!
+              if (isRejected) ...[
+                FilledButton.icon(
+                  key: ValueKey('btn_propose_replacement_${app.name}'),
+                  onPressed: () => _showProposeReplacementDialog(app),
+                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 14),
+                  label: const Text('Ajukan Siswa Pengganti'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFD97706),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstitutionStatusBadge(String status) {
+    Color bg;
+    Color fg;
+    String label;
+    IconData icon;
+
+    switch (status) {
+      case 'approved':
+        bg = const Color(0xFFDCFCE7);
+        fg = const Color(0xFF16A34A);
+        label = 'Disetujui';
+        icon = Icons.check_circle_rounded;
+        break;
+      case 'rejected':
+        bg = const Color(0xFFFEE2E2);
+        fg = const Color(0xFFDC2626);
+        label = 'Ditolak';
+        icon = Icons.cancel_rounded;
+        break;
+      case 'pending':
+      default:
+        bg = const Color(0xFFFEF3C7);
+        fg = const Color(0xFFD97706);
+        label = 'Menunggu Keputusan';
+        icon = Icons.pending_outlined;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: fg),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: fg,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1143,6 +1827,10 @@ class _CorporateVacancyDetailScreenState extends State<CorporateVacancyDetailScr
       case 'Ditolak':
         bg = const Color(0xFFFEE2E2);
         fg = const Color(0xFFDC2626);
+        break;
+      case 'Menunggu Persetujuan Corporate':
+        bg = const Color(0xFFEDE9FE);
+        fg = const Color(0xFF7C3AED);
         break;
       case 'Menunggu Review':
       default:
