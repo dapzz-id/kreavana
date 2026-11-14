@@ -7,7 +7,7 @@ import '../services/user_store.dart';
 import '../widgets/app_breadcrumbs.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import '../widgets/program_magang_card.dart';
-import 'detail_kebutuhan_screen.dart';
+import 'program_magang_detail_screen.dart';
 
 enum SchoolMagangTab {
   myApplications,
@@ -125,6 +125,34 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
     super.dispose();
   }
 
+  bool _isMagangOpportunity(OpportunityModel opp) {
+    final sub = opp.subRoleSlug.toLowerCase();
+    final title = opp.title.toLowerCase();
+    final desc = (opp.description ?? '').toLowerCase();
+
+    final isExplicitMagang = sub.contains('magang') ||
+        sub.contains('intern') ||
+        title.contains('magang') ||
+        title.contains('intern') ||
+        title.contains('pkl') ||
+        title.contains('mbkm') ||
+        desc.contains('magang') ||
+        desc.contains('intern') ||
+        desc.contains('siswa vokasi') ||
+        opp.requirements.any((r) =>
+            r.subRoleSlug.toLowerCase().contains('magang') ||
+            (r.notes != null &&
+                (r.notes!.toLowerCase().contains('magang') ||
+                    r.notes!.toLowerCase().contains('kuota') ||
+                    r.notes!.toLowerCase().contains('siswa smk'))));
+
+    final isCorporatePoster = opp.poster?.selectedSubRole?.toLowerCase() == 'corporate' ||
+        opp.poster?.role.toLowerCase() == 'corporate' ||
+        opp.poster?.verificationType?.toLowerCase() == 'corporate';
+
+    return isExplicitMagang || isCorporatePoster;
+  }
+
   Future<void> _fetchRealtimeData({bool forceRefresh = false}) async {
     if (!mounted) return;
     setState(() {
@@ -147,11 +175,8 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
       final myOpportunities = List<OpportunityModel>.from(results[0]);
       final exploreOpportunities = List<OpportunityModel>.from(results[1]);
 
-      // 1. Data lamaran/kemitraan magang sekolah
-      final myItems = <OpportunityModel>[];
-      for (final opp in myOpportunities) {
-        myItems.add(opp);
-      }
+      // 1. Data lamaran/kemitraan magang sekolah (exclude non-magang events/projects)
+      final myItems = myOpportunities.where(_isMagangOpportunity).toList();
       if (myItems.isEmpty) {
         myItems.addAll(_getSampleMagangOpportunities());
       }
@@ -165,32 +190,10 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
       });
 
       // 2. Data cari lowongan magang corporate
-      final filteredExplore = exploreOpportunities.where((opp) {
-        final isExplicitMagang = opp.subRoleSlug.toLowerCase().contains('magang') ||
-            opp.title.toLowerCase().contains('magang') ||
-            opp.title.toLowerCase().contains('intern') ||
-            opp.title.toLowerCase().contains('pkl') ||
-            opp.title.toLowerCase().contains('mbkm') ||
-            (opp.description != null &&
-                (opp.description!.toLowerCase().contains('magang') ||
-                    opp.description!.toLowerCase().contains('intern') ||
-                    opp.description!.toLowerCase().contains('siswa vokasi'))) ||
-            opp.requirements.any((r) =>
-                r.subRoleSlug.toLowerCase().contains('magang') ||
-                (r.notes != null &&
-                    (r.notes!.toLowerCase().contains('magang') ||
-                        r.notes!.toLowerCase().contains('kuota') ||
-                        r.notes!.toLowerCase().contains('siswa smk'))));
-
-        final isCorporatePoster = opp.poster?.selectedSubRole?.toLowerCase() == 'corporate' ||
-            opp.poster?.role.toLowerCase() == 'corporate' ||
-            opp.poster?.verificationType?.toLowerCase() == 'corporate';
-
-        return isExplicitMagang || isCorporatePoster;
-      }).toList();
+      final filteredExplore = exploreOpportunities.where(_isMagangOpportunity).toList();
 
       final exploreItems = <OpportunityModel>[];
-      for (final opp in (filteredExplore.isNotEmpty ? filteredExplore : exploreOpportunities)) {
+      for (final opp in filteredExplore) {
         exploreItems.add(opp);
       }
       if (exploreItems.isEmpty) {
@@ -267,9 +270,11 @@ class _ProgramMagangScreenState extends State<ProgramMagangScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => DetailKebutuhanScreen(
+        builder: (_) => ProgramMagangDetailScreen(
           opportunity: opp,
           user: _currentUser,
+          onUserUpdated: widget.onUserUpdated,
+          isAppliedPartnership: _schoolTab == SchoolMagangTab.myApplications,
         ),
       ),
     );
