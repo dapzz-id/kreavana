@@ -4752,6 +4752,10 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                    ],
+                  ),
+                );
+              },
             )
             .toList(),
         onChanged: (value) {
@@ -5403,26 +5407,6 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                         ),
                         const SizedBox(height: 16),
                       ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _buildFieldWithHeader(
-                            label: 'Deskripsi / Ruang Lingkup',
-                            caption: 'Jelaskan ringkasan kebutuhan, spesifikasi, atau catatan penting.',
-                            child: TextFormField(
-                              controller: _descriptionController,
-                              minLines: 3,
-                              maxLines: 4,
-                              decoration: _inputDecoration(
-                                hint: 'Jelaskan ringkasan kebutuhan, spesifikasi, atau catatan...',
-                                prefixIcon: Icons.notes_rounded,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                    ],
 
                     if (secondaryWidgets.isNotEmpty) ...[
                       // Section 2: Spesifikasi & Kontak (2 Columns)
