@@ -7,6 +7,7 @@ import '../../../services/call_service.dart';
 import '../../../services/push_notification_service.dart';
 import '../../../services/user_store.dart';
 import '../../../services/app_router.dart';
+import '../../../utils/app_errors.dart';
 import '../../../widgets/social_button.dart';
 import 'package:go_router/go_router.dart';
 
@@ -113,9 +114,10 @@ class _RegisterScreenState extends State<RegisterScreen>
           );
         } else {
           setState(() {
-            _errorMessage =
-                result['message']?.toString() ??
-                'Pendaftaran gagal. Silakan periksa kembali data Anda.';
+            _errorMessage = AppErrors.messageFromResult(
+              result,
+              fallback: 'Pendaftaran gagal. Silakan periksa kembali data Anda.',
+            );
           });
         }
       }
@@ -151,9 +153,10 @@ class _RegisterScreenState extends State<RegisterScreen>
         }
       } else {
         setState(() {
-          _errorMessage =
-              result['message']?.toString() ??
-              'Login dengan Google gagal. Coba lagi.';
+          _errorMessage = AppErrors.messageFromResult(
+            result,
+            fallback: 'Login dengan Google gagal. Coba lagi.',
+          );
         });
       }
     }

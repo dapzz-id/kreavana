@@ -10,6 +10,72 @@ import 'package:dio/dio.dart';
 class AppErrors {
   AppErrors._();
 
+  static String _friendlyFieldName(String field) {
+    switch (field.toLowerCase().trim()) {
+      case 'email':
+        return 'Alamat email';
+      case 'username':
+        return 'Username';
+      case 'name':
+      case 'full_name':
+        return 'Nama lengkap';
+      case 'password':
+        return 'Kata sandi';
+      case 'password_confirmation':
+        return 'Konfirmasi kata sandi';
+      case 'phone':
+        return 'Nomor telepon';
+      default:
+        return field;
+    }
+  }
+
+  /// Convert raw validation keys or English validation errors into clear Indonesian descriptions.
+  static String _humanizeValidationString(String raw, [String? field]) {
+    final lower = raw.toLowerCase().trim();
+    final fLabel = field != null ? _friendlyFieldName(field) : null;
+
+    if (lower.contains('validation.unique') ||
+        lower.contains('already been taken') ||
+        lower.contains('has already been taken')) {
+      if (field == 'email' || lower.contains('email')) {
+        return 'Alamat email ini sudah terdaftar. Silakan gunakan email lain atau masuk ke akun Anda.';
+      }
+      if (field == 'username' || lower.contains('username')) {
+        return 'Username ini sudah digunakan. Silakan pilih username lain.';
+      }
+      if (field == 'phone' || lower.contains('phone') || lower.contains('telepon')) {
+        return 'Nomor telepon ini sudah terdaftar.';
+      }
+      return fLabel != null
+          ? '$fLabel ini sudah digunakan. Silakan gunakan data lain.'
+          : 'Data ini sudah terdaftar. Silakan gunakan data lain atau masuk.';
+    }
+
+    if (lower.contains('validation.required')) {
+      return fLabel != null ? '$fLabel wajib diisi.' : 'Mohon lengkapi semua kolom yang wajib diisi.';
+    }
+
+    if (lower.contains('validation.email')) {
+      return 'Format alamat email tidak valid.';
+    }
+
+    if (lower.contains('validation.min') || lower.contains('too short')) {
+      return fLabel != null ? '$fLabel terlalu pendek.' : 'Isian terlalu pendek.';
+    }
+
+    if (lower.contains('validation.confirmed') ||
+        lower.contains('confirmation does not match')) {
+      return 'Konfirmasi kata sandi tidak cocok.';
+    }
+
+    if (lower == 'the given data was invalid.') {
+      return 'Data yang dimasukkan tidak valid. Periksa kembali form Anda.';
+    }
+
+    return _sanitizeMessage(raw);
+  }
+
   /// Masking logic to prevent raw backend errors from leaking
   static String _sanitizeMessage(
     String rawMsg, {
@@ -33,7 +99,29 @@ class AppErrors {
     String fallback = 'Terjadi kesalahan. Silakan coba lagi.',
     int? statusCode,
   }) {
-    // HTTP Status overrides
+    // 1. First, check detailed validation errors map
+    final errors = result['errors'];
+    if (errors is Map && errors.isNotEmpty) {
+      final List<String> errorList = [];
+      errors.forEach((key, val) {
+        final fieldName = key.toString();
+        if (val is List && val.isNotEmpty) {
+          for (final item in val) {
+            if (item != null && item.toString().trim().isNotEmpty) {
+              errorList.add(_humanizeValidationString(item.toString().trim(), fieldName));
+            }
+          }
+        } else if (val is String && val.trim().isNotEmpty) {
+          errorList.add(_humanizeValidationString(val.trim(), fieldName));
+        }
+      });
+
+      if (errorList.isNotEmpty) {
+        return errorList.first;
+      }
+    }
+
+    // 2. HTTP Status overrides (when no specific validation errors map was found)
     if (statusCode == 401) {
       return 'Email atau kata sandi yang Anda masukkan salah.';
     }
@@ -43,17 +131,23 @@ class AppErrors {
     if (statusCode == 404) {
       return 'Sumber data tidak ditemukan.';
     }
-    if (statusCode == 422) {
-      return 'Data yang dikirimkan tidak valid. Periksa kembali form Anda.';
-    }
     if (statusCode != null && statusCode >= 500) {
       return 'Terjadi kesalahan internal pada server. Coba lagi nanti.';
     }
 
+    // 3. Fall back to message/error/msg
     final raw = result['message'] ?? result['error'] ?? result['msg'];
     if (raw is String && raw.trim().isNotEmpty) {
-      return _sanitizeMessage(raw.trim(), fallback: fallback);
+      final humanized = _humanizeValidationString(raw.trim());
+      if (humanized.isNotEmpty && humanized != 'Terjadi kesalahan internal pada server.') {
+        return humanized;
+      }
     }
+
+    if (statusCode == 422) {
+      return 'Data yang dikirimkan tidak valid. Periksa kembali form Anda.';
+    }
+
     return fallback;
   }
 

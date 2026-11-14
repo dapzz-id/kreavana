@@ -30,7 +30,28 @@ class AuthService implements AuthServiceInterface
         }
 
         if (!empty($regResult['errors'])) {
-            throw \Illuminate\Validation\ValidationException::withMessages($regResult['errors']);
+            $formattedErrors = [];
+            foreach ($regResult['errors'] as $field => $messages) {
+                $formattedErrors[$field] = array_map(function ($msg) use ($field) {
+                    $strMsg = (string) $msg;
+                    if (str_contains($strMsg, 'validation.unique') || str_contains($strMsg, 'already been taken')) {
+                        return $field === 'email'
+                            ? 'Alamat email ini sudah terdaftar. Silakan gunakan email lain atau masuk ke akun Anda.'
+                            : 'Username ini sudah digunakan. Silakan pilih username lain.';
+                    }
+                    if (str_contains($strMsg, 'validation.required')) {
+                        return ($field === 'full_name' || $field === 'name' ? 'Nama lengkap' : ucfirst($field)) . ' wajib diisi.';
+                    }
+                    if (str_contains($strMsg, 'validation.min')) {
+                        return ($field === 'password' ? 'Kata sandi' : ucfirst($field)) . ' terlalu pendek.';
+                    }
+                    if (str_contains($strMsg, 'validation.email')) {
+                        return 'Format alamat email tidak valid.';
+                    }
+                    return $strMsg;
+                }, (array) $messages);
+            }
+            throw \Illuminate\Validation\ValidationException::withMessages($formattedErrors);
         }
 
         throw new \Exception($regResult['message'] ?? 'Pendaftaran pada Universal Identity gagal.');
