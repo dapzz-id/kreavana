@@ -77,6 +77,8 @@ class ProfileService {
     required String userId,
     String? name,
     String? phone,
+    String? username,
+    String? email,
     String? avatarUrl,
     String? selectedSubRole,
   }) async {
@@ -84,6 +86,8 @@ class ProfileService {
       'user_id': userId,
       'name': ?name,
       'phone': ?phone,
+      'username': ?username,
+      'email': ?email,
       'avatar_url': ?avatarUrl,
       'selected_sub_role': ?selectedSubRole,
     };

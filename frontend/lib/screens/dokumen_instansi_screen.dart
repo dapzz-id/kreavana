@@ -133,7 +133,7 @@ class _DokumenInstansiScreenState extends State<DokumenInstansiScreen> {
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             Text(
-              'Arsip Surat Keputusan (SK), MoU Kemitraan, SPK, dan BAST tersertifikasi BSrE',
+              'Arsip Surat Keputusan (SK), MoU Kemitraan, SPK, dan Berkas Resmi Instansi',
               style: TextStyle(
                 fontSize: 11,
                 color: isDark ? AppTheme.textMuted : Colors.grey.shade600,

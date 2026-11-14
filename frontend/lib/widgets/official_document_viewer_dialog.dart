@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'app_sweet_alert.dart';
 
 class OfficialDocumentViewerDialog extends StatelessWidget {
@@ -35,10 +36,111 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
 
   String get _title => (document['title'] ?? 'Dokumen Resmi').toString();
   String get _desc => (document['description'] ?? 'Tidak ada uraian keterangan.').toString();
-  String get _category => (_meta['category'] ?? _meta['kategori'] ?? 'Surat Keputusan (SK)').toString();
-  String get _docNumber => (_meta['doc_number'] ?? _meta['nomor_dokumen'] ?? '027/SPK-KREAVANA/DISPAREKRAF/2026').toString();
-  String get _docDate => (_meta['document_date'] ?? _meta['tanggal'] ?? '16 Oktober 2026').toString();
-  String get _author => (_meta['author'] ?? _meta['penandatangan'] ?? 'Pejabat Pembuat Komitmen (PPK)').toString();
+
+  String get _category {
+    final cat = _meta['category'] ?? _meta['kategori'] ?? document['category'];
+    if (cat != null && cat.toString().trim().isNotEmpty) {
+      return cat.toString().trim();
+    }
+    final t = _title.toLowerCase();
+    if (t.contains('mou') || t.contains('kerjasama') || t.contains('perjanjian') || t.contains('kemitraan')) {
+      return 'Perjanjian Kerjasama (MoU)';
+    } else if (t.contains('akreditasi') || t.contains('ban-pt')) {
+      return 'Sertifikat Akreditasi';
+    } else if (t.contains('pedoman') || t.contains('panduan') || t.contains('juknis')) {
+      return 'Pedoman Teknis';
+    } else if (t.contains('sk') || t.contains('keputusan')) {
+      return 'Surat Keputusan (SK)';
+    }
+    return 'Dokumen Resmi';
+  }
+
+  String get _docNumber {
+    final num = _meta['document_number'] ??
+        _meta['doc_number'] ??
+        _meta['sk_number'] ??
+        _meta['nomor_dokumen'] ??
+        _meta['no_surat'] ??
+        document['document_number'];
+    if (num != null && num.toString().trim().isNotEmpty) {
+      return num.toString().trim();
+    }
+    final id = document['id'];
+    if (id != null) return 'DOC-$id';
+    return '-';
+  }
+
+  String get _docDate {
+    final d = _meta['document_date'] ??
+        _meta['tanggal'] ??
+        _meta['valid_until'] ??
+        document['published_at'] ??
+        document['created_at'];
+    if (d != null && d.toString().trim().isNotEmpty) {
+      return d.toString().trim();
+    }
+    return '-';
+  }
+
+  String get _author {
+    final a = _meta['author'] ??
+        _meta['penandatangan'] ??
+        _meta['partner_name'] ??
+        _meta['institution_name'] ??
+        document['author'] ??
+        document['institution_name'];
+    if (a != null && a.toString().trim().isNotEmpty) {
+      return a.toString().trim();
+    }
+    return 'Instansi Terdaftar';
+  }
+
+  String get _status => (document['status'] ?? 'published').toString().toLowerCase();
+
+  String? get _fileUrl {
+    final u = _meta['url'] ??
+        _meta['file_url'] ??
+        _meta['mou_url'] ??
+        _meta['attachment_url'] ??
+        document['url'] ??
+        document['file_url'];
+    if (u != null && u.toString().trim().isNotEmpty) {
+      final s = u.toString().trim();
+      if (s.startsWith('http://') || s.startsWith('https://')) {
+        return s;
+      }
+    }
+    return null;
+  }
+
+  String get _fileFormat => (_meta['file_format'] ?? 'PDF').toString().toUpperCase();
+
+  String get _fileSize {
+    if (_meta['file_size'] != null && _meta['file_size'].toString().isNotEmpty) {
+      return _meta['file_size'].toString();
+    }
+    if (_meta['pages'] != null) {
+      return '${_meta['pages']} Halaman';
+    }
+    return '';
+  }
+
+  Future<void> _openExternalFile(BuildContext context, String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (context.mounted) {
+          AppSweetAlert.error(context, 'Tidak dapat membuka tautan berkas: $url');
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppSweetAlert.error(context, 'Gagal membuka berkas: $e');
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +148,9 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
     final isWide = screenWidth > 800;
+
+    final isPublished = _status == 'published' || _status == 'active';
+    final primaryColor = isGovernment ? const Color(0xFF1D4ED8) : const Color(0xFF2563EB);
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -72,7 +177,7 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               decoration: BoxDecoration(
-                color: isGovernment ? const Color(0xFF1D4ED8) : const Color(0xFF2563EB),
+                color: primaryColor,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               ),
               child: Row(
@@ -83,18 +188,16 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
                       color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.verified_user_rounded, color: Colors.white, size: 18),
+                    child: const Icon(Icons.article_rounded, color: Colors.white, size: 18),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          isGovernment
-                              ? 'PRATINJAU DOKUMEN RESMI PEMERINTAH'
-                              : 'PRATINJAU DOKUMEN KORPORAT RESMI',
-                          style: const TextStyle(
+                        const Text(
+                          'PRATINJAU DOKUMEN RESMI',
+                          style: TextStyle(
                             color: Colors.white,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -102,7 +205,7 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Sertifikasi Digital BSrE • Terdaftar & Terotentikasi',
+                          'Arsip Dokumen Terdaftar pada Platform Kreavana',
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.85),
                             fontSize: 10,
@@ -124,15 +227,15 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
                   decoration: BoxDecoration(
-                    color: Colors.white, // Always authentic paper white
+                    color: Colors.white, // Authentic document paper white
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Colors.grey.shade300),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
-                        blurRadius: 15,
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
                     ],
@@ -140,38 +243,36 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Kop Surat Resmi Pemerintah
-                      _buildOfficialHeader(),
-                      const SizedBox(height: 10),
-                      _buildOfficialDivider(),
-                      const SizedBox(height: 20),
+                      // Header Instansi / Dokumen
+                      _buildDocumentHeader(primaryColor),
+                      const SizedBox(height: 12),
+                      _buildDivider(),
+                      const SizedBox(height: 18),
 
-                      // Nomor & Klasifikasi
-                      _buildDocumentMetadataSection(),
+                      // Nomor & Status Dokumen
+                      _buildMetadataGrid(isPublished),
                       const SizedBox(height: 20),
 
                       // Judul Dokumen
                       Center(
                         child: Column(
                           children: [
-                            Text(
-                              _category.toUpperCase(),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.black87,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                decoration: TextDecoration.underline,
-                                letterSpacing: 0.5,
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: primaryColor.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Nomor: $_docNumber',
-                              style: const TextStyle(
-                                color: Colors.black87,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                              child: Text(
+                                _category.toUpperCase(),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: primaryColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -180,24 +281,36 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 color: Colors.black87,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                height: 1.3,
                               ),
                             ),
+                            if (_docNumber != '-') ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Nomor Registrasi: $_docNumber',
+                                style: const TextStyle(
+                                  color: Colors.black54,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 22),
 
-                      // Klausul & Isi Surat
-                      _buildDocumentBody(),
-                      const SizedBox(height: 32),
+                      // Isi / Uraian Dokumen (Data Asli)
+                      _buildDocumentContentSection(),
+                      const SizedBox(height: 20),
 
-                      // Pengesahan, Tanda Tangan & Cap Kedinasan
-                      _buildSignaturesSection(),
-                      const SizedBox(height: 28),
+                      // Lampiran Dokumen (Jika Ada)
+                      _buildAttachmentSection(context),
+                      const SizedBox(height: 20),
 
-                      // Footer Verifikasi Digital BSrE
+                      // Validasi Platform Kreavana
                       _buildVerificationFooter(),
                     ],
                   ),
@@ -222,46 +335,38 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
                 children: [
                   TextButton.icon(
                     onPressed: () {
-                      Clipboard.setData(ClipboardData(text: 'https://verifikasi.kreavana.id/doc/$_docNumber'));
+                      Clipboard.setData(ClipboardData(text: _docNumber));
                       AppSweetAlert.success(
                         context,
-                        'Tautan verifikasi resmi berhasil disalin ke papan klip.',
-                        title: 'Tautan Disalin',
+                        'Nomor dokumen "$_docNumber" berhasil disalin.',
+                        title: 'Nomor Disalin',
                       );
                     },
                     icon: const Icon(Icons.copy_rounded, size: 16),
-                    label: const Text('Salin Tautan Digital'),
+                    label: const Text('Salin Nomor Dokumen'),
                   ),
                   Wrap(
                     spacing: 10,
                     children: [
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          _showVerificationCertificate(context);
-                        },
-                        icon: const Icon(Icons.qr_code_2_rounded, size: 16),
-                        label: const Text('Cek Sertifikat BSrE'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      if (_fileUrl != null)
+                        ElevatedButton.icon(
+                          onPressed: () => _openExternalFile(context, _fileUrl!),
+                          icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                          label: const Text('Buka Berkas Asli'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
                         ),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          AppSweetAlert.success(
-                            context,
-                            'Berkas PDF resmi $_docNumber berhasil diunduh dan tersimpan di perangkat.',
-                            title: 'Unduh Berhasil',
-                          );
-                        },
-                        icon: const Icon(Icons.download_rounded, size: 16),
-                        label: const Text('Cetak / Unduh PDF Resmi'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isGovernment ? const Color(0xFF1D4ED8) : const Color(0xFF2563EB),
-                          foregroundColor: Colors.white,
+                      OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
+                        child: const Text('Tutup'),
                       ),
                     ],
                   ),
@@ -274,55 +379,43 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
     );
   }
 
-  // ── Kop Surat ─────────────────────────────────────────────────────────────
-  Widget _buildOfficialHeader() {
+  // ── Header Dokumen ────────────────────────────────────────────────────────
+  Widget _buildDocumentHeader(Color accentColor) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Garuda Emblem or Official Seal
         Container(
-          width: 60,
-          height: 60,
+          width: 52,
+          height: 52,
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: const Color(0xFFFEF3C7),
-            border: Border.all(color: const Color(0xFFD97706), width: 1.5),
+            color: accentColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: accentColor.withValues(alpha: 0.25), width: 1.5),
           ),
-          child: const Center(
-            child: Icon(Icons.account_balance_rounded, color: Color(0xFFB45309), size: 34),
+          child: Center(
+            child: Icon(Icons.account_balance_rounded, color: accentColor, size: 28),
           ),
         ),
-        const SizedBox(width: 18),
+        const SizedBox(width: 14),
         Expanded(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: const [
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(
-                'PEMERINTAH REPUBLIK INDONESIA',
-                style: TextStyle(
+                _author.toUpperCase(),
+                style: const TextStyle(
                   color: Colors.black87,
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              Text(
-                'DINAS KEBUDAYAAN, PARIWISATA DAN EKONOMI KREATIF',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.black87,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
                   letterSpacing: 0.5,
                 ),
               ),
-              SizedBox(height: 3),
-              Text(
-                'Kompleks Perkantoran Graha Praja Gedung B, Nusantara\nPos-el: disbudpar@daerah.go.id • Laman: https://lpse.kreavana.id',
-                textAlign: TextAlign.center,
+              const SizedBox(height: 2),
+              const Text(
+                'Platform Kemitraan & Manajemen Arsip Digital Kreavana',
                 style: TextStyle(
                   color: Colors.black54,
-                  fontSize: 10,
+                  fontSize: 11,
                   height: 1.3,
                 ),
               ),
@@ -333,43 +426,41 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
     );
   }
 
-  // ── Garis Ganda Kop Surat ──────────────────────────────────────────────────
-  Widget _buildOfficialDivider() {
+  // ── Divider ───────────────────────────────────────────────────────────────
+  Widget _buildDivider() {
     return Column(
       children: [
-        Container(height: 2.5, color: Colors.black87),
+        Container(height: 2.0, color: Colors.grey.shade400),
         const SizedBox(height: 1.5),
-        Container(height: 1.0, color: Colors.black87),
+        Container(height: 1.0, color: Colors.grey.shade300),
       ],
     );
   }
 
-  // ── Metadata Dokumen ──────────────────────────────────────────────────────
-  Widget _buildDocumentMetadataSection() {
+  // ── Metadata Grid ─────────────────────────────────────────────────────────
+  Widget _buildMetadataGrid(bool isPublished) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Klasifikasi: DOKUMEN RESMI NEGARA', style: _metaStyle()),
-              const SizedBox(height: 2),
-              Text('Lampiran: 1 (Satu) Berkas Terverifikasi', style: _metaStyle()),
+              _buildMetaItem('Nomor Dokumen', _docNumber),
+              _buildStatusPill(isPublished),
             ],
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          const Divider(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Tanggal Otorisasi: $_docDate', style: _metaStyle()),
-              const SizedBox(height: 2),
-              Text('Status: SAH & AKTIF', style: _metaStyle(color: const Color(0xFF10B981))),
+              _buildMetaItem('Tanggal Terbit / Berlaku', _docDate),
+              _buildMetaItem('Format Dokumen', '$_fileFormat ${_fileSize.isNotEmpty ? '• $_fileSize' : ''}'),
             ],
           ),
         ],
@@ -377,33 +468,62 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
     );
   }
 
-  TextStyle _metaStyle({Color color = Colors.black87}) {
-    return TextStyle(
-      fontSize: 11,
-      fontWeight: FontWeight.w600,
-      color: color,
+  Widget _buildMetaItem(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 10, color: Colors.black54, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+        ),
+      ],
     );
   }
 
-  // ── Isi Naskah Kedinasan ──────────────────────────────────────────────────
-  Widget _buildDocumentBody() {
+  Widget _buildStatusPill(bool isPublished) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: isPublished ? const Color(0xFFECFDF5) : const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isPublished ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isPublished ? Icons.check_circle_rounded : Icons.pending_rounded,
+            size: 13,
+            color: isPublished ? const Color(0xFF059669) : const Color(0xFFD97706),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            isPublished ? 'Tervalidasi / Terbit' : 'Draft / Dalam Proses',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: isPublished ? const Color(0xFF059669) : const Color(0xFFD97706),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Uraian Isi Dokumen ────────────────────────────────────────────────────
+  Widget _buildDocumentContentSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Menimbang / Mengingat:',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '1. Undang-Undang Nomor 24 Tahun 2019 tentang Ekonomi Kreatif;\n'
-          '2. Peraturan Presiden Nomor 12 Tahun 2021 tentang Perubahan atas Peraturan Presiden Nomor 16 Tahun 2018 tentang Pengadaan Barang/Jasa Pemerintah;\n'
-          '3. Dokumen Pelaksanaan Anggaran (DPA/DIPA) Tahun Anggaran 2026.',
-          style: TextStyle(fontSize: 11, height: 1.5, color: Colors.grey.shade800),
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          'Uraian Pokok & Ketentuan Pelaksanaan:',
+          'Uraian & Ringkasan Dokumen:',
           style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
         ),
         const SizedBox(height: 6),
@@ -424,168 +544,123 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 14),
-        Text(
-          'Segala hak cipta, kepemilikan aset intelektual, dan dokumentasi yang diproduksi berdasarkan pengesahan ini sepenuhnya tunduk pada ketentuan hukum negara serta perjanjian kemitraan terdaftar pada platform Kreavana.',
-          style: TextStyle(fontSize: 11, height: 1.5, color: Colors.grey.shade700),
-        ),
+        // Additional parameters if present in metadata
+        if (_meta.containsKey('sk_number') ||
+            _meta.containsKey('grade') ||
+            _meta.containsKey('edition') ||
+            _meta.containsKey('pages')) ...[
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              if (_meta['sk_number'] != null)
+                _buildInfoTag('No. SK: ${_meta['sk_number']}'),
+              if (_meta['grade'] != null)
+                _buildInfoTag('Predikat: ${_meta['grade']}'),
+              if (_meta['edition'] != null)
+                _buildInfoTag('Edisi: ${_meta['edition']}'),
+              if (_meta['pages'] != null)
+                _buildInfoTag('${_meta['pages']} Halaman'),
+            ],
+          ),
+        ],
       ],
     );
   }
 
-  // ── Tanda Tangan & Cap Basah ──────────────────────────────────────────────
-  Widget _buildSignaturesSection() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        // Pihak Rekanan / Mitra
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const Text(
-              'Penyedia Rekanan Terdaftar,',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black87),
-            ),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.blue.shade200),
+  Widget _buildInfoTag(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1D4ED8)),
+      ),
+    );
+  }
+
+  // ── Lampiran Berkas ───────────────────────────────────────────────────────
+  Widget _buildAttachmentSection(BuildContext context) {
+    if (_fileUrl == null) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          children: const [
+            Icon(Icons.info_outline_rounded, size: 18, color: Color(0xFF64748B)),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Naskah dokumen digital ini tercatat resmi di database sistem Kreavana.',
+                style: TextStyle(fontSize: 11, color: Color(0xFF475569)),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.verified, size: 14, color: Color(0xFF2563EB)),
-                  SizedBox(width: 4),
-                  Text(
-                    'TERVERIFIKASI DIGITAL',
-                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'DIREKTUR / KREATOR REKANAN',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87),
-            ),
-            Text(
-              'ID Rekanan: KRV-REK-2026-08',
-              style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
             ),
           ],
         ),
+      );
+    }
 
-        // Pihak Pemerintah PPK & Cap Stempel
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFFDC2626), size: 24),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Ditetapkan di: Nusantara',
-                  style: TextStyle(fontSize: 10, color: Colors.black87),
+                  'Berkas Lampiran Tersedia',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
                 ),
                 Text(
-                  _author,
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black87),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFECFDF5),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: const Color(0xFFA7F3D0)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.shield_rounded, size: 14, color: Color(0xFF059669)),
-                      SizedBox(width: 4),
-                      Text(
-                        'DITANDATANGANI SECARA ELEKTRONIK',
-                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'DR. H. ARYA WIRATAMA, M.M.',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    decoration: TextDecoration.underline,
-                    color: Colors.black87,
-                  ),
-                ),
-                Text(
-                  'NIP. 19780512 200312 1 004',
-                  style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                  _fileUrl!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 10, color: Color(0xFF3B82F6)),
                 ),
               ],
             ),
-
-            // Cap Stempel Basah Kedinasan (Stempel Ungu Melingkar)
-            Positioned(
-              left: -20,
-              top: 15,
-              child: Opacity(
-                opacity: 0.85,
-                child: Container(
-                  width: 76,
-                  height: 76,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFF6B21A8), width: 2.0),
-                  ),
-                  child: Center(
-                    child: Container(
-                      width: 66,
-                      height: 66,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFF6B21A8), width: 1.0),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Text(
-                            'PEMERINTAH',
-                            style: TextStyle(
-                              fontSize: 6.5,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF6B21A8),
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          Icon(Icons.star, size: 8, color: Color(0xFF6B21A8)),
-                          Text(
-                            'DISPAR',
-                            style: TextStyle(
-                              fontSize: 7.5,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF6B21A8),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => _openExternalFile(context, _fileUrl!),
+            icon: const Icon(Icons.download_rounded, size: 14),
+            label: const Text('Buka', style: TextStyle(fontSize: 11)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2563EB),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
             ),
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 
-  // ── Footer Keabsahan BSrE ──────────────────────────────────────────────────
+  // ── Footer Keabsahan Platform ─────────────────────────────────────────────
   Widget _buildVerificationFooter() {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -603,72 +678,25 @@ class OfficialDocumentViewerDialog extends StatelessWidget {
               borderRadius: BorderRadius.circular(6),
               border: Border.all(color: Colors.grey.shade300),
             ),
-            child: const Icon(Icons.qr_code_2_rounded, size: 36, color: Colors.black87),
+            child: const Icon(Icons.verified_user_rounded, size: 28, color: Color(0xFF10B981)),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Keabsahan Dokumen Tersertifikasi Elektronik (BSrE - BSSN)',
+              children: [
+                const Text(
+                  'Keabsahan Dokumen Terdaftar',
                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
-                  'Dokumen ini telah ditandatangani secara elektronik menggunakan sertifikat elektronik yang diterbitkan oleh Balai Sertifikasi Elektronik (BSrE), BSSN.',
-                  style: TextStyle(fontSize: 9.5, height: 1.35, color: Colors.black54),
+                  'Dokumen ini tercatat resmi di database platform Kreavana dan diterbitkan oleh $_author.',
+                  style: const TextStyle(fontSize: 10, height: 1.35, color: Colors.black54),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  void _showVerificationCertificate(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: const [
-            Icon(Icons.verified_user_rounded, color: Color(0xFF10B981)),
-            SizedBox(width: 8),
-            Text('Sertifikat BSrE BSSN', style: TextStyle(fontSize: 16)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _certRow('Status:', 'VALID & AKTIF'),
-            _certRow('Nomor Registrasi:', _docNumber),
-            _certRow('Penerbit:', 'Balai Sertifikasi Elektronik (BSrE) BSSN'),
-            _certRow('Integritas Data:', 'SHA-256 Otentik (Tanpa Perubahan)'),
-            _certRow('Otoritas Penandatangan:', _author),
-            _certRow('Waktu Tanda Tangan:', _docDate),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Tutup'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _certRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-          Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
         ],
       ),
     );

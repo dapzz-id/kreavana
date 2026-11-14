@@ -810,7 +810,7 @@ class _InstitutionWorkspaceScreenState
         _openOfficialDocument(record ?? {
           'title': 'Dokumen Resmi',
           'description': 'Dokumen elektronik resmi terverifikasi instansi.',
-          'metadata': {'url': trimmed, 'doc_number': '027/SPK-KREAVANA/DISPAREKRAF/2026'},
+          'metadata': {'url': trimmed},
         });
       }
       return;
@@ -2431,7 +2431,8 @@ class _InstitutionWorkspaceScreenState
       } else if (titleLower.contains('pedoman')) {
         docNumber = '088/JUKNIS-VOKASI/2026';
       } else {
-        docNumber = '027/SPK-KREAVANA/2026';
+        final recId = record['id'];
+        docNumber = recId != null ? 'DOC-$recId' : '-';
       }
     }
 
@@ -2906,7 +2907,7 @@ class _InstitutionWorkspaceScreenState
                             const Icon(Icons.verified_user_outlined, size: 14, color: Color(0xFF10B981)),
                             const SizedBox(width: 4),
                             const Text(
-                              'TTE Sah (BSrE)',
+                              'Dokumen Sah Terverifikasi',
                               style: TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w600,
@@ -4717,6 +4718,8 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
     required String caption,
     required Widget child,
     double? minHeaderHeight,
+    List<String> chips = const [],
+    TextEditingController? targetController,
   }) {
     final headerContent = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -4758,6 +4761,52 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
           headerContent,
         const SizedBox(height: 8),
         child,
+        if (chips.isNotEmpty && targetController != null) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: chips.map((chipText) {
+              return InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () {
+                  setState(() {
+                    targetController.text = chipText;
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _isDark ? const Color(0xFF201D35) : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: _isDark ? const Color(0xFF383457) : const Color(0xFFCBD5E1),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.add_rounded,
+                        size: 13,
+                        color: _isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        chipText,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ],
     );
   }
@@ -4793,11 +4842,7 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                 suffixIcon: Tooltip(
                   message: 'Tekan Enter untuk membuat tag',
                   child: IconButton(
-                    icon: Icon(
-                      Icons.keyboard_return_rounded,
-                      size: 18,
-                      color: _isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
-                    ),
+                    icon: const Icon(Icons.keyboard_return_rounded, size: 18, color: Color(0xFF2563EB)),
                     onPressed: () => _addTag(field.key),
                   ),
                 ),
@@ -4820,15 +4865,12 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: _isDark ? const Color(0xFF201D35) : Colors.white,
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _isDark ? const Color(0xFF383457) : const Color(0xFFCBD5E1),
-                        width: 1.2,
-                      ),
+                      border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF0F172A).withValues(alpha: _isDark ? 0.2 : 0.04),
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.04),
                           blurRadius: 4,
                           offset: const Offset(0, 1.5),
                         ),
@@ -4839,10 +4881,10 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                       children: [
                         Text(
                           tag,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
-                            color: _isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
+                            color: Color(0xFF1E293B),
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -4851,14 +4893,14 @@ class _ResourceEditorDialogState extends State<_ResourceEditorDialog> {
                           onTap: () => _removeTag(field.key, tag),
                           child: Container(
                             padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: _isDark ? const Color(0xFF2A2742) : const Color(0xFFF1F5F9),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFF1F5F9),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(
+                            child: const Icon(
                               Icons.close_rounded,
                               size: 13,
-                              color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                              color: Color(0xFF64748B),
                             ),
                           ),
                         ),

@@ -3338,7 +3338,7 @@ class _SchoolDashboardScreenState extends State<SchoolDashboardScreen>
       'Kategori Dokumen': cat,
       'Institusi Penerbit': 'Institut Seni & Rekayasa Kreatif Nusantara (ISRK)',
       'Akreditasi Institusi': 'Predikat UNGGUL (BAN-PT)',
-      'Status Verifikasi': 'Tersertifikasi Digital BSrE / BSSN RI',
+      'Status Verifikasi': 'Terverifikasi Resmi di Sistem',
     };
     if (meta.containsKey('period')) attributes['Periode Akademik'] = meta['period'].toString();
     if (meta.containsKey('valid_until')) attributes['Masa Berlaku'] = meta['valid_until'].toString();

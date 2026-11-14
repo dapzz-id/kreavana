@@ -54,8 +54,9 @@ class FormValidators {
     if (value == null || value.trim().isEmpty) return 'Bulan wajib diisi';
     if (!RegExp(r'^\d{1,2}$').hasMatch(value)) return 'Bulan hanya angka';
     final month = int.tryParse(value);
-    if (month == null || month < 1 || month > 12)
+    if (month == null || month < 1 || month > 12) {
       return 'Bulan tidak valid (1–12)';
+    }
     return null;
   }
 
@@ -124,8 +125,9 @@ class FormValidators {
 
   static String? phone(String? value) {
     if (value == null || value.trim().isEmpty) return null;
-    if (!RegExp(r'^(\+62|62|0)8[0-9]{8,11}$').hasMatch(value.trim())) {
-      return 'Nomor telepon tidak valid (contoh: 081234567890)';
+    final cleaned = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    if (!RegExp(r'^(\+62|62|0)[0-9]{7,14}$').hasMatch(cleaned)) {
+      return 'Nomor telepon tidak valid (contoh: 081234567890 atau 0218849201)';
     }
     return null;
   }
