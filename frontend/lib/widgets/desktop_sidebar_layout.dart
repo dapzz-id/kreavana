@@ -564,6 +564,14 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         _goToMain(4);
         return;
       case 'explore':
+        if (_isSchool || _isCompany) {
+          AppSweetAlert.warning(
+            context,
+            'Fitur Jelajahi tidak tersedia untuk akun ${_isSchool ? "Institusi Pendidikan" : "Corporate / Perusahaan"}.',
+            title: 'Akses Dibatasi',
+          );
+          return;
+        }
         _goToMain(1);
         return;
       case 'pengaturan_akun':

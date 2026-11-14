@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
@@ -12,6 +13,26 @@ import '../screens/institution_workspace_screen.dart';
 import '../screens/tim_hak_akses_screen.dart';
 import '../screens/corporate_lowongan_screen.dart';
 import '../screens/buat_kebutuhan_screen.dart';
+import '../screens/not_found_screen.dart';
+import '../screens/detail_kebutuhan_screen.dart';
+import '../screens/marketplace_detail_screen.dart';
+import '../screens/jual_karya_screen.dart';
+import '../screens/topup_screen.dart';
+import '../screens/withdraw_screen.dart';
+import '../screens/transfer_screen.dart';
+import '../screens/wallet_history_screen.dart';
+import '../screens/kyc_verification_screen.dart';
+import '../screens/client_verification_page.dart';
+import '../screens/creator_application_page.dart';
+import '../screens/addresses_screen.dart';
+import '../screens/payment_methods_screen.dart';
+import '../screens/storage_management_screen.dart';
+import '../screens/help_screen.dart';
+import '../screens/privacy_policy_screen.dart';
+import '../screens/creator_calendar_screen.dart';
+import '../services/opportunity_service.dart';
+import '../models/opportunity_model.dart';
+import '../models/marketplace_item.dart';
 import 'user_store.dart';
 import 'system_settings_service.dart';
 import 'auth_session_state.dart';
@@ -64,8 +85,37 @@ class AppRoutes {
   static const lowonganCorporate = '/lowongan-corporate';
   static const pengadaanVendor = '/pengadaan-vendor';
 
-  // Kebutuhan Proyek
+  // Halaman 404 & Akses Dibatasi
+  static const notFound = '/404';
+
+  // Kebutuhan Proyek & Sub-Halaman
   static const buatKebutuhan = '/buat-kebutuhan';
+  static const detailProyek = '/proyek/:id';
+
+  // Marketplace & Jual Karya
+  static const detailMarketplace = '/marketplace-karya/:id';
+  static const jualKarya = '/jual-karya';
+
+  // Dompet / Wallet Sub-Halaman
+  static const walletTopup = '/wallet/topup';
+  static const walletWithdraw = '/wallet/withdraw';
+  static const walletTransfer = '/wallet/transfer';
+  static const walletHistory = '/wallet/riwayat';
+
+  // Verifikasi & Pengajuan Kreator
+  static const verifikasiKyc = '/verifikasi-identitas';
+  static const verifikasiKlien = '/verifikasi-klien';
+  static const daftarKreator = '/daftar-kreator';
+
+  // Pengaturan & Bantuan
+  static const pengaturanAlamat = '/pengaturan/alamat';
+  static const pengaturanPembayaran = '/pengaturan/metode-pembayaran';
+  static const pengaturanPenyimpanan = '/pengaturan/penyimpanan';
+  static const bantuan = '/bantuan';
+  static const kebijakanPrivasi = '/kebijakan-privasi';
+
+  // Agenda & Kalender
+  static const creatorCalendar = '/agenda/kalender';
 
   /// Index → URL mapping untuk pengguna reguler / kreator / klien
   static const Map<int, String> indexRouteMap = {
@@ -143,6 +193,9 @@ const _publicRoutes = [
   AppRoutes.peluangProyek,
   AppRoutes.marketplaceKarya,
   AppRoutes.aiAssistant,
+  AppRoutes.notFound,
+  AppRoutes.bantuan,
+  AppRoutes.kebijakanPrivasi,
 ];
 
 /// GoRouter instance global aplikasi.
@@ -155,12 +208,22 @@ final GoRouter appRouter = GoRouter(
     authSignedOutNotifier,
     SystemSettingsService.moduleStatuses,
   ]),
+  errorBuilder: (context, state) {
+    final user = currentUserNotifier.value ?? UserModel.guest();
+    return NotFoundScreen(
+      user: user,
+      path: state.uri.toString(),
+    );
+  },
   redirect: (context, state) {
     final user = currentUserNotifier.value;
     final isSignedOut = authSignedOutNotifier.value;
     final currentPath = state.matchedLocation;
     final isPublic = _publicRoutes.contains(currentPath);
     final isAdmin = user != null && user.isAdmin;
+
+    // Halaman 404 selalu diizinkan tampil apa adanya
+    if (currentPath == AppRoutes.notFound) return null;
 
     // Belum login & mencoba akses halaman terlindungi via URL bar → redirect ke /login
     if ((user == null || isSignedOut || user.isGuest) && !isPublic) {
@@ -266,6 +329,16 @@ final GoRouter appRouter = GoRouter(
       final isOrg = user != null && (user.isInstitution || user.isCorporate || user.isGovernment);
       if (!isOrg) {
         return AppRoutes.beranda;
+      }
+    }
+
+    // 5. Rute Explore & Peluang Proyek DILARANG untuk Institusi Pendidikan & Corporate (Perusahaan)
+    // Sesuai aturan arsitektur: role yang tidak memiliki fitur Explore tidak boleh mengakses URL tersebut
+    if (!isAdmin && user != null && !user.isGuest) {
+      if (currentPath == AppRoutes.explore || currentPath == AppRoutes.peluangProyek) {
+        if (user.isInstitution || user.isCorporate) {
+          return AppRoutes.notFound;
+        }
       }
     }
 
@@ -512,6 +585,205 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final user = currentUserNotifier.value ?? UserModel.guest();
         return BuatKebutuhanScreen(user: user);
+      },
+    ),
+
+    // ── Halaman 404 & Akses Ditolak ─────────────────────────────────────
+    GoRoute(
+      path: AppRoutes.notFound,
+      name: 'not-found',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        final extraMsg = state.extra is String ? state.extra as String : null;
+        return NotFoundScreen(
+          user: user,
+          message: extraMsg,
+          path: state.uri.toString(),
+        );
+      },
+    ),
+
+    // ── Kebutuhan Proyek: Detail & Aksi ─────────────────────────────────
+    GoRoute(
+      path: AppRoutes.detailProyek,
+      name: 'detail-proyek',
+      builder: (context, state) {
+        final id = state.pathParameters['id'] ?? '';
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        final extraOpp = state.extra is OpportunityModel ? state.extra as OpportunityModel : null;
+
+        if (extraOpp != null) {
+          return DetailKebutuhanScreen(
+            opportunity: extraOpp,
+            user: user,
+          );
+        }
+
+        // Deep-link URL langsung atau browser refresh via API
+        return FutureBuilder<OpportunityModel?>(
+          future: OpportunityService.getOpportunityById(id),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (snapshot.hasData && snapshot.data != null) {
+              return DetailKebutuhanScreen(
+                opportunity: snapshot.data!,
+                user: user,
+              );
+            }
+            return NotFoundScreen(
+              title: 'Proyek Tidak Ditemukan',
+              message: 'Kebutuhan proyek dengan ID "$id" tidak ditemukan atau sudah ditutup.',
+              user: user,
+              path: state.uri.toString(),
+            );
+          },
+        );
+      },
+    ),
+
+    // ── Marketplace Karya: Detail & Jual Karya ──────────────────────────
+    GoRoute(
+      path: AppRoutes.detailMarketplace,
+      name: 'detail-marketplace',
+      builder: (context, state) {
+        final id = state.pathParameters['id'] ?? '';
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        final extraItem = state.extra is MarketplaceItem ? state.extra as MarketplaceItem : null;
+        return MarketplaceDetailScreen(
+          itemId: id,
+          initialItem: extraItem,
+          user: user,
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.jualKarya,
+      name: 'jual-karya',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return JualKaryaScreen(user: user);
+      },
+    ),
+
+    // ── Dompet / Wallet Sub-Halaman ─────────────────────────────────────
+    GoRoute(
+      path: AppRoutes.walletTopup,
+      name: 'wallet-topup',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return TopUpScreen(user: user);
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.walletWithdraw,
+      name: 'wallet-withdraw',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        final balance = (state.extra as num?)?.toDouble() ?? 0.0;
+        return WithdrawScreen(user: user, currentBalance: balance);
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.walletTransfer,
+      name: 'wallet-transfer',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        final toUser = state.uri.queryParameters['to'];
+        return TransferScreen(
+          user: user,
+          preFilledUsername: toUser,
+          onUserUpdated: (u) => currentUserNotifier.value = u,
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.walletHistory,
+      name: 'wallet-history',
+      builder: (context, state) => const WalletHistoryScreen(),
+    ),
+
+    // ── Verifikasi Identitas & Pengajuan Kreator ────────────────────────
+    GoRoute(
+      path: AppRoutes.verifikasiKyc,
+      name: 'verifikasi-kyc',
+      builder: (context, state) => const KycVerificationScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.verifikasiKlien,
+      name: 'verifikasi-klien',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return ClientVerificationPage(user: user);
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.daftarKreator,
+      name: 'daftar-kreator',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return CreatorApplicationPage(
+          user: user,
+          onUserUpdated: (u) => currentUserNotifier.value = u,
+        );
+      },
+    ),
+
+    // ── Pengaturan & Bantuan Sub-Halaman ────────────────────────────────
+    GoRoute(
+      path: AppRoutes.pengaturanAlamat,
+      name: 'pengaturan-alamat',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return AddressesScreen(user: user);
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.pengaturanPembayaran,
+      name: 'pengaturan-pembayaran',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return PaymentMethodsScreen(user: user);
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.pengaturanPenyimpanan,
+      name: 'pengaturan-penyimpanan',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return StorageManagementScreen(user: user);
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.bantuan,
+      name: 'bantuan',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return HelpScreen(user: user);
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.kebijakanPrivasi,
+      name: 'kebijakan-privasi',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return PrivacyPolicyScreen(user: user);
+      },
+    ),
+
+    // ── Agenda & Kalender ───────────────────────────────────────────────
+    GoRoute(
+      path: AppRoutes.creatorCalendar,
+      name: 'creator-calendar',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        return CreatorCalendarScreen(
+          user: user,
+          onUserUpdated: (u) => currentUserNotifier.value = u,
+        );
       },
     ),
   ],

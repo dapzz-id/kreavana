@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../services/app_router.dart';
 import '../models/user_model.dart';
 import '../models/wallet_transaction_model.dart';
 import '../services/wallet_service.dart';
 import '../app/theme.dart';
 import '../widgets/desktop_sidebar_layout.dart';
-import 'topup_screen.dart';
-import 'transfer_screen.dart';
-import 'withdraw_screen.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/wallet_pin_dialog.dart';
 import '../widgets/app_breadcrumbs.dart';
-import 'main_navigation.dart';
 
 class WalletScreen extends StatefulWidget {
   final UserModel user;
@@ -120,16 +118,7 @@ class _WalletScreenState extends State<WalletScreen> {
                               BreadcrumbItem(
                                 label: 'Beranda',
                                 icon: Icons.home_rounded,
-                                onTap: () => Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => MainNavigation(
-                                      initialUser: _currentUser,
-                                      initialIndex: 0,
-                                    ),
-                                  ),
-                                  (r) => false,
-                                ),
+                                onTap: () => context.go(AppRoutes.beranda),
                               ),
                               const BreadcrumbItem(
                                 label: 'Dompet & Pembayaran',
@@ -221,13 +210,7 @@ class _WalletScreenState extends State<WalletScreen> {
                               Expanded(
                                 child: ElevatedButton(
                                   onPressed: () async {
-                                    final result = await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            TopUpScreen(user: _currentUser),
-                                      ),
-                                    );
+                                    final result = await context.push(AppRoutes.walletTopup);
                                     if (result == true) {
                                       _loadWalletData();
                                     }
@@ -269,20 +252,7 @@ class _WalletScreenState extends State<WalletScreen> {
                               Expanded(
                                 child: ElevatedButton(
                                   onPressed: () async {
-                                    final result = await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => TransferScreen(
-                                          user: _currentUser,
-                                          onUserUpdated: (u) {
-                                            setState(() {
-                                              _currentUser = u;
-                                              _balance = u.balance;
-                                            });
-                                          },
-                                        ),
-                                      ),
-                                    );
+                                    final result = await context.push(AppRoutes.walletTransfer);
                                     if (result == true) {
                                       _loadWalletData();
                                     }
@@ -321,15 +291,7 @@ class _WalletScreenState extends State<WalletScreen> {
                               Expanded(
                                 child: ElevatedButton(
                                   onPressed: () async {
-                                    final result = await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => WithdrawScreen(
-                                          user: _currentUser,
-                                          currentBalance: _balance,
-                                        ),
-                                      ),
-                                    );
+                                    final result = await context.push(AppRoutes.walletWithdraw, extra: _balance);
                                     if (result == true) {
                                       _loadWalletData();
                                     }

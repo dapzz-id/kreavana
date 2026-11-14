@@ -42,6 +42,7 @@ import '../widgets/app_sweet_alert.dart';
 import '../widgets/sidebar_hover_tile.dart';
 import '../services/sidebar_scroll_manager.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'not_found_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   final UserModel initialUser;
@@ -304,6 +305,14 @@ class _MainNavigationState extends State<MainNavigation> {
     }
 
     if (!_currentUser.isAdmin) {
+      if ((index == 1 || index == 12) && (_currentUser.isInstitution || _currentUser.isCorporate)) {
+        AppSweetAlert.warning(
+          context,
+          'Menu Jelajahi tidak tersedia untuk akun ${_currentUser.isInstitution ? "Institusi Pendidikan" : "Corporate / Perusahaan"}.',
+          title: 'Akses Dibatasi',
+        );
+        return;
+      }
       if (index == 3 && !SystemSettingsService.isMarketplaceEnabled) {
         AppSweetAlert.warning(
           context,
@@ -1914,7 +1923,14 @@ class _MainNavigationState extends State<MainNavigation> {
 
     return switch (index) {
       0 => _buildClientDashboardScreen(),
-      1 => ExploreScreen(user: _currentUser),
+      1 => (_currentUser.isInstitution || _currentUser.isCorporate)
+          ? NotFoundScreen(
+              title: 'Akses Dibatasi (403)',
+              message:
+                  'Fitur Jelajahi Kolaborasi tidak tersedia untuk akun ${_currentUser.isInstitution ? "Institusi Pendidikan" : "Corporate / Perusahaan"}.',
+              user: _currentUser,
+            )
+          : ExploreScreen(user: _currentUser),
       2 => ProyekSayaScreen(user: _currentUser),
       3 => (!SystemSettingsService.isMarketplaceEnabled && !_currentUser.isAdmin)
           ? FeatureDisabledView(
@@ -1979,7 +1995,14 @@ class _MainNavigationState extends State<MainNavigation> {
               currentUser: _currentUser,
               showSidebar: false,
             ),
-      12 => PeluangProyekScreen(user: _currentUser),
+      12 => (_currentUser.isInstitution || _currentUser.isCorporate)
+          ? NotFoundScreen(
+              title: 'Akses Dibatasi (403)',
+              message:
+                  'Fitur Peluang Proyek tidak tersedia untuk akun ${_currentUser.isInstitution ? "Institusi Pendidikan" : "Corporate / Perusahaan"}.',
+              user: _currentUser,
+            )
+          : PeluangProyekScreen(user: _currentUser),
       13 => CreatorCalendarScreen(
           user: _currentUser,
           onUserUpdated: _onUserUpdated,

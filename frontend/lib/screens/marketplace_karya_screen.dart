@@ -10,8 +10,6 @@ import '../services/marketplace_service.dart';
 import '../services/system_settings_service.dart';
 import '../widgets/app_empty_state.dart';
 import '../widgets/feature_disabled_view.dart';
-import 'marketplace_detail_screen.dart';
-import 'jual_karya_screen.dart';
 import '../widgets/skeleton/skeleton_base.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import '../services/user_store.dart';
@@ -305,25 +303,11 @@ class _MarketplaceKaryaScreenState extends State<MarketplaceKaryaScreen>
   }
 
   void _openDetail(MarketplaceItem item) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => MarketplaceDetailScreen(
-          itemId: item.id,
-          initialItem: item,
-          user: widget.user,
-        ),
-      ),
-    );
+    context.push('/marketplace-karya/${item.id}', extra: item);
   }
 
   Future<void> _openJualKarya() async {
-    final created = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => JualKaryaScreen(user: widget.user),
-      ),
-    );
+    final created = await context.push<bool>(AppRoutes.jualKarya);
     if (created == true) {
       _loadAll();
     }

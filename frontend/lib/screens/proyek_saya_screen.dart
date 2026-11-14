@@ -12,13 +12,12 @@ import 'direct_message_screen.dart';
 import '../services/chat_service.dart';
 import '../services/user_store.dart';
 import '../widgets/desktop_sidebar_layout.dart';
-import 'buat_kebutuhan_screen.dart';
-import 'detail_kebutuhan_screen.dart';
 import '../widgets/app_breadcrumbs.dart';
 import '../widgets/skeleton/skeleton_list.dart';
 import 'main_navigation.dart';
 import '../services/verification_service.dart';
-import 'client_verification_page.dart';
+import 'package:go_router/go_router.dart';
+import '../services/app_router.dart';
 import '../widgets/user_profile_modal.dart';
 import '../widgets/opportunity_review_dialog.dart';
 import '../widgets/repeat_order_dialog.dart';
@@ -574,10 +573,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     // Akun corporate tidak memerlukan verifikasi KTP sama sekali
     if (_isCorporate) {
       if (!mounted) return;
-      final result = await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: _currentUser)),
-      );
+      final result = await context.push<bool>(AppRoutes.buatKebutuhan);
 
       if (result == true) {
         _fetchRealtimeProjects();
@@ -643,12 +639,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
         );
 
         if (shouldVerify == true && mounted) {
-          final res = await Navigator.push<bool>(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ClientVerificationPage(user: _currentUser),
-            ),
-          );
+          final res = await context.push<bool>(AppRoutes.verifikasiKlien);
           if (res == true && mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -666,10 +657,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     }
 
     if (!mounted) return;
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: _currentUser)),
-    );
+    final result = await context.push<bool>(AppRoutes.buatKebutuhan);
 
     if (result == true) {
       _fetchRealtimeProjects();
@@ -677,16 +665,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   }
 
   void _openOpportunityDetail(OpportunityModel opp, {JobContract? contract}) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => DetailKebutuhanScreen(
-          opportunity: opp,
-          user: widget.user ?? currentUserNotifier.value,
-          initialContract: contract,
-        ),
-      ),
-    ).then((_) => _fetchRealtimeProjects());
+    context.push('/proyek/${opp.id}', extra: opp).then((_) => _fetchRealtimeProjects());
   }
 
   Future<void> _openContractOpportunity(UnifiedProjectItem item) async {

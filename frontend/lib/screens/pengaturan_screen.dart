@@ -4,20 +4,12 @@ import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../features/auth/services/auth_service.dart';
 import '../utils/app_errors.dart';
-import 'payment_methods_screen.dart';
-import 'addresses_screen.dart';
-import 'help_screen.dart';
-import 'privacy_policy_screen.dart';
-import 'storage_management_screen.dart';
-import 'client_verification_page.dart';
-import 'creator_application_page.dart';
 import 'package:go_router/go_router.dart';
 import '../services/app_router.dart';
 import '../services/theme_transition_service.dart';
 import '../widgets/kreavana_image.dart';
 import '../widgets/app_breadcrumbs.dart';
 import '../widgets/auth_guard_dialog.dart';
-import 'main_navigation.dart';
 
 class PengaturanScreen extends StatefulWidget {
   final UserModel? user;
@@ -120,23 +112,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
               BreadcrumbItem(
                 label: 'Beranda',
                 icon: Icons.home_rounded,
-                onTap: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
-                  }
-                  if (widget.user != null) {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => MainNavigation(
-                          initialUser: widget.user!,
-                          initialIndex: 0,
-                        ),
-                      ),
-                      (r) => false,
-                    );
-                  }
-                },
+                onTap: () => context.go(AppRoutes.beranda),
               ),
               const BreadcrumbItem(
                 label: 'Pengaturan',
@@ -269,12 +245,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                 isDark: isDark,
                 onTap: () {
                   if (!_requireAuth('mengelola metode pembayaran')) return;
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PaymentMethodsScreen(user: widget.user),
-                    ),
-                  );
+                  context.push(AppRoutes.pengaturanPembayaran);
                 },
               ),
               _buildNavTile(
@@ -285,12 +256,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                 isDark: isDark,
                 onTap: () {
                   if (!_requireAuth('mengelola alamat pengiriman')) return;
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AddressesScreen(user: widget.user),
-                    ),
-                  );
+                  context.push(AppRoutes.pengaturanAlamat);
                 },
               ),
               _buildNavTile(
@@ -304,12 +270,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                     widget.user?.isCreator != true,
                 onTap: () {
                   if (!_requireAuth('mengakses manajemen storage')) return;
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => StorageManagementScreen(user: widget.user),
-                    ),
-                  );
+                  context.push(AppRoutes.pengaturanPenyimpanan);
                 },
               ),
               if (widget.user?.role == 'creator' ||
@@ -464,19 +425,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                       );
                       return;
                     }
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ClientVerificationPage(
-                          user: widget.user!,
-                          onSuccess: () {
-                            if (widget.onUserUpdated != null) {
-                              // trigger refresh
-                            }
-                          },
-                        ),
-                      ),
-                    );
+                    context.push(AppRoutes.verifikasiKlien);
                   },
                 ),
                 // Creator Application tile — only for non-creator users
@@ -523,15 +472,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                         : null,
                     onTap: () {
                       if (!_requireAuth('mengajukan verifikasi menjadi Kreator')) return;
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CreatorApplicationPage(
-                            user: widget.user!,
-                            onUserUpdated: widget.onUserUpdated,
-                          ),
-                        ),
-                      );
+                      context.push(AppRoutes.daftarKreator);
                     },
                   ),
               ],
@@ -658,12 +599,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                 title: 'Bantuan & Dukungan',
                 subtitle: 'FAQ, panduan pengguna, hubungi support',
                 isDark: isDark,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => HelpScreen(user: widget.user),
-                  ),
-                ),
+                onTap: () => context.push(AppRoutes.bantuan),
               ),
               _buildNavTile(
                 icon: Icons.privacy_tip_outlined,
@@ -671,12 +607,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                 title: 'Kebijakan Privasi',
                 subtitle: 'Pelajari cara kami melindungi data Anda',
                 isDark: isDark,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => PrivacyPolicyScreen(user: widget.user),
-                  ),
-                ),
+                onTap: () => context.push(AppRoutes.kebijakanPrivasi),
               ),
               _buildNavTile(
                 icon: Icons.info_outline,
