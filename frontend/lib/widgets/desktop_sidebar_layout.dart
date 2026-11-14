@@ -19,12 +19,18 @@ import '../screens/pengumuman_publik_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/tim_hak_akses_screen.dart';
 import '../screens/institution_workspace_screen.dart';
+import '../screens/corporate_lowongan_screen.dart';
 import '../screens/buat_kebutuhan_screen.dart';
 import '../features/dashboard/screens/community_dashboard_screen.dart';
+import 'package:go_router/go_router.dart';
+import '../services/app_router.dart';
+import '../services/user_store.dart';
+import 'auth_guard_dialog.dart';
 import 'creator_sidebar_menus.dart';
 import 'kreavana_ai_floating_widget.dart';
 import 'app_sweet_alert.dart';
 import '../services/system_settings_service.dart';
+import 'sidebar_hover_tile.dart';
 
 class DesktopSidebarLayout extends StatefulWidget {
   final Widget child;
@@ -55,6 +61,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   void initState() {
     super.initState();
     SystemSettingsService.moduleStatuses.addListener(_onModuleStatusesChanged);
+    currentUserNotifier.addListener(_onUserChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _sidebarScrollController.hasClients) {
         _sidebarScrollController.jumpTo(_savedSidebarScrollOffset);
@@ -64,9 +71,14 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
 
   @override
   void dispose() {
+    currentUserNotifier.removeListener(_onUserChanged);
     SystemSettingsService.moduleStatuses.removeListener(_onModuleStatusesChanged);
     _sidebarScrollController.dispose();
     super.dispose();
+  }
+
+  void _onUserChanged() {
+    if (mounted) setState(() {});
   }
 
   void _onModuleStatusesChanged() {
@@ -87,25 +99,28 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   }
 
   bool get _isSchool {
+    if (widget.user.isInstitution) return true;
     final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
-    return !widget.user.isAdmin &&
-        (sub == 'school' ||
+    final role = widget.user.role.toLowerCase().trim();
+    final verif = widget.user.verificationType?.toLowerCase().trim() ?? '';
+    final uname = widget.user.username.toLowerCase().trim();
+    return (role == 'user' || role == 'creator' || role == 'institution' || role == 'school') &&
+        (sub == 'institution' ||
+            sub == 'institusi' ||
+            sub == 'school' ||
             sub == 'education' ||
             sub == 'campus' ||
             sub == 'sekolah' ||
             sub == 'kampus' ||
-            sub == 'institution' ||
-            sub == 'institusi' ||
-            sub == 'lembaga' ||
-            sub == 'yayasan' ||
-            widget.user.username == 'institution_demo' ||
-            widget.user.email.startsWith('institution@'));
+            verif == 'institution' ||
+            uname.contains('institution') ||
+            uname.contains('sekolah') ||
+            uname.contains('smk'));
   }
 
   bool get _isCompany {
     final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
     return !widget.user.isAdmin &&
-        !_isSchool &&
         (sub == 'company' ||
             sub == 'corporate' ||
             sub == 'business' ||
@@ -113,17 +128,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
             sub == 'bisnis' ||
             widget.user.username == 'corporate_demo' ||
             widget.user.email.startsWith('corporate@'));
-  }
-
-  bool get _isInstitution {
-    final sub = CreatorSidebarMenus.normalizeSubRole(widget.user.subRole);
-    return !widget.user.isAdmin &&
-        (sub == 'institution' ||
-            sub == 'institusi' ||
-            sub == 'lembaga' ||
-            sub == 'yayasan' ||
-            widget.user.username == 'institution_demo' ||
-            widget.user.email.startsWith('institution@'));
   }
 
   void _pushNoAnimation(Widget destination) {
@@ -155,6 +159,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         route.startsWith('eo_') ||
         route.startsWith('drone_') ||
         route.startsWith('konten_') ||
+        route.startsWith('animator_') ||
+        route.startsWith('vendor_') ||
+        route.startsWith('mitra_') ||
         route.startsWith('komunitas_');
   }
 
@@ -162,6 +169,14 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     final current = widget.activeRoute.toLowerCase().trim();
     final t = target.toLowerCase().trim();
     if (current == t) return true;
+
+    // Lowongan Kerja & Magang
+    if (t == 'lowongan_magang' || t == 'lowongan' || t == 'internships') {
+      return current == 'lowongan_magang' ||
+          current == 'lowongan' ||
+          current == 'internships' ||
+          current == 'buka_lowongan';
+    }
 
     // Proyek / Kebutuhan (Add, Edit, View Detail, Manage Pelamar)
     if (t == 'proyek_saya' || t == 'proyek') {
@@ -371,21 +386,49 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     return false;
   }
 
+  static const Map<int, String> _protectedIndexActionMap = {
+    1: 'melihat rekomendasi peluang kerja',
+    2: 'mengakses proyek',
+    5: 'mengakses ruang kolaborasi',
+    6: 'melihat ulasan dan reputasi',
+    7: 'mengakses dompet dan pembayaran',
+    11: 'mengirim pesan langsung',
+    12: 'mencari pekerjaan kreatif',
+    13: 'mengatur kapasitas & jadwal kerja',
+  };
+
   void _goToMain(int index) {
+    if (widget.user.isGuest && _protectedIndexActionMap.containsKey(index)) {
+      AuthGuardDialog.show(
+        context,
+        actionName: _protectedIndexActionMap[index]!,
+      );
+      return;
+    }
     if (_sidebarScrollController.hasClients) {
       _savedSidebarScrollOffset = _sidebarScrollController.offset;
     }
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(
-        builder: (_) =>
-            MainNavigation(initialUser: widget.user, initialIndex: index),
-      ),
-      (route) => false,
+    final targetRoute = AppRoutes.getRouteForIndex(
+      index,
+      isAdmin: widget.user.isAdmin,
     );
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+    context.go(targetRoute);
   }
 
   void _pushService(String serviceKey) {
+    if (widget.user.isGuest) {
+      AuthGuardDialog.show(
+        context,
+        actionName: 'mengakses layanan kreator',
+      );
+      return;
+    }
+    if (widget.activeRoute.toLowerCase().trim() == serviceKey.toLowerCase().trim()) {
+      return;
+    }
     if (serviceKey.startsWith('komunitas_')) {
       _pushNoAnimation(
         CommunityDashboardScreen(
@@ -406,6 +449,35 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   }
 
   void _pushLink(String route) {
+    if (widget.user.isGuest) {
+      const guestBlockedRoutes = {
+        'kolaborasi': 'mengakses ruang kolaborasi',
+        'reputasi': 'melihat ulasan dan reputasi',
+        'pembayaran': 'mengakses dompet dan pembayaran',
+        'pesan': 'mengirim pesan langsung',
+        'chat': 'mengirim pesan langsung',
+        'direct_message': 'mengirim pesan langsung',
+        'proyek_saya': 'mengakses proyek',
+        'agenda': 'mengakses agenda',
+        'explore': 'melihat rekomendasi peluang kerja',
+        'marketplace': 'mencari kreator & vendor',
+        'kapasitas_jadwal': 'mengatur kapasitas & jadwal kerja',
+        'tender_kolaborasi': 'mengakses tender dan vendor',
+        'mitra_komunitas': 'mengakses mitra komunitas',
+        'karya_siswa': 'mengakses portofolio siswa',
+        'laporan': 'mengakses laporan',
+        'monitoring_evaluasi': 'mengakses monitoring evaluasi',
+        'dokumen_instansi': 'mengakses dokumen instansi',
+      };
+      if (guestBlockedRoutes.containsKey(route)) {
+        AuthGuardDialog.show(
+          context,
+          actionName: guestBlockedRoutes[route]!,
+        );
+        return;
+      }
+    }
+
     if (!widget.user.isAdmin) {
       if (route == 'marketplace' && !SystemSettingsService.isMarketplaceEnabled) {
         AppSweetAlert.warning(
@@ -455,6 +527,10 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
 
     // Routes that are in MainNavigation's IndexedStack — go to index instead
     switch (route) {
+      case 'notifikasi':
+      case 'notifications':
+        _goToMain(10);
+        return;
       case 'pesan':
       case 'chat':
       case 'direct_message':
@@ -494,10 +570,27 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     // Routes that push new screens (not in IndexedStack)
     Widget? destination;
     switch (route) {
+      case 'lowongan_magang':
+      case 'lowongan':
+      case 'internships':
+      case 'buka_lowongan':
+        destination = CorporateLowonganScreen(
+          user: widget.user,
+          onUserUpdated: widget.onUserUpdated,
+        );
+        break;
       case 'tender_kolaborasi':
       case 'tenders':
       case 'pengadaan_vendor':
-        destination = (_isSchool || _isCompany || _isInstitution)
+        if (_isSchool) {
+          AppSweetAlert.error(
+            context,
+            'Fitur Pengadaan & Vendor hanya tersedia untuk akun Corporate / Perusahaan.',
+            title: 'Akses Ditolak (403)',
+          );
+          return;
+        }
+        destination = (_isCompany || _isGovernment)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'tenders',
@@ -507,7 +600,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'mitra_komunitas':
       case 'partners':
-        destination = (_isSchool || _isCompany || _isInstitution)
+        destination = (_isSchool || _isCompany || _isGovernment)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'partners',
@@ -517,7 +610,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'laporan':
       case 'reports':
-        destination = (_isSchool || _isCompany || _isInstitution)
+        destination = (_isSchool || _isCompany || _isGovernment)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'reports',
@@ -527,7 +620,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'realisasi_anggaran':
       case 'budgets':
-        destination = (_isSchool || _isCompany || _isInstitution)
+        destination = (_isSchool || _isCompany || _isGovernment)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'budgets',
@@ -537,7 +630,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'monitoring_evaluasi':
       case 'monitoring':
-        destination = (_isSchool || _isCompany || _isInstitution)
+        destination = (_isSchool || _isCompany || _isGovernment)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'monitoring',
@@ -547,7 +640,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'dokumen_instansi':
       case 'documents':
-        destination = (_isSchool || _isCompany || _isInstitution)
+        destination = (_isSchool || _isCompany || _isGovernment)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'documents',
@@ -557,7 +650,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         break;
       case 'pengumuman_publik':
       case 'announcements':
-        destination = (_isSchool || _isCompany || _isInstitution)
+        destination = (_isSchool || _isCompany || _isGovernment)
             ? InstitutionWorkspaceScreen(
                 user: widget.user,
                 resourceType: 'announcements',
@@ -580,22 +673,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         destination = InstitutionWorkspaceScreen(
           user: widget.user,
           resourceType: 'showcases',
-          onUserUpdated: widget.onUserUpdated,
-        );
-        break;
-      case 'program_studi':
-      case 'study_programs':
-        destination = InstitutionWorkspaceScreen(
-          user: widget.user,
-          resourceType: 'study_programs',
-          onUserUpdated: widget.onUserUpdated,
-        );
-        break;
-      case 'penelusuran_talenta':
-      case 'talents':
-        destination = InstitutionWorkspaceScreen(
-          user: widget.user,
-          resourceType: 'talents',
           onUserUpdated: widget.onUserUpdated,
         );
         break;
@@ -649,89 +726,20 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
     required bool isDark,
     bool isCollapsed = false,
     Color? activeColor,
+    Widget? trailing,
   }) {
     final effectiveActiveColor =
       activeColor ?? SubRoleThemeEngine.getAccentColorForUser(widget.user);
 
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: isCollapsed ? 8 : 12,
-        vertical: 2,
-      ),
-      child: Tooltip(
-        message: isCollapsed ? label : '',
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          hoverColor: isDark
-              ? Colors.white.withValues(alpha: 0.04)
-              : Colors.black.withValues(alpha: 0.03),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: EdgeInsets.symmetric(
-              horizontal: isCollapsed ? 0 : 12,
-              vertical: 10,
-            ),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? effectiveActiveColor.withValues(alpha: isDark ? 0.16 : 0.09)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-              border: isSelected
-                  ? Border.all(
-                      color: effectiveActiveColor.withValues(alpha: isDark ? 0.3 : 0.2),
-                      width: 1,
-                    )
-                  : null,
-            ),
-            child: Row(
-              mainAxisAlignment: isCollapsed
-                  ? MainAxisAlignment.center
-                  : MainAxisAlignment.start,
-              children: [
-                if (!isCollapsed && isSelected) ...[
-                  Container(
-                    width: 3.5,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: effectiveActiveColor,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                Icon(
-                  icon,
-                  color: isSelected
-                      ? effectiveActiveColor
-                      : (isDark ? AppTheme.textMuted : AppTheme.textSecondary),
-                  size: 20,
-                ),
-                if (!isCollapsed) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontWeight: isSelected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        fontSize: 13.5,
-                        color: isSelected
-                            ? (isDark ? Colors.white : effectiveActiveColor)
-                            : (isDark ? Colors.white70 : AppTheme.textPrimary),
-                        letterSpacing: isSelected ? 0.1 : 0,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
+    return SidebarHoverTile(
+      icon: icon,
+      label: label,
+      onTap: onTap,
+      isSelected: isSelected,
+      isDark: isDark,
+      isCollapsed: isCollapsed,
+      activeColor: effectiveActiveColor,
+      trailing: trailing,
     );
   }
 
@@ -751,26 +759,60 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
   }
 
   Widget _buildUpgradePromoCard(bool isDark) {
-    final isCreator = widget.user.role == 'creator';
-    final isCorporate = widget.user.role == 'corporate' ||
-        widget.user.role == 'company' ||
+    final effectiveUser = currentUserNotifier.value ?? widget.user;
+    final currentTier = effectiveUser.subscriptionTier.toLowerCase();
+    final isSuper = currentTier == 'super';
+    final isPro = currentTier == 'pro';
+    final isPlus = currentTier == 'plus';
+
+    final isGov = _isGovernment;
+    final isSchool = _isSchool;
+    final isCorporate = effectiveUser.role == 'corporate' ||
+        effectiveUser.role == 'company' ||
         _isCompany;
-    final isInstitution = _isInstitution;
-    final promoTitle = isCorporate
-        ? 'Upgrade Akun Corporate'
-        : (isInstitution
-            ? 'Upgrade Akun Institusi'
-            : (isCreator ? 'Upgrade Akun Kreator' : 'Upgrade Plan & Paket'));
-    final promoDesc = isCorporate
-        ? 'Tingkatkan peluang & fitur premium untuk corporate.'
-        : (isInstitution
-            ? 'Tingkatkan kapasitas pengadaan & kemitraan institusi.'
-            : (isCreator
-                ? 'Tingkatkan peluang & fitur premium untuk kreator.'
-                : 'Tingkatkan peluang & fitur premium akun Anda.'));
+    final isCreator = effectiveUser.role == 'creator' || _isCreatorUser;
+
+    final String promoTitle;
+    final String promoDesc;
+    final String buttonLabel;
+
+    if (isSuper) {
+      promoTitle = 'Paket Super Aktif';
+      promoDesc = 'Semua fitur & kuota premium tertinggi telah aktif.';
+      buttonLabel = 'Lihat Detail Paket';
+    } else if (isPro) {
+      promoTitle = 'Paket Pro Aktif';
+      promoDesc = 'Tingkatkan ke Super untuk kuota call & storage maksimal.';
+      buttonLabel = 'Upgrade ke Super';
+    } else if (isPlus) {
+      promoTitle = 'Paket Plus Aktif';
+      promoDesc = 'Tingkatkan ke Pro/Super untuk fitur AI & boost lebih tinggi.';
+      buttonLabel = 'Tingkatkan Paket';
+    } else if (isGov) {
+      promoTitle = 'Upgrade Akun Pemerintah';
+      promoDesc = 'Tingkatkan peluang & fitur premium untuk instansi pemerintah.';
+      buttonLabel = 'Upgrade Sekarang';
+    } else if (isSchool) {
+      promoTitle = 'Upgrade Akun Institusi';
+      promoDesc = 'Tingkatkan peluang & fitur premium untuk institusi sekolah.';
+      buttonLabel = 'Upgrade Sekarang';
+    } else if (isCorporate) {
+      promoTitle = 'Upgrade Akun Corporate';
+      promoDesc = 'Tingkatkan peluang & fitur premium untuk corporate.';
+      buttonLabel = 'Upgrade Sekarang';
+    } else if (isCreator) {
+      promoTitle = 'Upgrade Akun Kreator';
+      promoDesc = 'Tingkatkan peluang & fitur premium untuk kreator.';
+      buttonLabel = 'Upgrade Sekarang';
+    } else {
+      promoTitle = 'Upgrade Akun';
+      promoDesc = 'Tingkatkan peluang & fitur premium akun Anda.';
+      buttonLabel = 'Upgrade Sekarang';
+    }
+
     final accentColor = SubRoleThemeEngine.getAccentColor(
-      widget.user.role,
-      widget.user.subRole,
+      effectiveUser.role,
+      effectiveUser.subRole,
     );
 
     return Column(
@@ -782,8 +824,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: SubRoleThemeEngine.getGradient(
-                widget.user.role,
-                widget.user.subRole,
+                effectiveUser.role,
+                effectiveUser.subRole,
               ),
               borderRadius: BorderRadius.circular(16),
             ),
@@ -816,7 +858,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => UpgradePlanModal.show(context),
+                    onPressed: () => UpgradePlanModal.show(context, user: effectiveUser),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: accentColor,
@@ -826,9 +868,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                       ),
                       elevation: 0,
                     ),
-                    child: const Text(
-                      'Upgrade Sekarang',
-                      style: TextStyle(
+                    child: Text(
+                      buttonLabel,
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
@@ -841,6 +883,330 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         ),
         const SizedBox(height: 12),
       ],
+    );
+  }
+
+  Widget _buildBottomUserCard(bool isDark, bool collapsed) {
+    if (widget.user.isGuest) {
+      if (collapsed) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          alignment: Alignment.center,
+          child: Tooltip(
+            message: 'Masuk / Daftar Akun',
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => context.go(AppRoutes.login),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.login_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      return Container(
+        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1C2B) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : const Color(0xFFE2E8F0),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.account_circle_outlined,
+                    size: 16,
+                    color: Color(0xFF6366F1),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Akses Akun',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF0F172A),
+                        ),
+                      ),
+                      Text(
+                        'Masuk atau daftar baru',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: isDark
+                              ? Colors.white60
+                              : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => context.go(AppRoutes.login),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(
+                                0xFF6366F1,
+                              ).withValues(alpha: 0.3),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        alignment: Alignment.center,
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.login_rounded,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                            SizedBox(width: 5),
+                            Text(
+                              'Masuk',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => context.go(AppRoutes.register),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 7.5),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.06)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.12)
+                                : const Color(0xFFCBD5E1),
+                            width: 1,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.person_add_alt_1_rounded,
+                              size: 14,
+                              color: isDark
+                                  ? Colors.white70
+                                  : const Color(0xFF334155),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              'Daftar',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF334155),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: EdgeInsets.all(collapsed ? 10 : 16),
+      child: collapsed
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Tooltip(
+                  message:
+                      '${widget.user.name} (@${widget.user.username})',
+                  child: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: isDark
+                        ? const Color(0xFF2D2A3E)
+                        : Colors.grey.shade200,
+                    backgroundImage:
+                        widget.user.avatarUrl != null &&
+                                widget.user.avatarUrl!.isNotEmpty
+                            ? NetworkImage(
+                                ApiService.resolveAssetUrl(
+                                  widget.user.avatarUrl!,
+                                ),
+                              )
+                            : const AssetImage('assets/brandlogo.png')
+                                as ImageProvider,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Tooltip(
+                  message: 'Keluar',
+                  child: InkWell(
+                    onTap: _showLogoutDialog,
+                    borderRadius: BorderRadius.circular(8),
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(
+                        Icons.logout_rounded,
+                        color: Colors.redAccent,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: isDark
+                      ? const Color(0xFF2D2A3E)
+                      : Colors.grey.shade200,
+                  backgroundImage:
+                      widget.user.avatarUrl != null &&
+                              widget.user.avatarUrl!.isNotEmpty
+                          ? NetworkImage(
+                              ApiService.resolveAssetUrl(
+                                widget.user.avatarUrl!,
+                              ),
+                            )
+                          : const AssetImage('assets/brandlogo.png')
+                                as ImageProvider,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.user.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        '@${widget.user.username}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.logout_rounded,
+                    color: Colors.redAccent,
+                    size: 20,
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: _showLogoutDialog,
+                ),
+              ],
+            ),
     );
   }
 
@@ -872,9 +1238,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
         CreatorSidebarMenus.showKolaborasiInLainnya(
           widget.user.subRole,
         );
-    final showUpgradePromo = CreatorSidebarMenus.showPaymentFeature(
-      widget.user.subRole,
-    );
 
     final layoutScaffold = Scaffold(
       body: Row(
@@ -915,7 +1278,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                                 fit: BoxFit.contain,
                                 errorBuilder: (_, _, _) => Icon(
                                   Icons.auto_awesome,
-                                  color: (_isCompany || _isInstitution) ? const Color(0xFF2563EB) : AppTheme.primaryPurple,
+                                  color: _isCompany ? const Color(0xFF2563EB) : AppTheme.primaryPurple,
                                   size: 20,
                                 ),
                               ),
@@ -950,7 +1313,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                                   fit: BoxFit.contain,
                                   errorBuilder: (_, _, _) => Icon(
                                     Icons.auto_awesome,
-                                    color: (_isCompany || _isInstitution) ? const Color(0xFF2563EB) : AppTheme.primaryPurple,
+                                    color: _isCompany ? const Color(0xFF2563EB) : AppTheme.primaryPurple,
                                     size: 24,
                                   ),
                                 ),
@@ -1033,9 +1396,9 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('kreavana_ai') || _isRouteActive('ai'),
                             isDark: isDark,
                             isCollapsed: collapsed,
-                            activeColor: (_isCompany || _isInstitution) ? const Color(0xFF2563EB) : const Color(0xFF8B5CF6),
+                            activeColor: _isCompany ? const Color(0xFF2563EB) : const Color(0xFF8B5CF6),
                           ),
-                        if ((_isCreatorUser || _isCompany || _isInstitution) && !_isGovernment && !_isSchool)
+                        if ((_isCreatorUser || _isCompany) && !_isGovernment && !_isSchool)
                           _buildNavRow(
                             icon: Icons.explore_outlined,
                             label: 'Rekomendasi Peluang',
@@ -1062,7 +1425,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
-                        if (!_hasSpecificCreatorSubRole && !_isCompany && !_isInstitution) ...[
+                        if (!_hasSpecificCreatorSubRole && !_isCompany && !_isSchool && !_isGovernment) ...[
                           if (SystemSettingsService.isMarketplaceEnabled || widget.user.isAdmin)
                             _buildNavRow(
                               icon: Icons.storefront_outlined,
@@ -1072,7 +1435,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                               isDark: isDark,
                               isCollapsed: collapsed,
                             ),
-                          if (_isCreatorUser && !_isGovernment && !_isSchool)
+                          if (_isCreatorUser)
                             _buildNavRow(
                               icon: Icons.calendar_today_outlined,
                               label: 'Agenda',
@@ -1085,7 +1448,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                         if (_isSchool) ...[
                           if (!collapsed) ...[
                             const SizedBox(height: 18),
-                            _buildSectionHeader(_isInstitution ? 'PENGELOLAAN INSTITUSI' : 'PENGELOLAAN SEKOLAH', isDark),
+                            _buildSectionHeader('PENGELOLAAN SEKOLAH', isDark),
                           ] else ...[
                             const SizedBox(height: 8),
                           ],
@@ -1096,7 +1459,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('proyek_saya'),
                             isDark: isDark,
                             isCollapsed: collapsed,
-                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           _buildNavRow(
                             icon: Icons.event_outlined,
@@ -1105,61 +1467,22 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('agenda'),
                             isDark: isDark,
                             isCollapsed: collapsed,
-                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
-                          ),
-                          _buildNavRow(
-                            icon: Icons.handshake_outlined,
-                            label: 'Pengadaan & Vendor',
-                            onTap: () => _pushLink('tender_kolaborasi'),
-                            isSelected: _isRouteActive('tender_kolaborasi'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
-                          ),
-                          _buildNavRow(
-                            icon: Icons.people_outlined,
-                            label: 'Daftar Kreator & Vendor',
-                            onTap: () => _pushLink('explore'),
-                            isSelected: _isRouteActive('explore'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           _buildNavRow(
                             icon: Icons.diversity_3_outlined,
-                            label: _isInstitution ? 'Mitra Industri & IDUKA' : 'Mitra Industri & Sanggar',
+                            label: 'Mitra Industri & Sanggar',
                             onTap: () => _pushLink('mitra_komunitas'),
                             isSelected: _isRouteActive('mitra_komunitas'),
                             isDark: isDark,
                             isCollapsed: collapsed,
-                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           _buildNavRow(
                             icon: Icons.palette_outlined,
-                            label: _isInstitution ? 'Karya & Showcase Siswa' : 'Karya & Portofolio Siswa',
+                            label: 'Karya & Portofolio Siswa',
                             onTap: () => _pushLink('karya_siswa'),
                             isSelected: _isRouteActive('karya_siswa'),
                             isDark: isDark,
                             isCollapsed: collapsed,
-                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
-                          ),
-                          _buildNavRow(
-                            icon: Icons.school_outlined,
-                            label: 'Program Studi & Keunggulan',
-                            onTap: () => _pushLink('program_studi'),
-                            isSelected: _isRouteActive('program_studi'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
-                          ),
-                          _buildNavRow(
-                            icon: Icons.badge_outlined,
-                            label: 'Penelusuran Talenta',
-                            onTap: () => _pushLink('penelusuran_talenta'),
-                            isSelected: _isRouteActive('penelusuran_talenta'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           if (!collapsed) ...[
                             const SizedBox(height: 18),
@@ -1174,7 +1497,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('laporan'),
                             isDark: isDark,
                             isCollapsed: collapsed,
-                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           _buildNavRow(
                             icon: Icons.monitor_outlined,
@@ -1183,7 +1505,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('monitoring_evaluasi'),
                             isDark: isDark,
                             isCollapsed: collapsed,
-                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           if (!collapsed) ...[
                             const SizedBox(height: 18),
@@ -1198,16 +1519,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('dokumen_instansi'),
                             isDark: isDark,
                             isCollapsed: collapsed,
-                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
-                          ),
-                          _buildNavRow(
-                            icon: Icons.campaign_outlined,
-                            label: _isInstitution ? 'Pengumuman Lembaga' : 'Pengumuman Sekolah',
-                            onTap: () => _pushLink('pengumuman_publik'),
-                            isSelected: _isRouteActive('pengumuman_publik'),
-                            isDark: isDark,
-                            isCollapsed: collapsed,
-                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           if (!collapsed) ...[
                             const SizedBox(height: 18),
@@ -1217,12 +1528,11 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                           ],
                           _buildNavRow(
                             icon: Icons.account_balance_outlined,
-                            label: _isInstitution ? 'Profil Institusi' : 'Profil Sekolah',
+                            label: 'Profil Institusi',
                             onTap: () => _pushLink('profil_instansi'),
                             isSelected: _isRouteActive('profil_instansi'),
                             isDark: isDark,
                             isCollapsed: collapsed,
-                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           _buildNavRow(
                             icon: Icons.settings_outlined,
@@ -1231,7 +1541,6 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('pengaturan_akun'),
                             isDark: isDark,
                             isCollapsed: collapsed,
-                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
                           _buildNavRow(
                             icon: Icons.admin_panel_settings_outlined,
@@ -1240,8 +1549,8 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isSelected: _isRouteActive('tim_hak_akses'),
                             isDark: isDark,
                             isCollapsed: collapsed,
-                            activeColor: _isInstitution ? const Color(0xFF2563EB) : null,
                           ),
+                          if (!collapsed) _buildUpgradePromoCard(isDark),
                         ] else if (_isGovernment) ...[
                           if (!collapsed) ...[
                             const SizedBox(height: 18),
@@ -1371,6 +1680,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
+                          if (!collapsed) _buildUpgradePromoCard(isDark),
                         ] else if (_isCompany) ...[
                           if (!collapsed) ...[
                             const SizedBox(height: 18),
@@ -1378,6 +1688,14 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                           ] else ...[
                             const SizedBox(height: 8),
                           ],
+                          _buildNavRow(
+                            icon: Icons.work_outline_rounded,
+                            label: 'Lowongan Kerja & Magang',
+                            onTap: () => _pushLink('lowongan_magang'),
+                            isSelected: _isRouteActive('lowongan_magang'),
+                            isDark: isDark,
+                            isCollapsed: collapsed,
+                          ),
                           _buildNavRow(
                             icon: Icons.assignment_outlined,
                             label: 'Pengadaan & Tender (RFP)',
@@ -1542,7 +1860,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                             isDark: isDark,
                             isCollapsed: collapsed,
                           ),
-                          if (!collapsed && showUpgradePromo) _buildUpgradePromoCard(isDark),
+                          if (!collapsed) _buildUpgradePromoCard(isDark),
                         ],
                       ],
                     ),
@@ -1558,110 +1876,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
                         ? const Color(0xFF2D2A3E)
                         : Colors.grey.shade200,
                   ),
-                  Container(
-                    padding: EdgeInsets.all(collapsed ? 10 : 16),
-                    child: collapsed
-                        ? Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Tooltip(
-                                message:
-                                    '${widget.user.name} (@${widget.user.username})',
-                                child: CircleAvatar(
-                                  radius: 16,
-                                  backgroundColor: isDark
-                                      ? const Color(0xFF2D2A3E)
-                                      : Colors.grey.shade200,
-                                  backgroundImage:
-                                      widget.user.avatarUrl != null &&
-                                          widget.user.avatarUrl!.isNotEmpty
-                                      ? NetworkImage(
-                                          ApiService.resolveAssetUrl(
-                                            widget.user.avatarUrl!,
-                                          ),
-                                        )
-                                      : const AssetImage('assets/brandlogo.png')
-                                            as ImageProvider,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Tooltip(
-                                message: 'Keluar',
-                                child: InkWell(
-                                  onTap: _showLogoutDialog,
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(4),
-                                    child: Icon(
-                                      Icons.logout_rounded,
-                                      color: Colors.redAccent,
-                                      size: 18,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        : Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 18,
-                                backgroundColor: isDark
-                                    ? const Color(0xFF2D2A3E)
-                                    : Colors.grey.shade200,
-                                backgroundImage:
-                                    widget.user.avatarUrl != null &&
-                                        widget.user.avatarUrl!.isNotEmpty
-                                    ? NetworkImage(
-                                        ApiService.resolveAssetUrl(
-                                          widget.user.avatarUrl!,
-                                        ),
-                                      )
-                                    : const AssetImage('assets/brandlogo.png')
-                                          as ImageProvider,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      widget.user.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    Text(
-                                      '@${widget.user.username}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: isDark
-                                            ? Colors.grey.shade400
-                                            : Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.logout_rounded,
-                                  color: Colors.redAccent,
-                                  size: 20,
-                                ),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                onPressed: _showLogoutDialog,
-                              ),
-                            ],
-                          ),
-                  ),
+                  _buildBottomUserCard(isDark, collapsed),
                 ],
               ),
             ),
@@ -1680,7 +1895,7 @@ class _DesktopSidebarLayoutState extends State<DesktopSidebarLayout> {
             !widget.activeRoute.startsWith('eo_'))
           KreavanaAiFloatingWidget(
             hasPageFab: false,
-            accentColor: (_isCompany || _isInstitution) ? const Color(0xFF2563EB) : null,
+            accentColor: _isCompany ? const Color(0xFF2563EB) : null,
           ),
       ],
     );

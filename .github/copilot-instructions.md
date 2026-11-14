@@ -1,0 +1,26 @@
+# Kreavana Repository Developer & AI Agent Instructions
+
+## 🚨 Mandatory Git Workflow Rules (STRICT ENFORCEMENT)
+
+Setiap pengembang maupun AI Assistant yang membuat, mengubah, atau memperbarui kode pada repositori ini **WAJIB MENGIKUTI ALUR KERJA BERIKUT**:
+
+1. **Wajib `git pull origin main` di branch `main` terlebih dahulu** sebelum membuat branch atau melakukan pekerjaan apa pun. Pastikan seluruh perubahan remote telah diambil.
+2. **Buat branch baru** dari `main` yang sudah ter-update (`git checkout -b <tipe>/<nama-branch>`).
+3. **Commit perubahan** di branch baru tersebut.
+4. **Sebelum push ke branch baru, wajib lakukan sinkronisasi dan merge lokal dengan `main` terbaru**:
+   - `git checkout main && git pull origin main`
+   - `git checkout <nama-branch> && git merge main`
+   - Pastikan tidak ada konflik sebelum push.
+5. **Push branch baru ke remote origin**:
+   - `git push -u origin <nama-branch>`
+6. **Merge lokal ke `main` dan push ke `origin/main`**:
+   - `git checkout main`
+   - `git pull origin main` (verifikasi pull kembali)
+   - `git merge <nama-branch>`
+   - `git push origin main`
+
+### Dilarang Keras:
+- Jangan langsung push ke remote sebelum melakukan pull `main` terbaru dan merge lokal.
+- Jangan push ke branch `main` tanpa melakukan pull `main` terlebih dahulu.
+- Jangan pernah force-push (`git push -f`) ke `main`.
+- **ATURAN KHUSUS CLAUDE:** Jika menggunakan Claude (Anthropic / Claude Code), **JANGAN LAKUKAN OTOMATISASI PUSH KE BRANCH ATAU MAIN** agar Claude tidak tercatat berkontribusi di GitHub. Claude hanya boleh mengedit lokal; biarkan push dieksekusi secara manual oleh pengguna atau agen Antigravity.

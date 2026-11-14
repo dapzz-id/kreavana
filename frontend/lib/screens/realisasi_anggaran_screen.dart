@@ -3,6 +3,7 @@ import '../../app/theme.dart';
 import '../models/user_model.dart';
 import '../models/job_contract.dart';
 import '../services/job_contract_service.dart';
+import '../services/api_service.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 
 class RealisasiAnggaranScreen extends StatefulWidget {
@@ -30,11 +31,40 @@ class _RealisasiAnggaranScreenState extends State<RealisasiAnggaranScreen> {
 
   Future<void> _fetchAnggaranData() async {
     try {
-      final List<JobContract> contracts = await JobContractService.getUserContracts();
+      final List<JobContract> contracts = await JobContractService.getUserContracts().catchError((_) => <JobContract>[]);
       double total = 0;
       double realized = 0;
       final items = <Map<String, dynamic>>[];
 
+      // 1. Fetch institution budget resources if logged in
+      try {
+        final res = await ApiService.get(
+          'institution/resources',
+          queryParams: {'type': 'budgets'},
+        );
+        final bList = res['data'] as List<dynamic>? ?? [];
+        for (final b in bList) {
+          if (b is Map<String, dynamic>) {
+            final meta = b['metadata'] as Map<String, dynamic>? ?? {};
+            final alloc = double.tryParse(meta['allocation']?.toString() ?? '') ?? 0;
+            final real = double.tryParse(meta['realization']?.toString() ?? '') ?? 0;
+            if (alloc > 0) {
+              total += alloc;
+              realized += real;
+              final p = ((real / alloc) * 100).clamp(0, 100).toInt();
+              items.add({
+                'name': b['title'] ?? 'Pos Anggaran DIPA / APBD',
+                'percent': p,
+                'pagu': 'Rp ${alloc.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}',
+                'realisasi': 'Rp ${real.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}',
+                'color': p >= 80 ? const Color(0xFF10B981) : (p >= 50 ? const Color(0xFF2563EB) : const Color(0xFFF59E0B)),
+              });
+            }
+          }
+        }
+      } catch (_) {}
+
+      // 2. Add contracts if any
       for (final c in contracts) {
         total += c.agreedPrice;
         final isCompleted = c.workStatus == 'completed';
@@ -47,8 +77,10 @@ class _RealisasiAnggaranScreenState extends State<RealisasiAnggaranScreen> {
         items.add({
           'name': c.title,
           'percent': percent,
-          'pagu': 'Rp ${c.agreedPrice.toStringAsFixed(0)}',
-          'realisasi': isCompleted ? 'Rp ${c.agreedPrice.toStringAsFixed(0)}' : 'Rp 0',
+          'pagu': 'Rp ${c.agreedPrice.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}',
+          'realisasi': isCompleted
+              ? 'Rp ${c.agreedPrice.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}'
+              : 'Rp 0',
           'color': isCompleted ? const Color(0xFF10B981) : const Color(0xFF2563EB),
         });
       }

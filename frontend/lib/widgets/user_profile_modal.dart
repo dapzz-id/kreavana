@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../app/theme.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
@@ -64,6 +65,9 @@ class _UserProfileModalState extends State<UserProfileModal>
   bool _isLoading = true;
   Map<String, dynamic>? _profile;
   TabController? _tabController;
+  List<Map<String, dynamic>> _userReviews = [];
+  Map<String, dynamic>? _reviewSummary;
+  bool _loadingReviews = false;
 
   @override
   void initState() {
@@ -80,16 +84,39 @@ class _UserProfileModalState extends State<UserProfileModal>
   Future<void> _loadProfile() async {
     setState(() => _isLoading = true);
     final data = await VerificationService.getPublicProfile(widget.userId);
+    _loadReviews();
     if (mounted) {
       final isCreator = (data?['role'] ?? widget.initialRole ?? 'user') == 'creator';
       _tabController = TabController(
-        length: isCreator ? 3 : 2,
+        length: isCreator ? 4 : 3,
         vsync: this,
       );
       setState(() {
         _profile = data;
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadReviews() async {
+    setState(() => _loadingReviews = true);
+    try {
+      final res = await ApiService.get('creators/${widget.userId}/reviews');
+      final sumRes = await ApiService.get('creators/${widget.userId}/reviews/summary').catchError((_) => {'status': false});
+      if (mounted) {
+        setState(() {
+          if (res['status'] == true && res['data'] != null) {
+            final items = res['data']['items'] as List? ?? [];
+            _userReviews = items.map((e) => Map<String, dynamic>.from(e)).toList();
+          }
+          if (sumRes['status'] == true && sumRes['data'] != null) {
+            _reviewSummary = Map<String, dynamic>.from(sumRes['data']);
+          }
+          _loadingReviews = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingReviews = false);
     }
   }
 
@@ -383,10 +410,12 @@ class _UserProfileModalState extends State<UserProfileModal>
                       Tab(text: 'Portofolio Pribadi'),
                       Tab(text: 'Proyek di Kreavana'),
                       Tab(text: 'Pengalaman Luar'),
+                      Tab(text: 'Ulasan & Reputasi'),
                     ]
                   : const [
-                      Tab(text: 'Proyek Klien'),
                       Tab(text: 'Informasi Akun'),
+                      Tab(text: 'Proyek Klien'),
+                      Tab(text: 'Ulasan & Reputasi'),
                     ],
             ),
 
@@ -403,10 +432,12 @@ class _UserProfileModalState extends State<UserProfileModal>
                                 _buildCreatorPortfolioTab(isDark),
                                 _buildCreatorInternalProjectsTab(isDark),
                                 _buildCreatorExternalExperienceTab(isDark),
+                                _buildReviewsTab(isDark),
                               ]
                             : [
-                                _buildClientProjectsTab(isDark),
                                 _buildClientInfoTab(isDark),
+                                _buildClientProjectsTab(isDark),
+                                _buildReviewsTab(isDark),
                               ],
                       ),
           ),
@@ -1100,6 +1131,259 @@ class _UserProfileModalState extends State<UserProfileModal>
           color: AppTheme.primaryPurple.withValues(alpha: 0.4),
         ),
       ),
+    );
+  }
+
+  // ── Tab: Ulasan & Reputasi ──────────────────────────────────────────────────
+  Widget _buildReviewsTab(bool isDark) {
+    if (_loadingReviews) {
+      return const Center(child: CircularProgressIndicator(color: AppTheme.primaryPurple));
+    }
+
+    if (_userReviews.isEmpty) {
+      return _buildEmptyState(
+        icon: Icons.star_border_rounded,
+        title: 'Belum Ada Ulasan',
+        subtitle: 'Pengguna ini belum memiliki riwayat ulasan atau rating proyek di Kreavana.',
+        isDark: isDark,
+      );
+    }
+
+    final avgRating = _reviewSummary?['average_rating']?.toString() ?? '5.0';
+    final totalReviews = _reviewSummary?['total_reviews']?.toString() ?? _userReviews.length.toString();
+    final onTimePercentage = _reviewSummary?['on_time_percentage']?.toString() ?? '100';
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Rating Summary Card
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isDark
+                  ? [const Color(0xFF261D45), const Color(0xFF1E1738)]
+                  : [const Color(0xFFFBF8FF), const Color(0xFFF3EDFF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark ? AppTheme.inputBorder : const Color(0xFFE9D8FD),
+            ),
+          ),
+          child: Row(
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 28),
+                      const SizedBox(width: 6),
+                      Text(
+                        avgRating,
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Text(
+                        ' / 5.0',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Berdasarkan $totalReviews ulasan terverifikasi',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text(
+                      'Tepat Waktu',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF059669),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$onTimePercentage%',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF059669),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // List of Review Cards
+        ..._userReviews.map((r) {
+          final reviewer = r['reviewer'] as Map<String, dynamic>? ?? {};
+          final reviewerName = reviewer['name'] ?? 'Mitra Pengguna';
+          final reviewerAvatar = reviewer['avatar_url']?.toString();
+          final rating = (r['rating'] as num?)?.toDouble() ?? 5.0;
+          final comment = r['comment']?.toString() ?? 'Kerja sama sangat baik, komunikasi responsif dan hasil memuaskan.';
+          final project = r['project']?.toString() ?? 'Proyek Kolaborasi';
+          final isOnTime = r['is_on_time'] == true;
+          final dateStr = r['created_at']?.toString();
+          String formattedDate = 'Baru saja';
+          if (dateStr != null) {
+            final dt = DateTime.tryParse(dateStr);
+            if (dt != null) {
+              formattedDate = DateFormat('dd MMM yyyy').format(dt);
+            }
+          }
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardBg : const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.15),
+                      backgroundImage: reviewerAvatar != null && reviewerAvatar.isNotEmpty
+                          ? NetworkImage(ApiService.resolveAssetUrl(reviewerAvatar))
+                          : null,
+                      child: (reviewerAvatar == null || reviewerAvatar.isEmpty)
+                          ? Text(
+                              reviewerName.isNotEmpty ? reviewerName[0].toUpperCase() : 'U',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryPurple,
+                              ),
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            reviewerName,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            project,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Row(
+                      children: List.generate(5, (starIdx) {
+                        return Icon(
+                          starIdx < rating.floor()
+                              ? Icons.star_rounded
+                              : (starIdx < rating ? Icons.star_half_rounded : Icons.star_outline_rounded),
+                          color: const Color(0xFFF59E0B),
+                          size: 16,
+                        );
+                      }),
+                    ),
+                  ],
+                ),
+                if (comment.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    comment,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      height: 1.45,
+                      color: isDark ? Colors.white70 : Colors.grey.shade800,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (isOnTime) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_rounded, size: 10, color: Color(0xFF059669)),
+                            SizedBox(width: 3),
+                            Text(
+                              'Tepat Waktu',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF059669),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Text(
+                      formattedDate,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 }

@@ -28,15 +28,10 @@ class AiSubscriptionGatingTest extends TestCase
     {
         $user = User::factory()->create([
             'email' => 'freeuser@test.com',
-            'password' => Hash::make('password123'),
             'role' => RoleType::User,
         ]);
 
-        $loginResponse = $this->postJson('/api/auth/login', [
-            'email' => 'freeuser@test.com',
-            'password' => 'password123',
-        ]);
-        $token = $loginResponse->json('data.access_token');
+        $token = \Tymon\JWTAuth\Facades\JWTAuth::fromUser($user);
 
         $response = $this->withHeaders([
             'Authorization' => "Bearer {$token}",
@@ -54,7 +49,6 @@ class AiSubscriptionGatingTest extends TestCase
     {
         $user = User::factory()->create([
             'email' => 'prouser@test.com',
-            'password' => Hash::make('password123'),
             'role' => RoleType::User,
         ]);
 
@@ -64,11 +58,7 @@ class AiSubscriptionGatingTest extends TestCase
             'expires_at' => now()->addMonth(),
         ]);
 
-        $loginResponse = $this->postJson('/api/auth/login', [
-            'email' => 'prouser@test.com',
-            'password' => 'password123',
-        ]);
-        $token = $loginResponse->json('data.access_token');
+        $token = \Tymon\JWTAuth\Facades\JWTAuth::fromUser($user);
 
         $response = $this->withHeaders([
             'Authorization' => "Bearer {$token}",

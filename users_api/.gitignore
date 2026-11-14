@@ -1,0 +1,11 @@
+/vendor
+/.idea
+/.vscode
+/.phpunit.result.cache
+.env
+.env.backup
+.env.production
+dump.rdb
+
+# Generated Laravel bootstrap cache
+/bootstrap/cache/*.php

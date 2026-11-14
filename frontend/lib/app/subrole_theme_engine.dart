@@ -113,38 +113,38 @@ class SubRoleThemeEngine {
     ),
     'institution': SubRoleThemeConfig(
       slug: 'institution',
-      label: 'Lembaga / Yayasan',
-      icon: Icons.assured_workload_rounded,
-      primaryColor: Color(0xFF2563EB), // Sapphire Blue (Konsisten dengan Corporate)
-      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+      label: 'Sekolah & Perguruan Tinggi',
+      icon: Icons.school_rounded,
+      primaryColor: Color(0xFF4338CA), // Solid Academic Indigo
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
     ),
     'institusi': SubRoleThemeConfig(
       slug: 'institusi',
-      label: 'Lembaga / Yayasan',
-      icon: Icons.assured_workload_rounded,
-      primaryColor: Color(0xFF2563EB),
-      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+      label: 'Sekolah & Perguruan Tinggi',
+      icon: Icons.school_rounded,
+      primaryColor: Color(0xFF4338CA),
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
     ),
     'lembaga': SubRoleThemeConfig(
       slug: 'lembaga',
-      label: 'Lembaga / Yayasan',
-      icon: Icons.assured_workload_rounded,
-      primaryColor: Color(0xFF2563EB),
-      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+      label: 'Sekolah & Perguruan Tinggi',
+      icon: Icons.school_rounded,
+      primaryColor: Color(0xFF4338CA),
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
     ),
     'yayasan': SubRoleThemeConfig(
       slug: 'yayasan',
-      label: 'Lembaga / Yayasan',
-      icon: Icons.assured_workload_rounded,
-      primaryColor: Color(0xFF2563EB),
-      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+      label: 'Sekolah & Perguruan Tinggi',
+      icon: Icons.school_rounded,
+      primaryColor: Color(0xFF4338CA),
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
     ),
     'instansi': SubRoleThemeConfig(
       slug: 'instansi',
-      label: 'Lembaga / Yayasan',
-      icon: Icons.domain_rounded,
-      primaryColor: Color(0xFF2563EB),
-      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+      label: 'Sekolah & Perguruan Tinggi',
+      icon: Icons.school_rounded,
+      primaryColor: Color(0xFF4338CA),
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
     ),
     'community': SubRoleThemeConfig(
       slug: 'community',
@@ -162,17 +162,17 @@ class SubRoleThemeEngine {
     ),
     'school': SubRoleThemeConfig(
       slug: 'school',
-      label: 'Sekolah & Kampus',
+      label: 'Sekolah & Perguruan Tinggi',
       icon: Icons.school_rounded,
-      primaryColor: Color(0xFF3B82F6), // Ocean Blue
-      description: 'Peluang media akademik, buku tahunan, & event pendidikan',
+      primaryColor: Color(0xFF4338CA),
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
     ),
     'sekolah': SubRoleThemeConfig(
       slug: 'sekolah',
-      label: 'Sekolah & Kampus',
+      label: 'Sekolah & Perguruan Tinggi',
       icon: Icons.school_outlined,
-      primaryColor: Color(0xFF3B82F6),
-      description: 'Peluang media akademik, buku tahunan, & event pendidikan',
+      primaryColor: Color(0xFF4338CA),
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
     ),
     'tourism': SubRoleThemeConfig(
       slug: 'tourism',
@@ -230,31 +230,31 @@ class SubRoleThemeEngine {
   static const Map<String, SubRoleThemeConfig> creatorConfigs = {
     'institution': SubRoleThemeConfig(
       slug: 'institution',
-      label: 'Lembaga / Yayasan',
-      icon: Icons.assured_workload_rounded,
-      primaryColor: Color(0xFF2563EB), // Sapphire Blue (Konsisten dengan Corporate)
-      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+      label: 'Sekolah & Perguruan Tinggi',
+      icon: Icons.school_rounded,
+      primaryColor: Color(0xFF4338CA), // Solid Academic Indigo
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
     ),
     'institusi': SubRoleThemeConfig(
       slug: 'institusi',
-      label: 'Lembaga / Yayasan',
-      icon: Icons.assured_workload_rounded,
-      primaryColor: Color(0xFF2563EB),
-      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+      label: 'Sekolah & Perguruan Tinggi',
+      icon: Icons.school_rounded,
+      primaryColor: Color(0xFF4338CA),
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
     ),
     'lembaga': SubRoleThemeConfig(
       slug: 'lembaga',
-      label: 'Lembaga / Yayasan',
-      icon: Icons.assured_workload_rounded,
-      primaryColor: Color(0xFF2563EB),
-      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+      label: 'Sekolah & Perguruan Tinggi',
+      icon: Icons.school_rounded,
+      primaryColor: Color(0xFF4338CA),
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
     ),
     'yayasan': SubRoleThemeConfig(
       slug: 'yayasan',
-      label: 'Lembaga / Yayasan',
-      icon: Icons.assured_workload_rounded,
-      primaryColor: Color(0xFF2563EB),
-      description: 'Kampanye sosial, riset, dan kegiatan nirlaba',
+      label: 'Sekolah & Perguruan Tinggi',
+      icon: Icons.school_rounded,
+      primaryColor: Color(0xFF4338CA),
+      description: 'Menghubungkan talenta, ilmu pengetahuan dan peluang masa depan',
     ),
     'government': SubRoleThemeConfig(
       slug: 'government',
@@ -391,10 +391,66 @@ class SubRoleThemeEngine {
     ),
     'talent': SubRoleThemeConfig(
       slug: 'talent',
-      label: 'Talent & Model',
+      label: 'Talent & Performer',
       icon: Icons.stars_rounded,
-      primaryColor: Color(0xFFEA580C), // Sunset Orange
-      description: 'Model iklan, pemeran video komersial, & voiceover',
+      primaryColor: Color(0xFFEA580C), // Vibrant Sunset Orange
+      description: 'Model, aktor, MC, penyanyi, musisi, penari, voice over, & KOL',
+    ),
+    'performer': SubRoleThemeConfig(
+      slug: 'performer',
+      label: 'Talent & Performer',
+      icon: Icons.theater_comedy_rounded,
+      primaryColor: Color(0xFFEA580C),
+      description: 'Model, aktor, MC, penyanyi, musisi, penari, voice over, & KOL',
+    ),
+    'talent_performer': SubRoleThemeConfig(
+      slug: 'talent_performer',
+      label: 'Talent & Performer',
+      icon: Icons.stars_rounded,
+      primaryColor: Color(0xFFEA580C),
+      description: 'Model, aktor, MC, penyanyi, musisi, penari, voice over, & KOL',
+    ),
+    'model': SubRoleThemeConfig(
+      slug: 'model',
+      label: 'Model & Performer',
+      icon: Icons.portrait_rounded,
+      primaryColor: Color(0xFFEA580C),
+      description: 'Model iklan, catwalk, photoshoot katalog, & brand ambassador',
+    ),
+    'actor': SubRoleThemeConfig(
+      slug: 'actor',
+      label: 'Aktor & Pemeran',
+      icon: Icons.movie_rounded,
+      primaryColor: Color(0xFFEA580C),
+      description: 'Pemeran video komersial, serial web, teater, & voice over',
+    ),
+    'aktor': SubRoleThemeConfig(
+      slug: 'aktor',
+      label: 'Aktor & Pemeran',
+      icon: Icons.movie_rounded,
+      primaryColor: Color(0xFFEA580C),
+      description: 'Pemeran video komersial, serial web, teater, & voice over',
+    ),
+    'penari': SubRoleThemeConfig(
+      slug: 'penari',
+      label: 'Penari & Koreografer',
+      icon: Icons.accessibility_new_rounded,
+      primaryColor: Color(0xFFEA580C),
+      description: 'Penari kontemporer, tari tradisional, modern dance, & koreografi',
+    ),
+    'dancer': SubRoleThemeConfig(
+      slug: 'dancer',
+      label: 'Penari & Koreografer',
+      icon: Icons.accessibility_new_rounded,
+      primaryColor: Color(0xFFEA580C),
+      description: 'Penari kontemporer, tari tradisional, modern dance, & koreografi',
+    ),
+    'voice_over': SubRoleThemeConfig(
+      slug: 'voice_over',
+      label: 'Voice Over & Talent',
+      icon: Icons.record_voice_over_rounded,
+      primaryColor: Color(0xFFEA580C),
+      description: 'Pengisi suara iklan, audio book, dubbing video, & podcast',
     ),
     'animator': SubRoleThemeConfig(
       slug: 'animator',
@@ -402,6 +458,147 @@ class SubRoleThemeEngine {
       icon: Icons.animation_rounded,
       primaryColor: Color(0xFF0D9488), // Neon Teal
       description: 'Animasi 2D/3D, motion graphics, & efek visual (VFX)',
+    ),
+    // ── Role 3: Vendor & Penyedia Jasa Pendukung ──────────────────────────────
+    'vendor': SubRoleThemeConfig(
+      slug: 'vendor',
+      label: 'Vendor & Penyedia Jasa Pendukung',
+      icon: Icons.storefront_rounded,
+      primaryColor: Color(0xFFD97706), // Warm Amber Gold
+      description: 'Studio, rental alat, MUA, wardrobe, dekorasi, katering, printing, lighting, sound, & transportasi',
+    ),
+    'vendor_pendukung': SubRoleThemeConfig(
+      slug: 'vendor_pendukung',
+      label: 'Vendor & Penyedia Jasa Pendukung',
+      icon: Icons.storefront_rounded,
+      primaryColor: Color(0xFFD97706),
+      description: 'Studio, rental alat, MUA, wardrobe, dekorasi, katering, printing, lighting, sound, & transportasi',
+    ),
+    'penyedia_jasa': SubRoleThemeConfig(
+      slug: 'penyedia_jasa',
+      label: 'Vendor & Penyedia Jasa Pendukung',
+      icon: Icons.storefront_rounded,
+      primaryColor: Color(0xFFD97706),
+      description: 'Studio, rental alat, MUA, wardrobe, dekorasi, katering, printing, lighting, sound, & transportasi',
+    ),
+    'mitra_pendukung': SubRoleThemeConfig(
+      slug: 'mitra_pendukung',
+      label: 'Mitra Jasa Pendukung',
+      icon: Icons.handshake_rounded,
+      primaryColor: Color(0xFFEA580C), // Vibrant Sunset Amber
+      description: 'Layanan keahlian teknis pendukung produksi event, dekorasi, rias, tata panggung & katering',
+    ),
+    'mitra': SubRoleThemeConfig(
+      slug: 'mitra',
+      label: 'Mitra Jasa Pendukung',
+      icon: Icons.handshake_rounded,
+      primaryColor: Color(0xFFEA580C),
+      description: 'Layanan keahlian teknis pendukung produksi event, dekorasi, rias, tata panggung & katering',
+    ),
+    'studio': SubRoleThemeConfig(
+      slug: 'studio',
+      label: 'Studio & Ruang Produksi',
+      icon: Icons.camera_indoor_rounded,
+      primaryColor: Color(0xFF0284C7), // Sky Blue
+      description: 'Penyewaan studio foto, video, podcast, green screen, & ruang produksi',
+    ),
+    'rental_alat': SubRoleThemeConfig(
+      slug: 'rental_alat',
+      label: 'Rental Alat Foto & Video',
+      icon: Icons.camera_alt_rounded,
+      primaryColor: Color(0xFFD97706), // Warm Amber
+      description: 'Penyewaan kamera, lensa, gimbal, drone, lighting, & perlengkapan visual',
+    ),
+    'sewa_alat': SubRoleThemeConfig(
+      slug: 'sewa_alat',
+      label: 'Rental Alat Foto & Video',
+      icon: Icons.camera_alt_rounded,
+      primaryColor: Color(0xFFD97706),
+      description: 'Penyewaan kamera, lensa, gimbal, drone, lighting, & perlengkapan visual',
+    ),
+    'wardrobe': SubRoleThemeConfig(
+      slug: 'wardrobe',
+      label: 'Wardrobe & Kostum',
+      icon: Icons.checkroom_rounded,
+      primaryColor: Color(0xFFC026D3), // Magenta
+      description: 'Penyewaan pakaian panggung, busana pengantin, jas, & kostum tematik',
+    ),
+    'kostum': SubRoleThemeConfig(
+      slug: 'kostum',
+      label: 'Wardrobe & Kostum',
+      icon: Icons.checkroom_rounded,
+      primaryColor: Color(0xFFC026D3),
+      description: 'Penyewaan pakaian panggung, busana pengantin, jas, & kostum tematik',
+    ),
+    'dekorasi': SubRoleThemeConfig(
+      slug: 'dekorasi',
+      label: 'Dekorasi & Properti',
+      icon: Icons.local_florist_rounded,
+      primaryColor: Color(0xFF10B981), // Emerald Green
+      description: 'Dekorasi panggung, backdrop, instalasi pameran, properti set, & tata ruang',
+    ),
+    'properti': SubRoleThemeConfig(
+      slug: 'properti',
+      label: 'Dekorasi & Properti',
+      icon: Icons.local_florist_rounded,
+      primaryColor: Color(0xFF10B981),
+      description: 'Dekorasi panggung, backdrop, instalasi pameran, properti set, & tata ruang',
+    ),
+    'katering': SubRoleThemeConfig(
+      slug: 'katering',
+      label: 'Katering & Food Service',
+      icon: Icons.restaurant_menu_rounded,
+      primaryColor: Color(0xFFF59E0B), // Amber
+      description: 'Konsumsi kru produksi, prasmanan acara, coffee break VIP, & meal box',
+    ),
+    'catering': SubRoleThemeConfig(
+      slug: 'catering',
+      label: 'Katering & Food Service',
+      icon: Icons.restaurant_menu_rounded,
+      primaryColor: Color(0xFFF59E0B),
+      description: 'Konsumsi kru produksi, prasmanan acara, coffee break VIP, & meal box',
+    ),
+    'printing': SubRoleThemeConfig(
+      slug: 'printing',
+      label: 'Printing & Merchandise',
+      icon: Icons.print_rounded,
+      primaryColor: Color(0xFF4F46E5), // Indigo
+      description: 'Cetak banner, backdrop, photobook, merchandise, lanyard, & media promosi',
+    ),
+    'merchandise': SubRoleThemeConfig(
+      slug: 'merchandise',
+      label: 'Printing & Merchandise',
+      icon: Icons.print_rounded,
+      primaryColor: Color(0xFF4F46E5),
+      description: 'Cetak banner, backdrop, photobook, merchandise, lanyard, & media promosi',
+    ),
+    'lighting_sound': SubRoleThemeConfig(
+      slug: 'lighting_sound',
+      label: 'Lighting & Sound System',
+      icon: Icons.speaker_group_rounded,
+      primaryColor: Color(0xFF0284C7), // Blue
+      description: 'Tata suara panggung, moving beam, LED screen, par-light, mixer, & genset',
+    ),
+    'sound_system': SubRoleThemeConfig(
+      slug: 'sound_system',
+      label: 'Lighting & Sound System',
+      icon: Icons.speaker_group_rounded,
+      primaryColor: Color(0xFF0284C7),
+      description: 'Tata suara panggung, moving beam, LED screen, par-light, mixer, & genset',
+    ),
+    'transportasi': SubRoleThemeConfig(
+      slug: 'transportasi',
+      label: 'Transportasi & Logistik',
+      icon: Icons.local_shipping_rounded,
+      primaryColor: Color(0xFF334155), // Slate
+      description: 'Armada van kru, truk pengangkut logistik alat, & transportasi produksi',
+    ),
+    'logistik': SubRoleThemeConfig(
+      slug: 'logistik',
+      label: 'Transportasi & Logistik',
+      icon: Icons.local_shipping_rounded,
+      primaryColor: Color(0xFF334155),
+      description: 'Armada van kru, truk pengangkut logistik alat, & transportasi produksi',
     ),
   };
 
@@ -416,6 +613,26 @@ class SubRoleThemeEngine {
       if (creatorConfigs.containsKey(cleanSub)) {
         return creatorConfigs[cleanSub]!;
       }
+    }
+
+    if (cleanRole == 'vendor' ||
+        cleanRole == 'mitra' ||
+        cleanRole == 'mitra_pendukung' ||
+        cleanSub == 'vendor' ||
+        cleanSub == 'vendor_pendukung' ||
+        cleanSub == 'penyedia_jasa' ||
+        cleanSub == 'mitra' ||
+        cleanSub == 'mitra_pendukung' ||
+        cleanSub == 'studio' ||
+        cleanSub == 'rental_alat' ||
+        cleanSub == 'wardrobe' ||
+        cleanSub == 'dekorasi' ||
+        cleanSub == 'katering' ||
+        cleanSub == 'catering' ||
+        cleanSub == 'printing' ||
+        cleanSub == 'lighting_sound' ||
+        cleanSub == 'transportasi') {
+      return creatorConfigs[cleanSub] ?? creatorConfigs['vendor']!;
     }
 
     if (cleanRole == 'corporate' ||

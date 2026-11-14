@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dio_client.dart';
+import 'system_settings_service.dart';
 
 class ApiService {
   static Dio get _dio => DioClient.instance.dio;
@@ -176,6 +177,9 @@ class ApiService {
         if (!data.containsKey('status')) {
           data['status'] = false;
         }
+        if (data['code'] == 'MODULE_DISABLED' && data['module'] is String) {
+          SystemSettingsService.updateLocalModule(data['module'] as String, false);
+        }
         return data;
       }
 
@@ -191,6 +195,9 @@ class ApiService {
         final data = e.response!.data as Map<String, dynamic>;
         if (!data.containsKey('status')) {
           data['status'] = false;
+        }
+        if (data['code'] == 'MODULE_DISABLED' && data['module'] is String) {
+          SystemSettingsService.updateLocalModule(data['module'] as String, false);
         }
         return data;
       }

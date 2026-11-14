@@ -15,10 +15,13 @@ class OpportunityRequirement extends Model
         'sub_role_slug',
         'quantity',
         'notes',
+        'payment_scheme',
+        'payment_terms',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
+        'payment_terms' => 'array',
     ];
 
     public function opportunity(): BelongsTo

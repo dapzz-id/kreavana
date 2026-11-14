@@ -72,7 +72,20 @@ class OpportunityController extends Controller
     public function store(StoreOpportunityRequest $request)
     {
         $user = Auth::guard('api')->user();
-        if ($user && $user->role->value === 'user' && !$user->is_verified) {
+
+        if ($user) {
+            $rawSub = $user->sub_role;
+            $subRole = is_object($rawSub) && isset($rawSub->value) 
+                ? strtolower(trim($rawSub->value)) 
+                : strtolower(trim((string)$rawSub));
+
+            if (in_array($subRole, ['institution', 'institusi', 'school', 'sekolah', 'kampus', 'campus', 'education'])) {
+                return $this->errorResponse('Institusi Pendidikan tidak memiliki akses untuk membuka lowongan magang atau proyek. Program magang hanya dapat dibuka oleh akun Corporate / Mitra Industri.', 403);
+            }
+        }
+
+        // Akun Corporate tidak memerlukan verifikasi KTP untuk membuka lowongan/proyek
+        if ($user && $user->role->value === 'user' && !$user->isCorporate() && !$user->is_verified) {
             return $this->errorResponse('Klien wajib melakukan verifikasi KTP terlebih dahulu sebelum mempublikasikan kebutuhan proyek.', 403);
         }
 
@@ -91,7 +104,7 @@ class OpportunityController extends Controller
             'sub_role_slug' => 'required|string|max:50',
             'pitch_message' => 'required|string|min:10|max:2000',
             'questions_notes' => 'nullable|string|max:1000',
-            'bid_price' => 'nullable|numeric|min:0',
+            'bid_price' => 'required|numeric|min:1',
         ]);
 
         try {
@@ -179,15 +192,26 @@ class OpportunityController extends Controller
         $user = Auth::guard('api')->user();
         $action = $request->input('action');
 
-        if (!in_array($action, ['accept', 'decline'])) {
-            return $this->errorResponse('Tindakan tidak valid. Pilihan: accept atau decline.', 422);
+        if (!in_array($action, ['accept', 'decline', 'counter'])) {
+            return $this->errorResponse('Tindakan tidak valid. Pilihan: accept, decline, atau counter.', 422);
         }
 
+        $counterOfferPrice = $request->has('counter_offer_price') ? (float) $request->input('counter_offer_price') : null;
+        $counterOfferNotes = $request->input('counter_offer_notes');
+
         try {
-            $result = $this->opportunityService->respondCounterOffer($applicationId, $user->id, $action);
-            $msg = $action === 'accept'
-                ? 'Tawaran dana berhasil diterima. Lamaran kini siap difinalisasi oleh pemilik proyek.'
-                : 'Tawaran dana telah ditolak.';
+            $result = $this->opportunityService->respondCounterOffer(
+                $applicationId,
+                $user->id,
+                $action,
+                $counterOfferPrice,
+                $counterOfferNotes
+            );
+            $msg = match ($action) {
+                'accept' => 'Tawaran dana berhasil diterima. Lamaran kini siap difinalisasi oleh pemilik proyek.',
+                'counter' => 'Penawaran balik berhasil diajukan kepada pemilik proyek.',
+                'decline' => 'Tawaran dana telah ditolak.',
+            };
             return $this->successResponse($msg, $result);
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             return $this->errorResponse($e->getMessage(), $e->getStatusCode());
@@ -278,13 +302,63 @@ class OpportunityController extends Controller
         }
     }
 
+    public function signContract(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+
+        $request->validate([
+            'signature' => 'required|string',
+        ]);
+
+        try {
+            $opp = $this->opportunityService->signContract($id, $user->id, $request->all());
+            return $this->successResponse('Tanda tangan elektronik dynamic berhasil disimpan.', $opp);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function updateDynamicTerms(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+
+        $request->validate([
+            'dynamic_terms' => 'required|array',
+        ]);
+
+        try {
+            $opp = $this->opportunityService->updateDynamicTerms($id, $user->id, $request->input('dynamic_terms'));
+            return $this->successResponse('Ketentuan khusus kontrak berhasil diperbarui.', $opp);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
     public function startEvent(Request $request, string $id)
     {
         $user = Auth::guard('api')->user();
 
         try {
-            $opp = $this->opportunityService->startEvent($id, $user->id);
-            return $this->successResponse('Acara berhasil dimulai! Status proyek kini berlangsung dan pendaftaran ditutup.', $opp);
+            $opp = $this->opportunityService->startEvent($id, $user->id, $request->all());
+            return $this->successResponse('Acara berhasil dimulai! Status proyek kini berlangsung, tanda tangan telah sah, dan dana escrow telah diamankan.', $opp);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function getContracts(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+
+        try {
+            $contracts = $this->opportunityService->getOpportunityContracts($id, $user->id);
+            return $this->successResponse('Daftar kontrak digital dynamic 3 pihak berhasil dimuat.', $contracts);
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             return $this->errorResponse($e->getMessage(), $e->getStatusCode());
         } catch (\Exception $e) {
@@ -343,7 +417,158 @@ class OpportunityController extends Controller
 
         try {
             $opp = $this->opportunityService->scheduleMeeting($id, $user->id, $validated);
-            return $this->successResponse('Jadwal pertemuan dengan pihak Kreavana berhasil diajukan.', $opp);
+            return $this->successResponse('Jadwal pertemuan fisik tanda tangan basah berhasil diajukan.', $opp);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function reviewMeeting(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        $validated = $request->validate([
+            'decision' => 'required|in:approve,counter,reject',
+            'notes' => 'nullable|string|max:1000',
+            'counter_date' => 'nullable|date',
+            'counter_time' => 'nullable|string|max:50',
+            'counter_location' => 'nullable|string|max:500',
+            'counter_lat' => 'nullable|numeric',
+            'counter_lng' => 'nullable|numeric',
+            'counter_notes' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $opp = $this->opportunityService->reviewMeeting($id, $user->id, $validated['decision'], $validated['notes'] ?? null, $validated);
+            $msg = $validated['decision'] === 'approve'
+                ? 'Jadwal pertemuan fisik disetujui. Status acara: Diproses.'
+                : ($validated['decision'] === 'counter'
+                    ? 'Tawaran nego jadwal dan lokasi alternatif berhasil dikirim ke pembuat acara.'
+                    : 'Jadwal pertemuan fisik ditolak.');
+            return $this->successResponse($msg, $opp);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function respondMeetingCounter(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        $validated = $request->validate([
+            'action' => 'required|in:accept,counter,decline',
+            'meeting_date' => 'nullable|date',
+            'meeting_time' => 'nullable|string|max:50',
+            'meeting_location' => 'nullable|string|max:500',
+            'meeting_lat' => 'nullable|numeric',
+            'meeting_lng' => 'nullable|numeric',
+            'meeting_notes' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $opp = $this->opportunityService->respondMeetingCounter($id, $user->id, $validated['action'], $validated);
+            $msg = $validated['action'] === 'accept'
+                ? 'Jadwal usulan Admin disetujui. Status pertemuan: Diproses.'
+                : ($validated['action'] === 'counter'
+                    ? 'Tawaran balik jadwal dan lokasi berhasil dikirim ke Admin Kreavana.'
+                    : 'Tawaran jadwal Admin ditolak.');
+            return $this->successResponse($msg, $opp);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function adminStartEvent(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        $validated = $request->validate([
+            'document_mou_url' => 'nullable|string|max:500',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $opp = $this->opportunityService->adminStartEvent($id, $user->id, $validated);
+            return $this->successResponse('Acara resmi dimulai oleh Admin setelah verifikasi tanda tangan basah fisik!', $opp);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function updateWorkerProgress(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        $validated = $request->validate([
+            'progress' => 'required|integer|min:0|max:100',
+            'notes' => 'nullable|string|max:1000',
+            'worker_status' => 'nullable|string|max:40',
+        ]);
+
+        try {
+            $res = $this->opportunityService->updateWorkerProgress($id, $user->id, (int) $validated['progress'], $validated['notes'] ?? null, $validated['worker_status'] ?? null);
+            return $this->successResponse('Progress pekerja berhasil diperbarui.', $res);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function uploadDeliverable(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        $validated = $request->validate([
+            'type' => 'required|in:link,image,video,document',
+            'url' => 'nullable|string|max:1000',
+            'title' => 'required|string|max:200',
+            'notes' => 'nullable|string|max:1000',
+            'file' => 'nullable|file|max:51200', // Max 50MB
+        ]);
+
+        try {
+            $file = $request->file('file');
+            $res = $this->opportunityService->submitWorkerDeliverable($id, $user->id, $validated, $file);
+            return $this->successResponse('Hasil kerja (deliverable) berhasil diunggah.', $res);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function payWorker(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+        $validated = $request->validate([
+            'milestone_index' => 'nullable|integer|min:0',
+            'amount' => 'nullable|numeric|min:1',
+        ]);
+
+        try {
+            $milestoneIndex = isset($validated['milestone_index']) ? (int) $validated['milestone_index'] : null;
+            $amount = isset($validated['amount']) ? (float) $validated['amount'] : null;
+
+            $res = $this->opportunityService->payWorkerTerm($id, $user->id, $milestoneIndex, $amount);
+            return $this->successResponse('Pembayaran honor berhasil dicairkan ke saldo pekerja.', $res);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
+    }
+
+    public function autoReleaseEscrow(Request $request, string $id)
+    {
+        $user = Auth::guard('api')->user();
+
+        try {
+            $res = $this->opportunityService->checkAndAutoReleaseEscrow($id, $user->id);
+            return $this->successResponse($res['message'], $res);
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             return $this->errorResponse($e->getMessage(), $e->getStatusCode());
         } catch (\Exception $e) {

@@ -14,6 +14,7 @@ import '../widgets/desktop_sidebar_layout.dart';
 import 'client_verification_page.dart';
 import '../widgets/app_breadcrumbs.dart';
 import '../widgets/auth_guard_dialog.dart';
+import '../widgets/app_sweet_alert.dart';
 import 'main_navigation.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -43,6 +44,92 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _phoneController = TextEditingController();
   final _scrollController = ScrollController();
 
+  // ── School / Institution Profile Controllers ─────────────────────────────
+  final _schoolNameController = TextEditingController();
+  final _npsnController = TextEditingController();
+  final _institutionTypeController = TextEditingController();
+  final _accreditationController = TextEditingController();
+  final _permitNumberController = TextEditingController();
+  final _headmasterNameController = TextEditingController();
+  final _headmasterNipController = TextEditingController();
+  final _schoolPhoneController = TextEditingController();
+  final _schoolEmailController = TextEditingController();
+  final _websiteController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  String? _schoolResourceId;
+  bool _isSavingSchool = false;
+
+  bool get _isSchool {
+    if (_currentUser.isInstitution) return true;
+    final sub = _currentUser.subRole?.toLowerCase().trim() ?? '';
+    final role = _currentUser.role.toLowerCase().trim();
+    final verif = _currentUser.verificationType?.toLowerCase().trim() ?? '';
+    final uname = _currentUser.username.toLowerCase().trim();
+    final mail = _currentUser.email.toLowerCase().trim();
+    return [
+      'school',
+      'sekolah',
+      'universitas',
+      'institution',
+      'kampus',
+      'smk',
+      'education',
+      'institusi',
+      'campus',
+    ].contains(sub) ||
+    ['school', 'institution', 'institusi'].contains(role) ||
+    verif == 'institution' ||
+    uname.contains('institution') ||
+    uname.contains('sekolah') ||
+    uname.contains('smk') ||
+    mail.startsWith('institution@') ||
+    mail.startsWith('smk@') ||
+    mail.startsWith('sekolah@');
+  }
+
+  bool get _isGovernment {
+    final sub = _currentUser.subRole?.toLowerCase().trim() ?? '';
+    return [
+      'government',
+      'pemerintah',
+      'instansi',
+      'dinas',
+      'bumn',
+      'kementerian',
+    ].contains(sub);
+  }
+
+  void _initSchoolDefaults() {
+    final uname = _currentUser.username.toLowerCase();
+    final isSmk = uname.contains('smk') || uname.contains('sekolah');
+
+    _schoolNameController.text = _currentUser.name.isNotEmpty && _currentUser.name != 'Kreavana Demo Institution'
+        ? _currentUser.name
+        : (isSmk ? 'SMK Negeri 1 Kreasi Nusantara' : 'Institut Seni & Rekayasa Kreatif Nusantara (ISRK)');
+    _npsnController.text = isSmk ? '20108942' : '20401829';
+    _institutionTypeController.text = isSmk
+        ? 'Sekolah Menengah Kejuruan (SMK Vokasi)'
+        : 'Perguruan Tinggi Vokasi / Institut Seni & Desain';
+    _accreditationController.text = 'A (Unggul) - BAN-PT';
+    _permitNumberController.text = isSmk ? '421.5/128/Disdik/2019' : '842/E/O/2021';
+    _headmasterNameController.text = isSmk ? 'Drs. H. Hendra Setiawan, M.Pd.' : 'Prof. Dr. Ir. H. Bambang Sudarsono, M.Ds.';
+    _headmasterNipController.text = isSmk ? '19680315 199403 1 007' : '19740512 199903 1 004';
+    _schoolPhoneController.text = _currentUser.phone?.isNotEmpty == true
+        ? _currentUser.phone!
+        : (isSmk ? '(021) 8241-908' : '(021) 8849-201');
+    _schoolEmailController.text = isSmk ? 'info@smkn1kreasi.sch.id' : 'kemitraan@isrk.ac.id';
+    _websiteController.text = isSmk ? 'https://smkn1kreasi.sch.id' : 'https://isrk.ac.id';
+    _cityController.text = isSmk ? 'Kota Bekasi, Jawa Barat' : 'Jakarta Selatan, DKI Jakarta';
+    _addressController.text = isSmk
+        ? 'Jl. Kejuruan Kreatif No. 12, Bekasi, Jawa Barat'
+        : 'Jl. Pendidikan Kreatif No. 45, Kampus Budaya Vokasi Terpadu';
+    _descriptionController.text = isSmk
+        ? 'SMK Pusat Keunggulan bidang Animasi 3D, Desain Komunikasi Visual, dan Rekayasa Perangkat Lunak berbasis kurikulum industri.'
+        : 'Institut pendidikan tinggi vokasi seni, animasi 3D, DKV, dan rekayasa kreatif nusantara yang terakreditasi Unggul oleh BAN-PT dan berstandar internasional.';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -70,6 +157,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
     _nameController.text = _currentUser.name;
     _phoneController.text = _currentUser.phone ?? '';
+    if (_isSchool) {
+      _initSchoolDefaults();
+    }
     _loadProfileDetails();
   }
 
@@ -78,12 +168,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.didUpdateWidget(oldWidget);
     if (widget.user != oldWidget.user) {
       _currentUser = widget.user;
+      if (_isSchool && _schoolNameController.text.isEmpty) {
+        _initSchoolDefaults();
+      }
     }
     if (widget.user.name != oldWidget.user.name) {
       _nameController.text = widget.user.name;
+      if (_isSchool && _schoolNameController.text.isEmpty) {
+        _schoolNameController.text = widget.user.name;
+      }
     }
     if (widget.user.phone != oldWidget.user.phone) {
       _phoneController.text = widget.user.phone ?? '';
+      if (_isSchool && _schoolPhoneController.text.isEmpty) {
+        _schoolPhoneController.text = widget.user.phone ?? '';
+      }
     }
   }
 
@@ -92,6 +191,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _nameController.dispose();
     _phoneController.dispose();
     _scrollController.dispose();
+    _schoolNameController.dispose();
+    _npsnController.dispose();
+    _institutionTypeController.dispose();
+    _accreditationController.dispose();
+    _permitNumberController.dispose();
+    _headmasterNameController.dispose();
+    _headmasterNipController.dispose();
+    _schoolPhoneController.dispose();
+    _schoolEmailController.dispose();
+    _websiteController.dispose();
+    _cityController.dispose();
+    _addressController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -99,16 +211,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _isLoading = true);
     final result = await ProfileService.getProfile(_currentUser.id ?? '');
     if (mounted) {
-      setState(() {
-        _isLoading = false;
-        if (result.success == true) {
-          _latestApplication = result.application;
-          if (result.user != null) {
-            _currentUser = result.user!;
-            widget.onUserUpdated(result.user!);
+      if (result.success == true) {
+        _latestApplication = result.application;
+        if (result.user != null) {
+          _currentUser = result.user!;
+          widget.onUserUpdated(result.user!);
+          if (_isSchool && _schoolNameController.text.isEmpty) {
+            _initSchoolDefaults();
           }
         }
-      });
+      }
+    }
+
+    if (_isSchool) {
+      try {
+        final profileRes = await ApiService.get(
+          'institution/resources',
+          queryParams: {'type': 'profile'},
+        );
+        if (mounted && profileRes['status'] == true && profileRes['data'] is List) {
+          final resList = profileRes['data'] as List;
+          if (resList.isNotEmpty) {
+            final profileItem = Map<String, dynamic>.from(resList.first);
+            _schoolResourceId = profileItem['id']?.toString();
+            final meta = profileItem['metadata'] is Map
+                ? Map<String, dynamic>.from(profileItem['metadata'])
+                : <String, dynamic>{};
+
+            if (profileItem['title'] != null && profileItem['title'].toString().trim().isNotEmpty) {
+              _schoolNameController.text = profileItem['title'].toString();
+            }
+            if (profileItem['description'] != null && profileItem['description'].toString().trim().isNotEmpty) {
+              _descriptionController.text = profileItem['description'].toString();
+            }
+            if (meta['npsn'] != null) _npsnController.text = meta['npsn'].toString();
+            if (meta['institution_type'] != null) _institutionTypeController.text = meta['institution_type'].toString();
+            if (meta['accreditation'] != null) _accreditationController.text = meta['accreditation'].toString();
+            if (meta['permit_number'] != null) _permitNumberController.text = meta['permit_number'].toString();
+            if (meta['headmaster_name'] != null) _headmasterNameController.text = meta['headmaster_name'].toString();
+            if (meta['headmaster_nip'] != null) _headmasterNipController.text = meta['headmaster_nip'].toString();
+            if (meta['official_phone'] != null) _schoolPhoneController.text = meta['official_phone'].toString();
+            if (meta['official_email'] != null) _schoolEmailController.text = meta['official_email'].toString();
+            if (meta['website'] != null) _websiteController.text = meta['website'].toString();
+            if (meta['city'] != null) _cityController.text = meta['city'].toString();
+            if (meta['address'] != null) _addressController.text = meta['address'].toString();
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -218,6 +371,84 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _handleSaveSchoolProfile() async {
+    setState(() => _isSavingSchool = true);
+
+    try {
+      final title = _schoolNameController.text.trim().isNotEmpty
+          ? _schoolNameController.text.trim()
+          : _currentUser.name;
+      final phone = _schoolPhoneController.text.trim();
+      final metadata = {
+        'npsn': _npsnController.text.trim(),
+        'institution_type': _institutionTypeController.text.trim(),
+        'accreditation': _accreditationController.text.trim(),
+        'permit_number': _permitNumberController.text.trim(),
+        'headmaster_name': _headmasterNameController.text.trim(),
+        'headmaster_nip': _headmasterNipController.text.trim(),
+        'official_phone': phone,
+        'official_email': _schoolEmailController.text.trim(),
+        'website': _websiteController.text.trim(),
+        'city': _cityController.text.trim(),
+        'address': _addressController.text.trim(),
+      };
+
+      Map<String, dynamic> res;
+      if (_schoolResourceId != null) {
+        res = await ApiService.put('institution/resources/$_schoolResourceId', {
+          'resource_type': 'profile',
+          'title': title,
+          'description': _descriptionController.text.trim(),
+          'status': 'published',
+          'metadata': metadata,
+        });
+      } else {
+        res = await ApiService.post('institution/resources', {
+          'resource_type': 'profile',
+          'title': title,
+          'description': _descriptionController.text.trim(),
+          'status': 'published',
+          'metadata': metadata,
+        });
+        if (res['status'] == true && res['data'] is Map && res['data']['id'] != null) {
+          _schoolResourceId = res['data']['id'].toString();
+        }
+      }
+
+      // Sync nama & telepon ke user utama agar seluruh UI (sidebar, header) ikut terbarui
+      final userUpdate = await ProfileService.updateProfile(
+        userId: _currentUser.id ?? '',
+        name: title,
+        phone: phone,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isSavingSchool = false;
+          if (userUpdate.user != null) {
+            _currentUser = userUpdate.user!;
+            widget.onUserUpdated(userUpdate.user!);
+          }
+        });
+
+        AppSweetAlert.success(
+          context,
+          'Data legalitas, nomor pokok institusi, dan profil berhasil diperbarui.',
+          title: 'Profil Institusi Disimpan',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSavingSchool = false);
+        AppSweetAlert.error(
+          context,
+          'Terjadi kesalahan saat menyimpan profil institusi: $e',
+          title: 'Gagal Menyimpan',
+        );
+      }
+    }
+  }
+
   Widget _buildStatColumn(String label, String count, bool isDark) {
     return Column(
       children: [
@@ -248,9 +479,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: MediaQuery.of(context).size.width <= 900,
         toolbarHeight: 75,
-        title: const Text(
-          'Profil Pengguna',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          _isSchool
+              ? 'Profil Institusi'
+              : (_isGovernment ? 'Profil Instansi & Kedinasan' : 'Profil Pengguna'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
@@ -362,9 +595,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         }
                                       },
                                     ),
-                                    const BreadcrumbItem(
-                                      label: 'Profil Saya',
-                                      icon: Icons.person_rounded,
+                                    BreadcrumbItem(
+                                      label: _isSchool
+                                          ? 'Profil Institusi'
+                                          : (_isGovernment
+                                              ? 'Profil Instansi'
+                                              : 'Profil Saya'),
+                                      icon: _isSchool
+                                          ? Icons.account_balance_rounded
+                                          : (_isGovernment
+                                              ? Icons.account_balance_rounded
+                                              : Icons.person_rounded),
                                     ),
                                   ],
                           ),
@@ -375,22 +616,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   children: [
                                     // Left Column - Profile Card
                                     Expanded(
-                                      flex: 1,
-                                      child: _buildProfileCard(theme, isDark),
+                                      flex: _isSchool ? 5 : 1,
+                                      child: _isSchool
+                                          ? _buildSchoolProfileCard(theme, isDark)
+                                          : _buildProfileCard(theme, isDark),
                                     ),
                                     const SizedBox(width: 24),
                                     // Right Column - Form only
                                     Expanded(
-                                      flex: 1,
-                                      child: _buildProfileForm(theme, isDark),
+                                      flex: _isSchool ? 7 : 1,
+                                      child: _isSchool
+                                          ? _buildSchoolProfileForm(theme, isDark)
+                                          : _buildProfileForm(theme, isDark),
                                     ),
                                   ],
                                 )
                               : Column(
                                   children: [
-                                    _buildProfileCard(theme, isDark),
+                                    _isSchool
+                                        ? _buildSchoolProfileCard(theme, isDark)
+                                        : _buildProfileCard(theme, isDark),
                                     const SizedBox(height: 24),
-                                    _buildProfileForm(theme, isDark),
+                                    _isSchool
+                                        ? _buildSchoolProfileForm(theme, isDark)
+                                        : _buildProfileForm(theme, isDark),
                                   ],
                                 ),
                         ],
@@ -646,7 +895,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // ── Quick action buttons ─────────────────────────────────────────
           if (!_currentUser.isAdmin) ...[
             const SizedBox(height: 16),
-            if (!_currentUser.isVerified && !_currentUser.isCreator)
+            if (!_currentUser.isVerified && !_currentUser.isCreator && !_currentUser.isCorporate)
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -777,6 +1026,773 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // ── School Profile Left Card ───────────────────────────────────────────────
+
+  Widget _buildSchoolProfileCard(ThemeData theme, bool isDark) {
+    final schoolName = _schoolNameController.text.trim().isNotEmpty
+        ? _schoolNameController.text.trim()
+        : _currentUser.name;
+    final npsn = _npsnController.text.trim().isNotEmpty ? _npsnController.text.trim() : '20401829';
+    final akreditasi = _accreditationController.text.trim().isNotEmpty
+        ? _accreditationController.text.trim()
+        : 'A (Unggul)';
+    final jenjang = _institutionTypeController.text.trim().isNotEmpty
+        ? _institutionTypeController.text.trim()
+        : 'Institut Seni & Desain';
+
+    return Container(
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [
+                  const Color(0xFF1E1B4B).withValues(alpha: 0.6),
+                  const Color(0xFF1E293B).withValues(alpha: 0.8),
+                ]
+              : [
+                  const Color(0xFFEEF2FF),
+                  Colors.white,
+                ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? const Color(0xFF4338CA).withValues(alpha: 0.4) : const Color(0xFFC7D2FE),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Logo Sekolah / Institusi
+          GestureDetector(
+            onTap: _pickAndUploadAvatar,
+            child: Stack(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFF6366F1).withValues(alpha: 0.4),
+                      width: 4,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6366F1).withValues(alpha: 0.25),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: CircleAvatar(
+                    radius: 54,
+                    backgroundColor: isDark ? const Color(0xFF312E81) : const Color(0xFFE0E7FF),
+                    backgroundImage: _currentUser.avatarUrl != null &&
+                            _currentUser.avatarUrl!.isNotEmpty
+                        ? NetworkImage(
+                            ApiService.resolveAssetUrl(_currentUser.avatarUrl!),
+                          )
+                        : null,
+                    child: _currentUser.avatarUrl == null ||
+                            _currentUser.avatarUrl!.isEmpty
+                        ? const Icon(
+                            Icons.school_rounded,
+                            size: 52,
+                            color: Color(0xFF4F46E5),
+                          )
+                        : null,
+                  ),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
+                      ),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: theme.scaffoldBackgroundColor,
+                        width: 2.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt_rounded,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            schoolName,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, height: 1.3),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '@${_currentUser.username}',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            jenjang,
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF6366F1),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 14),
+          // Badge Role
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF4338CA), Color(0xFF6366F1)],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF4F46E5).withValues(alpha: 0.35),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.school_outlined, size: 14, color: Colors.white),
+                SizedBox(width: 6),
+                Text(
+                  'INSTITUSI PENDIDIKAN',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.8,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Official Verification Badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF10B981).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 15),
+                SizedBox(width: 6),
+                Text(
+                  'Terverifikasi Kemendikbudristek',
+                  style: TextStyle(
+                    color: Color(0xFF10B981),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
+          // 3 Academic KPI Columns
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.black.withValues(alpha: 0.25) : Colors.white.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isDark ? Colors.white10 : Colors.indigo.shade50,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildSchoolStat('NPSN / Kode PT', npsn, isDark),
+                Container(height: 36, width: 1, color: isDark ? Colors.white12 : Colors.grey.shade300),
+                _buildSchoolStat('Akreditasi', akreditasi.split(' ').first, isDark),
+                Container(height: 36, width: 1, color: isDark ? Colors.white12 : Colors.grey.shade300),
+                _buildSchoolStat('Status', 'Aktif', isDark),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Quick details snippet
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey.shade900.withValues(alpha: 0.4) : Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.person_pin_circle_outlined, size: 15, color: Color(0xFF6366F1)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _headmasterNameController.text.isNotEmpty
+                            ? _headmasterNameController.text
+                            : 'Pimpinan Institusi Terdaftar',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(Icons.pin_drop_outlined, size: 15, color: Color(0xFF6366F1)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _cityController.text.isNotEmpty
+                            ? _cityController.text
+                            : 'Kampus Budaya Vokasi Terpadu',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSchoolStat(String label, String value, bool isDark) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF4F46E5),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── School Profile Right Form ──────────────────────────────────────────────
+
+  Widget _buildSchoolProfileForm(ThemeData theme, bool isDark) {
+    const primary = Color(0xFF4F46E5);
+
+    return Container(
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardBg : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Form Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.account_balance_rounded, color: primary, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Informasi Legalitas & Profil Institusi',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Kelola data legalitas, nomor pokok institusi (NPSN / Kode PT), akreditasi, pimpinan, dan narahubung resmi institusi.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Divider(),
+          const SizedBox(height: 16),
+
+          // ── SEKSI 1: IDENTITAS & LEGALITAS ────────────────────────────────
+          _buildFormSectionHeader('1. IDENTITAS & LEGALITAS PENDIDIKAN', Icons.verified_outlined, isDark),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: _schoolNameController,
+            decoration: const InputDecoration(
+              labelText: 'Nama Resmi Institusi Pendidikan *',
+              hintText: 'Contoh: SMK Negeri 1 Kreasi / Institut Seni & Rekayasa Kreatif',
+              prefixIcon: Icon(Icons.school_outlined),
+            ),
+          ),
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 550;
+              return isWide
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _npsnController,
+                            keyboardType: TextInputType.text,
+                            decoration: const InputDecoration(
+                              labelText: 'Nomor Pokok / Kode Institusi (NPSN / Kode PT) *',
+                              hintText: 'NPSN untuk sekolah atau Kode PT untuk kampus (misal: 20401829 / 001001)',
+                              prefixIcon: Icon(Icons.pin_outlined),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _institutionTypeController,
+                            decoration: const InputDecoration(
+                              labelText: 'Jenjang / Tipe Institusi *',
+                              hintText: 'SMK / Vokasi / Institut / Universitas',
+                              prefixIcon: Icon(Icons.category_outlined),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        TextFormField(
+                          controller: _npsnController,
+                          keyboardType: TextInputType.text,
+                          decoration: const InputDecoration(
+                            labelText: 'Nomor Pokok / Kode Institusi (NPSN / Kode PT) *',
+                            hintText: 'NPSN untuk sekolah atau Kode PT untuk kampus (misal: 20401829 / 001001)',
+                            prefixIcon: Icon(Icons.pin_outlined),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _institutionTypeController,
+                          decoration: const InputDecoration(
+                            labelText: 'Jenjang / Tipe Institusi *',
+                            hintText: 'SMK / Vokasi / Institut / Universitas',
+                            prefixIcon: Icon(Icons.category_outlined),
+                          ),
+                        ),
+                      ],
+                    );
+            },
+          ),
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 550;
+              return isWide
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _accreditationController,
+                            decoration: const InputDecoration(
+                              labelText: 'Status Akreditasi *',
+                              hintText: 'A (Unggul) - BAN-PT',
+                              prefixIcon: Icon(Icons.workspace_premium_outlined),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _permitNumberController,
+                            decoration: const InputDecoration(
+                              labelText: 'Nomor SK Pendirian / Izin Operasional',
+                              hintText: 'Contoh: 842/E/O/2021',
+                              prefixIcon: Icon(Icons.assignment_outlined),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        TextFormField(
+                          controller: _accreditationController,
+                          decoration: const InputDecoration(
+                            labelText: 'Status Akreditasi *',
+                            hintText: 'A (Unggul) - BAN-PT',
+                            prefixIcon: Icon(Icons.workspace_premium_outlined),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _permitNumberController,
+                          decoration: const InputDecoration(
+                            labelText: 'Nomor SK Pendirian / Izin Operasional',
+                            hintText: 'Contoh: 842/E/O/2021',
+                            prefixIcon: Icon(Icons.assignment_outlined),
+                          ),
+                        ),
+                      ],
+                    );
+            },
+          ),
+          const SizedBox(height: 24),
+
+          // ── SEKSI 2: PIMPINAN & NARAHUBUNG ──────────────────────────────
+          _buildFormSectionHeader('2. PIMPINAN & NARAHUBUNG RESMI', Icons.person_pin_outlined, isDark),
+          const SizedBox(height: 14),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 550;
+              return isWide
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _headmasterNameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Nama Pimpinan Institusi (Rektor / Kepala Sekolah / Direktur) *',
+                              hintText: 'Nama lengkap pimpinan beserta gelar',
+                              prefixIcon: Icon(Icons.person_outline_rounded),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _headmasterNipController,
+                            decoration: const InputDecoration(
+                              labelText: 'NIP / NIDN / Identitas Pimpinan',
+                              hintText: 'NIP untuk ASN atau NIDN/NIK Pimpinan',
+                              prefixIcon: Icon(Icons.badge_outlined),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        TextFormField(
+                          controller: _headmasterNameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Nama Pimpinan Institusi (Rektor / Kepala Sekolah / Direktur) *',
+                            hintText: 'Nama lengkap pimpinan beserta gelar',
+                            prefixIcon: Icon(Icons.person_outline_rounded),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _headmasterNipController,
+                          decoration: const InputDecoration(
+                            labelText: 'NIP / NIDN / Identitas Pimpinan',
+                            hintText: 'NIP untuk ASN atau NIDN/NIK Pimpinan',
+                            prefixIcon: Icon(Icons.badge_outlined),
+                          ),
+                        ),
+                      ],
+                    );
+            },
+          ),
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 550;
+              return isWide
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _schoolPhoneController,
+                            decoration: const InputDecoration(
+                              labelText: 'Telepon Resmi Institusi / Narahubung *',
+                              hintText: '(021) 8849-201',
+                              prefixIcon: Icon(Icons.phone_outlined),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _schoolEmailController,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: const InputDecoration(
+                              labelText: 'Email Resmi Institusi *',
+                              hintText: 'kemitraan@isrk.ac.id',
+                              prefixIcon: Icon(Icons.email_outlined),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        TextFormField(
+                          controller: _schoolPhoneController,
+                          decoration: const InputDecoration(
+                            labelText: 'Telepon Resmi Institusi / Narahubung *',
+                            hintText: '(021) 8849-201',
+                            prefixIcon: Icon(Icons.phone_outlined),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _schoolEmailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: const InputDecoration(
+                            labelText: 'Email Resmi Institusi *',
+                            hintText: 'kemitraan@isrk.ac.id',
+                            prefixIcon: Icon(Icons.email_outlined),
+                          ),
+                        ),
+                      ],
+                    );
+            },
+          ),
+          const SizedBox(height: 24),
+
+          // ── SEKSI 3: LOKASI & DESKRIPSI ───────────────────────────────────
+          _buildFormSectionHeader('3. LOKASI & PROFIL INSTITUSI', Icons.place_outlined, isDark),
+          const SizedBox(height: 14),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 550;
+              return isWide
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _websiteController,
+                            decoration: const InputDecoration(
+                              labelText: 'Website Resmi Institusi',
+                              hintText: 'https://isrk.ac.id',
+                              prefixIcon: Icon(Icons.language_outlined),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _cityController,
+                            decoration: const InputDecoration(
+                              labelText: 'Kota / Kabupaten & Provinsi',
+                              hintText: 'Jakarta Selatan, DKI Jakarta',
+                              prefixIcon: Icon(Icons.location_city_outlined),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        TextFormField(
+                          controller: _websiteController,
+                          decoration: const InputDecoration(
+                            labelText: 'Website Resmi Institusi',
+                            hintText: 'https://isrk.ac.id',
+                            prefixIcon: Icon(Icons.language_outlined),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _cityController,
+                          decoration: const InputDecoration(
+                            labelText: 'Kota / Kabupaten & Provinsi',
+                            hintText: 'Jakarta Selatan, DKI Jakarta',
+                            prefixIcon: Icon(Icons.location_city_outlined),
+                          ),
+                        ),
+                      ],
+                    );
+            },
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _addressController,
+            decoration: const InputDecoration(
+              labelText: 'Alamat Lengkap Institusi / Kampus',
+              hintText: 'Jl. Pendidikan Kreatif No. 45, Kampus Budaya Vokasi Terpadu',
+              prefixIcon: Icon(Icons.map_outlined),
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _descriptionController,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Visi & Profil Singkat Institusi',
+              hintText: 'Visi, misi, dan keunggulan program pendidikan/vokasi institusi...',
+              prefixIcon: Icon(Icons.description_outlined),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // ── KARTU AKUN LOGIN TERKAIT ──────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey.shade900.withValues(alpha: 0.5) : Colors.indigo.shade50.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark ? Colors.white10 : Colors.indigo.shade100,
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.security_outlined, size: 20, color: Color(0xFF4F46E5)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Akun Pengguna: @${_currentUser.username} (${_currentUser.email})',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Untuk pengaturan kata sandi atau keamanan akun, silakan akses menu Pengaturan Akun.',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // ── TOMBOL SIMPAN ────────────────────────────────────────────────
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton.icon(
+              onPressed: _isSavingSchool ? null : _handleSaveSchoolProfile,
+              icon: _isSavingSchool
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.check_circle_outline_rounded, size: 20),
+              label: Text(
+                _isSavingSchool ? 'Menyimpan...' : 'Simpan Profil Institusi',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4F46E5),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormSectionHeader(String title, IconData icon, bool isDark) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: const Color(0xFF4F46E5)),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+            color: isDark ? Colors.indigo.shade200 : Colors.indigo.shade800,
+          ),
+        ),
+      ],
     );
   }
 }

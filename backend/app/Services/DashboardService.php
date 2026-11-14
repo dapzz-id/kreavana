@@ -74,8 +74,8 @@ class DashboardService extends BaseService implements DashboardServiceInterface
                 'poster_url' => $opp->poster_url,
             ])->toArray(),
             'project_needs' => $isGuest ? [] : $this->getProjectNeeds($userId),
-            'incoming_proposals' => $isGuest ? [] : $this->getIncomingProposals($userId),
-            'running_contracts' => $isGuest ? [] : $this->getRunningContracts($userId),
+            'incoming_proposals' => $isGuest ? [] : $this->getIncomingProposals($userId, $roleType),
+            'running_contracts' => $isGuest ? [] : $this->getRunningContracts($userId, $roleType),
             'agenda' => $isGuest ? [] : $this->getAgenda($userId),
             'project_assets' => $isGuest ? [] : $this->getProjectAssets($userId),
         ];
@@ -99,6 +99,35 @@ class DashboardService extends BaseService implements DashboardServiceInterface
 
     protected function getOverviewSummary(string $userId, string $roleType): array
     {
+        $isCreator = $roleType === 'creator';
+        if ($isCreator) {
+            $totalProjects = \App\Models\JobContract::where('creator_id', $userId)->count();
+            $runningProjects = \App\Models\JobContract::where('creator_id', $userId)
+                ->whereNotIn('contract_status', [\App\Enums\ContractStatus::Completed, \App\Enums\ContractStatus::Cancelled])
+                ->count();
+            $proposalsCount = \App\Models\OpportunityApplication::where('creator_id', $userId)->count();
+            $activeNeeds = \App\Models\Opportunity::where('status', 'open')->count();
+            $completedEarnings = $this->walletTransactionRepo->sumAmountByUserAndStatus($userId, 'completed');
+            $pendingEarnings = \App\Models\JobContract::where('creator_id', $userId)
+                ->where('contract_status', \App\Enums\ContractStatus::Active)
+                ->sum('agreed_price');
+            $favorites = $this->followRepo->getFollowersCount($userId);
+
+            return [
+                'active_needs' => $activeNeeds,
+                'proposals_count' => $proposalsCount,
+                'running_projects' => $runningProjects,
+                'estimated_expenses' => 'Rp ' . number_format($completedEarnings, 0, ',', '.'),
+                'monthly_income' => 'Rp ' . number_format($completedEarnings, 0, ',', '.'),
+                'total_projects' => $totalProjects,
+                'active_projects' => $runningProjects,
+                'total_payments' => 'Rp ' . number_format($completedEarnings, 0, ',', '.'),
+                'pending_payments' => 'Rp ' . number_format($pendingEarnings, 0, ',', '.'),
+                'favorites' => $favorites,
+                'role_type' => $roleType,
+            ];
+        }
+
         $totalProjects = $this->opportunityRepo->countByUser($userId);
         $activeProjects = $this->opportunityRepo->countActiveByUser($userId);
         $completedPayments = $this->walletTransactionRepo->sumAmountByUserAndStatus($userId, 'completed');
@@ -146,16 +175,26 @@ class DashboardService extends BaseService implements DashboardServiceInterface
         })->toArray();
     }
 
-    protected function getIncomingProposals(string $userId): array
+    protected function getIncomingProposals(string $userId, string $roleType = 'client'): array
     {
-        $proposals = \App\Models\OpportunityApplication::query()
-            ->whereHas('opportunity', function ($q) use ($userId) {
-                $q->where('posted_by', $userId);
-            })
-            ->with(['creator', 'opportunity'])
-            ->orderByDesc('created_at')
-            ->limit(5)
-            ->get();
+        $isCreator = $roleType === 'creator';
+        if ($isCreator) {
+            $proposals = \App\Models\OpportunityApplication::query()
+                ->where('creator_id', $userId)
+                ->with(['creator', 'opportunity'])
+                ->orderByDesc('created_at')
+                ->limit(5)
+                ->get();
+        } else {
+            $proposals = \App\Models\OpportunityApplication::query()
+                ->whereHas('opportunity', function ($q) use ($userId) {
+                    $q->where('posted_by', $userId);
+                })
+                ->with(['creator', 'opportunity'])
+                ->orderByDesc('created_at')
+                ->limit(5)
+                ->get();
+        }
 
         return $proposals->map(function ($prop) {
             $creatorName = $prop->creator?->name ?? 'Kreator';
@@ -174,24 +213,33 @@ class DashboardService extends BaseService implements DashboardServiceInterface
         })->toArray();
     }
 
-    protected function getRunningContracts(string $userId): array
+    protected function getRunningContracts(string $userId, string $roleType = 'client'): array
     {
-        $contracts = \App\Models\JobContract::query()
-            ->where('client_id', $userId)
+        $isCreator = $roleType === 'creator';
+        $query = \App\Models\JobContract::query();
+        if ($isCreator) {
+            $query->where('creator_id', $userId)->with(['client', 'creator']);
+        } else {
+            $query->where('client_id', $userId)->with('creator');
+        }
+
+        $contracts = $query
             ->whereNotIn('contract_status', [\App\Enums\ContractStatus::Completed, \App\Enums\ContractStatus::Cancelled])
-            ->with('creator')
             ->orderByDesc('updated_at')
             ->limit(5)
             ->get();
 
-        return $contracts->map(function ($c) {
+        return $contracts->map(function ($c) use ($isCreator) {
             $workStatusStr = is_object($c->work_status) ? $c->work_status->value : (string)$c->work_status;
             $contractStatusStr = is_object($c->contract_status) ? $c->contract_status->value : (string)$c->contract_status;
+            $partnerName = $isCreator ? ($c->client?->name ?? 'Klien') : ($c->creator?->name ?? 'Kreator');
+            $partnerAvatar = $isCreator ? $c->client?->avatar_url : $c->creator?->avatar_url;
+
             return [
                 'id' => $c->id,
                 'title' => $c->title,
-                'creator_name' => $c->creator?->name ?? 'Kreator',
-                'creator_avatar' => $c->creator?->avatar_url,
+                'creator_name' => $partnerName,
+                'creator_avatar' => $partnerAvatar,
                 'agreed_price' => 'Rp ' . number_format($c->agreed_price ?? 0, 0, ',', '.'),
                 'escrow_amount' => 'Rp ' . number_format($c->escrow_amount ?? 0, 0, ',', '.'),
                 'work_status' => $workStatusStr,
@@ -330,6 +378,10 @@ class DashboardService extends BaseService implements DashboardServiceInterface
 
             $subRoleVal = is_string($user->sub_role) ? $user->sub_role : $user->sub_role?->value;
             $category = $subRoleVal ? ucwords(str_replace('_', ' ', $subRoleVal)) : 'Creator';
+            $firstService = $services->first();
+            $coverUrl = $firstService?->thumbnail_url
+                ?? (!empty($portfolioImages) ? $portfolioImages[0] : null)
+                ?? $user->avatar_url;
 
             return [
                 'id' => $user->id,
@@ -338,6 +390,8 @@ class DashboardService extends BaseService implements DashboardServiceInterface
                 'rating' => number_format((float) ($user->rating ?? 5.0), 1),
                 'review_count' => (int) ($user->positive_marketplace_reviews_count ?? 0) + (int) ($user->positive_contract_reviews_count ?? 0),
                 'avatar_url' => $user->avatar_url,
+                'cover_url' => $coverUrl,
+                'thumbnail_url' => $firstService?->thumbnail_url,
                 'location' => $city,
                 'starting_price' => 'Rp ' . number_format($minPrice, 0, ',', '.'),
                 'portfolio_images' => $portfolioImages,
@@ -419,18 +473,32 @@ class DashboardService extends BaseService implements DashboardServiceInterface
                     ['stat_label' => 'Rating', 'stat_value' => '4.7', 'stat_icon' => 'star'],
                 ]
             ],
-            'pemerintah' => [
+            'government' => [
                 'user' => [
-                    ['stat_label' => 'Kegiatan Aktif', 'stat_value' => '12', 'stat_icon' => 'event'],
-                    ['stat_label' => 'Relawan', 'stat_value' => '320', 'stat_icon' => 'volunteer_activism'],
-                    ['stat_label' => 'Vendor Lokal', 'stat_value' => '85', 'stat_icon' => 'store'],
-                    ['stat_label' => 'Laporan', 'stat_value' => '18', 'stat_icon' => 'assessment'],
+                    ['stat_label' => 'Tender LPSE Aktif', 'stat_value' => '5 Paket', 'stat_icon' => 'gavel'],
+                    ['stat_label' => 'Pagu Anggaran', 'stat_value' => 'Rp 2.45 M', 'stat_icon' => 'account_balance_wallet'],
+                    ['stat_label' => 'Realisasi DIPA', 'stat_value' => '74.2%', 'stat_icon' => 'trending_up'],
+                    ['stat_label' => 'Capaian Monev', 'stat_value' => '98.4%', 'stat_icon' => 'fact_check'],
                 ],
                 'creator' => [
-                    ['stat_label' => 'Program Aktif', 'stat_value' => '6', 'stat_icon' => 'gavel'],
-                    ['stat_label' => 'Dokumentasi', 'stat_value' => '15', 'stat_icon' => 'photo_camera'],
-                    ['stat_label' => 'Selesai', 'stat_value' => '30', 'stat_icon' => 'done_all'],
-                    ['stat_label' => 'Rating', 'stat_value' => '4.5', 'stat_icon' => 'star'],
+                    ['stat_label' => 'Program DIPA', 'stat_value' => '8 Proyek', 'stat_icon' => 'account_balance'],
+                    ['stat_label' => 'Dokumen BAST', 'stat_value' => '14 Berkas', 'stat_icon' => 'description'],
+                    ['stat_label' => 'Mitra Kreator', 'stat_value' => '24 Rekanan', 'stat_icon' => 'groups'],
+                    ['stat_label' => 'Indeks Akuntabilitas', 'stat_value' => '4.9/5', 'stat_icon' => 'verified'],
+                ]
+            ],
+            'pemerintah' => [
+                'user' => [
+                    ['stat_label' => 'Tender LPSE Aktif', 'stat_value' => '5 Paket', 'stat_icon' => 'gavel'],
+                    ['stat_label' => 'Pagu Anggaran', 'stat_value' => 'Rp 2.45 M', 'stat_icon' => 'account_balance_wallet'],
+                    ['stat_label' => 'Realisasi DIPA', 'stat_value' => '74.2%', 'stat_icon' => 'trending_up'],
+                    ['stat_label' => 'Capaian Monev', 'stat_value' => '98.4%', 'stat_icon' => 'fact_check'],
+                ],
+                'creator' => [
+                    ['stat_label' => 'Program DIPA', 'stat_value' => '8 Proyek', 'stat_icon' => 'account_balance'],
+                    ['stat_label' => 'Dokumen BAST', 'stat_value' => '14 Berkas', 'stat_icon' => 'description'],
+                    ['stat_label' => 'Mitra Kreator', 'stat_value' => '24 Rekanan', 'stat_icon' => 'groups'],
+                    ['stat_label' => 'Indeks Akuntabilitas', 'stat_value' => '4.9/5', 'stat_icon' => 'verified'],
                 ]
             ],
             'komunitas' => [
@@ -463,6 +531,11 @@ class DashboardService extends BaseService implements DashboardServiceInterface
             ]
         ];
 
-        return $fallback[$subRoleSlug][$roleType] ?? $fallback['kreator']['user'];
+        $slug = strtolower(str_replace(['-', ' '], '_', $subRoleSlug));
+        if (in_array($slug, ['pemerintah', 'instansi', 'dinas', 'bumn', 'kementerian'], true)) {
+            $slug = 'government';
+        }
+
+        return $fallback[$slug][$roleType] ?? $fallback[$subRoleSlug][$roleType] ?? $fallback['kreator']['user'];
     }
 }

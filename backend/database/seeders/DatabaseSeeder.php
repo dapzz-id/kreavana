@@ -34,6 +34,7 @@ class DatabaseSeeder extends Seeder
             CollaborationSeeder::class,
             CorporateDummySeeder::class,
             PresentationDemoSeeder::class,
+            SchoolDummySeeder::class,
         ]);
     }
 }

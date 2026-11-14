@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use App\Repositories\WalletTransactionRepository;
 use App\Repositories\UserRepository;
 use App\Repositories\NotificationRepository;
@@ -26,12 +27,40 @@ class WalletService extends BaseService
     public function getInfo(string $userId): array
     {
         $user = $this->userRepo->find($userId);
+        if ($user) {
+            $this->reconcileBalanceWithLedger($user);
+        }
         $transactions = $this->walletRepo->getHistoryByUser($userId, null, 100);
 
         return [
             'balance' => (double) $user->balance,
             'transactions' => $transactions->items(),
         ];
+    }
+
+    /**
+     * Rekonsiliasi integritas saldo pengguna dengan buku kas ledger (wallet_transactions).
+     * Mencegah kehilangan saldo akibat seeder overwrite di lingkungan deployment.
+     */
+    public function reconcileBalanceWithLedger(User $user): void
+    {
+        $completedCredits = (float) \App\Models\WalletTransaction::where('user_id', $user->id)
+            ->where('status', 'completed')
+            ->whereIn('type', ['topup', 'transfer_receive', 'refund', 'escrow_refund'])
+            ->sum('amount');
+
+        $completedDebits = (float) \App\Models\WalletTransaction::where('user_id', $user->id)
+            ->where('status', 'completed')
+            ->whereIn('type', ['transfer_send', 'withdrawal', 'payment', 'contract_payment', 'escrow_hold'])
+            ->sum('amount');
+
+        $netMovement = $completedCredits - $completedDebits;
+        $expectedBalance = max(0.0, $netMovement);
+
+        if ($completedCredits > 0 && (float) $user->balance < $expectedBalance) {
+            $user->balance = $expectedBalance;
+            $user->save();
+        }
     }
 
     public function createTopup(string $userId, array $data): array
@@ -97,9 +126,16 @@ class WalletService extends BaseService
         try {
             DB::beginTransaction();
 
-            $this->walletRepo->update($transaction->id, ['status' => 'completed']);
-            $user = $this->userRepo->find($userId);
-            $this->userRepo->update($userId, ['balance' => $user->balance + $transaction->amount]);
+            $transaction->status = 'completed';
+            $transaction->ledger_hash = $transaction->generateLedgerHash();
+            $transaction->save();
+
+            $user = User::where('id', $userId)->lockForUpdate()->first();
+            if (!$user) {
+                throw new Exception('Pengguna tidak ditemukan.', 404);
+            }
+            $user->balance += $transaction->amount;
+            $user->save();
 
             $this->notificationRepo->create([
                 'user_id' => $userId,
@@ -114,45 +150,65 @@ class WalletService extends BaseService
             DB::commit();
 
             return [
-                'balance' => (double) ($user->balance + $transaction->amount),
+                'balance' => (double) $user->balance,
                 'transaction' => $this->walletRepo->find($transaction->id),
             ];
         } catch (Exception $e) {
             DB::rollBack();
-            throw new Exception('Gagal memproses simulasi pembayaran. Silakan coba lagi.', 500);
+            throw new Exception($e->getCode() === 404 ? $e->getMessage() : 'Gagal memproses simulasi pembayaran. Silakan coba lagi.', $e->getCode() ?: 500);
         }
     }
 
     public function transfer(string $senderId, array $data): array
     {
-        $sender = $this->userRepo->find($senderId);
-        $receiver = $this->userRepo->findByEmailOrUsername($data['receiver_username']); // Using existing method
+        $amount = (float) $data['amount'];
+        $receiverUser = $this->userRepo->findByEmailOrUsername($data['receiver_username']);
 
-        if (!$receiver) {
+        if (!$receiverUser) {
              throw new Exception('Penerima tidak ditemukan.', 404);
         }
 
-        if ($sender->id === $receiver->id) {
+        if ($senderId === $receiverUser->id) {
             throw new Exception('Tidak dapat mengirim saldo ke diri sendiri.', 400);
-        }
-
-        if ($sender->balance < $data['amount']) {
-            throw new Exception('Saldo tidak mencukupi untuk transfer.', 400);
         }
 
         try {
             DB::beginTransaction();
-            $fee = $data['amount'] * 0.05;
-            $netAmount = $data['amount'] - $fee;
+
+            // Lock both users in sorted order to avoid deadlock
+            $userIds = [$senderId, $receiverUser->id];
+            sort($userIds);
+
+            $lockedUsers = User::whereIn('id', $userIds)
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            $sender = $lockedUsers[$senderId] ?? null;
+            $receiver = $lockedUsers[$receiverUser->id] ?? null;
+
+            if (!$sender || !$receiver) {
+                throw new Exception('Data pengguna tidak ditemukan.', 404);
+            }
+
+            if ($sender->balance < $amount) {
+                throw new Exception('Saldo tidak mencukupi untuk transfer.', 400);
+            }
+
+            $fee = $amount * 0.05;
+            $netAmount = $amount - $fee;
             $refNumber = 'TX-' . strtoupper(Str::random(8)) . '-' . time();
 
-            $this->userRepo->update($sender->id, ['balance' => $sender->balance - $data['amount']]);
-            $this->userRepo->update($receiver->id, ['balance' => $receiver->balance + $netAmount]);
+            $sender->balance -= $amount;
+            $sender->save();
+
+            $receiver->balance += $netAmount;
+            $receiver->save();
 
             $senderTx = $this->walletRepo->create([
                 'user_id' => $sender->id,
                 'type' => 'transfer_send',
-                'amount' => $data['amount'],
+                'amount' => $amount,
                 'fee' => $fee,
                 'payment_method' => 'wallet',
                 'payment_provider' => 'Kreavana Wallet',
@@ -160,8 +216,10 @@ class WalletService extends BaseService
                 'reference_number' => $refNumber . '-SEND',
                 'description' => "Kirim saldo ke @{$receiver->username}. " . ($data['description'] ?? ''),
             ]);
+            $senderTx->ledger_hash = $senderTx->generateLedgerHash();
+            $senderTx->save();
 
-            $this->walletRepo->create([
+            $receiverTx = $this->walletRepo->create([
                 'user_id' => $receiver->id,
                 'type' => 'transfer_receive',
                 'amount' => $netAmount,
@@ -172,41 +230,64 @@ class WalletService extends BaseService
                 'reference_number' => $refNumber . '-RCV',
                 'description' => "Terima saldo dari @{$sender->username}. " . ($data['description'] ?? ''),
             ]);
+            $receiverTx->ledger_hash = $receiverTx->generateLedgerHash();
+            $receiverTx->save();
+
+            $this->notificationRepo->create([
+                'user_id' => $receiver->id,
+                'title' => 'Saldo Masuk',
+                'message' => 'Anda menerima transfer saldo sebesar Rp ' . number_format($netAmount, 0, ',', '.') . ' dari @' . $sender->username . '.',
+                'type' => 'wallet',
+                'data' => ['sender_id' => $sender->id, 'amount' => $netAmount, 'fee' => $fee],
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
 
             DB::commit();
 
             return [
-                'sender_balance' => (double) ($sender->balance - $data['amount']),
+                'sender_balance' => (double) $sender->balance,
                 'fee' => $fee,
                 'net_amount' => $netAmount,
                 'transaction' => $senderTx,
             ];
         } catch (Exception $e) {
             DB::rollBack();
+            if (in_array($e->getCode(), [400, 404])) {
+                throw $e;
+            }
             throw new Exception('Transfer gagal diproses. Silakan coba lagi.', 500);
         }
     }
 
     public function withdraw(string $userId, array $data): array
     {
-        $user = $this->userRepo->find($userId);
-
-        if ($user->balance < $data['amount']) {
-            throw new Exception('Saldo tidak mencukupi untuk melakukan penarikan.', 400);
-        }
+        $amount = (float) $data['amount'];
 
         try {
             DB::beginTransaction();
-            $tax = $data['amount'] * 0.05; 
-            $netAmount = $data['amount'] - $tax;
+
+            $user = User::where('id', $userId)->lockForUpdate()->first();
+
+            if (!$user) {
+                throw new Exception('Pengguna tidak ditemukan.', 404);
+            }
+
+            if ($user->balance < $amount) {
+                throw new Exception('Saldo tidak mencukupi untuk melakukan penarikan.', 400);
+            }
+
+            $tax = $amount * 0.05; 
+            $netAmount = $amount - $tax;
             $refNumber = 'WD-' . strtoupper(Str::random(8)) . '-' . time();
 
-            $this->userRepo->update($user->id, ['balance' => $user->balance - $data['amount']]);
+            $user->balance -= $amount;
+            $user->save();
 
             $transaction = $this->walletRepo->create([
                 'user_id' => $user->id,
                 'type' => 'withdrawal',
-                'amount' => $data['amount'],
+                'amount' => $amount,
                 'fee' => $tax,
                 'payment_method' => $data['payment_method'],
                 'payment_provider' => $data['payment_provider'],
@@ -218,13 +299,16 @@ class WalletService extends BaseService
             DB::commit();
 
             return [
-                'balance' => (double) ($user->balance - $data['amount']),
+                'balance' => (double) $user->balance,
                 'tax' => $tax,
                 'net_amount' => $netAmount,
                 'transaction' => $transaction,
             ];
         } catch (Exception $e) {
             DB::rollBack();
+            if (in_array($e->getCode(), [400, 404])) {
+                throw $e;
+            }
             throw new Exception('Penarikan saldo gagal. Silakan coba lagi.', 500);
         }
     }

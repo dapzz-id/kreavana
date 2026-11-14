@@ -84,7 +84,7 @@ class ProfileService extends BaseService
                         $storageService = app(\App\Services\StorageService::class);
                         $storageFile = $storageService->store($user, $uploadedFile, 'avatar', 'public');
                         
-                        $user->avatar_url = url('storage/' . $storageFile->path);
+                        $user->avatar_url = $storageFile->url;
                         @unlink($tempPath);
                     }
                 }
@@ -205,6 +205,9 @@ class ProfileService extends BaseService
         if ($user->role->value === 'creator' || ($user->is_verified && $user->verification_type === 'creator')) {
             throw new Exception('Akun Anda telah terdaftar sebagai Kreator. Verifikasi KTP Klien dinonaktifkan.', 422);
         }
+        if ($user->isCorporate()) {
+            throw new Exception('Akun Anda telah berstatus Corporate. Verifikasi KTP Klien tidak diperlukan untuk akun Corporate.', 422);
+        }
         if ($user->is_verified && $user->verification_type === 'client') {
             throw new Exception('Identitas KTP Anda sudah terverifikasi.', 422);
         }
@@ -292,10 +295,12 @@ class ProfileService extends BaseService
             ];
         }
 
+        $isCorporate = method_exists($user, 'isCorporate') ? $user->isCorporate() : false;
+
         return [
-            'is_verified' => (bool) $user->is_verified,
-            'verification_type' => $user->verification_type,
-            'verified_at' => $user->verified_at?->toISOString(),
+            'is_verified' => $isCorporate ? true : (bool) $user->is_verified,
+            'verification_type' => $isCorporate ? ($user->verification_type ?? 'corporate') : $user->verification_type,
+            'verified_at' => $user->verified_at?->toISOString() ?? ($isCorporate ? now()->toISOString() : null),
             'has_pending' => $pending !== null,
             'pending_application' => $pending,
             'latest_application' => $latest,
@@ -415,7 +420,7 @@ class ProfileService extends BaseService
                     $storageFile = $storageService->store($user, $uploadedFile, $prefix, 'public');
                     
                     @unlink($tempPath);
-                    return url('storage/' . $storageFile->path);
+                    return $storageFile->url;
                 }
             }
         }

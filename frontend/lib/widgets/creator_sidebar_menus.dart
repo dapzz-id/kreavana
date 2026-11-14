@@ -43,8 +43,19 @@ class CreatorSidebarMenus {
       'singer',
       'penyanyi',
       'talent',
+      'performer',
+      'talent_performer',
       'model',
       'talent_model',
+      'actor',
+      'aktor',
+      'penari',
+      'dancer',
+      'musisi',
+      'musician',
+      'voice_over',
+      'vo',
+      'voiceover',
       'makeup_artist',
       'mua',
       'makeup',
@@ -63,6 +74,26 @@ class CreatorSidebarMenus {
       'animator',
       '3d_animator',
       'motion_designer',
+      'vendor',
+      'vendor_pendukung',
+      'penyedia_jasa',
+      'mitra',
+      'mitra_pendukung',
+      'studio',
+      'rental_alat',
+      'sewa_alat',
+      'wardrobe',
+      'kostum',
+      'dekorasi',
+      'properti',
+      'katering',
+      'catering',
+      'printing',
+      'merchandise',
+      'lighting_sound',
+      'sound_system',
+      'transportasi',
+      'logistik',
     };
     return known.contains(normalizeSubRole(subRole));
   }
@@ -109,9 +140,18 @@ class CreatorSidebarMenus {
       case 'penyanyi':
         return 'LAYANAN PENYANYI';
       case 'talent':
+      case 'performer':
+      case 'talent_performer':
       case 'model':
       case 'talent_model':
-        return 'LAYANAN TALENT';
+      case 'actor':
+      case 'aktor':
+      case 'penari':
+      case 'dancer':
+      case 'voice_over':
+      case 'vo':
+      case 'voiceover':
+        return 'LAYANAN TALENT & PERFORMER';
       case 'makeup_artist':
       case 'mua':
       case 'makeup':
@@ -137,6 +177,27 @@ class CreatorSidebarMenus {
       case '3d_animator':
       case 'motion_designer':
         return 'LAYANAN ANIMATOR 3D';
+      case 'vendor':
+      case 'vendor_pendukung':
+      case 'penyedia_jasa':
+      case 'mitra':
+      case 'mitra_pendukung':
+      case 'studio':
+      case 'rental_alat':
+      case 'sewa_alat':
+      case 'wardrobe':
+      case 'kostum':
+      case 'dekorasi':
+      case 'properti':
+      case 'katering':
+      case 'catering':
+      case 'printing':
+      case 'merchandise':
+      case 'lighting_sound':
+      case 'sound_system':
+      case 'transportasi':
+      case 'logistik':
+        return 'LAYANAN VENDOR & JASA PENDUKUNG';
       default:
         return null;
     }
@@ -293,27 +354,36 @@ class CreatorSidebarMenus {
           ),
         ];
       case 'talent':
+      case 'performer':
+      case 'talent_performer':
       case 'model':
       case 'talent_model':
+      case 'actor':
+      case 'aktor':
+      case 'penari':
+      case 'dancer':
+      case 'voice_over':
+      case 'vo':
+      case 'voiceover':
         return const [
           CreatorSidebarMenuEntry(
-            icon: Icons.portrait_outlined,
-            label: 'Profil Talent',
+            icon: Icons.smart_display_outlined,
+            label: 'Showreel & Portofolio',
             serviceKey: 'talent_profil',
           ),
           CreatorSidebarMenuEntry(
             icon: Icons.calendar_today_outlined,
-            label: 'Jadwal & Booking',
+            label: 'Jadwal & Ketersediaan',
             serviceKey: 'talent_jadwal',
           ),
           CreatorSidebarMenuEntry(
-            icon: Icons.work_outline,
-            label: 'Kategori Pekerjaan',
+            icon: Icons.campaign_outlined,
+            label: 'Casting & Peluang',
             serviceKey: 'talent_kategori',
           ),
           CreatorSidebarMenuEntry(
             icon: Icons.payments_outlined,
-            label: 'Tarif',
+            label: 'Tarif & Kontrak',
             serviceKey: 'talent_tarif',
           ),
         ];
@@ -487,6 +557,53 @@ class CreatorSidebarMenus {
             icon: Icons.history_toggle_off_outlined,
             label: 'Render & Milestone',
             serviceKey: 'animator_render',
+          ),
+        ];
+      case 'vendor':
+      case 'vendor_pendukung':
+      case 'penyedia_jasa':
+      case 'mitra':
+      case 'mitra_pendukung':
+      case 'studio':
+      case 'rental_alat':
+      case 'sewa_alat':
+      case 'wardrobe':
+      case 'kostum':
+      case 'dekorasi':
+      case 'properti':
+      case 'katering':
+      case 'catering':
+      case 'printing':
+      case 'merchandise':
+      case 'lighting_sound':
+      case 'sound_system':
+      case 'transportasi':
+      case 'logistik':
+        return const [
+          CreatorSidebarMenuEntry(
+            icon: Icons.inventory_2_outlined,
+            label: 'Katalog & Harga',
+            serviceKey: 'vendor_katalog',
+          ),
+          CreatorSidebarMenuEntry(
+            icon: Icons.calendar_today_outlined,
+            label: 'Jadwal & Ketersediaan',
+            serviceKey: 'vendor_ketersediaan',
+          ),
+          CreatorSidebarMenuEntry(
+            icon: Icons.mark_chat_unread_outlined,
+            label: 'Permintaan & Pesanan',
+            serviceKey: 'vendor_permintaan',
+          ),
+          CreatorSidebarMenuEntry(
+            icon: Icons.build_circle_outlined,
+            label: 'Layanan & Operasional',
+            serviceKey: 'vendor_operasional',
+          ),
+          CreatorSidebarMenuEntry(
+            icon: Icons.star_outline_rounded,
+            label: 'Ulasan & Reputasi',
+            serviceKey: 'vendor_reputasi',
           ),
         ];
       default:

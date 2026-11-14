@@ -232,12 +232,12 @@ jobs:
           echo "Composer install completed."
 
           echo "============================================================"
-          echo "RUN DATABASE MIGRATIONS & SEEDERS"
+          echo "RUN DATABASE MIGRATIONS"
           echo "============================================================"
 
-          php8.4 artisan migrate --seed --force
+          php8.4 artisan migrate --force
 
-          echo "Database migrations and seeders completed."
+          echo "Database migrations completed."
 
           echo "============================================================"
           echo "CLEAR LARAVEL CACHE"
@@ -272,6 +272,38 @@ jobs:
           php8.4 artisan --version
 
           echo "DEV backend update completed."
+
+          # ============================================================
+          # UPDATE KREAVANA DEV AUTH (USERS_API)
+          # ============================================================
+          AUTH_PROJECT="/var/www/kreavana-dev-auth"
+          AUTH_API="$AUTH_PROJECT/users_api"
+
+          if [ -d "$AUTH_PROJECT" ]; then
+              echo "============================================================"
+              echo "UPDATING USERS_API IN $AUTH_PROJECT"
+              echo "============================================================"
+              cd "$AUTH_PROJECT"
+              git config --global --add safe.directory "$AUTH_PROJECT"
+
+              git fetch origin main
+              git reset --hard origin/main
+
+              cd "$AUTH_API"
+
+              php8.4 /usr/bin/composer install \
+                --no-interaction \
+                --prefer-dist \
+                --optimize-autoloader
+
+              php8.4 artisan migrate --seed --force
+              php8.4 artisan optimize:clear
+              php8.4 artisan config:cache
+              php8.4 artisan route:cache
+
+              chown -R www-data:www-data "$AUTH_PROJECT"
+              echo "Kreavana DEV Auth (users_api) update completed."
+          fi
 
           REMOTE_SCRIPT
 

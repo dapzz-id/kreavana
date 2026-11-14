@@ -162,10 +162,10 @@ class _AdminSystemSettingsScreenState extends State<AdminSystemSettingsScreen>
   }
 
   Future<void> _saveAiSettings() async {
-    setState(() => _isSavingAi = true);
-
     final rawKey = _apiKeyController.text.trim();
     final isMasked = rawKey.contains('•');
+
+    setState(() => _isSavingAi = true);
 
     final res = await AdminService.updateAiConfig(
       provider: _aiProvider,
@@ -864,7 +864,7 @@ class _AdminSystemSettingsScreenState extends State<AdminSystemSettingsScreen>
                       decoration: InputDecoration(
                         hintText: _hasSavedApiKey
                             ? 'Masukkan key baru jika ingin mengganti...'
-                            : 'Contoh: AIzaSy...',
+                            : 'Contoh: AQ.Ab... atau AIzaSy...',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -879,7 +879,7 @@ class _AdminSystemSettingsScreenState extends State<AdminSystemSettingsScreen>
                     const SizedBox(height: 8),
                     Text(
                       _aiProvider == 'gemini'
-                          ? 'Dapatkan API key gratis di Google AI Studio (aistudio.google.com).'
+                          ? 'Dapatkan API key gratis di Google AI Studio (aistudio.google.com). Mendukung format terbaru (AQ...) maupun legacy (AIza...).'
                           : (_aiProvider == 'openai'
                               ? 'Dapatkan API key di OpenAI Developer Platform (platform.openai.com).'
                               : 'Masukkan kredensial otorisasi sesuai provider.'),

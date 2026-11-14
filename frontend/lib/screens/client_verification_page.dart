@@ -13,6 +13,7 @@ import '../widgets/ktp_camera_view.dart';
 import '../widgets/desktop_sidebar_layout.dart';
 import '../widgets/auth_guard_dialog.dart';
 import '../features/auth/services/auth_service.dart';
+import '../services/user_store.dart';
 import 'main_navigation.dart';
 
 class _HistoryRowData {
@@ -63,7 +64,29 @@ class _ClientVerificationPageState extends State<ClientVerificationPage> {
   @override
   void initState() {
     super.initState();
-    _currentUser = widget.user;
+    _currentUser = widget.user ?? currentUserNotifier.value;
+    final isCorp = _currentUser?.isCorporate == true ||
+        (_currentUser?.subRole ?? '').toLowerCase().contains('corporate') ||
+        (_currentUser?.subRole ?? '').toLowerCase().contains('company') ||
+        _currentUser?.username == 'corporate_demo';
+    if (isCorp) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Akun Corporate tidak memerlukan verifikasi KTP perorangan.',
+            ),
+            backgroundColor: Colors.blue,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context, true);
+        }
+      });
+      return;
+    }
     if (_currentUser?.isGuest == true) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;

@@ -193,6 +193,7 @@ class MessageService extends BaseService
 
         $messageData = [
             'id' => $message->id,
+            'chat_id' => $chat->id,
             'text' => $message->message,
             'type' => $message->type,
             'media_url' => $message->media_url,
@@ -206,16 +207,14 @@ class MessageService extends BaseService
             'encryption_version' => $encryptionVersion,
             'ciphertext' => $ciphertext,
             'iv' => $iv,
+            'message_keys' => $messageKeys,
         ];
 
-        $broadcastData = $messageData;
-        if (isset($broadcastData['message_keys'])) {
-            unset($broadcastData['message_keys']);
-        }
+        $participantIds = $chat->participants()->pluck('user_id')->toArray();
 
         try {
             Log::info('Broadcasting MessageSent on chat.' . $chat->id . ' by User ' . $userId);
-            broadcast(new MessageSent($broadcastData, $chat->id));
+            broadcast(new MessageSent($messageData, $chat->id, $participantIds));
         } catch (\Throwable $e) {
             Log::warning('Broadcast MessageSent failed: ' . $e->getMessage());
         }

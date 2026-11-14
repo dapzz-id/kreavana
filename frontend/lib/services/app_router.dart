@@ -41,6 +41,43 @@ class AppRoutes {
   static const peluangProyek = '/peluang-proyek';
   static const kapasitasJadwal = '/kapasitas-jadwal';
   static const aiAssistant = '/ai';
+
+  /// Index → URL mapping untuk pengguna reguler / kreator / klien
+  static const Map<int, String> indexRouteMap = {
+    0: AppRoutes.beranda,
+    1: AppRoutes.explore,
+    2: AppRoutes.proyek,
+    3: AppRoutes.marketplaceKarya,
+    4: AppRoutes.agenda,
+    5: AppRoutes.kolaborasi,
+    6: AppRoutes.reputasi,
+    7: AppRoutes.wallet,
+    8: AppRoutes.pengaturan,
+    9: AppRoutes.profil,
+    10: AppRoutes.notifikasi,
+    11: AppRoutes.pesan,
+    12: AppRoutes.peluangProyek,
+    13: AppRoutes.kapasitasJadwal,
+    14: AppRoutes.aiAssistant,
+  };
+
+  /// Index → URL mapping untuk akun administrator
+  static const Map<int, String> adminIndexRouteMap = {
+    0: AppRoutes.adminDashboard,
+    1: AppRoutes.adminVerification,
+    2: AppRoutes.adminResolution,
+    3: AppRoutes.adminSystemSettings,
+    4: AppRoutes.notifikasi,
+    5: AppRoutes.profil,
+  };
+
+  /// Dapatkan path URL route dari index MainNavigation
+  static String getRouteForIndex(int index, {bool isAdmin = false}) {
+    if (isAdmin) {
+      return adminIndexRouteMap[index] ?? AppRoutes.adminDashboard;
+    }
+    return indexRouteMap[index] ?? AppRoutes.beranda;
+  }
 }
 
 const _routeIndexMap = {

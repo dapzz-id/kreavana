@@ -196,21 +196,26 @@ class AdminSystemSettingController extends Controller
             }
         }
 
+        $currentModel = SystemSetting::get('ai_model', 'gemini-3.5-flash-lite');
+        if (in_array($currentModel, ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'])) {
+            $currentModel = 'gemini-3.5-flash-lite';
+        }
+
         $config = [
             'provider' => SystemSetting::get('ai_provider', 'gemini'),
             'api_key_masked' => $maskedKey,
             'has_api_key' => !empty($apiKey),
-            'model' => SystemSetting::get('ai_model', 'gemini-1.5-flash'),
+            'model' => $currentModel,
             'temperature' => (float) SystemSetting::get('ai_temperature', 0.7),
             'max_tokens' => (int) SystemSetting::get('ai_max_tokens', 2048),
             'system_prompt' => SystemSetting::get('ai_system_prompt', 'Anda adalah Kreavana AI, asisten intelijen kreatif resmi untuk platform Kreavana. Bantu kreator dan klien mengoptimalkan ide, peluang proyek, dan strategi bisnis kreatif di Indonesia.'),
             'custom_endpoint' => SystemSetting::get('ai_custom_endpoint', ''),
             'available_models' => [
                 'gemini' => [
-                    ['id' => 'gemini-1.5-flash', 'name' => 'Google Gemini 1.5 Flash (Cepat & Hemat Kuota)'],
-                    ['id' => 'gemini-1.5-pro', 'name' => 'Google Gemini 1.5 Pro (Kemampuan Analisis Tinggi)'],
-                    ['id' => 'gemini-2.0-flash', 'name' => 'Google Gemini 2.0 Flash (Next-Gen Ultrafast)'],
-                    ['id' => 'gemini-2.5-flash', 'name' => 'Google Gemini 2.5 Flash'],
+                    ['id' => 'gemini-3.5-flash-lite', 'name' => 'Google Gemini 3.5 Flash Lite (Direkomendasikan - Paling Cepat & Stabil)'],
+                    ['id' => 'gemini-3.8-flash', 'name' => 'Google Gemini 3.8 Flash (Next-Gen Flagship - Respon Kadang Lambat/Antrean)'],
+                    ['id' => 'gemini-flash-latest', 'name' => 'Google Gemini Flash Latest'],
+                    ['id' => 'gemini-2.5-pro', 'name' => 'Google Gemini 2.5 Pro (Analisis Kompleks)'],
                 ],
                 'openai' => [
                     ['id' => 'gpt-4o-mini', 'name' => 'OpenAI GPT-4o Mini (Efisiensi Tinggi)'],
@@ -303,8 +308,14 @@ class AdminSystemSettingController extends Controller
 
         try {
             if ($provider === 'gemini') {
+                if (empty($model) || in_array($model, ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'])) {
+                    $model = 'gemini-3.5-flash-lite';
+                }
+
                 $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
-                $response = Http::timeout(10)->post($endpoint, [
+                $response = Http::withHeaders([
+                    'x-goog-api-key' => $apiKey,
+                ])->timeout(25)->post($endpoint, [
                     'contents' => [
                         [
                             'parts' => [
@@ -412,10 +423,83 @@ class AdminSystemSettingController extends Controller
                 ]);
             }
         } catch (Exception $e) {
+            $msg = $e->getMessage();
+            if (str_contains($msg, 'Operation timed out') || str_contains($msg, 'cURL error 28')) {
+                $msg = "Waktu koneksi habis (Timeout setelah 25 detik). Server model '{$model}' sedang mengalami antrean/beban tinggi dari Google. Disarankan memilih model 'Google Gemini 3.5 Flash Lite' yang jauh lebih cepat dan stabil.";
+            }
+
             return response()->json([
                 'status' => false,
-                'message' => 'Gagal terhubung ke server AI: ' . $e->getMessage(),
+                'message' => 'Gagal terhubung ke server AI: ' . $msg,
             ], 500);
         }
+    }
+
+    /**
+     * GET /api/admin/system/contract-signature
+     */
+    public function getContractSignature()
+    {
+        return response()->json([
+            'status' => true,
+            'data' => [
+                'admin_name' => SystemSetting::get('admin_contract_signer_name', 'Tim Legal & Penjamin Escrow Kreavana'),
+                'admin_title' => SystemSetting::get('admin_contract_signer_title', 'Otoritas Penjamin Transaksi PT Kreavana Digital Indonesia'),
+                'admin_signature_url' => SystemSetting::get('admin_contract_signature_image', '/assets/images/kreavana_official_signature.png'),
+            ],
+        ]);
+    }
+
+    /**
+     * POST /api/admin/system/contract-signature
+     * Upload foto tanda tangan & nama admin untuk auto-input sistem ke kontrak digital
+     */
+    public function updateContractSignature(Request $request)
+    {
+        $validated = $request->validate([
+            'admin_name' => 'required|string|max:150',
+            'admin_title' => 'nullable|string|max:150',
+            'signature_image' => 'nullable',
+        ]);
+
+        SystemSetting::set('admin_contract_signer_name', $validated['admin_name'], 'contracts');
+        if (!empty($validated['admin_title'])) {
+            SystemSetting::set('admin_contract_signer_title', $validated['admin_title'], 'contracts');
+        }
+
+        $diskName = in_array(config('filesystems.default'), ['minio', 's3'], true) ? config('filesystems.default') : 'public';
+
+        if ($request->hasFile('signature_image')) {
+            $file = $request->file('signature_image');
+            $filename = 'admin_sig_' . time() . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('signatures', $filename, $diskName);
+            $signatureUrl = \Illuminate\Support\Facades\Storage::disk($diskName)->url('signatures/' . $filename);
+            SystemSetting::set('admin_contract_signature_image', $signatureUrl, 'contracts');
+        } elseif ($request->filled('signature_image_base64')) {
+            $raw = $request->input('signature_image_base64');
+            if (preg_match('/^data:image\/(\w+);base64,/', $raw, $type)) {
+                $raw = substr($raw, strpos($raw, ',') + 1);
+                $type = strtolower($type[1]);
+                $image = base64_decode($raw);
+                if ($image !== false) {
+                    $filename = 'admin_sig_' . time() . '.' . $type;
+                    \Illuminate\Support\Facades\Storage::disk($diskName)->put('signatures/' . $filename, $image);
+                    $signatureUrl = \Illuminate\Support\Facades\Storage::disk($diskName)->url('signatures/' . $filename);
+                    SystemSetting::set('admin_contract_signature_image', $signatureUrl, 'contracts');
+                }
+            }
+        } elseif ($request->filled('signature_url')) {
+            SystemSetting::set('admin_contract_signature_image', $request->input('signature_url'), 'contracts');
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Tanda tangan dan identitas Admin Kreavana untuk auto-input kontrak digital berhasil diperbarui.',
+            'data' => [
+                'admin_name' => SystemSetting::get('admin_contract_signer_name'),
+                'admin_title' => SystemSetting::get('admin_contract_signer_title'),
+                'admin_signature_url' => SystemSetting::get('admin_contract_signature_image'),
+            ],
+        ]);
     }
 }

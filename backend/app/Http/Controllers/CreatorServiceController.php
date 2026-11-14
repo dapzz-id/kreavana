@@ -64,6 +64,10 @@ class CreatorServiceController extends Controller
             return $this->errorResponse('Jenis paket wajib dipilih.', 422);
         }
 
+        if ($isCreatorPackage && !$request->hasFile('thumbnail') && !$request->filled('thumbnail_url')) {
+            return $this->errorResponse('Foto thumbnail wajib dilampirkan untuk paket layanan.', 422);
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:200',
             'description' => 'nullable|string',
@@ -71,7 +75,8 @@ class CreatorServiceController extends Controller
             'price' => 'required|numeric|min:0',
             'duration_info' => 'nullable|string|max:100',
             'package_type' => 'nullable|string|max:100',
-            'thumbnail' => ($isCreatorPackage ? 'required' : 'nullable') . '|image|mimes:jpeg,jpg,png,webp|max:5120',
+            'thumbnail' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:5120',
+            'thumbnail_url' => 'nullable|string',
         ]);
 
         if ($request->hasFile('thumbnail')) {
@@ -81,8 +86,10 @@ class CreatorServiceController extends Controller
                 'creator_service_thumbnails',
                 'public',
             );
-                $validated['thumbnail_url'] = url('/api/creator-service-thumbnails/' . $storageFile->stored_name);
+            $validated['thumbnail_url'] = url('/api/creator-service-thumbnails/' . $storageFile->stored_name);
             unset($validated['thumbnail']);
+        } elseif ($request->filled('thumbnail_url')) {
+            $validated['thumbnail_url'] = $request->input('thumbnail_url');
         }
 
         $validated['creator_id'] = $user->id;
@@ -100,27 +107,28 @@ class CreatorServiceController extends Controller
     public function mine(Request $request)
     {
         $packageType = $request->query('package_type');
-        $services = CreatorService::query()
-            ->where('creator_id', $request->user()->id)
-            ->when(
-                $request->query('category'),
-                function ($query, $category) use ($packageType) {
-                    if ($category === self::CREATOR_PACKAGE_CATEGORY) {
-                        $query->whereIn('category', [
-                            self::CREATOR_PACKAGE_CATEGORY,
-                            self::EO_PACKAGE_CATEGORY,
-                        ]);
-                    } else {
-                        $query->where('category', $category);
-                    }
+        $category = $request->query('category');
 
-                    if ($packageType) {
-                        $query->where('package_type', $packageType);
-                    }
-                },
-            )
-            ->latest()
-            ->get();
+        $query = CreatorService::query()
+            ->where('creator_id', $request->user()->id);
+
+        if ($packageType) {
+            $query->where(function ($q) use ($packageType) {
+                $q->where('package_type', $packageType)
+                  ->orWhere('category', $packageType);
+            });
+        } elseif ($category) {
+            if ($category === self::CREATOR_PACKAGE_CATEGORY) {
+                $query->whereIn('category', [
+                    self::CREATOR_PACKAGE_CATEGORY,
+                    self::EO_PACKAGE_CATEGORY,
+                ]);
+            } else {
+                $query->where('category', $category);
+            }
+        }
+
+        $services = $query->latest()->get();
 
         return $this->successResponse('Daftar layanan Anda berhasil diambil', $services->toArray());
     }
@@ -130,6 +138,16 @@ class CreatorServiceController extends Controller
         $path = 'creator_service_thumbnails/' . basename($filename);
         $disk = Storage::disk('public');
         if (!$disk->exists($path)) {
+            $defaultDisk = config('filesystems.default');
+            $cloudDisks = array_unique(array_filter([$defaultDisk, 'minio', 's3']));
+            foreach ($cloudDisks as $d) {
+                if (Storage::disk($d)->exists($path)) {
+                    return Storage::disk($d)->response($path, basename($filename), [
+                        'Content-Type' => Storage::disk($d)->mimeType($path) ?? 'application/octet-stream',
+                        'Cache-Control' => 'public, max-age=86400',
+                    ]);
+                }
+            }
             return $this->errorResponse('Thumbnail tidak ditemukan.', 404);
         }
 
@@ -176,6 +194,7 @@ class CreatorServiceController extends Controller
             'price' => 'sometimes|required|numeric|min:0',
             'duration_info' => 'nullable|string|max:100',
             'thumbnail' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:5120',
+            'thumbnail_url' => 'nullable|string',
             ...($isCreatorPackage ? [] : ['status' => 'sometimes|required|in:active,inactive']),
         ]);
 
@@ -188,6 +207,8 @@ class CreatorServiceController extends Controller
             );
             $validated['thumbnail_url'] = url('/api/creator-service-thumbnails/' . $storageFile->stored_name);
             unset($validated['thumbnail']);
+        } elseif ($request->filled('thumbnail_url')) {
+            $validated['thumbnail_url'] = $request->input('thumbnail_url');
         }
 
         if ($isCreatorPackage) {

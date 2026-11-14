@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app/theme.dart';
+import '../app/subrole_theme_engine.dart';
 import '../services/ai_service.dart';
 import '../models/user_model.dart';
 import '../models/opportunity_model.dart';
@@ -13,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import '../services/app_router.dart';
 import '../screens/explore_screen.dart';
 import '../services/user_store.dart';
+import '../services/profile_service.dart';
 
 /// Floating Assistant Widget that opens the Kreavana.AI Dedicated Screen.
 /// Supports both Light and Dark themes, draggable across Mobile & Desktop viewports.
@@ -34,6 +36,7 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
   static Offset? _savedPosition;
   Offset? _position;
   bool _isDragging = false;
+  bool _isHovered = false;
   bool _hasDragged = false;
   Offset? _dragStartPos;
 
@@ -137,73 +140,81 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
           child: Builder(
             builder: (context) {
               final loggedUser = currentUserNotifier.value;
-              final isCorporate = widget.accentColor != null ||
-                  (loggedUser != null &&
-                      ([
-                        'corporate',
-                        'company',
-                        'business',
-                        'perusahaan',
-                        'bisnis',
-                        'institution',
-                        'institusi',
-                        'lembaga',
-                        'yayasan',
-                      ].contains(loggedUser.subRole?.toLowerCase()) ||
-                      loggedUser.username == 'institution_demo' ||
-                      loggedUser.email.startsWith('institution@')));
               final effectiveColor = widget.accentColor ??
-                  (isCorporate ? const Color(0xFF2563EB) : AppTheme.primaryPurple);
-              final gradientColors = isCorporate
-                  ? const [Color(0xFF2563EB), Color(0xFF1D4ED8)]
-                  : const [Color(0xFF8B5CF6), Color(0xFF6D28D9)];
+                  (loggedUser != null
+                      ? SubRoleThemeEngine.getAccentColor(
+                          loggedUser.role,
+                          loggedUser.subRole,
+                        )
+                      : AppTheme.primaryPurple);
+              final darker = HSLColor.fromColor(effectiveColor)
+                  .withLightness(
+                    (HSLColor.fromColor(effectiveColor).lightness * 0.82)
+                        .clamp(0.0, 1.0),
+                  )
+                  .toColor();
+              final gradientColors = [effectiveColor, darker];
 
-              return Material(
-                color: Colors.transparent,
-                elevation: _isDragging ? 12 : 6,
-                shadowColor: effectiveColor.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(24),
-                child: AnimatedScale(
-                  scale: _isDragging ? 1.04 : 1.0,
-                  duration: const Duration(milliseconds: 120),
-                  child: Container(
-                    width: _buttonWidth,
-                    height: _buttonHeight,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: gradientColors,
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+              return MouseRegion(
+                cursor: SystemMouseCursors.click,
+                onEnter: (_) => setState(() => _isHovered = true),
+                onExit: (_) => setState(() => _isHovered = false),
+                child: Material(
+                  color: Colors.transparent,
+                  elevation: _isDragging ? 14 : (_isHovered ? 10 : 6),
+                  shadowColor: effectiveColor.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(24),
+                  child: AnimatedScale(
+                    scale: _isDragging ? 1.05 : (_isHovered ? 1.04 : 1.0),
+                    duration: const Duration(milliseconds: 160),
+                    curve: Curves.easeOutCubic,
+                    child: Container(
+                      width: _buttonWidth,
+                      height: _buttonHeight,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
                       ),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.35),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: effectiveColor.withValues(
-                            alpha: _isDragging ? 0.6 : 0.35,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: gradientColors,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: Colors.white.withValues(
+                            alpha: _isHovered ? 0.60 : 0.35,
                           ),
-                          blurRadius: _isDragging ? 16 : 10,
-                          offset: Offset(0, _isDragging ? 6 : 4),
+                          width: 1.2,
                         ),
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
+                        boxShadow: [
+                          BoxShadow(
+                            color: effectiveColor.withValues(
+                              alpha: _isDragging
+                                  ? 0.65
+                                  : (_isHovered ? 0.55 : 0.35),
+                            ),
+                            blurRadius: _isDragging ? 18 : (_isHovered ? 16 : 10),
+                            offset: Offset(
+                              0,
+                              _isDragging ? 6 : (_isHovered ? 5 : 4),
+                            ),
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withValues(
+                              alpha: _isHovered ? 0.28 : 0.2,
+                            ),
+                            blurRadius: _isHovered ? 10 : 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
                       child: Image.asset(
                         'assets/brandlogo.png',
                         width: 22,
@@ -234,11 +245,12 @@ class _KreavanaAiFloatingWidgetState extends State<KreavanaAiFloatingWidget> {
                 ),
               ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     ),
   ),
+),
 );
   }
 }
@@ -886,32 +898,50 @@ class _KreavanaAiPanelState extends State<KreavanaAiPanel> {
   }
 
   /// Ensures the user is logged in and has an active designated subscription (Plus, Pro, or Super).
-  bool _ensureAccess() {
-    final user = currentUserNotifier.value;
+  Future<bool> _ensureAccessAsync() async {
+    var user = currentUserNotifier.value;
     // 1. Guest check
     if (user == null || user.isGuest) {
-      AuthGuardDialog.show(context, actionName: 'menggunakan Kreavana AI');
+      if (mounted) {
+        AuthGuardDialog.show(context, actionName: 'menggunakan Kreavana AI');
+      }
       return false;
     }
 
     // 2. Subscription check (Plus, Pro, Super)
-    final tier = user.subscriptionTier.toLowerCase();
-    final isAllowed = ['plus', 'pro', 'super'].contains(tier);
+    var tier = user.subscriptionTier.toLowerCase();
+    var isAllowed = ['plus', 'pro', 'super'].contains(tier);
+
+    // If local tier is not yet allowed, verify with backend before blocking
+    if (!isAllowed && user.id != null) {
+      try {
+        final profileRes = await ProfileService.getProfile(user.id!);
+        if (profileRes.success && profileRes.user != null) {
+          user = profileRes.user!;
+          tier = user.subscriptionTier.toLowerCase();
+          isAllowed = ['plus', 'pro', 'super'].contains(tier);
+        }
+      } catch (_) {}
+    }
+
     if (!isAllowed) {
-      UpgradePlanModal.show(context, user: user);
-      AppSweetAlert.warning(
-        context,
-        'Fitur Kreavana AI Assistant hanya tersedia untuk pengguna Paket Plus, Pro, dan Super.',
-        title: 'Paket Berlangganan Diperlukan',
-      );
+      if (mounted) {
+        UpgradePlanModal.show(context, user: user);
+        AppSweetAlert.warning(
+          context,
+          'Fitur Kreavana AI Assistant hanya tersedia untuk pengguna Paket Plus, Pro, dan Super.',
+          title: 'Paket Berlangganan Diperlukan',
+        );
+      }
       return false;
     }
 
     return true;
   }
 
-  void _handleUpload() {
-    if (!_ensureAccess()) return;
+  void _handleUpload() async {
+    final hasAccess = await _ensureAccessAsync();
+    if (!hasAccess || !mounted) return;
 
     setState(() {
       _attachedFileName = 'brief_kebutuhan_kreatif.pdf';
@@ -923,15 +953,17 @@ class _KreavanaAiPanelState extends State<KreavanaAiPanel> {
     );
   }
 
-  void _sendPrompt(String prompt, {String? category}) {
-    if (!_ensureAccess()) return;
+  void _sendPrompt(String prompt, {String? category}) async {
+    final hasAccess = await _ensureAccessAsync();
+    if (!hasAccess || !mounted) return;
 
     _inputController.text = prompt;
     _sendMessage(category: category);
   }
 
   Future<void> _sendMessage({String? category}) async {
-    if (!_ensureAccess()) return;
+    final hasAccess = await _ensureAccessAsync();
+    if (!hasAccess || !mounted) return;
 
     final text = _inputController.text.trim();
     if (text.isEmpty && _attachedFileName == null) return;
@@ -968,15 +1000,13 @@ class _KreavanaAiPanelState extends State<KreavanaAiPanel> {
       return;
     }
 
-    String aiResponse =
-        "Halo! Saya Kreavana AI. Saya siap membantu mengoptimalkan proyek, konten, dan riset kreatif Anda.";
-
+    String aiResponse;
     List<Map<String, dynamic>> recommendationCards = [];
 
-    if (res != null && res['data'] != null) {
+    if (res != null && res['status'] == true && res['data'] != null) {
       aiResponse =
           res['data']['answer'] ??
-          (res['data']['polished_message'] ?? aiResponse);
+          (res['data']['polished_message'] ?? "Tidak ada jawaban yang dihasilkan.");
 
       if (res['data']['recommendation_cards'] != null &&
           res['data']['recommendation_cards'] is List) {
@@ -985,6 +1015,13 @@ class _KreavanaAiPanelState extends State<KreavanaAiPanel> {
             (c) => Map<String, dynamic>.from(c),
           ),
         );
+      }
+    } else {
+      final errorMsg = res?['message']?.toString();
+      if (errorMsg != null && errorMsg.isNotEmpty) {
+        aiResponse = "⚠️ Gagal mendapatkan respons dari AI:\n\n$errorMsg\n\n💡 Catatan: Jika Anda adalah Administrator, silakan periksa konfigurasi API Key dan Model di Dasbor Admin > Pengaturan Sistem > Konfigurasi AI Engine.";
+      } else {
+        aiResponse = "⚠️ Terjadi kendala saat menghubungkan ke layanan AI. Silakan periksa koneksi internet Anda atau hubungi Administrator.";
       }
     }
 
@@ -2508,7 +2545,7 @@ class _KreavanaAiPanelState extends State<KreavanaAiPanel> {
             ),
             const SizedBox(width: 6),
             Text(
-              'Rekomendasi Terpilih (Sistem Booster Akun):',
+              'Rekomendasi Akun Terpilih (${cards.length} Kreator):',
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.bold,
@@ -2552,8 +2589,12 @@ class _KreavanaAiPanelState extends State<KreavanaAiPanel> {
   ) {
     final isEvent = card['type'] == 'event';
     final name = (isEvent ? card['title'] : card['name']) ?? 'Rekomendasi AI';
-    final subRole =
-        (isEvent ? card['category'] : card['sub_role']) ?? 'Kreator';
+    final subRole = (isEvent
+            ? card['category']
+            : (card['sub_role_label'] ?? card['sub_role']))
+        ?.toString()
+        .replaceAll('_', ' ') ??
+        'Kreator';
     final location = card['location'] ?? 'Bandung';
     final boostBadge = card['performance_boost']?.toString() ?? '⚡ Booster';
     final ratingVal = card['rating'] != null

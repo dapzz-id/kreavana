@@ -30,32 +30,52 @@ class AiService extends BaseService implements AiServiceInterface
                 return "Kreavana AI siap membantu! (Catatan: Admin belum memasukkan Gemini API Key di Pengaturan Sistem).";
             }
 
-            $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
-            $response = Http::timeout(25)->post($url, [
-                'system_instruction' => [
-                    'parts' => [
-                        ['text' => $systemPrompt]
-                    ]
-                ],
-                'contents' => [
-                    [
-                        'parts' => [
-                            ['text' => $prompt]
-                        ]
-                    ]
-                ],
-                'generationConfig' => [
-                    'temperature' => $temperature,
-                ],
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                return $data['candidates'][0]['content']['parts'][0]['text'] ?? 'Tidak ada respons dari AI.';
+            // Map deprecated or legacy Gemini model IDs to active Gemini 3.5 Flash Lite
+            if (empty($model) || in_array($model, ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'])) {
+                $model = 'gemini-3.5-flash-lite';
             }
 
-            $err = $response->json()['error']['message'] ?? $response->body();
-            throw new Exception("Google Gemini Error: " . substr($err, 0, 150));
+            $modelsToTry = [$model];
+            if ($model !== 'gemini-3.5-flash-lite') {
+                $modelsToTry[] = 'gemini-3.5-flash-lite';
+            }
+
+            $lastError = null;
+            foreach ($modelsToTry as $currentModelToTry) {
+                try {
+                    $url = "https://generativelanguage.googleapis.com/v1beta/models/{$currentModelToTry}:generateContent?key={$apiKey}";
+                    $response = Http::withHeaders([
+                        'x-goog-api-key' => $apiKey,
+                    ])->timeout(25)->post($url, [
+                        'system_instruction' => [
+                            'parts' => [
+                                ['text' => $systemPrompt]
+                            ]
+                        ],
+                        'contents' => [
+                            [
+                                'parts' => [
+                                    ['text' => $prompt]
+                                ]
+                            ]
+                        ],
+                        'generationConfig' => [
+                            'temperature' => $temperature,
+                        ],
+                    ]);
+
+                    if ($response->successful()) {
+                        $data = $response->json();
+                        return $data['candidates'][0]['content']['parts'][0]['text'] ?? 'Tidak ada respons dari AI.';
+                    }
+
+                    $lastError = $response->json()['error']['message'] ?? $response->body();
+                } catch (\Throwable $e) {
+                    $lastError = $e->getMessage();
+                }
+            }
+
+            throw new Exception("Google Gemini Error: " . substr($lastError ?? 'Layanan tidak merespons.', 0, 200));
 
         } elseif ($provider === 'openai') {
             if (empty($apiKey)) {
@@ -124,6 +144,9 @@ class AiService extends BaseService implements AiServiceInterface
     {
         $message = $payload['message'] ?? '';
         $mode = $payload['mode'] ?? 'chat';
+        $includeData = !empty($payload['include_data_kreavana']);
+
+        $recommendationCards = [];
 
         if ($mode === 'polish') {
             $prompt = "Perhalus pesan berikut agar terdengar lebih ramah, profesional, dan persuasif untuk komunikasi bisnis kreatif:\n\"{$message}\"";
@@ -131,6 +154,27 @@ class AiService extends BaseService implements AiServiceInterface
             $prompt = "Berikan 2 alternatif balasan cepat yang sopan dan profesional untuk pesan berikut:\n\"{$message}\"";
         } else {
             $prompt = $message;
+
+            if ($includeData) {
+                try {
+                    if ($this->isCreatorRecommendationIntent($message)) {
+                        $recommendationCards = $this->findRelevantCreators($message, 15);
+
+                        if (!empty($recommendationCards)) {
+                            $count = count($recommendationCards);
+                            $prompt = $message . "\n\n[SISTEM PLATFORM KREAVANA]:\nDitemukan {$count} akun kreator terverifikasi yang cocok dengan kriteria pencarian dan telah ditampilkan secara visual pada daftar kartu rekomendasi sistem di layar pengguna.\nTUGAS ANDA: Berikan pesan pengantar yang sangat singkat, ramah, dan langsung ke intinya (cukup 1-2 kalimat saja, contoh: 'Berikut adalah rekomendasi {$count} akun kreator terverifikasi di Kreavana yang sesuai dengan kebutuhan Anda:').\nATURAN KETAT: JANGAN menjabarkan atau menulis ulang profil kreator satu per satu di rangkuman teks ini, karena seluruh akun beserta portofolio dan profil lengkapnya sudah ditampilkan langsung pada kartu rekomendasi sistem.";
+                        } else {
+                            $prompt = $message . "\n\n[SISTEM PLATFORM KREAVANA]:\nPengguna mencari rekomendasi kreator/jasa, namun sistem belum menemukan akun kreator yang cocok dengan spesifikasi tersebut di database saat ini.\nTUGAS ANDA: Beritahu pengguna dengan sopan dan ramah bahwa belum ditemukan kreator yang spesifik sesuai kriteria tersebut di database, dan sarankan mereka untuk mempublikasikan lowongan/kebutuhan melalui menu 'Proyek Saya' agar kreator yang berminat dapat langsung mengajukan proposal.";
+                        }
+                    } else {
+                        // User TIDAK meminta rekomendasi akun atau kreator.
+                        // Berikan jawaban langsung atas pertanyaan atau sapaan pengguna.
+                        $prompt = $message . "\n\n[SISTEM PLATFORM KREAVANA]:\nTUGAS ANDA: Jawab pertanyaan, sapaan, atau pesan pengguna di atas secara langsung, jelas, ramah, dan solutif sebagai asisten resmi Kreavana.\nATURAN KETAT: JANGAN menyapa dengan menawarkan daftar rekomendasi akun kreator atau membuat daftar rekomendasi akun fiktif, karena pengguna tidak meminta rekomendasi akun. Fokuslah sepenuhnya untuk menjawab pertanyaan pengguna dengan tepat.";
+                    }
+                } catch (\Throwable $e) {
+                    // Fallback to original prompt if query fails
+                }
+            }
         }
 
         $answer = $this->generateContent($prompt);
@@ -138,7 +182,271 @@ class AiService extends BaseService implements AiServiceInterface
         return [
             'answer' => $answer,
             'polished_message' => $answer,
+            'recommendation_cards' => $recommendationCards,
             'ai_provider' => SystemSetting::get('ai_provider', 'gemini'),
         ];
+    }
+
+    /**
+     * Cek apakah pesan pengguna memang bermaksud mencari atau meminta rekomendasi akun/kreator/jasa.
+     */
+    protected function isCreatorRecommendationIntent(string $message): bool
+    {
+        $msg = strtolower(trim($message));
+        if (empty($msg)) {
+            return false;
+        }
+
+        // 1. Abaikan sapaan umum murni (greetings)
+        if (preg_match('/^(hi|halo|hello|hai|hei|p|ping|selamat\s*(pagi|siang|sore|malam)|assalamu[\'\w]*|tes|test|oy|woy|help)[\s\!\.\?]*$/i', $msg)) {
+            return false;
+        }
+
+        // 2. Pertanyaan definisi/penjelasan (apa itu, jelaskan, bagaimana cara, kenapa, dll.)
+        if (preg_match('/^(apa\s*itu|jelaskan|apakah|bagaimana\s*cara|gimana\s*cara|mengapa|kenapa|tips|panduan|tutorial)\b/i', $msg)) {
+            // Kecuali jika ada kata "rekomendasi akun/kreator"
+            if (!preg_match('/\b(rekomendasi|rekomendasikan)\s+(akun|kreator|creator|talent|freelance|vendor|fotografer|videografer|desainer|mc|mua|wo|eo)\b/i', $msg)) {
+                return false;
+            }
+        }
+
+        // 3. Keyword eksplisit minta rekomendasi akun / kreator / talent / jasa
+        if (preg_match('/\b(rekomendasi|rekomendasikan|sarankan|referensi)\b/i', $msg)) {
+            if (preg_match('/\b(kreator|creator|akun|orang|talent|freelance|freelancer|vendor|mitra|jasa|siapa|wo\b|eo\b|wedding\s*organi[sz]er|event\s*organi[sz]er|fotografer|photographer|videografer|videographer|desainer|designer|editor|animator|mc|mua|makeup|singer|penyanyi|musisi|musician|band|drone|model)\b/i', $msg)) {
+                return true;
+            }
+            if (preg_match('/^(minta\s*)?rekomendasi(\s*(dong|ya|pls|please|kreator|akun))?$/i', $msg)) {
+                return true;
+            }
+        }
+
+        // 4. Keyword pencarian / perekrutan / kebutuhan kreator
+        $hasSearchVerb = preg_match('/\b(cari|carikan|mencari|butuh|membutuhkan|perlu|memerlukan|hire|pekerjakan|sewa|booking|kontrak|ada\s*ga|ada\s*gk|ada\s*kah|adakah|ada\s*yang\s*bisa|siapa\s*yang\s*bisa|tolong\s*carikan)\b/i', $msg);
+
+        $hasCreatorTarget = preg_match('/\b(kreator|creator|talent|freelance|freelancer|vendor|mitra|jasa|wo\b|eo\b|wedding\s*organi[sz]er|event\s*organi[sz]er|fotografer|photographer|foto|videografer|videographer|video|shooting|edit\s*video|editing|editor|desain|desainer|designer|logo|animator|animasi|mc|host|pembawa\s*acara|mua|makeup|tata\s*rias|singer|penyanyi|musisi|musician|band|tukang\s*kendang|drone|model)\b/i', $msg);
+
+        if ($hasSearchVerb && $hasCreatorTarget) {
+            // Hindari false-positive seperti "bagaimana cara mencari proyek" atau "cara cari kerja"
+            if (!preg_match('/\b(cara|panduan|tips)\s*(cari|mencari)\s*(event|proyek|project|pekerjaan|lowongan|job|klien)\b/i', $msg)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Cari dan rangking kreator yang relevan dengan pertanyaan / prompt pengguna.
+     * Mendukung deteksi sub-role spesifik (Wedding Organizer, Videografer, Fotografer, dll.),
+     * deteksi lokasi geografis (Bekasi, Jakarta, Bandung, dll.), serta perangkingan booster akun.
+     */
+    protected function findRelevantCreators(string $message, int $limit = 15): array
+    {
+        if (!$this->isCreatorRecommendationIntent($message)) {
+            return [];
+        }
+
+        $normalizedMsg = strtolower($message);
+
+        // 1. Deteksi sub_role spesifik berdasarkan konteks pesan pengguna
+        $detectedSubRoles = [];
+
+        if (preg_match('/\b(wedding\s*organi[sz]e*r*|organi[sz]e*r*\s*wedding|wo\b|pernikahan|pengantin|nikah|resepsi|walimah|wedding)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'wedding_organizer';
+        }
+        if (preg_match('/\b(event\s*organi[sz]e*r*|organi[sz]e*r*\s*event|organi[sz]e*r*\s*acara|eo\b|konser|festival|gathering|bazar|expo|pameran)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'event_organizer';
+        }
+        if (preg_match('/\b(make\s*up|mua\b|tata\s*rias|rias\b|beauty)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'makeup_artist';
+        }
+        if (preg_match('/\b(fotografer|photographer|fotografi|photography|foto|photo|pemotretan)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'photographer';
+        }
+        if (preg_match('/\b(videografer|videographer|videografi|videography|video|shooting|cinematic|sinematik|aftermovie|reels)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'videographer';
+        }
+        if (preg_match('/\b(pembawa\s*acara|master\s*of\s*ceremon|mc\b|host\b|moderator)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'mc';
+        }
+        if (preg_match('/\b(penyanyi|singer|vokalis|vokal|solois)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'singer';
+        }
+        if (preg_match('/\b(musisi|musician|pemain\s*musik|band\b|akustik|gitaris|keyboardist)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'musician';
+        }
+        if (preg_match('/\b(tukang\s*kendang|kendang|gendang|ketipung)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'tukang_kendang';
+        }
+        if (preg_match('/\b(editor|editing|edit\s*video|edit\s*foto|color\s*grading)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'editor';
+        }
+        if (preg_match('/\b(desain|design|desainer|designer|grafis|graphic|logo|branding|poster|banner|ilustrator)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'designer';
+        }
+        if (preg_match('/\b(animator|animasi|animation|motion\s*graphic|3d\s*artist)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'animator';
+        }
+        if (preg_match('/\b(drone|pilot\s*drone|aerial)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'drone_pilot';
+        }
+        if (preg_match('/\b(talent\b|model\b|aktor|aktris)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'talent';
+        }
+        if (preg_match('/\b(content\s*creator|konten\s*kreator|influencer|selebgram|tiktoker)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'content_creator';
+        }
+        if (preg_match('/\b(vendor\b|katering|catering|tenda\b|panggung|sound\s*system|dekorasi)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'vendor';
+        }
+        if (preg_match('/\b(mitra\s*jasa|mitra\s*pendukung|jasa\s*pendukung)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'mitra_pendukung';
+        }
+        if (preg_match('/\b(studio\b|sewa\s*studio)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'studio';
+        }
+        if (preg_match('/\b(rental\b|sewa\s*kamera|sewa\s*alat|rental\s*kamera|sewa\s*lensa)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'rental_alat';
+        }
+        if (preg_match('/\b(komunitas|community|paguyuban|kolektif)\b/i', $normalizedMsg)) {
+            $detectedSubRoles[] = 'community';
+        }
+
+        // Disambiguasi: jika user menyebut "wedding organizer", jangan sertakan event_organizer
+        if (in_array('wedding_organizer', $detectedSubRoles) && !preg_match('/\b(event|acara\s*kantor|konser|festival|gathering)\b/i', $normalizedMsg)) {
+            $detectedSubRoles = array_values(array_diff($detectedSubRoles, ['event_organizer']));
+        }
+
+        // 2. Deteksi Lokasi dari Pesan
+        $cityMap = [
+            'bekasi' => 'Bekasi',
+            'jakarta selatan' => 'Jakarta Selatan',
+            'jakarta barat' => 'Jakarta Barat',
+            'jakarta pusat' => 'Jakarta Pusat',
+            'jakarta timur' => 'Jakarta Timur',
+            'jakarta utara' => 'Jakarta Utara',
+            'jakarta' => 'Jakarta',
+            'jaksel' => 'Jakarta Selatan',
+            'jakpus' => 'Jakarta Pusat',
+            'jakbar' => 'Jakarta Barat',
+            'jaktim' => 'Jakarta Timur',
+            'jakut' => 'Jakarta Utara',
+            'bogor' => 'Bogor',
+            'depok' => 'Depok',
+            'tangerang selatan' => 'Tangerang Selatan',
+            'tangsel' => 'Tangerang Selatan',
+            'tangerang' => 'Tangerang',
+            'bandung' => 'Bandung',
+            'surabaya' => 'Surabaya',
+            'semarang' => 'Semarang',
+            'yogyakarta' => 'Yogyakarta',
+            'jogja' => 'Yogyakarta',
+            'solo' => 'Solo',
+            'surakarta' => 'Solo',
+            'malang' => 'Malang',
+            'bali' => 'Bali',
+            'denpasar' => 'Denpasar',
+            'medan' => 'Medan',
+            'makassar' => 'Makassar',
+            'palembang' => 'Palembang',
+            'karawang' => 'Karawang',
+            'cirebon' => 'Cirebon',
+            'sukabumi' => 'Sukabumi',
+            'serang' => 'Serang',
+            'batam' => 'Batam',
+        ];
+
+        $detectedLocation = null;
+        foreach ($cityMap as $k => $locName) {
+            if (preg_match('/\b' . preg_quote($k, '/') . '\b/i', $normalizedMsg)) {
+                $detectedLocation = $locName;
+                break;
+            }
+        }
+
+        // 3. Query Kreator
+        $query = \App\Models\User::where('role', \App\Enums\RoleType::Creator)
+            ->where('is_creator_approved', true)
+            ->with(['addresses']);
+
+        // Jika sub_role terdeteksi, filter HANYA ke sub_role tersebut
+        if (!empty($detectedSubRoles)) {
+            $query->where(function ($q) use ($detectedSubRoles) {
+                $q->whereIn('sub_role', $detectedSubRoles)
+                  ->orWhereHas('userSubRoles', function ($sq) use ($detectedSubRoles) {
+                      $sq->whereIn('sub_role_slug', $detectedSubRoles);
+                  });
+            });
+        }
+
+        $creators = $query->get();
+
+        if ($creators->isEmpty()) {
+            return [];
+        }
+
+        // 4. Hitung Skor Relevansi & Perangkingan
+        $scored = $creators->map(function ($c) use ($detectedLocation, $normalizedMsg) {
+            $score = 0;
+
+            // Prioritas Booster platform (Sistem Booster Akun)
+            $boost = (float) ($c->performance_boost ?? 0);
+            $score += $boost * 10;
+
+            // Tier langganan
+            $tier = $c->subscription_tier ?? 'free';
+            if ($tier === 'super') $score += 20;
+            elseif ($tier === 'pro') $score += 10;
+            elseif ($tier === 'plus') $score += 5;
+
+            // Alamat / Kota
+            $addr = $c->addresses->firstWhere('is_default', true) ?? $c->addresses->first();
+            $city = $addr?->city;
+            $province = $addr?->province;
+            $creatorLocation = ($city && $province) ? "{$city}, {$province}" : ($city ?? $province ?? null);
+
+            if ($detectedLocation) {
+                $locLower = strtolower($detectedLocation);
+                $isLocationMatch = ($city && str_contains(strtolower($city), $locLower))
+                    || ($province && str_contains(strtolower($province), $locLower))
+                    || ($addr && str_contains(strtolower($addr->address), $locLower))
+                    || str_contains(strtolower($c->name), $locLower)
+                    || str_contains(strtolower($c->username), $locLower);
+
+                if ($isLocationMatch) {
+                    $score += 1000; // Prioritas tertinggi: kreator yang berada di lokasi pencarian
+                }
+            }
+
+            // Nama atau username spesifik
+            if (str_contains($normalizedMsg, strtolower($c->name)) || str_contains($normalizedMsg, strtolower($c->username))) {
+                $score += 50;
+            }
+
+            $subRoleEnum = \App\Enums\CreatorSubRole::tryFrom($c->sub_role ?? '');
+            $subRoleLabel = $subRoleEnum?->label() ?? ucfirst(str_replace('_', ' ', $c->sub_role ?? 'Kreator'));
+
+            $resolvedLoc = $creatorLocation ?? ($detectedLocation ? "{$detectedLocation} & Sekitarnya" : 'Indonesia');
+
+            return [
+                'score' => $score,
+                'data' => [
+                    'type' => 'creator',
+                    'id' => $c->id,
+                    'name' => $c->name,
+                    'username' => $c->username,
+                    'sub_role' => $c->sub_role ?? 'creator',
+                    'sub_role_label' => $subRoleLabel,
+                    'location' => $resolvedLoc,
+                    'performance_boost' => $boost > 0 ? "⚡ {$boost}x Booster" : '⭐ Terverifikasi',
+                    'rating' => 4.9,
+                    'review_count' => 'Kreator Terverifikasi',
+                    'avatar_url' => $c->avatar_url,
+                    'action_label' => 'Lihat Profil',
+                ],
+            ];
+        });
+
+        return $scored->sortByDesc('score')->take($limit)->pluck('data')->values()->all();
     }
 }

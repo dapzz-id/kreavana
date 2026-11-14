@@ -64,10 +64,110 @@ class UserModel {
   });
 
   bool get isClient => role == 'user' || role == 'client';
-  bool get isClientVerified => isClient && isVerified;
+  bool get isCorporate {
+    if (isAdmin) return false;
+    final r = role.toLowerCase().trim();
+    final s = (subRole ?? '').toLowerCase().trim();
+    const corporateKeywords = [
+      'corporate',
+      'company',
+      'enterprise',
+      'business',
+      'perusahaan',
+      'bisnis',
+      'b2b',
+      'agency',
+      'industri',
+      'mitra_industri',
+    ];
+    return corporateKeywords.contains(r) ||
+        corporateKeywords.contains(s) ||
+        username.toLowerCase() == 'corporate_demo' ||
+        email.toLowerCase().startsWith('corporate@');
+  }
+
+  bool get isInstitution {
+    if (isAdmin) return false;
+    final r = role.toLowerCase().trim();
+    final s = (subRole ?? '').toLowerCase().trim();
+    final v = (verificationType ?? '').toLowerCase().trim();
+    final uname = username.toLowerCase().trim();
+    final mail = email.toLowerCase().trim();
+    const instKeywords = [
+      'institution',
+      'institusi',
+      'school',
+      'sekolah',
+      'universitas',
+      'kampus',
+      'smk',
+      'education',
+      'campus',
+    ];
+    return instKeywords.contains(r) ||
+        instKeywords.contains(s) ||
+        v == 'institution' ||
+        uname.contains('institution') ||
+        uname.contains('sekolah') ||
+        uname.contains('smk') ||
+        mail.startsWith('institution@') ||
+        mail.startsWith('smk@') ||
+        mail.startsWith('sekolah@');
+  }
+
+  bool get isSchool => isInstitution;
+
+  bool get isClientVerified => isCorporate || (isClient && isVerified);
   bool get isCreatorVerified => isCreator && (isVerified || isCreatorApproved);
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    final rawSub = json['sub_role'] is Map
+        ? json['sub_role']['value']?.toString()
+        : json['sub_role']?.toString();
+    final uname = (json['username'] ?? '').toString().toLowerCase().trim();
+    final mail = (json['email'] ?? '').toString().toLowerCase().trim();
+    final r = (json['role'] ?? 'user').toString().toLowerCase().trim();
+    final s = (rawSub ?? '').toLowerCase().trim();
+
+    const corpKeywords = [
+      'corporate',
+      'company',
+      'enterprise',
+      'business',
+      'perusahaan',
+      'bisnis',
+      'b2b',
+      'agency',
+      'industri',
+      'mitra_industri',
+    ];
+    final isCorp = corpKeywords.contains(r) ||
+        corpKeywords.contains(s) ||
+        uname == 'corporate_demo' ||
+        mail.startsWith('corporate@');
+
+    const instKeywords = [
+      'institution',
+      'institusi',
+      'school',
+      'sekolah',
+      'universitas',
+      'kampus',
+      'smk',
+      'education',
+      'campus',
+    ];
+    final verifType = json['verification_type']?.toString().toLowerCase().trim();
+    final isInst = instKeywords.contains(r) ||
+        instKeywords.contains(s) ||
+        verifType == 'institution' ||
+        uname.contains('institution') ||
+        uname.contains('sekolah') ||
+        uname.contains('smk') ||
+        mail.startsWith('institution@') ||
+        mail.startsWith('smk@') ||
+        mail.startsWith('sekolah@');
+
     return UserModel(
       id: json['id']?.toString(),
       name: json['name'] ?? '',
@@ -78,22 +178,20 @@ class UserModel {
       bio: json['bio']?.toString() ?? json['description']?.toString(),
       location: json['location']?.toString() ?? json['city']?.toString(),
       role: json['role'] ?? 'user',
-      subRole: (json['sub_role'] is Map
-              ? json['sub_role']['value']?.toString()
-              : json['sub_role']?.toString()) ??
-          (json['username'] == 'corporate_demo' ||
-                  json['email'] == 'corporate@kreavana.id'
-              ? 'corporate'
-              : null),
+      subRole: rawSub ?? (isCorp ? 'corporate' : (isInst ? 'institution' : null)),
       isCreatorApproved:
+          isInst ||
           json['is_creator_approved'] == 1 ||
           json['is_creator_approved'] == true ||
           json['is_creator_approved'] == '1',
       isVerified:
+          isCorp ||
+          isInst ||
           json['is_verified'] == 1 ||
           json['is_verified'] == true ||
           json['is_verified'] == '1',
-      verificationType: json['verification_type']?.toString(),
+      verificationType: json['verification_type']?.toString() ??
+          (isCorp ? 'corporate' : (isInst ? 'institution' : null)),
       nik: json['nik']?.toString(),
       fullNameKtp: json['full_name_ktp']?.toString(),
       ktpPhotoUrl: json['ktp_photo_url']?.toString(),

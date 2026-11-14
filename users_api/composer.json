@@ -1,0 +1,49 @@
+{
+    "$schema": "https://getcomposer.org/schema.json",
+    "name": "kreavana/users-api",
+    "type": "project",
+    "description": "Universal Identity & Access Management (IAM) Service for Kreavana Ecosystem",
+    "license": "MIT",
+    "require": {
+        "php": "^8.3",
+        "doctrine/dbal": "^4.4",
+        "laravel/framework": "^13.0",
+        "laravel/sanctum": "^4.0",
+        "predis/predis": "^3.5",
+        "tymon/jwt-auth": "^2.3"
+    },
+    "require-dev": {
+        "fakerphp/faker": "^1.23",
+        "mockery/mockery": "^1.6",
+        "phpunit/phpunit": "^12.5.12"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/",
+            "Database\\Factories\\": "database/factories/",
+            "Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "post-autoload-dump": [
+            "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+            "@php artisan package:discover --ansi"
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "php-http/discovery": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

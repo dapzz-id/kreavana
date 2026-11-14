@@ -71,15 +71,21 @@ class RealtimeService {
 
       channel.subscribe();
 
-      channel.bind('App\\Events\\MessageSent').listen((event) {
+      void onNewMessage() {
         debugPrint('📩 New Message Event via Realtime!');
-        BadgeService().incrementUnreadMessages();
-      });
+        BadgeService().fetchCounts();
+      }
 
-      channel.bind('App\\Events\\NotificationSent').listen((event) {
+      channel.bind('App\\Events\\MessageSent').listen((_) => onNewMessage());
+      channel.bind('message.sent').listen((_) => onNewMessage());
+
+      void onNewNotification() {
         debugPrint('🔔 New Notification Event via Realtime!');
-        BadgeService().incrementUnreadNotifications();
-      });
+        BadgeService().fetchCounts();
+      }
+
+      channel.bind('App\\Events\\NotificationSent').listen((_) => onNewNotification());
+      channel.bind('notification.sent').listen((_) => onNewNotification());
 
       _subscribed = true;
     } catch (e) {

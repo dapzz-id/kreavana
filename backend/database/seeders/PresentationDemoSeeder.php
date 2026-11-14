@@ -34,6 +34,30 @@ class PresentationDemoSeeder extends Seeder
         // Target pemilik proyek (prioritaskan event_organizer_demo jika ada)
         $owners = array_filter([$eventOrganizer, $clientDemo, $institution]);
 
+        if ($clientDemo) {
+            if (empty($clientDemo->wallet_pin)) {
+                $clientDemo->wallet_pin = \Illuminate\Support\Facades\Hash::make('123456');
+                $clientDemo->save();
+            }
+
+            \App\Models\Subscription::updateOrCreate(
+                ['user_id' => $clientDemo->id, 'tier' => 'pro'],
+                ['price_paid' => 199999, 'auto_renew' => true, 'expires_at' => now()->addYear()]
+            );
+        }
+
+        if ($eventOrganizer) {
+            if (empty($eventOrganizer->wallet_pin)) {
+                $eventOrganizer->wallet_pin = \Illuminate\Support\Facades\Hash::make('123456');
+                $eventOrganizer->save();
+            }
+
+            \App\Models\Subscription::updateOrCreate(
+                ['user_id' => $eventOrganizer->id, 'tier' => 'pro'],
+                ['price_paid' => 199999, 'auto_renew' => true, 'expires_at' => now()->addYear()]
+            );
+        }
+
         foreach ($owners as $owner) {
             $this->seedForOwner($owner, $photographer, $videographer, $mc);
         }
@@ -64,9 +88,6 @@ class PresentationDemoSeeder extends Seeder
                 'event_end_date'         => Carbon::now()->addDays(27)->toDateString(),
                 'budget_range'           => 'Rp 18.000.000 - Rp 25.000.000',
                 'status'                 => 'open',
-                'external_rating'        => 4.90,
-                'external_rating_source' => 'Loket.com & Google Reviews (Edisi 2025)',
-                'external_proof_url'     => 'https://loket.com/event/jakarta-indie-music-art-fest',
                 'escrow_status'          => 'none',
                 'event_progress'         => 35,
                 'created_at'             => Carbon::now()->subDays(3),
@@ -140,9 +161,6 @@ class PresentationDemoSeeder extends Seeder
                 'event_date'             => Carbon::now()->addDays(18)->toDateString(),
                 'budget_range'           => 'Rp 30.000.000 - Rp 45.000.000',
                 'status'                 => 'open',
-                'external_rating'        => 4.85,
-                'external_rating_source' => 'Survei Kepuasan Klien & Vendor Korporat 2025',
-                'external_proof_url'     => 'https://kreavana.id/showcase/gala-dinner-anniversary',
                 'escrow_status'          => 'none',
                 'event_progress'         => 20,
                 'created_at'             => Carbon::now()->subDays(5),
@@ -176,9 +194,6 @@ class PresentationDemoSeeder extends Seeder
                 'event_end_date'         => Carbon::now()->subDays(12)->toDateString(),
                 'budget_range'           => 'Rp 22.000.000',
                 'status'                 => 'closed',
-                'external_rating'        => 4.75,
-                'external_rating_source' => 'Tiket.com Events (Rating Pengunjung Edisi 2025)',
-                'external_proof_url'     => 'https://tiket.com/event/nusantara-coffee-expo-2025',
                 'escrow_status'          => 'released_to_creators',
                 'event_progress'         => 100,
                 'created_at'             => Carbon::now()->subDays(25),
@@ -367,9 +382,6 @@ class PresentationDemoSeeder extends Seeder
                 'deadline'               => Carbon::now()->addDays(30)->toDateString(),
                 'budget_range'           => 'Rp 25.000.000 - Rp 35.000.000',
                 'status'                 => 'under_dispute',
-                'external_rating'        => 4.90,
-                'external_rating_source' => 'Survei Kepuasan Komunitas Startup 2025',
-                'external_proof_url'     => 'https://kreavana.id/events/tech-startup-pitch-day',
                 'created_at'             => Carbon::now()->subDays(1),
             ]
         );

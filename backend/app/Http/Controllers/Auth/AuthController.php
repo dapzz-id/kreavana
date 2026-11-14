@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use App\Jobs\SendSocialLoginPasswordJob;
 use App\Contracts\AuthServiceInterface;
+use App\Services\UsersApiClient;
 use Illuminate\Support\Facades\Http;
 
 class AuthController extends Controller
@@ -100,6 +101,13 @@ class AuthController extends Controller
             return response()->json(['status' => false, 'message' => 'Email atau kata sandi salah.'], 401);
         }
 
+        if ($token === 'service_unavailable') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Layanan autentikasi sedang tidak dapat dijangkau. Silakan coba beberapa saat lagi.',
+            ], 503);
+        }
+
         if ($token === 'email_not_verified') {
             return response()->json([
                 'status' => false,
@@ -113,6 +121,17 @@ class AuthController extends Controller
 
         if ($token === 'forbidden') {
             return response()->json(['status' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        if ($token === 'suspended') {
+            $user = User::where('email', $request->email)->orWhere('username', $request->email)->first();
+            $until = $user?->suspended_until ? ' hingga ' . $user->suspended_until->format('d M Y H:i') : '';
+            return response()->json([
+                'status' => false,
+                'message' => 'Akun Anda di Kreavana sedang ditangguhkan' . $until . '.',
+                'reason' => $user?->suspend_reason,
+                'suspended_until' => $user?->suspended_until?->toIso8601String(),
+            ], 403);
         }
 
         return $this->respondWithToken($token, Auth::guard('api')->user());
@@ -209,6 +228,28 @@ class AuthController extends Controller
 
         $user = Auth::guard('api')->user();
 
+        if (UsersApiClient::isEnabled()) {
+            $proxyResult = UsersApiClient::changePassword($user, $request->current_password, $request->new_password);
+            if (!$proxyResult['success']) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $proxyResult['message'] ?? 'Gagal memperbarui kata sandi.',
+                ], $proxyResult['status'] ?? 422);
+            }
+
+            AuthLog::create([
+                'user_id' => $user->id,
+                'action' => 'password_changed_via_users_api',
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 255),
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Kata sandi berhasil diperbarui.',
+            ]);
+        }
+
         if (! Hash::check($request->current_password, $user->password)) {
             return response()->json([
                 'status' => false,
@@ -304,6 +345,20 @@ class AuthController extends Controller
 
         $provider = $request->provider;
         $idToken = $request->id_token;
+
+        if ($provider === 'google' && UsersApiClient::isEnabled()) {
+            $proxyResult = UsersApiClient::socialLogin($idToken, 'google');
+            if ($proxyResult['success']) {
+                $userApiData = $proxyResult['data']['user'] ?? [];
+                $user = UsersApiClient::syncShadowUser($userApiData);
+                $token = Auth::guard('api')->login($user);
+                return $this->respondWithToken($token, $user);
+            }
+            return response()->json([
+                'status' => false,
+                'message' => $proxyResult['message'] ?? 'Login Google gagal.',
+            ], $proxyResult['status'] >= 400 && $proxyResult['status'] < 500 ? $proxyResult['status'] : 401);
+        }
 
         try {
             // Verify token based on provider

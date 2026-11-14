@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/opportunity_model.dart';
 import '../models/opportunity_application_model.dart';
+import '../models/job_contract.dart';
 import 'api_service.dart';
 
 class OpportunityService {
@@ -212,7 +214,9 @@ class OpportunityService {
             .map((item) => OpportunityApplicationModel.fromJson(item))
             .toList();
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error getOpportunityApplications: $e');
+    }
     return [];
   }
 
@@ -259,12 +263,22 @@ class OpportunityService {
 
   static Future<Map<String, dynamic>> respondCounterOffer({
     required String applicationId,
-    required String action, // 'accept' or 'decline'
+    required String action, // 'accept', 'decline', or 'counter'
+    double? counterOfferPrice,
+    String? counterOfferNotes,
   }) async {
     try {
+      final Map<String, dynamic> body = {'action': action};
+      if (counterOfferPrice != null && counterOfferPrice > 0) {
+        body['counter_offer_price'] = counterOfferPrice;
+      }
+      if (counterOfferNotes != null && counterOfferNotes.isNotEmpty) {
+        body['counter_offer_notes'] = counterOfferNotes;
+      }
+
       final response = await ApiService.post(
         'opportunities/applications/$applicationId/respond-counter-offer',
-        {'action': action},
+        body,
       );
       return {
         'status': response['status'] == true,
@@ -403,12 +417,15 @@ class OpportunityService {
           meetingLat: meetingLat,
           meetingLng: meetingLng,
           meetingNotes: meetingNotes,
-          meetingStatus: (budgetRange != null && (budgetRange.contains('20.000.000') || budgetRange.contains('MoU')))
+          meetingStatus: (budgetRange != null && (budgetRange.contains('100.000.000') || budgetRange.contains('MoU Fisik') || budgetRange.contains('tanda tangan basah')))
               ? 'pending_marketing_review'
               : 'not_required',
-          escrowStatus: (budgetRange != null && (budgetRange.contains('20.000.000') || budgetRange.contains('MoU')))
+          escrowStatus: (budgetRange != null && (budgetRange.contains('100.000.000') || budgetRange.contains('MoU Fisik') || budgetRange.contains('tanda tangan basah')))
               ? 'none'
               : 'pending_deposit',
+          signatureType: (budgetRange != null && (budgetRange.contains('100.000.000') || budgetRange.contains('MoU Fisik') || budgetRange.contains('tanda tangan basah')))
+              ? 'wet_signature'
+              : 'dynamic_electronic',
           status: 'open',
           poster: poster,
           externalRating: externalRating,
@@ -432,12 +449,85 @@ class OpportunityService {
     };
   }
 
-  static Future<Map<String, dynamic>> startEvent(String opportunityId) async {
+  static Future<Map<String, dynamic>> startEvent(
+    String opportunityId, {
+    String? signature,
+    String? signatureType,
+    String? documentUrl,
+    List<String>? dynamicTerms,
+  }) async {
     try {
-      final res = await ApiService.post('opportunities/$opportunityId/start-event', {});
+      final body = <String, dynamic>{};
+      if (signature != null && signature.isNotEmpty) body['signature'] = signature;
+      if (signatureType != null && signatureType.isNotEmpty) body['signature_type'] = signatureType;
+      if (documentUrl != null && documentUrl.isNotEmpty) body['document_url'] = documentUrl;
+      if (dynamicTerms != null && dynamicTerms.isNotEmpty) body['dynamic_terms'] = dynamicTerms;
+
+      final res = await ApiService.post('opportunities/$opportunityId/start-event', body);
       return {
         'status': res['status'] == true,
         'message': res['message'] ?? 'Acara resmi dimulai!',
+        'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<List<JobContract>> getOpportunityContracts(String opportunityId) async {
+    try {
+      final res = await ApiService.get('opportunities/$opportunityId/contracts');
+      if (res['status'] == true && res['data'] is List) {
+        return (res['data'] as List)
+            .map((item) => JobContract.fromJson(item))
+            .toList();
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  static Future<Map<String, dynamic>> signContract({
+    required String opportunityId,
+    String? signature,
+    String? signatureType,
+    String? documentUrl,
+    List<String>? dynamicTerms,
+  }) async {
+    try {
+      final body = <String, dynamic>{};
+      if (signature != null && signature.isNotEmpty) body['signature'] = signature;
+      if (signatureType != null && signatureType.isNotEmpty) body['signature_type'] = signatureType;
+      if (documentUrl != null && documentUrl.isNotEmpty) body['document_url'] = documentUrl;
+      if (dynamicTerms != null && dynamicTerms.isNotEmpty) body['dynamic_terms'] = dynamicTerms;
+
+      final res = await ApiService.post('opportunities/$opportunityId/sign-contract', body);
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Kontrak berhasil ditandatangani.',
+        'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateDynamicTerms({
+    required String opportunityId,
+    required List<String> dynamicTerms,
+  }) async {
+    try {
+      final res = await ApiService.post('opportunities/$opportunityId/dynamic-terms', {
+        'dynamic_terms': dynamicTerms,
+      });
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Ketentuan khusus kontrak berhasil diperbarui.',
         'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
       };
     } catch (e) {
@@ -507,8 +597,190 @@ class OpportunityService {
       });
       return {
         'status': res['status'] == true,
-        'message': res['message'] ?? 'Jadwal pertemuan diajukan ke tim Marketing.',
+        'message': res['message'] ?? 'Jadwal pertemuan fisik tanda tangan basah berhasil diajukan.',
         'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> reviewMeeting({
+    required String opportunityId,
+    required String decision, // 'approve' | 'counter' | 'reject'
+    String? notes,
+    String? counterDate,
+    String? counterTime,
+    String? counterLocation,
+    double? counterLat,
+    double? counterLng,
+    String? counterNotes,
+  }) async {
+    try {
+      final res = await ApiService.post('opportunities/$opportunityId/review-meeting', {
+        'decision': decision,
+        if (notes != null) 'notes': notes,
+        if (counterDate != null) 'counter_date': counterDate,
+        if (counterTime != null) 'counter_time': counterTime,
+        if (counterLocation != null) 'counter_location': counterLocation,
+        if (counterLat != null) 'counter_lat': counterLat,
+        if (counterLng != null) 'counter_lng': counterLng,
+        if (counterNotes != null) 'counter_notes': counterNotes,
+      });
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Status jadwal pertemuan berhasil diperbarui.',
+        'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> respondMeetingCounter({
+    required String opportunityId,
+    required String action, // 'accept' | 'counter' | 'decline'
+    String? date,
+    String? time,
+    String? location,
+    double? lat,
+    double? lng,
+    String? notes,
+  }) async {
+    try {
+      final res = await ApiService.post('opportunities/$opportunityId/respond-meeting-counter', {
+        'action': action,
+        if (date != null) 'meeting_date': date,
+        if (time != null) 'meeting_time': time,
+        if (location != null) 'meeting_location': location,
+        if (lat != null) 'meeting_lat': lat,
+        if (lng != null) 'meeting_lng': lng,
+        if (notes != null) 'meeting_notes': notes,
+      });
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Respon tawaran jadwal berhasil dikirim.',
+        'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> adminStartEvent({
+    required String opportunityId,
+    String? documentMouUrl,
+    String? notes,
+  }) async {
+    try {
+      final res = await ApiService.post('opportunities/$opportunityId/admin-start-event', {
+        if (documentMouUrl != null) 'document_mou_url': documentMouUrl,
+        if (notes != null) 'notes': notes,
+      });
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Acara resmi dimulai oleh Admin setelah verifikasi tanda tangan basah fisik!',
+        'data': res['data'] != null ? OpportunityModel.fromJson(res['data']) : null,
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateWorkerProgress({
+    required String applicationId,
+    required int progress,
+    String? notes,
+    String? workerStatus,
+  }) async {
+    try {
+      final res = await ApiService.post('opportunities/applications/$applicationId/progress', {
+        'progress': progress,
+        if (notes != null) 'notes': notes,
+        if (workerStatus != null) 'worker_status': workerStatus,
+      });
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Progress pekerja berhasil diperbarui.',
+        'data': res['data'],
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> uploadDeliverable({
+    required String applicationId,
+    required String type, // 'link' | 'image' | 'video' | 'document'
+    required String title,
+    String? url,
+    String? notes,
+  }) async {
+    try {
+      final res = await ApiService.post('opportunities/applications/$applicationId/deliverables', {
+        'type': type,
+        'title': title,
+        if (url != null) 'url': url,
+        if (notes != null) 'notes': notes,
+      });
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Hasil kerja (deliverable) berhasil diunggah.',
+        'data': res['data'],
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> payWorker({
+    required String applicationId,
+    int? milestoneIndex,
+    double? amount,
+  }) async {
+    try {
+      final res = await ApiService.post('opportunities/applications/$applicationId/pay', {
+        if (milestoneIndex != null) 'milestone_index': milestoneIndex,
+        if (amount != null) 'amount': amount,
+      });
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Pembayaran honor berhasil dicairkan ke pekerja.',
+        'data': res['data'],
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'message': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> autoReleaseEscrow(String opportunityId) async {
+    try {
+      final res = await ApiService.post('opportunities/$opportunityId/auto-release-escrow', {});
+      return {
+        'status': res['status'] == true,
+        'message': res['message'] ?? 'Pengecekan auto-release selesai.',
+        'data': res['data'],
       };
     } catch (e) {
       return {

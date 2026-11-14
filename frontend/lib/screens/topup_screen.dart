@@ -3,6 +3,7 @@ import '../models/user_model.dart';
 import '../services/wallet_service.dart';
 import '../services/api_service.dart';
 import '../app/theme.dart';
+import '../utils/currency_formatter.dart';
 import 'topup_details_screen.dart';
 
 class TopUpScreen extends StatefulWidget {
@@ -65,7 +66,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
 
   void _onQuickAmountSelected(double val) {
     setState(() {
-      _amountController.text = val.toStringAsFixed(0);
+      _amountController.text = formatIndonesianNumber(val);
     });
   }
 
@@ -78,8 +79,8 @@ class _TopUpScreenState extends State<TopUpScreen> {
       return;
     }
 
-    final amount = double.tryParse(amountText);
-    if (amount == null || amount < 10000) {
+    final amount = parseRupiahToDouble(amountText);
+    if (amount < 10000) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Minimal pengisian adalah Rp 10.000.')),
       );
@@ -162,6 +163,9 @@ class _TopUpScreenState extends State<TopUpScreen> {
                   TextField(
                     controller: _amountController,
                     keyboardType: TextInputType.number,
+                    inputFormatters: const [
+                      IndonesianCurrencyInputFormatter(),
+                    ],
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -191,9 +195,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ActionChip(
-                      label: Text(
-                        'Rp ${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
-                      ),
+                      label: Text(formatRupiah(amount)),
                       onPressed: () => _onQuickAmountSelected(amount),
                       backgroundColor: isDark ? AppTheme.cardBg : Colors.white,
                       shape: RoundedRectangleBorder(

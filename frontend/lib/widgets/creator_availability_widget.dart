@@ -6,8 +6,13 @@ import '../services/schedule_service.dart';
 
 class CreatorAvailabilityWidget extends StatefulWidget {
   final String creatorId;
+  final Color? accentColor;
 
-  const CreatorAvailabilityWidget({super.key, required this.creatorId});
+  const CreatorAvailabilityWidget({
+    super.key,
+    required this.creatorId,
+    this.accentColor,
+  });
 
   @override
   State<CreatorAvailabilityWidget> createState() =>
@@ -65,73 +70,135 @@ class _CreatorAvailabilityWidgetState extends State<CreatorAvailabilityWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: AppTheme.cardLight,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Cek Ketersediaan',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textDark,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Pilih tanggal untuk melihat apakah kreator tersedia.',
-              style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
-            ),
-            const SizedBox(height: 16),
-            InkWell(
-              onTap: () async {
-                final now = DateTime.now();
-                final d = await showDatePicker(
-                  context: context,
-                  initialDate: _selectedDate ?? now,
-                  firstDate: now,
-                  lastDate: now.add(
-                    const Duration(days: 90),
-                  ), // Check up to 90 days ahead
-                );
-                if (d != null && d != _selectedDate) {
-                  setState(() => _selectedDate = d);
-                  _checkAvailability();
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.all(12),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = widget.accentColor ?? AppTheme.primaryPurple;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardBg : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  border: Border.all(color: AppTheme.inputBorderLight),
-                  borderRadius: BorderRadius.circular(8),
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Icon(Icons.event_available_rounded, size: 18, color: accent),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _selectedDate == null
-                          ? 'Pilih Tanggal'
-                          : DateFormat('yyyy-MM-dd').format(_selectedDate!),
+                      'Cek Ketersediaan Tanggal',
                       style: TextStyle(
-                        fontSize: 14,
-                        color: _selectedDate == null
-                            ? AppTheme.textMuted
-                            : AppTheme.textDark,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : AppTheme.textDark,
                       ),
                     ),
-                    const Icon(
-                      Icons.calendar_today,
-                      color: AppTheme.primaryPurple,
-                      size: 20,
+                    const SizedBox(height: 2),
+                    Text(
+                      'Pilih tanggal untuk melihat ketersediaan jadwal kreator.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                      ),
                     ),
                   ],
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () async {
+              final now = DateTime.now();
+              final d = await showDatePicker(
+                context: context,
+                initialDate: _selectedDate ?? now,
+                firstDate: now,
+                lastDate: now.add(const Duration(days: 90)),
+                builder: (context, child) {
+                  return Theme(
+                    data: Theme.of(context).copyWith(
+                      colorScheme: Theme.of(context).colorScheme.copyWith(
+                        primary: accent,
+                      ),
+                    ),
+                    child: child!,
+                  );
+                },
+              );
+              if (d != null && d != _selectedDate) {
+                setState(() => _selectedDate = d);
+                _checkAvailability();
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.cardDark2 : Colors.grey.shade50,
+                border: Border.all(
+                  color: _selectedDate != null
+                      ? accent.withValues(alpha: 0.6)
+                      : (isDark ? AppTheme.inputBorder : Colors.grey.shade300),
+                  width: _selectedDate != null ? 1.4 : 1.0,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_month_rounded,
+                        color: accent,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        _selectedDate == null
+                            ? 'Pilih tanggal kalender...'
+                            : DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(_selectedDate!),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: _selectedDate != null ? FontWeight.w600 : FontWeight.normal,
+                          color: _selectedDate == null
+                              ? (isDark ? AppTheme.textMuted : Colors.grey.shade500)
+                              : (isDark ? Colors.white : AppTheme.textDark),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Icon(
+                    Icons.arrow_drop_down_rounded,
+                    color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
+                  ),
+                ],
+              ),
             ),
+          ),
             if (_isLoading) ...[
               const SizedBox(height: 16),
               const Center(child: CircularProgressIndicator()),
@@ -228,7 +295,6 @@ class _CreatorAvailabilityWidgetState extends State<CreatorAvailabilityWidget> {
             ],
           ],
         ),
-      ),
-    );
+      );
   }
 }

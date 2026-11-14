@@ -6,6 +6,7 @@ import '../services/api_service.dart';
 import '../services/verification_service.dart';
 import '../widgets/skeleton/skeleton_list.dart';
 import '../widgets/app_breadcrumbs.dart';
+import '../widgets/desktop_sidebar_layout.dart';
 import 'main_navigation.dart';
 
 class UlasanReputasiScreen extends StatefulWidget {
@@ -211,11 +212,18 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
 
     final isDesktop = MediaQuery.of(context).size.width > 900;
 
-    return Scaffold(
+    final scaffold = Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
+        automaticallyImplyLeading: Navigator.canPop(context),
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                tooltip: 'Kembali',
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
         toolbarHeight: 80,
-        titleSpacing: isDesktop ? 32 : 18,
+        titleSpacing: (isDesktop && !Navigator.canPop(context)) ? 32 : 18,
         elevation: 0,
         title: const Text(
           'Ulasan & Reputasi',
@@ -303,6 +311,18 @@ class _UlasanReputasiScreenState extends State<UlasanReputasiScreen> {
         ),
       ),
     );
+
+    final effectiveUser = widget.user;
+    if (isDesktop && effectiveUser != null) {
+      return DesktopSidebarLayout(
+        user: effectiveUser,
+        activeRoute: 'reputasi',
+        onUserUpdated: widget.onUserUpdated,
+        child: scaffold,
+      );
+    }
+
+    return scaffold;
   }
 
   // ── Hero Reputation Banner ─────────────────────────────────────────────────

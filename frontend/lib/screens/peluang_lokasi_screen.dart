@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -37,25 +38,25 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
   OpportunityModel? _selectedOpportunity;
 
   static const _categories = [
-    {'slug': 'all', 'name': 'Semua', 'color': Colors.indigo},
-    {'slug': 'tukang_kendang', 'name': 'Kendang', 'color': Color(0xFFD97706)},
-    {'slug': 'institution', 'name': 'Institusi', 'color': Color(0xFF3730A3)},
-    {'slug': 'government', 'name': 'Pemerintah', 'color': Color(0xFF475569)},
-    {'slug': 'mc', 'name': 'MC', 'color': Color(0xFFF59E0B)},
-    {'slug': 'videographer', 'name': 'Videografer', 'color': Color(0xFF0EA5E9)},
-    {'slug': 'photographer', 'name': 'Fotografer', 'color': Color(0xFF3B82F6)},
-    {'slug': 'editor', 'name': 'Editor', 'color': Color(0xFF14B8A6)},
-    {'slug': 'makeup_artist', 'name': 'MUA', 'color': Color(0xFFD946EF)},
-    {'slug': 'singer', 'name': 'Penyanyi', 'color': Color(0xFF8B5CF6)},
-    {'slug': 'event_organizer', 'name': 'EO', 'color': Color(0xFFF97316)},
-    {'slug': 'wedding_organizer', 'name': 'WO', 'color': Color(0xFFE11D48)},
-    {'slug': 'community', 'name': 'Komunitas', 'color': Color(0xFFEC4899)},
-    {'slug': 'content_creator', 'name': 'Content Creator', 'color': Color(0xFFEF4444)},
-    {'slug': 'animator', 'name': 'Animator', 'color': Color(0xFF22C55E)},
-    {'slug': 'designer', 'name': 'Desainer', 'color': Color(0xFF06B6D4)},
-    {'slug': 'musician', 'name': 'Musisi', 'color': Color(0xFFA855F7)},
-    {'slug': 'talent', 'name': 'Talent', 'color': Color(0xFFFACC15)},
-    {'slug': 'drone_pilot', 'name': 'Drone Pilot', 'color': Color(0xFF64748B)},
+    {'slug': 'all', 'name': 'Semua', 'color': Color(0xFF6366F1), 'icon': Icons.map_rounded},
+    {'slug': 'tukang_kendang', 'name': 'Kendang', 'color': Color(0xFFD97706), 'icon': Icons.music_note_rounded},
+    {'slug': 'institution', 'name': 'Institusi', 'color': Color(0xFF3730A3), 'icon': Icons.account_balance_rounded},
+    {'slug': 'government', 'name': 'Pemerintah', 'color': Color(0xFF475569), 'icon': Icons.assured_workload_rounded},
+    {'slug': 'mc', 'name': 'MC', 'color': Color(0xFFF59E0B), 'icon': Icons.mic_rounded},
+    {'slug': 'videographer', 'name': 'Videografer', 'color': Color(0xFF0EA5E9), 'icon': Icons.videocam_rounded},
+    {'slug': 'photographer', 'name': 'Fotografer', 'color': Color(0xFF3B82F6), 'icon': Icons.photo_camera_rounded},
+    {'slug': 'editor', 'name': 'Editor', 'color': Color(0xFF14B8A6), 'icon': Icons.movie_filter_rounded},
+    {'slug': 'makeup_artist', 'name': 'MUA', 'color': Color(0xFFD946EF), 'icon': Icons.face_retouching_natural_rounded},
+    {'slug': 'singer', 'name': 'Penyanyi', 'color': Color(0xFF8B5CF6), 'icon': Icons.mic_external_on_rounded},
+    {'slug': 'event_organizer', 'name': 'EO', 'color': Color(0xFFF97316), 'icon': Icons.event_available_rounded},
+    {'slug': 'wedding_organizer', 'name': 'WO', 'color': Color(0xFFE11D48), 'icon': Icons.favorite_rounded},
+    {'slug': 'community', 'name': 'Komunitas', 'color': Color(0xFFEC4899), 'icon': Icons.groups_rounded},
+    {'slug': 'content_creator', 'name': 'Content Creator', 'color': Color(0xFFEF4444), 'icon': Icons.video_collection_rounded},
+    {'slug': 'animator', 'name': 'Animator', 'color': Color(0xFF22C55E), 'icon': Icons.animation_rounded},
+    {'slug': 'designer', 'name': 'Desainer', 'color': Color(0xFF06B6D4), 'icon': Icons.palette_rounded},
+    {'slug': 'musician', 'name': 'Musisi', 'color': Color(0xFFA855F7), 'icon': Icons.album_rounded},
+    {'slug': 'talent', 'name': 'Talent', 'color': Color(0xFFEAB308), 'icon': Icons.star_rounded},
+    {'slug': 'drone_pilot', 'name': 'Drone Pilot', 'color': Color(0xFF64748B), 'icon': Icons.flight_takeoff_rounded},
   ];
 
   static const _radiusOptions = [
@@ -404,15 +405,73 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
     }
   }
 
+  int _categoryCount(String slug) {
+    if (slug == 'all') return _locations.length;
+    return _locations.where((l) {
+      if (l.subRoleSlug == slug) return true;
+      return l.requirements.any((r) => r.subRoleSlug == slug);
+    }).length;
+  }
+
   List<OpportunityModel> get _filtered {
     if (_selectedCategory == 'all') return _locations;
-    return _locations.where((l) => l.subRoleSlug == _selectedCategory).toList();
+    return _locations.where((l) {
+      if (l.subRoleSlug == _selectedCategory) return true;
+      return l.requirements.any((r) => r.subRoleSlug == _selectedCategory);
+    }).toList();
+  }
+
+  IconData _markerIcon(String? subRole) {
+    switch (subRole) {
+      case 'tukang_kendang':
+        return Icons.music_note_rounded;
+      case 'institution':
+        return Icons.account_balance_rounded;
+      case 'government':
+        return Icons.assured_workload_rounded;
+      case 'mc':
+        return Icons.mic_rounded;
+      case 'videographer':
+        return Icons.videocam_rounded;
+      case 'photographer':
+        return Icons.photo_camera_rounded;
+      case 'editor':
+        return Icons.movie_filter_rounded;
+      case 'makeup_artist':
+        return Icons.face_retouching_natural_rounded;
+      case 'singer':
+        return Icons.mic_external_on_rounded;
+      case 'event_organizer':
+        return Icons.event_available_rounded;
+      case 'wedding_organizer':
+        return Icons.favorite_rounded;
+      case 'community':
+        return Icons.groups_rounded;
+      case 'content_creator':
+        return Icons.video_collection_rounded;
+      case 'animator':
+        return Icons.animation_rounded;
+      case 'designer':
+        return Icons.palette_rounded;
+      case 'musician':
+        return Icons.album_rounded;
+      case 'talent':
+        return Icons.star_rounded;
+      case 'drone_pilot':
+        return Icons.flight_takeoff_rounded;
+      default:
+        return Icons.place_rounded;
+    }
   }
 
   Color _markerColor(String? subRole) {
     switch (subRole) {
       case 'tukang_kendang':
         return const Color(0xFFD97706);
+      case 'institution':
+        return const Color(0xFF3730A3);
+      case 'government':
+        return const Color(0xFF475569);
       case 'mc':
         return const Color(0xFFF59E0B);
       case 'videographer':
@@ -431,6 +490,18 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
         return const Color(0xFFE11D48);
       case 'community':
         return const Color(0xFFEC4899);
+      case 'content_creator':
+        return const Color(0xFFEF4444);
+      case 'animator':
+        return const Color(0xFF22C55E);
+      case 'designer':
+        return const Color(0xFF06B6D4);
+      case 'musician':
+        return const Color(0xFFA855F7);
+      case 'talent':
+        return const Color(0xFFEAB308);
+      case 'drone_pilot':
+        return const Color(0xFF64748B);
       default:
         return Colors.teal;
     }
@@ -752,7 +823,7 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
       ),
       body: Column(
         children: [
-          // ── Category filter dropdown ─────────────────────────────────────
+          // ── Category filter row & dropdown ─────────────────────────────
           Padding(
             padding: EdgeInsets.fromLTRB(
               isMobile ? 12 : 24,
@@ -761,17 +832,24 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
               4,
             ),
             child: Container(
-              height: 44,
+              height: 48,
               padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
                 color: isDark ? AppTheme.cardBg : Colors.white,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isDark
                       ? AppTheme.inputBorder
                       : const Color(0xFFE2E8F0),
                   width: 1.2,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
@@ -786,28 +864,45 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                       ? const Color(0xFF1E1E2D)
                       : Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  elevation: 4,
-                  menuMaxHeight: 380,
+                  elevation: 6,
+                  menuMaxHeight: 420,
                   onChanged: (newCat) {
                     if (newCat != null) {
                       setState(() => _selectedCategory = newCat);
+                      final matches = _filtered;
+                      if (matches.isNotEmpty &&
+                          matches.first.latitude != null &&
+                          matches.first.longitude != null) {
+                        _animatedMapMove(
+                          LatLng(matches.first.latitude!, matches.first.longitude!),
+                          13.0,
+                        );
+                      }
                     }
                   },
                   items: _categories.map((cat) {
                     final slug = cat['slug'] as String;
                     final name = cat['name'] as String;
                     final color = cat['color'] as Color;
+                    final icon = cat['icon'] as IconData? ?? Icons.place_rounded;
+                    final count = _categoryCount(slug);
                     final isSelected = _selectedCategory == slug;
+
                     return DropdownMenuItem<String>(
                       value: slug,
                       child: Row(
                         children: [
                           Container(
-                            width: 10,
-                            height: 10,
+                            width: 26,
+                            height: 26,
                             decoration: BoxDecoration(
-                              color: color,
+                              color: color.withValues(alpha: isSelected ? 1.0 : 0.15),
                               shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              icon,
+                              size: 14,
+                              color: isSelected ? Colors.white : color,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -820,21 +915,38 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                                     ? FontWeight.w700
                                     : FontWeight.w500,
                                 color: isSelected
-                                    ? (isDark
-                                        ? Colors.white
-                                        : color)
-                                    : (isDark
-                                        ? Colors.white70
-                                        : Colors.black87),
+                                    ? (isDark ? Colors.white : color)
+                                    : (isDark ? Colors.white70 : Colors.black87),
                               ),
                             ),
                           ),
-                          if (isSelected)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? color.withValues(alpha: 0.18)
+                                  : (isDark ? Colors.white10 : Colors.grey.shade100),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '$count Lokasi',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected
+                                    ? color
+                                    : (isDark ? Colors.white54 : Colors.grey.shade600),
+                              ),
+                            ),
+                          ),
+                          if (isSelected) ...[
+                            const SizedBox(width: 6),
                             Icon(
                               Icons.check_rounded,
                               size: 18,
                               color: color,
                             ),
+                          ],
                         ],
                       ),
                     );
@@ -1160,9 +1272,9 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                                 .map((loc) {
                                   final isSelected = loc.id == _selectedOpportunity?.id;
                                   final color = _markerColor(loc.subRoleSlug);
-                                  final markerWidth = isMobile ? (isSelected ? 115.0 : 100.0) : (isSelected ? 140.0 : 125.0);
-                                  final markerHeight = isMobile ? (isSelected ? 68.0 : 60.0) : (isSelected ? 80.0 : 70.0);
-                                  final reqCount = loc.requirements.length;
+                                  final icon = _markerIcon(loc.subRoleSlug);
+                                  final markerWidth = isMobile ? (isSelected ? 125.0 : 110.0) : (isSelected ? 150.0 : 135.0);
+                                  final markerHeight = isMobile ? (isSelected ? 76.0 : 70.0) : (isSelected ? 86.0 : 78.0);
 
                                   return Marker(
                                     point: LatLng(
@@ -1171,100 +1283,16 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
                                     ),
                                     width: markerWidth,
                                     height: markerHeight,
-                                    child: GestureDetector(
+                                    alignment: Alignment.topCenter,
+                                    child: _PeluangMapMarker(
+                                      key: ValueKey(loc.id ?? '${loc.latitude}_${loc.longitude}'),
+                                      loc: loc,
+                                      isSelected: isSelected,
+                                      isDark: isDark,
+                                      isMobile: isMobile,
+                                      color: color,
+                                      icon: icon,
                                       onTap: () => _onMarkerTap(loc),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Container(
-                                            padding: EdgeInsets.all(
-                                              isMobile ? (isSelected ? 5 : 4) : (isSelected ? 7 : 6),
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: isSelected ? const Color(0xFFF59E0B) : color,
-                                              shape: BoxShape.circle,
-                                              border: isSelected
-                                                  ? Border.all(color: Colors.white, width: 2.5)
-                                                  : null,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: (isSelected ? const Color(0xFFF59E0B) : color).withValues(
-                                                    alpha: isSelected ? 0.6 : 0.4,
-                                                  ),
-                                                  blurRadius: isSelected ? 12 : 8,
-                                                  spreadRadius: isSelected ? 2 : 0,
-                                                  offset: const Offset(0, 2),
-                                                ),
-                                              ],
-                                            ),
-                                            child: Icon(
-                                              Icons.location_on,
-                                              color: Colors.white,
-                                              size: isMobile ? (isSelected ? 18.0 : 16.0) : (isSelected ? 22.0 : 20.0),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Container(
-                                            padding: EdgeInsets.symmetric(
-                                              horizontal: isMobile ? 5 : 7,
-                                              vertical: isMobile ? 2 : 3,
-                                            ),
-                                            constraints: BoxConstraints(
-                                              maxWidth: isMobile ? 95 : 125,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: isSelected
-                                                  ? (isDark ? const Color(0xFF2D1457) : const Color(0xFFEDE9FE))
-                                                  : (isDark ? AppTheme.cardBg : Colors.white),
-                                              borderRadius: BorderRadius.circular(7),
-                                              border: Border.all(
-                                                color: isSelected
-                                                    ? AppTheme.primaryPurple
-                                                    : (isDark ? AppTheme.inputBorder : Colors.grey.shade300),
-                                                width: isSelected ? 1.5 : 0.5,
-                                              ),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black.withValues(alpha: isSelected ? 0.2 : 0.1),
-                                                  blurRadius: isSelected ? 6 : 4,
-                                                  offset: const Offset(0, 1),
-                                                ),
-                                              ],
-                                            ),
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Text(
-                                                  loc.title,
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  textAlign: TextAlign.center,
-                                                  style: TextStyle(
-                                                    fontSize: isMobile ? 8.5 : 9.5,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: isSelected
-                                                        ? AppTheme.primaryPurple
-                                                        : (isDark ? Colors.white : Colors.black87),
-                                                  ),
-                                                ),
-                                                if (reqCount > 0)
-                                                  Text(
-                                                    reqCount > 1 ? '$reqCount Posisi' : loc.subRoleLabel,
-                                                    maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
-                                                    style: TextStyle(
-                                                      fontSize: isMobile ? 7 : 8,
-                                                      fontWeight: FontWeight.w600,
-                                                      color: isSelected
-                                                          ? AppTheme.primaryPurple
-                                                          : const Color(0xFF0891B2),
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
                                     ),
                                   );
                                 }),
@@ -1836,4 +1864,221 @@ class _PeluangLokasiScreenState extends State<PeluangLokasiScreen>
       );
     }
   }
+}
+
+class _PeluangMapMarker extends StatefulWidget {
+  final OpportunityModel loc;
+  final bool isSelected;
+  final bool isDark;
+  final bool isMobile;
+  final Color color;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _PeluangMapMarker({
+    super.key,
+    required this.loc,
+    required this.isSelected,
+    required this.isDark,
+    required this.isMobile,
+    required this.color,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  State<_PeluangMapMarker> createState() => _PeluangMapMarkerState();
+}
+
+class _PeluangMapMarkerState extends State<_PeluangMapMarker> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isSel = widget.isSelected;
+    final isHov = _isHovered;
+    final pinColor = isSel ? const Color(0xFFF59E0B) : widget.color;
+    final reqCount = widget.loc.requirements.length;
+
+    return RepaintBoundary(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) {
+          if (!_isHovered && mounted) setState(() => _isHovered = true);
+        },
+        onExit: (_) {
+          if (_isHovered && mounted) setState(() => _isHovered = false);
+        },
+        child: GestureDetector(
+          onTap: widget.onTap,
+          behavior: HitTestBehavior.opaque,
+          child: AnimatedScale(
+            scale: isSel ? 1.15 : (isHov ? 1.08 : 1.0),
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOutCubic,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Top Pin with gradient & custom icon
+                Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Outer glow halo if selected
+                    if (isSel)
+                      Container(
+                        width: widget.isMobile ? 38 : 44,
+                        height: widget.isMobile ? 38 : 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: pinColor.withValues(alpha: 0.25),
+                          boxShadow: [
+                            BoxShadow(
+                              color: pinColor.withValues(alpha: 0.6),
+                              blurRadius: 16,
+                              spreadRadius: 3,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // Pin Head (circular with gradient)
+                    Container(
+                      width: widget.isMobile ? (isSel ? 34 : 30) : (isSel ? 38 : 34),
+                      height: widget.isMobile ? (isSel ? 34 : 30) : (isSel ? 38 : 34),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            pinColor.withValues(alpha: 0.95),
+                            pinColor,
+                          ],
+                        ),
+                        border: Border.all(
+                          color: Colors.white,
+                          width: isSel ? 2.5 : 2.0,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: pinColor.withValues(alpha: isSel ? 0.6 : 0.4),
+                            blurRadius: isSel ? 12 : 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Icon(
+                          widget.icon,
+                          color: Colors.white,
+                          size: widget.isMobile ? 15 : 17,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Pointer tip caret
+                CustomPaint(
+                  size: const Size(10, 5),
+                  painter: _TrianglePainter(color: pinColor),
+                ),
+                const SizedBox(height: 1),
+
+                // Bottom title capsule
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: widget.isMobile ? 6 : 8,
+                    vertical: widget.isMobile ? 2.5 : 3.5,
+                  ),
+                  constraints: BoxConstraints(
+                    maxWidth: widget.isMobile ? 105 : 135,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSel
+                        ? (widget.isDark ? const Color(0xFF2D1457) : const Color(0xFFEDE9FE))
+                        : (widget.isDark
+                            ? const Color(0xFF1E1E2E).withValues(alpha: 0.96)
+                            : Colors.white.withValues(alpha: 0.96)),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isSel
+                          ? const Color(0xFF8B5CF6)
+                          : (isHov
+                              ? widget.color.withValues(alpha: 0.6)
+                              : (widget.isDark ? AppTheme.inputBorder : const Color(0xFFE2E8F0))),
+                      width: isSel ? 1.5 : 1.0,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isSel ? 0.25 : 0.12),
+                        blurRadius: isSel ? 8 : 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.loc.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: widget.isMobile ? 8.5 : 9.5,
+                          fontWeight: FontWeight.bold,
+                          color: isSel
+                              ? const Color(0xFF8B5CF6)
+                              : (widget.isDark ? Colors.white : Colors.black87),
+                        ),
+                      ),
+                      if (reqCount > 0 || widget.loc.location != null)
+                        Text(
+                          reqCount > 1
+                              ? '$reqCount Posisi • ${widget.loc.location ?? ""}'
+                              : (widget.loc.location ?? widget.loc.subRoleLabel),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: widget.isMobile ? 7 : 8,
+                            fontWeight: FontWeight.w600,
+                            color: isSel
+                                ? const Color(0xFF8B5CF6)
+                                : widget.color,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TrianglePainter extends CustomPainter {
+  final Color color;
+  _TrianglePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    final path = ui.Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TrianglePainter oldDelegate) =>
+      oldDelegate.color != color;
 }

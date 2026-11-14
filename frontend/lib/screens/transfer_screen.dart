@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../services/wallet_service.dart';
 import '../app/theme.dart';
+import '../widgets/desktop_sidebar_layout.dart';
+import '../utils/currency_formatter.dart';
 
 class TransferScreen extends StatefulWidget {
   final UserModel user;
@@ -57,7 +59,7 @@ class _TransferScreenState extends State<TransferScreen> {
       return;
     }
 
-    final parsed = double.tryParse(text) ?? 0.0;
+    final parsed = parseRupiahToDouble(text);
     setState(() {
       _amount = parsed;
       _tax = parsed * 0.05; // 5% pajak platform
@@ -66,9 +68,7 @@ class _TransferScreenState extends State<TransferScreen> {
   }
 
   String _formatRupiah(double val) {
-    final str = val.toStringAsFixed(0);
-    final reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
-    return 'Rp ${str.replaceAllMapped(reg, (Match m) => '${m[1]}.')}';
+    return formatRupiah(val);
   }
 
   Future<void> _handleTransfer() async {
@@ -89,7 +89,7 @@ class _TransferScreenState extends State<TransferScreen> {
       return;
     }
 
-    final amount = double.tryParse(amountText) ?? 0.0;
+    final amount = parseRupiahToDouble(amountText);
     if (amount < 10000) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Minimal transfer adalah Rp 10.000.')),
@@ -183,7 +183,7 @@ class _TransferScreenState extends State<TransferScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
+    final content = Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Kirim Saldo'),
@@ -272,6 +272,9 @@ class _TransferScreenState extends State<TransferScreen> {
                   TextFormField(
                     controller: _amountController,
                     keyboardType: TextInputType.number,
+                    inputFormatters: const [
+                      IndonesianCurrencyInputFormatter(),
+                    ],
                     decoration: const InputDecoration(
                       hintText: '0',
                       prefixText: 'Rp ',
@@ -384,6 +387,13 @@ class _TransferScreenState extends State<TransferScreen> {
           ],
         ),
       ),
+    );
+
+    return DesktopSidebarLayout(
+      user: widget.user,
+      activeRoute: 'pembayaran',
+      onUserUpdated: widget.onUserUpdated,
+      child: content,
     );
   }
 

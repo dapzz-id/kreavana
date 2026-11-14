@@ -3,6 +3,7 @@ import '../models/user_model.dart';
 import '../services/wallet_service.dart';
 import '../services/api_service.dart';
 import '../app/theme.dart';
+import '../utils/currency_formatter.dart';
 
 class WithdrawScreen extends StatefulWidget {
   final UserModel user;
@@ -115,8 +116,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
   }
 
   void _updateCalculations() {
-    final amountText = _amountController.text.trim();
-    final parsedAmount = double.tryParse(amountText) ?? 0.0;
+    final parsedAmount = parseRupiahToDouble(_amountController.text);
     setState(() {
       _amount = parsedAmount;
       var tax = (_amount * (_feePercent / 100)) + _feeFlat;
@@ -130,7 +130,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
 
   void _onQuickAmountSelected(double val) {
     setState(() {
-      _amountController.text = val.toStringAsFixed(0);
+      _amountController.text = formatIndonesianNumber(val);
     });
   }
 
@@ -158,8 +158,8 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
       return;
     }
 
-    final amount = double.tryParse(amountText);
-    if (amount == null || amount < 10000) {
+    final amount = parseRupiahToDouble(amountText);
+    if (amount < 10000) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Minimal pencairan adalah Rp 10.000.')),
       );
@@ -428,6 +428,9 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                   TextField(
                     controller: _amountController,
                     keyboardType: TextInputType.number,
+                    inputFormatters: const [
+                      IndonesianCurrencyInputFormatter(),
+                    ],
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,

@@ -8,7 +8,6 @@ import '../features/auth/services/auth_service.dart';
 import '../services/profile_service.dart';
 import '../services/api_service.dart';
 import '../features/dashboard/screens/dashboard_screen.dart';
-import '../features/dashboard/screens/govt_dashboard_screen.dart';
 import 'institution_workspace_screen.dart';
 import 'marketing_dashboard_screen.dart';
 import 'tim_hak_akses_screen.dart';
@@ -30,25 +29,7 @@ import 'peluang_proyek_screen.dart';
 import 'ulasan_reputasi_screen.dart';
 import 'pengaturan_screen.dart';
 import 'wallet_screen.dart';
-import '../features/dashboard/screens/company_dashboard_screen.dart';
-import '../features/dashboard/screens/eo_dashboard_screen.dart';
-import '../features/dashboard/screens/wo_dashboard_screen.dart';
-import '../features/dashboard/screens/school_dashboard_screen.dart';
-import '../features/dashboard/screens/tourism_dashboard_screen.dart';
-import '../features/dashboard/screens/individual_dashboard_screen.dart';
 import '../features/dashboard/screens/community_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_general_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_fotografer_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_videografer_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_editor_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_desainer_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_mua_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_talent_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_drone_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_content_dashboard_screen.dart';
-import '../features/dashboard/screens/creator_animator_dashboard_screen.dart';
-import '../features/dashboard/screens/umkm_dashboard_screen.dart';
-import '../features/dashboard/screens/agency_dashboard_screen.dart';
 import 'creator_service_screen.dart';
 import 'direct_message_screen.dart';
 import '../app/subrole_theme_engine.dart';
@@ -60,7 +41,9 @@ import 'admin_system_settings_screen.dart';
 import '../services/system_settings_service.dart';
 import '../widgets/feature_disabled_view.dart';
 import '../widgets/app_sweet_alert.dart';
+import '../widgets/sidebar_hover_tile.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'corporate_lowongan_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   final UserModel initialUser;
@@ -95,6 +78,7 @@ class _MainNavigationState extends State<MainNavigation> {
     _currentIndex = widget.initialIndex;
     _loadedScreenIndices.add(widget.initialIndex);
     SystemSettingsService.moduleStatuses.addListener(_onModuleStatusesChanged);
+    currentUserNotifier.addListener(_onUserNotifierChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _refreshProfile();
@@ -106,10 +90,44 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   @override
+  void didUpdateWidget(MainNavigation oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialIndex != _currentIndex) {
+      setState(() {
+        _currentIndex = widget.initialIndex;
+        if (widget.initialIndex == 11) {
+          _messageScreenVersion++;
+          _screenCache.remove(widget.initialIndex);
+        }
+        _loadedScreenIndices.add(widget.initialIndex);
+        _activeGovRoute = null;
+      });
+    }
+    if (widget.initialUser != oldWidget.initialUser &&
+        widget.initialUser != _currentUser) {
+      setState(() {
+        _currentUser = widget.initialUser;
+        _screenCache.clear();
+      });
+    }
+  }
+
+  @override
   void dispose() {
+    currentUserNotifier.removeListener(_onUserNotifierChanged);
     SystemSettingsService.moduleStatuses.removeListener(_onModuleStatusesChanged);
     _sidebarScrollController.dispose();
     super.dispose();
+  }
+
+  void _onUserNotifierChanged() {
+    final newUser = currentUserNotifier.value;
+    if (newUser != null && mounted && newUser != _currentUser) {
+      setState(() {
+        _currentUser = newUser;
+        _screenCache.clear();
+      });
+    }
   }
 
   void _onModuleStatusesChanged() {
@@ -127,6 +145,7 @@ class _MainNavigationState extends State<MainNavigation> {
         if (result.success == true && result.user != null) {
           _currentUser = result.user!;
           _screenCache.clear();
+          currentUserNotifier.value = result.user!;
         }
       });
     }
@@ -137,6 +156,7 @@ class _MainNavigationState extends State<MainNavigation> {
       _currentUser = updatedUser;
       _screenCache.clear();
     });
+    currentUserNotifier.value = updatedUser;
   }
 
   void _onLogout() async {
@@ -186,100 +206,39 @@ class _MainNavigationState extends State<MainNavigation> {
       _currentUser,
     );
     final activeColor = isAi
-        ? ((_isCompany || _isInstitution) ? defaultAccent : const Color(0xFF8B5CF6))
+        ? (_isCompany ? defaultAccent : const Color(0xFF8B5CF6))
         : defaultAccent;
 
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: isCollapsed ? 8 : 12,
-        vertical: 2,
-      ),
-      child: Tooltip(
-        message: isCollapsed ? label : '',
-        child: InkWell(
-          onTap: () {
-            if (isMobileDrawer) Navigator.pop(context);
-            _navigateToScreenIndex(index);
-            final shouldRefresh = _currentUser.isAdmin
-                ? index == 2 || index == 3
-                : index == 9 || index == 10;
-            if (shouldRefresh) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) _refreshProfile();
-              });
-            }
-          },
-          borderRadius: BorderRadius.circular(12),
-          hoverColor: isDark
-              ? Colors.white.withValues(alpha: 0.04)
-              : Colors.black.withValues(alpha: 0.03),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: EdgeInsets.symmetric(
-              horizontal: isCollapsed ? 0 : 12,
-              vertical: 10,
-            ),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? activeColor.withValues(alpha: isDark ? 0.18 : 0.09)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-              border: isSelected
-                  ? Border.all(
-                      color: activeColor.withValues(alpha: isDark ? 0.35 : 0.2),
-                      width: 1,
-                    )
-                  : null,
-            ),
-            child: Row(
-              mainAxisAlignment: isCollapsed
-                  ? MainAxisAlignment.center
-                  : MainAxisAlignment.start,
-              children: [
-                Icon(
-                  isSelected ? activeIcon : icon,
-                  color: isAi && isSelected
-                      ? ((_isCompany || _isInstitution) ? defaultAccent : const Color(0xFF8B5CF6))
-                      : (isSelected
-                            ? activeColor
-                            : (isDark
-                                  ? AppTheme.textMuted
-                                  : AppTheme.textSecondary)),
-                  size: 20,
-                ),
-                if (!isCollapsed) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontWeight: isSelected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        fontSize: 13.5,
-                        color: isSelected
-                            ? (isDark ? Colors.white : activeColor)
-                            : (isDark ? Colors.white70 : AppTheme.textPrimary),
-                      ),
-                    ),
-                  ),
-                  if (isAi)
-                    Text(
-                      'AI',
-                      style: TextStyle(
-                        color: (_isCompany || _isInstitution) ? defaultAccent : const Color(0xFF8B5CF6),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
+    return SidebarHoverTile(
+      icon: icon,
+      activeIcon: activeIcon,
+      label: label,
+      onTap: () {
+        if (isMobileDrawer) Navigator.pop(context);
+        _navigateToScreenIndex(index);
+        final shouldRefresh = _currentUser.isAdmin
+            ? index == 2 || index == 3
+            : index == 9 || index == 10;
+        if (shouldRefresh) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _refreshProfile();
+          });
+        }
+      },
+      isSelected: isSelected,
+      isDark: isDark,
+      isCollapsed: isCollapsed,
+      activeColor: activeColor,
+      trailing: isAi
+          ? Text(
+              'AI',
+              style: TextStyle(
+                color: _isCompany ? defaultAccent : const Color(0xFF8B5CF6),
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+              ),
+            )
+          : null,
     );
   }
 
@@ -293,90 +252,19 @@ class _MainNavigationState extends State<MainNavigation> {
     bool isMobileDrawer = false,
   }) {
     final activeColor = SubRoleThemeEngine.getAccentColorForUser(_currentUser);
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: isCollapsed ? 8 : 12,
-        vertical: 2,
-      ),
-      child: Tooltip(
-        message: isCollapsed ? label : '',
-        child: InkWell(
-          onTap: () {
-            if (isMobileDrawer) {
-              Navigator.pop(context);
-            }
-            onTap();
-          },
-          borderRadius: BorderRadius.circular(12),
-          hoverColor: isDark
-              ? Colors.white.withValues(alpha: 0.04)
-              : Colors.black.withValues(alpha: 0.03),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: EdgeInsets.symmetric(
-              horizontal: isCollapsed ? 0 : 12,
-              vertical: 10,
-            ),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? activeColor.withValues(alpha: isDark ? 0.18 : 0.09)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-              border: isSelected
-                  ? Border.all(
-                      color: activeColor.withValues(alpha: isDark ? 0.35 : 0.2),
-                      width: 1,
-                    )
-                  : null,
-            ),
-            child: Row(
-              mainAxisAlignment: isCollapsed
-                  ? MainAxisAlignment.center
-                  : MainAxisAlignment.start,
-              children: [
-                if (!isCollapsed && isSelected) ...[
-                  Container(
-                    width: 3.5,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: activeColor,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                Icon(
-                  icon,
-                  color: isSelected
-                      ? activeColor
-                      : (isDark ? AppTheme.textMuted : AppTheme.textSecondary),
-                  size: 20,
-                ),
-                if (!isCollapsed) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontWeight: isSelected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        fontSize: 13.5,
-                        color: isSelected
-                            ? (isDark ? Colors.white : activeColor)
-                            : (isDark ? Colors.white70 : AppTheme.textPrimary),
-                        letterSpacing: isSelected ? 0.1 : 0,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
+    return SidebarHoverTile(
+      icon: icon,
+      label: label,
+      onTap: () {
+        if (isMobileDrawer) {
+          Navigator.pop(context);
+        }
+        onTap();
+      },
+      isSelected: isSelected,
+      isDark: isDark,
+      isCollapsed: isCollapsed,
+      activeColor: activeColor,
     );
   }
 
@@ -388,7 +276,6 @@ class _MainNavigationState extends State<MainNavigation> {
   bool get _isCompany {
     final sub = CreatorSidebarMenus.normalizeSubRole(_currentUser.subRole);
     return !_currentUser.isAdmin &&
-        !_isSchool &&
         (sub == 'company' ||
             sub == 'corporate' ||
             sub == 'business' ||
@@ -397,45 +284,6 @@ class _MainNavigationState extends State<MainNavigation> {
             _currentUser.username == 'corporate_demo' ||
             _currentUser.email.startsWith('corporate@'));
   }
-
-  bool get _isInstitution {
-    final sub = CreatorSidebarMenus.normalizeSubRole(_currentUser.subRole);
-    return !_currentUser.isAdmin &&
-        (sub == 'institution' ||
-            sub == 'institusi' ||
-            sub == 'lembaga' ||
-            sub == 'yayasan' ||
-            _currentUser.username == 'institution_demo' ||
-            _currentUser.email.startsWith('institution@'));
-  }
-
-  /// Index → URL mapping (kebalikan dari _routeIndexMap di app_router.dart)
-  static const _indexRouteMap = {
-    0: AppRoutes.beranda,
-    1: AppRoutes.explore,
-    2: AppRoutes.proyek,
-    3: AppRoutes.marketplaceKarya,
-    4: AppRoutes.agenda,
-    5: AppRoutes.kolaborasi,
-    6: AppRoutes.reputasi,
-    7: AppRoutes.wallet,
-    8: AppRoutes.pengaturan,
-    9: AppRoutes.profil,
-    10: AppRoutes.notifikasi,
-    11: AppRoutes.pesan,
-    12: AppRoutes.peluangProyek,
-    13: AppRoutes.kapasitasJadwal,
-    14: AppRoutes.aiAssistant,
-  };
-
-  static const _adminIndexRouteMap = {
-    0: AppRoutes.adminDashboard,
-    1: AppRoutes.adminVerification,
-    2: AppRoutes.adminResolution,
-    3: AppRoutes.adminSystemSettings,
-    4: AppRoutes.notifikasi,
-    5: AppRoutes.profil,
-  };
 
   static const _protectedIndexActionMap = {
     2: 'mengakses Manajemen Proyek',
@@ -526,10 +374,11 @@ class _MainNavigationState extends State<MainNavigation> {
       _activeGovRoute = null;
     });
     // Sync URL di web
-    final route = _currentUser.isAdmin
-        ? _adminIndexRouteMap[index]
-        : _indexRouteMap[index];
-    if (route != null && mounted) {
+    final route = AppRoutes.getRouteForIndex(
+      index,
+      isAdmin: _currentUser.isAdmin,
+    );
+    if (mounted) {
       context.go(route);
     }
   }
@@ -556,26 +405,60 @@ class _MainNavigationState extends State<MainNavigation> {
 
   Widget _buildUpgradePromoCard(bool isDark, {bool isCollapsed = false}) {
     if (isCollapsed) return const SizedBox.shrink();
-    final isCreator = _currentUser.role == 'creator';
-    final isCorporate = _currentUser.role == 'corporate' ||
-        _currentUser.role == 'company' ||
+    final effectiveUser = currentUserNotifier.value ?? _currentUser;
+    final currentTier = effectiveUser.subscriptionTier.toLowerCase();
+    final isSuper = currentTier == 'super';
+    final isPro = currentTier == 'pro';
+    final isPlus = currentTier == 'plus';
+
+    final isGov = _isGovernment;
+    final isSchool = _isSchool;
+    final isCorporate = effectiveUser.role == 'corporate' ||
+        effectiveUser.role == 'company' ||
         _isCompany;
-    final isInstitution = _isInstitution;
-    final promoTitle = isCorporate
-        ? 'Upgrade Akun Corporate'
-        : (isInstitution
-            ? 'Upgrade Akun Institusi'
-            : (isCreator ? 'Upgrade Akun Kreator' : 'Upgrade Plan & Paket'));
-    final promoDesc = isCorporate
-        ? 'Tingkatkan peluang & fitur premium untuk corporate.'
-        : (isInstitution
-            ? 'Tingkatkan kapasitas pengadaan & kemitraan institusi.'
-            : (isCreator
-                ? 'Tingkatkan peluang & fitur premium untuk kreator.'
-                : 'Tingkatkan peluang & fitur premium akun Anda.'));
+    final isCreator = effectiveUser.role == 'creator' || _isCreatorUser;
+
+    final String promoTitle;
+    final String promoDesc;
+    final String buttonLabel;
+
+    if (isSuper) {
+      promoTitle = 'Paket Super Aktif';
+      promoDesc = 'Semua fitur & kuota premium tertinggi telah aktif.';
+      buttonLabel = 'Lihat Detail Paket';
+    } else if (isPro) {
+      promoTitle = 'Paket Pro Aktif';
+      promoDesc = 'Tingkatkan ke Super untuk kuota call & storage maksimal.';
+      buttonLabel = 'Upgrade ke Super';
+    } else if (isPlus) {
+      promoTitle = 'Paket Plus Aktif';
+      promoDesc = 'Tingkatkan ke Pro/Super untuk fitur AI & boost lebih tinggi.';
+      buttonLabel = 'Tingkatkan Paket';
+    } else if (isGov) {
+      promoTitle = 'Upgrade Akun Pemerintah';
+      promoDesc = 'Tingkatkan peluang & fitur premium untuk instansi pemerintah.';
+      buttonLabel = 'Upgrade Sekarang';
+    } else if (isSchool) {
+      promoTitle = 'Upgrade Akun Institusi';
+      promoDesc = 'Tingkatkan peluang & fitur premium untuk institusi sekolah.';
+      buttonLabel = 'Upgrade Sekarang';
+    } else if (isCorporate) {
+      promoTitle = 'Upgrade Akun Corporate';
+      promoDesc = 'Tingkatkan peluang & fitur premium untuk corporate.';
+      buttonLabel = 'Upgrade Sekarang';
+    } else if (isCreator) {
+      promoTitle = 'Upgrade Akun Kreator';
+      promoDesc = 'Tingkatkan peluang & fitur premium untuk kreator.';
+      buttonLabel = 'Upgrade Sekarang';
+    } else {
+      promoTitle = 'Upgrade Akun';
+      promoDesc = 'Tingkatkan peluang & fitur premium akun Anda.';
+      buttonLabel = 'Upgrade Sekarang';
+    }
+
     final accentColor = SubRoleThemeEngine.getAccentColor(
-      _currentUser.role,
-      _currentUser.subRole,
+      effectiveUser.role,
+      effectiveUser.subRole,
     );
 
     return Column(
@@ -587,8 +470,8 @@ class _MainNavigationState extends State<MainNavigation> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: SubRoleThemeEngine.getGradient(
-                _currentUser.role,
-                _currentUser.subRole,
+                effectiveUser.role,
+                effectiveUser.subRole,
               ),
               borderRadius: BorderRadius.circular(16),
             ),
@@ -621,7 +504,7 @@ class _MainNavigationState extends State<MainNavigation> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => UpgradePlanModal.show(context),
+                    onPressed: () => UpgradePlanModal.show(context, user: effectiveUser),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: accentColor,
@@ -631,9 +514,9 @@ class _MainNavigationState extends State<MainNavigation> {
                       ),
                       elevation: 0,
                     ),
-                    child: const Text(
-                      'Upgrade Sekarang',
-                      style: TextStyle(
+                    child: Text(
+                      buttonLabel,
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
@@ -732,7 +615,7 @@ class _MainNavigationState extends State<MainNavigation> {
         isCollapsed: isCollapsed,
         isMobileDrawer: isMobileDrawer,
       ),
-      if (!isMobileDrawer && CreatorSidebarMenus.showPaymentFeature(_currentUser.subRole))
+      if (!isMobileDrawer)
         _buildUpgradePromoCard(isDark, isCollapsed: isCollapsed),
     ];
   }
@@ -909,7 +792,7 @@ class _MainNavigationState extends State<MainNavigation> {
         isCollapsed: isCollapsed,
         isMobileDrawer: isMobileDrawer,
       ),
-      if (!isMobileDrawer && CreatorSidebarMenus.showPaymentFeature(_currentUser.subRole))
+      if (!isMobileDrawer)
         _buildUpgradePromoCard(isDark, isCollapsed: isCollapsed),
     ];
   }
@@ -1008,7 +891,7 @@ class _MainNavigationState extends State<MainNavigation> {
           isMobileDrawer: isMobileDrawer,
           isAi: true,
         ),
-      if ((_isCreatorUser || _isCompany || _isInstitution) && !_isGovernment && !_isSchool)
+      if ((_isCreatorUser || _isCompany) && !_isGovernment && !_isSchool)
         _buildSidebarItem(
           icon: Icons.explore_outlined,
           activeIcon: Icons.explore,
@@ -1041,7 +924,7 @@ class _MainNavigationState extends State<MainNavigation> {
           isCollapsed: isCollapsed,
           isMobileDrawer: isMobileDrawer,
         ),
-      if (!_hasSpecificCreatorSubRole && !_isCompany && !_isInstitution) ...[
+      if (!_hasSpecificCreatorSubRole && !_isCompany && !_isSchool && !_isGovernment) ...[
         if (SystemSettingsService.isMarketplaceEnabled || _currentUser.isAdmin)
           _buildSidebarItem(
             icon: Icons.storefront_outlined,
@@ -1053,7 +936,7 @@ class _MainNavigationState extends State<MainNavigation> {
             isCollapsed: isCollapsed,
             isMobileDrawer: isMobileDrawer,
           ),
-        if (_isCreatorUser && !_isGovernment && !_isSchool)
+        if (_isCreatorUser)
           _buildSidebarItem(
             icon: Icons.calendar_today_outlined,
             activeIcon: Icons.calendar_today,
@@ -1067,7 +950,7 @@ class _MainNavigationState extends State<MainNavigation> {
       ],
       if (!isCollapsed && _isSchool) ...[
         const SizedBox(height: 18),
-        _buildSidebarSectionHeader(_isInstitution ? 'PENGELOLAAN INSTITUSI' : 'PENGELOLAAN SEKOLAH', isDark),
+        _buildSidebarSectionHeader('PENGELOLAAN SEKOLAH', isDark),
       ] else if (!isCollapsed && _isGovernment) ...[
         const SizedBox(height: 18),
         _buildSidebarSectionHeader('PENGELOLAAN', isDark),
@@ -1102,35 +985,8 @@ class _MainNavigationState extends State<MainNavigation> {
           isMobileDrawer: isMobileDrawer,
         ),
         _buildSidebarLink(
-          icon: Icons.handshake_outlined,
-          label: 'Pengadaan & Vendor',
-          onTap: () {
-            setState(() => _activeGovRoute = 'tender_kolaborasi');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'tenders',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _activeGovRoute == 'tender_kolaborasi',
-          isMobileDrawer: isMobileDrawer,
-        ),
-        _buildSidebarLink(
-          icon: Icons.people_outlined,
-          label: 'Daftar Kreator & Vendor',
-          onTap: () => _navigateToScreenIndex(1),
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _currentIndex == 1 && _activeGovRoute == null,
-          isMobileDrawer: isMobileDrawer,
-        ),
-        _buildSidebarLink(
           icon: Icons.diversity_3_outlined,
-          label: _isInstitution ? 'Mitra Industri & IDUKA' : 'Mitra Industri & Sanggar',
+          label: 'Mitra Industri & Sanggar',
           onTap: () {
             setState(() => _activeGovRoute = 'mitra_komunitas');
             _pushGovScreen(
@@ -1148,7 +1004,7 @@ class _MainNavigationState extends State<MainNavigation> {
         ),
         _buildSidebarLink(
           icon: Icons.palette_outlined,
-          label: _isInstitution ? 'Karya & Showcase Siswa' : 'Karya & Portofolio Siswa',
+          label: 'Karya & Portofolio Siswa',
           onTap: () {
             setState(() => _activeGovRoute = 'karya_siswa');
             _pushGovScreen(
@@ -1162,42 +1018,6 @@ class _MainNavigationState extends State<MainNavigation> {
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _activeGovRoute == 'karya_siswa',
-          isMobileDrawer: isMobileDrawer,
-        ),
-        _buildSidebarLink(
-          icon: Icons.school_outlined,
-          label: 'Program Studi & Keunggulan',
-          onTap: () {
-            setState(() => _activeGovRoute = 'program_studi');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'study_programs',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _activeGovRoute == 'program_studi',
-          isMobileDrawer: isMobileDrawer,
-        ),
-        _buildSidebarLink(
-          icon: Icons.badge_outlined,
-          label: 'Penelusuran Talenta',
-          onTap: () {
-            setState(() => _activeGovRoute = 'penelusuran_talenta');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'talents',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _activeGovRoute == 'penelusuran_talenta',
           isMobileDrawer: isMobileDrawer,
         ),
         if (!isCollapsed) ...[
@@ -1284,24 +1104,6 @@ class _MainNavigationState extends State<MainNavigation> {
           isSelected: _activeGovRoute == 'dokumen_instansi',
           isMobileDrawer: isMobileDrawer,
         ),
-        _buildSidebarLink(
-          icon: Icons.campaign_outlined,
-          label: _isInstitution ? 'Pengumuman Lembaga' : 'Pengumuman Sekolah',
-          onTap: () {
-            setState(() => _activeGovRoute = 'pengumuman_publik');
-            _pushGovScreen(
-              InstitutionWorkspaceScreen(
-                user: _currentUser,
-                resourceType: 'announcements',
-                onUserUpdated: _onUserUpdated,
-              ),
-            );
-          },
-          isDark: isDark,
-          isCollapsed: isCollapsed,
-          isSelected: _activeGovRoute == 'pengumuman_publik',
-          isMobileDrawer: isMobileDrawer,
-        ),
         if (!isCollapsed) ...[
           const SizedBox(height: 18),
           Padding(
@@ -1319,7 +1121,7 @@ class _MainNavigationState extends State<MainNavigation> {
         ],
         _buildSidebarLink(
           icon: Icons.account_balance_outlined,
-          label: _isInstitution ? 'Profil Institusi' : 'Profil Sekolah',
+          label: 'Profil Institusi',
           onTap: () {
             setState(() => _activeGovRoute = 'profil_instansi');
             _pushGovScreen(
@@ -1356,6 +1158,8 @@ class _MainNavigationState extends State<MainNavigation> {
           isSelected: _activeGovRoute == 'tim_hak_akses',
           isMobileDrawer: isMobileDrawer,
         ),
+        if (!isMobileDrawer)
+          _buildUpgradePromoCard(isDark, isCollapsed: isCollapsed),
       ] else if (_isGovernment) ...[
         _buildSidebarLink(
           icon: Icons.campaign_outlined,
@@ -1594,7 +1398,26 @@ class _MainNavigationState extends State<MainNavigation> {
           isSelected: _activeGovRoute == 'tim_hak_akses',
           isMobileDrawer: isMobileDrawer,
         ),
+        if (!isMobileDrawer)
+          _buildUpgradePromoCard(isDark, isCollapsed: isCollapsed),
       ] else if (_isCompany) ...[
+        _buildSidebarLink(
+          icon: Icons.work_outline_rounded,
+          label: 'Lowongan Kerja & Magang',
+          onTap: () {
+            setState(() => _activeGovRoute = 'lowongan_magang');
+            _pushGovScreen(
+              CorporateLowonganScreen(
+                user: _currentUser,
+                onUserUpdated: _onUserUpdated,
+              ),
+            );
+          },
+          isDark: isDark,
+          isCollapsed: isCollapsed,
+          isSelected: _activeGovRoute == 'lowongan_magang',
+          isMobileDrawer: isMobileDrawer,
+        ),
         _buildSidebarLink(
           icon: Icons.assignment_outlined,
           label: 'Pengadaan & Tender (RFP)',
@@ -1688,7 +1511,13 @@ class _MainNavigationState extends State<MainNavigation> {
         _buildSidebarLink(
           icon: Icons.storefront_outlined,
           label: 'Cari Kreator & Vendor',
-          onTap: () => _navigateToScreenIndex(3),
+          onTap: () {
+            if (_currentUser.isGuest) {
+              AuthGuardDialog.show(context, actionName: 'mencari kreator & vendor');
+              return;
+            }
+            _navigateToScreenIndex(3);
+          },
           isDark: isDark,
           isCollapsed: isCollapsed,
           isSelected: _currentIndex == 3 && _activeGovRoute == null,
@@ -2207,258 +2036,21 @@ class _MainNavigationState extends State<MainNavigation> {
     if (_currentUser.isMarketing) {
       return MarketingDashboardScreen(user: _currentUser);
     }
-
     if (_currentUser.role == 'creator' || _currentUser.isCreator) {
       return _buildCreatorDashboardScreen();
     }
 
-    if (_isCompany) {
-      return CompanyDashboardScreen(
-        user: _currentUser,
-        onUserUpdated: _onUserUpdated,
-      );
-    }
-
-    final subRole = (_currentUser.subRole ?? '').toLowerCase().trim();
-    switch (subRole) {
-      case 'umkm':
-        return UmkmDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'brand_agency':
-      case 'agency':
-        return AgencyDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'government':
-      case 'pemerintah':
-      case 'instansi':
-        return GovtDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'company':
-      case 'business':
-      case 'corporate':
-      case 'perusahaan':
-      case 'bisnis':
-      case 'institution':
-      case 'institusi':
-      case 'lembaga':
-      case 'yayasan':
-        return CompanyDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'event_organizer':
-      case 'eo':
-        return EoDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'wedding_organizer':
-      case 'wo':
-        return WoDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'school':
-      case 'education':
-      case 'campus':
-      case 'sekolah':
-      case 'kampus':
-        return SchoolDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'tourism':
-      case 'desa_wisata':
-      case 'pariwisata':
-        return TourismDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'individual':
-      case 'personal':
-      case 'family':
-      case 'pribadi':
-      case 'individu':
-      case 'keluarga':
-        return IndividualDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'community':
-      case 'komunitas':
-        return CommunityDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-          showSidebar: false,
-        );
-
-      case 'animator':
-      case '3d_animator':
-      case 'motion_designer':
-        return CreatorAnimatorDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      default:
-        // Tampilan Klien Umum (Default untuk akun baru atau sub_role kosong / umum / null)
-        return DashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-    }
+    return DashboardScreen(
+      user: _currentUser,
+      onUserUpdated: _onUserUpdated,
+    );
   }
 
   Widget _buildCreatorDashboardScreen() {
-    final subRole = (_currentUser.subRole ?? '').toLowerCase().trim();
-    switch (subRole) {
-      case 'government':
-      case 'pemerintah':
-      case 'instansi':
-        return GovtDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'school':
-      case 'education':
-      case 'campus':
-      case 'sekolah':
-      case 'kampus':
-        return SchoolDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'institution':
-      case 'institusi':
-      case 'lembaga':
-      case 'yayasan':
-        return CompanyDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'fotografer':
-      case 'photographer':
-      case 'foto':
-        return CreatorFotograferDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'videografer':
-      case 'videographer':
-      case 'video':
-        return CreatorVideograferDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'editor':
-      case 'photo_editor':
-      case 'video_editor':
-        return CreatorEditorDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'desainer':
-      case 'designer':
-      case 'graphic_designer':
-      case 'desain':
-        return CreatorDesainerDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'mua':
-      case 'makeup_artist':
-      case 'makeup':
-        return CreatorMuaDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'talent':
-      case 'model':
-      case 'talent_model':
-      case 'mc':
-      case 'singer':
-      case 'penyanyi':
-        return CreatorTalentDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'wedding_organizer':
-      case 'wo':
-        return WoDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'event_organizer':
-      case 'eo':
-        return EoDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'community':
-      case 'komunitas':
-        return CommunityDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-          showSidebar: false,
-        );
-
-      case 'drone':
-      case 'drone_pilot':
-      case 'pilot_drone':
-        return CreatorDroneDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'content_creator':
-      case 'influencer':
-      case 'ugc':
-        return CreatorContentDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      case 'animator':
-      case '3d_animator':
-      case 'motion_designer':
-        return CreatorAnimatorDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-
-      default:
-        // Kreator Umum (Default untuk kreator baru yang belum memilih kategori)
-        return CreatorGeneralDashboardScreen(
-          user: _currentUser,
-          onUserUpdated: _onUserUpdated,
-        );
-    }
+    return DashboardScreen(
+      user: _currentUser,
+      onUserUpdated: _onUserUpdated,
+    );
   }
 
   bool get _isGovernment {
@@ -2470,19 +2062,23 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   bool get _isSchool {
+    if (_currentUser.isInstitution) return true;
     final sub = CreatorSidebarMenus.normalizeSubRole(_currentUser.subRole);
-    return !_currentUser.isAdmin &&
-        (sub == 'school' ||
+    final role = _currentUser.role.toLowerCase().trim();
+    final verif = _currentUser.verificationType?.toLowerCase().trim() ?? '';
+    final uname = _currentUser.username.toLowerCase().trim();
+    return (role == 'user' || role == 'creator' || role == 'institution' || role == 'school') &&
+        (sub == 'institution' ||
+            sub == 'institusi' ||
+            sub == 'school' ||
             sub == 'education' ||
             sub == 'campus' ||
             sub == 'sekolah' ||
             sub == 'kampus' ||
-            sub == 'institution' ||
-            sub == 'institusi' ||
-            sub == 'lembaga' ||
-            sub == 'yayasan' ||
-            _currentUser.username == 'institution_demo' ||
-            _currentUser.email.startsWith('institution@'));
+            verif == 'institution' ||
+            uname.contains('institution') ||
+            uname.contains('sekolah') ||
+            uname.contains('smk'));
   }
 
   Widget _buildScreenAt(int index) {
@@ -2666,12 +2262,10 @@ class _MainNavigationState extends State<MainNavigation> {
                                   width: 30,
                                   height: 30,
                                   fit: BoxFit.contain,
-                                  errorBuilder: (_, _, _) => Center(
+                                  errorBuilder: (_, _, _) => const Center(
                                     child: Icon(
                                       Icons.auto_awesome,
-                                      color: (_isCompany || _isInstitution)
-                                          ? const Color(0xFF2563EB)
-                                          : AppTheme.primaryPurple,
+                                      color: AppTheme.primaryPurple,
                                       size: 20,
                                     ),
                                   ),
@@ -2707,12 +2301,10 @@ class _MainNavigationState extends State<MainNavigation> {
                                     width: 36,
                                     height: 36,
                                     fit: BoxFit.contain,
-                                    errorBuilder: (_, _, _) => Center(
+                                    errorBuilder: (_, _, _) => const Center(
                                       child: Icon(
                                         Icons.auto_awesome,
-                                        color: (_isCompany || _isInstitution)
-                                            ? const Color(0xFF2563EB)
-                                            : AppTheme.primaryPurple,
+                                        color: AppTheme.primaryPurple,
                                         size: 24,
                                       ),
                                     ),

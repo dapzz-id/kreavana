@@ -21,6 +21,9 @@ import '../services/verification_service.dart';
 import 'client_verification_page.dart';
 import '../widgets/user_profile_modal.dart';
 import '../widgets/opportunity_review_dialog.dart';
+import '../widgets/repeat_order_dialog.dart';
+import '../widgets/app_sweet_alert.dart';
+import '../widgets/program_magang_card.dart';
 
 enum ProjectItemType {
   opportunity,
@@ -216,8 +219,22 @@ class UnifiedProjectItem {
 class ProyekSayaScreen extends StatefulWidget {
   final UserModel? user;
   final ValueChanged<UserModel>? onUserUpdated;
+  final String? initialOpportunityId;
+  final String? initialContractId;
+  final String? initialTitle;
+  final OpportunityModel? initialOpportunity;
+  final JobContract? initialContract;
 
-  const ProyekSayaScreen({super.key, this.user, this.onUserUpdated});
+  const ProyekSayaScreen({
+    super.key,
+    this.user,
+    this.onUserUpdated,
+    this.initialOpportunityId,
+    this.initialContractId,
+    this.initialTitle,
+    this.initialOpportunity,
+    this.initialContract,
+  });
 
   @override
   State<ProyekSayaScreen> createState() => _ProyekSayaScreenState();
@@ -228,13 +245,40 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   String? _errorMessage;
   String _selectedStatus = 'Semua';
   String _searchQuery = '';
+  bool _handledInitialTarget = false;
   final _debouncer = Debouncer(milliseconds: 300);
   final TextEditingController _searchController = TextEditingController();
 
   List<UnifiedProjectItem> _allItems = [];
 
+  UserModel? get _currentUser => widget.user ?? currentUserNotifier.value;
+
+  bool get _isCorporate {
+    final u = _currentUser;
+    if (u == null) return false;
+    if (u.isCorporate) return true;
+    final sub = (u.subRole ?? '').toLowerCase().trim();
+    final role = u.role.toLowerCase().trim();
+    const corporateKeywords = [
+      'corporate',
+      'company',
+      'enterprise',
+      'business',
+      'perusahaan',
+      'bisnis',
+      'b2b',
+      'agency',
+      'industri',
+      'mitra_industri',
+    ];
+    return corporateKeywords.contains(sub) ||
+        corporateKeywords.contains(role) ||
+        u.username.toLowerCase() == 'corporate_demo' ||
+        u.email.toLowerCase().startsWith('corporate@');
+  }
+
   bool get _isSchool {
-    final sub = (widget.user?.subRole ?? '').toLowerCase().trim();
+    final sub = (_currentUser?.subRole ?? '').toLowerCase().trim();
     return sub == 'institution' ||
         sub == 'institusi' ||
         sub == 'school' ||
@@ -242,6 +286,72 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
         sub == 'campus' ||
         sub == 'sekolah' ||
         sub == 'kampus';
+  }
+
+  List<OpportunityModel> _getSampleMagangOpportunities() {
+    return [
+      OpportunityModel(
+        id: 'sch_opp_magang_1',
+        title: 'Program Magang MBKM 3D Modeler Batch I 2026',
+        description:
+            'Kerja sama penempatan 10 siswa vokasi magang pada produksi serial animasi nusantara.',
+        subRoleSlug: 'animator',
+        type: 'project',
+        status: 'open',
+        deadline: '2026-09-21',
+        eventStartDate: '2026-09-21',
+        eventEndDate: '2027-02-23',
+        budgetRange: 'Rp 3.500.000 / bulan',
+        requirements: [
+          OpportunityRequirementModel(
+            subRoleSlug: 'animator',
+            quantity: 10,
+            notes:
+                'Siswa SMK jurusan terkait, Menguasai dasar 3D Modeling, Memiliki portofolio karya',
+          ),
+        ],
+      ),
+      OpportunityModel(
+        id: 'sch_opp_magang_2',
+        title: 'Program Magang MBKM UI/UX & Digital Product Design',
+        description:
+            'Kerja sama penempatan 8 siswa vokasi magang pada perancangan produk digital kreatif.',
+        subRoleSlug: 'desainer',
+        type: 'project',
+        status: 'open',
+        eventStartDate: '2027-02-01',
+        eventEndDate: '2027-03-01',
+        budgetRange: 'Rp 3.000.000 / bulan',
+        requirements: [
+          OpportunityRequirementModel(
+            subRoleSlug: 'desainer',
+            quantity: 8,
+            notes:
+                'Siswa SMK / Mahasiswa DKV & RPL, Menguasai Figma & Design System, Memiliki portofolio studi kasus',
+          ),
+        ],
+      ),
+      OpportunityModel(
+        id: 'sch_opp_magang_3',
+        title: 'Program Magang Post-Production & Motion Graphics',
+        description:
+            'Kerja sama penempatan 6 siswa magang post-production video komersial dan animasi nusantara.',
+        subRoleSlug: 'editor',
+        type: 'project',
+        status: 'open',
+        eventStartDate: '2027-02-15',
+        eventEndDate: '2027-03-15',
+        budgetRange: 'Rp 3.200.000 / bulan',
+        requirements: [
+          OpportunityRequirementModel(
+            subRoleSlug: 'editor',
+            quantity: 6,
+            notes:
+                'Siswa SMK Multimedia / Animasi, Mahir Premiere Pro & After Effects, Menyertakan showreel karya video',
+          ),
+        ],
+      ),
+    ];
   }
 
   @override
@@ -269,14 +379,21 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
           debugPrint('Error fetching contracts: $e');
           return <JobContract>[];
         }),
-        OpportunityService.getMyOpportunities().catchError((e) {
-          debugPrint('Error fetching my opportunities: $e');
+        (_isSchool
+                ? OpportunityService.getOpportunities(limit: 50)
+                : OpportunityService.getMyOpportunities())
+            .catchError((e) {
+          debugPrint('Error fetching opportunities: $e');
           return <OpportunityModel>[];
         }),
       ]);
 
       final contracts = results[0] as List<JobContract>;
-      final opportunities = results[1] as List<OpportunityModel>;
+      final opportunities = List<OpportunityModel>.from(results[1] as List<OpportunityModel>);
+
+      if (_isSchool && opportunities.isEmpty) {
+        opportunities.addAll(_getSampleMagangOpportunities());
+      }
 
       final unified = <UnifiedProjectItem>[];
 
@@ -304,6 +421,133 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
           _allItems = unified;
           _errorMessage = null;
         });
+
+        if (!_handledInitialTarget) {
+          _handledInitialTarget = true;
+
+          if (widget.initialTitle != null && widget.initialTitle!.isNotEmpty) {
+            _searchController.text = widget.initialTitle!;
+            _searchQuery = widget.initialTitle!.toLowerCase().trim();
+          }
+
+          if ((widget.initialOpportunityId != null && widget.initialOpportunityId!.isNotEmpty) ||
+              (widget.initialTitle != null && widget.initialTitle!.isNotEmpty) ||
+              widget.initialOpportunity != null) {
+            UnifiedProjectItem? target;
+            for (final item in _allItems) {
+              if (item.type == ProjectItemType.opportunity) {
+                if (widget.initialOpportunityId != null && item.id == widget.initialOpportunityId) {
+                  target = item;
+                  break;
+                }
+                if (widget.initialTitle != null &&
+                    widget.initialTitle!.isNotEmpty &&
+                    item.title.toLowerCase().contains(widget.initialTitle!.toLowerCase())) {
+                  target = item;
+                  break;
+                }
+              }
+            }
+
+            if (target?.opportunity != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _openOpportunityDetail(target!.opportunity!);
+              });
+            } else if (widget.initialOpportunity != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _openOpportunityDetail(widget.initialOpportunity!);
+              });
+            } else if (widget.initialOpportunityId != null &&
+                !widget.initialOpportunityId!.startsWith('eo_') &&
+                !widget.initialOpportunityId!.startsWith('wo_') &&
+                !widget.initialOpportunityId!.startsWith('sch_') &&
+                !widget.initialOpportunityId!.startsWith('gen_')) {
+              OpportunityService.getOpportunityById(widget.initialOpportunityId!).then((opp) {
+                if (opp != null && mounted) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) _openOpportunityDetail(opp);
+                  });
+                } else if (widget.initialTitle != null && widget.initialTitle!.isNotEmpty && mounted) {
+                  final fallbackOpp = OpportunityModel(
+                    id: widget.initialOpportunityId ?? 'opp_${DateTime.now().millisecondsSinceEpoch}',
+                    title: widget.initialTitle!,
+                    description: 'Kebutuhan dan aktivitas proyek ${widget.initialTitle}.',
+                    budgetRange: 'Sesuai Kesepakatan',
+                    subRoleSlug: widget.user?.subRole ?? 'event_organizer',
+                    type: 'project',
+                    status: 'open',
+                    postedBy: widget.user?.id,
+                  );
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) _openOpportunityDetail(fallbackOpp);
+                  });
+                }
+              }).catchError((_) {});
+            } else if (widget.initialTitle != null && widget.initialTitle!.isNotEmpty) {
+              final fallbackOpp = OpportunityModel(
+                id: widget.initialOpportunityId ?? 'opp_${DateTime.now().millisecondsSinceEpoch}',
+                title: widget.initialTitle!,
+                description: 'Kebutuhan dan aktivitas proyek ${widget.initialTitle}.',
+                budgetRange: 'Sesuai Kesepakatan',
+                subRoleSlug: widget.user?.subRole ?? 'event_organizer',
+                type: 'project',
+                status: 'open',
+                postedBy: widget.user?.id,
+              );
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _openOpportunityDetail(fallbackOpp);
+              });
+            }
+          } else if ((widget.initialContractId != null && widget.initialContractId!.isNotEmpty) ||
+              (widget.initialTitle != null && widget.initialTitle!.isNotEmpty) ||
+              widget.initialContract != null) {
+            UnifiedProjectItem? target;
+            for (final item in _allItems) {
+              if (item.type == ProjectItemType.contract) {
+                if (widget.initialContractId != null && item.id == widget.initialContractId) {
+                  target = item;
+                  break;
+                }
+                if (widget.initialTitle != null &&
+                    widget.initialTitle!.isNotEmpty &&
+                    item.title.toLowerCase().contains(widget.initialTitle!.toLowerCase())) {
+                  target = item;
+                  break;
+                }
+              }
+            }
+            if (target != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _openContractOpportunity(target!);
+              });
+            } else if (widget.initialContract != null) {
+              final item = UnifiedProjectItem.fromContract(widget.initialContract!, currentUserId: widget.user?.id);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _openContractOpportunity(item);
+              });
+            } else if (widget.initialTitle != null && widget.initialTitle!.isNotEmpty) {
+              final dummyContract = JobContract(
+                id: widget.initialContractId ?? 'ctr_${DateTime.now().millisecondsSinceEpoch}',
+                title: widget.initialTitle!,
+                description: 'Kontrak aktif proyek ${widget.initialTitle}.',
+                clientId: widget.user?.id ?? 'client_id',
+                creatorId: 'creator_id',
+                contractStatus: 'active',
+                workStatus: 'in_progress',
+                agreedPrice: 20000000,
+                escrowAmount: 20000000,
+                escrowPaid: true,
+                createdAt: DateTime.now(),
+                creator: {'name': 'Kreator Partner'},
+                client: {'name': widget.user?.name ?? 'Klien'},
+              );
+              final item = UnifiedProjectItem.fromContract(dummyContract, currentUserId: widget.user?.id);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _openContractOpportunity(item);
+              });
+            }
+          }
+        }
       }
     } catch (e) {
       debugPrint('Error fetching projects: $e');
@@ -318,11 +562,34 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   }
 
   Future<void> _openBuatKebutuhan() async {
+    if (_isSchool) {
+      AppSweetAlert.error(
+        context,
+        'Fitur Buka Program Magang khusus untuk akun Corporate / Mitra Industri. Institusi Pendidikan tidak dapat membuka lowongan magang.',
+        title: 'Akses Ditolak (403)',
+      );
+      return;
+    }
+
+    // Akun corporate tidak memerlukan verifikasi KTP sama sekali
+    if (_isCorporate) {
+      if (!mounted) return;
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: _currentUser)),
+      );
+
+      if (result == true) {
+        _fetchRealtimeProjects();
+      }
+      return;
+    }
+
     // Check if client is verified
-    final isClient =
-        widget.user?.role == 'user' || widget.user?.isClient == true;
+    final u = _currentUser;
+    final isClient = u?.role == 'user' || u?.isClient == true;
     if (isClient) {
-      bool isVerified = widget.user?.isVerified == true;
+      bool isVerified = u?.isVerified == true || u?.isClientVerified == true;
       if (!isVerified) {
         // Double check latest status from server
         try {
@@ -379,7 +646,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
           final res = await Navigator.push<bool>(
             context,
             MaterialPageRoute(
-              builder: (_) => ClientVerificationPage(user: widget.user),
+              builder: (_) => ClientVerificationPage(user: _currentUser),
             ),
           );
           if (res == true && mounted) {
@@ -401,7 +668,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     if (!mounted) return;
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: widget.user)),
+      MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: _currentUser)),
     );
 
     if (result == true) {
@@ -409,16 +676,145 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     }
   }
 
-  void _openOpportunityDetail(OpportunityModel opp) {
+  void _openOpportunityDetail(OpportunityModel opp, {JobContract? contract}) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => DetailKebutuhanScreen(
           opportunity: opp,
-          user: widget.user,
+          user: widget.user ?? currentUserNotifier.value,
+          initialContract: contract,
         ),
       ),
     ).then((_) => _fetchRealtimeProjects());
+  }
+
+  Future<void> _openContractOpportunity(UnifiedProjectItem item) async {
+    final c = item.contract;
+    if (c == null) {
+      if (item.opportunity != null) {
+        _openOpportunityDetail(item.opportunity!);
+      }
+      return;
+    }
+
+    final oppId = c.opportunityId;
+    if (oppId != null && oppId.isNotEmpty) {
+      // 1. Cek apakah model opportunity sudah ada di list realtime saat ini
+      for (final it in _allItems) {
+        if (it.opportunity != null && it.opportunity!.id == oppId) {
+          _openOpportunityDetail(it.opportunity!, contract: c);
+          return;
+        }
+      }
+
+      // 2. Jika belum ada di list, tampilkan loader lalu ambil via API
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(width: 16),
+                  Text('Membuka detail proyek...', style: TextStyle(fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      try {
+        final opp = await OpportunityService.getOpportunityById(oppId);
+        if (mounted) {
+          Navigator.pop(context); // Tutup loader
+          if (opp != null) {
+            _openOpportunityDetail(opp, contract: c);
+            return;
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      }
+    }
+
+    // Bangun model OpportunityModel dari data kontrak lengkap agar tampil persis seperti halaman Detail Kebutuhan
+    final currencyFmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final deadlineStr = c.deadline != null
+        ? DateFormat('yyyy-MM-dd').format(c.deadline!)
+        : (c.scheduledEndDate != null ? DateFormat('yyyy-MM-dd').format(c.scheduledEndDate!) : null);
+    final deadlineFormatted = c.deadline != null
+        ? DateFormat('dd MMM yyyy').format(c.deadline!)
+        : (c.scheduledEndDate != null ? DateFormat('dd MMM yyyy').format(c.scheduledEndDate!) : null);
+
+    final partnerRole = _getPartnerRole(c);
+    final approvedCreator = OpportunityApprovedCreatorModel(
+      id: c.creatorId,
+      name: c.creatorName.isNotEmpty ? c.creatorName : 'Kreator Partner',
+      username: c.creator?['username'] ?? c.creatorName.toLowerCase().replaceAll(' ', '_'),
+      avatarUrl: c.creator?['avatar_url'] ?? c.creator?['profile_photo_url'],
+      subRole: partnerRole.isNotEmpty ? partnerRole : 'creator',
+      creatorSignature: c.creatorSignature,
+      creatorSignedAt: c.creatorSignedAt?.toIso8601String() ??
+          (c.creatorApproved ? (c.createdAt?.toIso8601String() ?? DateTime.now().toIso8601String()) : null),
+    );
+
+    final poster = OpportunityPoster(
+      id: c.clientId,
+      name: c.clientName.isNotEmpty ? c.clientName : (widget.user?.name ?? 'Klien'),
+      username: c.client?['username'] ?? (widget.user?.username ?? 'klien'),
+      avatarUrl: c.client?['avatar_url'] ?? c.client?['profile_photo_url'],
+      role: 'client',
+    );
+
+    final defaultDynamicTerms = [
+      'Penyelenggara (Pihak Pertama) wajib menyediakan akses lokasi, jadwal rundown yang jelas, dan koordinasi teknis di venue.',
+      'Penyediaan fasilitas dan alat kerja utama (seperti kamera, lensa, instrumen, dll) disepakati tertulis antara pembuat event dan pekerja.',
+      'Pekerja (Pihak Kedua) berkewajiban hadir tepat waktu dan menyerahkan hasil kerja sesuai standar profesional yang disepakati.',
+      'Honorarium kerja diamankan 100% pada sistem Escrow Rekber Kreavana (Pihak Ketiga) dan hanya dicairkan setelah hasil pekerjaan disetujui.',
+    ];
+
+    final dynamicTerms = c.dynamicTerms.isNotEmpty
+        ? c.dynamicTerms
+        : (c.terms != null && c.terms!.isNotEmpty ? [c.terms!] : defaultDynamicTerms);
+
+    final fallbackOpp = OpportunityModel(
+      id: (c.opportunityId != null && c.opportunityId!.isNotEmpty) ? c.opportunityId : c.id,
+      title: c.title,
+      description: c.description ?? 'Aktivitas dan pengerjaan proyek ${c.title}.',
+      budgetRange: currencyFmt.format(c.agreedPrice),
+      subRoleSlug: partnerRole.isNotEmpty ? partnerRole : (widget.user?.subRole ?? 'creator'),
+      type: 'project',
+      location: 'Indonesia',
+      deadline: deadlineStr ?? deadlineFormatted,
+      status: c.contractStatus == 'active' ? 'in_progress' : c.contractStatus,
+      postedBy: c.clientId,
+      poster: poster,
+      approvedCreators: [approvedCreator],
+      applicationsCount: 1,
+      escrowStatus: c.escrowPaid ? 'held_in_escrow' : 'none',
+      escrowAmount: c.escrowAmount > 0 ? c.escrowAmount : c.agreedPrice,
+      dynamicTerms: dynamicTerms,
+      signatureType: 'dynamic_electronic',
+      clientSignature: c.clientSignature,
+      clientSignedAt: c.clientSignedAt?.toIso8601String(),
+      adminName: c.adminName ?? 'Admin Kreavana',
+      adminSignatureUrl: c.adminSignatureUrl,
+      adminSignedAt: c.adminSignedAt?.toIso8601String(),
+      eventProgress: c.workerProgress,
+      createdAt: c.createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
+    );
+
+    if (mounted) {
+      _openOpportunityDetail(fallbackOpp, contract: c);
+    }
   }
 
   String _getPartnerId(JobContract contract) {
@@ -689,7 +1085,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               ),
         ),
       ),
-      floatingActionButton: (!isDesktop)
+      floatingActionButton: (!isDesktop && !_isSchool)
           ? FloatingActionButton.extended(
               heroTag: 'proyek_saya_fab_mobile',
               onPressed: _openBuatKebutuhan,
@@ -760,7 +1156,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
               const SizedBox(height: 4),
               Text(
                 _isSchool
-                    ? 'Kelola program magang, PKL, dan proyek kreatif bersama industri dan studio mitra.'
+                    ? 'Pantau program magang industri dan kemitraan siswa bersama studio mitra.'
                     : 'Pantau kebutuhan terbuka, proposal kreator, dan progres kontrak kerja Anda.',
                 style: TextStyle(
                   fontSize: 13,
@@ -782,14 +1178,14 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         ),
-        if (isDesktop) ...[
+        if (isDesktop && !_isSchool) ...[
           const SizedBox(width: 12),
           ElevatedButton.icon(
             onPressed: _openBuatKebutuhan,
             icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-            label: Text(
-              _isSchool ? 'Buka Program / Magang' : 'Buat Proyek Baru',
-              style: const TextStyle(
+            label: const Text(
+              'Buat Proyek Baru',
+              style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
@@ -1130,16 +1526,25 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   ) {
     if (isDesktop) {
       // 2-column responsive layout for clean desktop readability
-      return Wrap(
-        spacing: 16,
-        runSpacing: 16,
-        children: items.map((item) {
-          final cardWidth = (screenWidth > 1260 ? 1260 : screenWidth) / 2 - 40;
-          return SizedBox(
-            width: cardWidth > 450 ? cardWidth : double.infinity,
-            child: _buildUnifiedCard(item, isDark, accentColor),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          const double spacing = 16.0;
+          final bool isTwoCol = constraints.maxWidth >= 680;
+          final double cardWidth = isTwoCol
+              ? (constraints.maxWidth - spacing) / 2 - 0.5
+              : constraints.maxWidth;
+
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: items.map((item) {
+              return SizedBox(
+                width: cardWidth,
+                child: _buildUnifiedCard(item, isDark, accentColor),
+              );
+            }).toList(),
           );
-        }).toList(),
+        },
       );
     }
 
@@ -1162,14 +1567,77 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
   ) {
     final isOpportunity = item.type == ProjectItemType.opportunity;
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.cardBg : Colors.white,
+    final isMagang = _isSchool ||
+        item.category.toLowerCase().contains('magang') ||
+        item.title.toLowerCase().contains('magang') ||
+        (item.opportunity != null &&
+            (item.opportunity!.subRoleSlug.toLowerCase() == 'magang' ||
+                item.opportunity!.title.toLowerCase().contains('magang')));
+
+    if (isMagang) {
+      if (item.opportunity != null) {
+        return ProgramMagangCard.fromOpportunity(
+          item.opportunity!,
+          onTap: () => _openOpportunityDetail(item.opportunity!),
+          onDetailPressed: () => _openOpportunityDetail(item.opportunity!),
+        );
+      } else {
+        return ProgramMagangCard(
+          title: item.title,
+          description: item.description,
+          categoryBadge: 'Magang',
+          statusBadge: item.statusCategory == 'Mencari Kreator'
+              ? 'Pendaftaran Dibuka'
+              : (item.statusCategory == 'Berjalan'
+                  ? 'Sedang Berjalan'
+                  : (item.statusCategory == 'Selesai'
+                      ? 'Pendaftaran Ditutup'
+                      : item.statusLabel)),
+          statusBadgeColor: item.statusColor,
+          registrationPeriod: ProgramMagangCard.formatDateDisplay(
+            item.deadline != '-' ? item.deadline : null,
+            defaultFallback: '21 Sep 2026',
+          ),
+          quotaText: '4 dari 10 posisi',
+          requirements: const [
+            'Siswa SMK jurusan terkait',
+            'Menguasai dasar 3D Modeling',
+            'Memiliki portofolio karya',
+          ],
+          requirementsCountLabel: '3 Persyaratan',
+          onTap: () {
+            if (item.contract != null) {
+              _openContractOpportunity(item);
+            }
+          },
+          onDetailPressed: () {
+            if (item.contract != null) {
+              _openContractOpportunity(item);
+            }
+          },
+        );
+      }
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-        ),
+        onTap: () {
+          if (isOpportunity && item.opportunity != null) {
+            _openOpportunityDetail(item.opportunity!);
+          } else if (!isOpportunity) {
+            _openContractOpportunity(item);
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.cardBg : Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
+            ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -1299,13 +1767,6 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                   Icons.event_rounded,
                   item.deadline!,
                   isDark,
-                ),
-              if (item.opportunity != null && item.opportunity!.hasExternalRating)
-                _buildMetaChip(
-                  Icons.star_rounded,
-                  '${item.opportunity!.externalRating!.toStringAsFixed(1)} (${item.opportunity!.externalRatingSource ?? 'Rating Luar'})',
-                  isDark,
-                  highlight: true,
                 ),
             ],
           ),
@@ -1490,37 +1951,8 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   ),
                 ),
-                if (item.opportunity != null && item.opportunity!.isClosed) ...[
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      final opp = item.opportunity!;
-                      final approvedCreator = opp.approvedCreators.isNotEmpty ? opp.approvedCreators.first : null;
-                      OpportunityReviewDialog.show(
-                        context,
-                        opportunityId: opp.id ?? '',
-                        projectTitle: opp.title,
-                        targetUserId: approvedCreator?.id ?? opp.postedBy ?? '',
-                        targetUserName: approvedCreator?.name ?? 'Kreator Terkait',
-                        targetUserAvatar: approvedCreator?.avatarUrl,
-                        targetUserSubRole: approvedCreator?.capability ?? approvedCreator?.subRole,
-                        onReviewSubmitted: _fetchRealtimeProjects,
-                      );
-                    },
-                    icon: const Icon(Icons.star_rounded, size: 16, color: Color(0xFFD97706)),
-                    label: const Text('Beri Ulasan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF59E0B).withValues(alpha: 0.15),
-                      foregroundColor: const Color(0xFFD97706),
-                      elevation: 0,
-                      side: const BorderSide(color: Color(0xFFF59E0B), width: 1),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    ),
-                  ),
-                ],
+                if (item.opportunity != null && item.opportunity!.isClosed)
+                  ..._buildOpportunityCompletedActions(item.opportunity!, item),
               ] else ...[
                 IconButton(
                   icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
@@ -1547,9 +1979,26 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
+                if (item.contract?.opportunityId != null && item.contract!.opportunityId!.isNotEmpty) ...[
+                  ElevatedButton.icon(
+                    onPressed: () => _openContractOpportunity(item),
+                    icon: const Icon(Icons.dashboard_customize_rounded, size: 14),
+                    label: const Text('Workspace Proyek', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryPurple,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 OutlinedButton(
                   onPressed: () {
-                    _showContractDetailDialog(item);
+                    _openContractOpportunity(item);
                   },
                   style: OutlinedButton.styleFrom(
                     shape: RoundedRectangleBorder(
@@ -1563,42 +2012,149 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                   ),
                 ),
                 if (item.contract != null &&
-                    (item.contract!.isCompleted || item.progress >= 1.0)) ...[
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      final c = item.contract!;
-                      final partnerId = _getPartnerId(c);
-                      final partnerName = _getPartnerName(c);
-                      OpportunityReviewDialog.show(
-                        context,
-                        opportunityId: c.opportunityId ?? '',
-                        projectTitle: item.title,
-                        targetUserId: partnerId,
-                        targetUserName: partnerName,
-                        onReviewSubmitted: _fetchRealtimeProjects,
-                      );
-                    },
-                    icon: const Icon(Icons.star_rounded, size: 16, color: Color(0xFFD97706)),
-                    label: const Text('Beri Ulasan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF59E0B).withValues(alpha: 0.15),
-                      foregroundColor: const Color(0xFFD97706),
-                      elevation: 0,
-                      side: const BorderSide(color: Color(0xFFF59E0B), width: 1),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    ),
-                  ),
-                ],
+                    (item.contract!.isCompleted || item.progress >= 1.0))
+                  ..._buildContractCompletedActions(item.contract!, item),
               ],
             ],
           ),
         ],
       ),
+    ),
+  ),
+);
+  }
+
+  List<Widget> _buildOpportunityCompletedActions(OpportunityModel opp, UnifiedProjectItem item) {
+    final widgets = <Widget>[];
+    final approvedCreator = opp.approvedCreators.isNotEmpty ? opp.approvedCreators.first : null;
+    if (approvedCreator != null && (widget.user?.isClient == true || opp.postedBy == widget.user?.id)) {
+      widgets.add(const SizedBox(width: 8));
+      widgets.add(
+        ElevatedButton.icon(
+          onPressed: () {
+            RepeatOrderDialog.show(
+              context,
+              creatorId: approvedCreator.id,
+              creatorName: approvedCreator.name,
+              creatorAvatar: approvedCreator.avatarUrl,
+              originalTitle: item.title,
+              originalPrice: double.tryParse(opp.budgetRange?.replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 0.0,
+              onSuccess: _fetchRealtimeProjects,
+            );
+          },
+          icon: const Icon(Icons.replay_rounded, size: 15, color: Colors.white),
+          label: const Text('Repeat Order', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF7C3AED),
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          ),
+        ),
+      );
+    }
+
+    widgets.add(const SizedBox(width: 8));
+    widgets.add(
+      ElevatedButton.icon(
+        onPressed: () {
+          OpportunityReviewDialog.show(
+            context,
+            opportunityId: opp.id ?? '',
+            projectTitle: opp.title,
+            targetUserId: approvedCreator?.id ?? opp.postedBy ?? '',
+            targetUserName: approvedCreator?.name ?? 'Kreator Terkait',
+            targetUserAvatar: approvedCreator?.avatarUrl,
+            targetUserSubRole: approvedCreator?.capability ?? approvedCreator?.subRole,
+            onReviewSubmitted: _fetchRealtimeProjects,
+          );
+        },
+        icon: const Icon(Icons.star_rounded, size: 16, color: Color(0xFFD97706)),
+        label: const Text('Beri Ulasan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+          foregroundColor: const Color(0xFFD97706),
+          elevation: 0,
+          side: const BorderSide(color: Color(0xFFF59E0B), width: 1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        ),
+      ),
     );
+
+    return widgets;
+  }
+
+  List<Widget> _buildContractCompletedActions(JobContract c, UnifiedProjectItem item) {
+    final widgets = <Widget>[];
+    if (c.clientId == widget.user?.id || widget.user?.isClient == true) {
+      widgets.add(const SizedBox(width: 8));
+      widgets.add(
+        ElevatedButton.icon(
+          onPressed: () {
+            RepeatOrderDialog.show(
+              context,
+              contractId: c.id,
+              creatorId: c.creatorId,
+              creatorName: c.creatorName.isNotEmpty ? c.creatorName : 'Kreator',
+              creatorAvatar: c.creator?['avatar_url'] ?? c.creator?['profile_photo_url'],
+              originalTitle: item.title,
+              originalPrice: c.agreedPrice,
+              defaultTerms: c.terms,
+              onSuccess: _fetchRealtimeProjects,
+            );
+          },
+          icon: const Icon(Icons.replay_rounded, size: 15, color: Colors.white),
+          label: const Text('Repeat Order', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF7C3AED),
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          ),
+        ),
+      );
+    }
+
+    final partnerId = _getPartnerId(c);
+    final partnerName = _getPartnerName(c);
+    widgets.add(const SizedBox(width: 8));
+    widgets.add(
+      ElevatedButton.icon(
+        onPressed: () {
+          OpportunityReviewDialog.show(
+            context,
+            opportunityId: c.opportunityId ?? '',
+            projectTitle: item.title,
+            targetUserId: partnerId,
+            targetUserName: partnerName,
+            onReviewSubmitted: _fetchRealtimeProjects,
+          );
+        },
+        icon: const Icon(Icons.star_rounded, size: 16, color: Color(0xFFD97706)),
+        label: const Text('Beri Ulasan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+          foregroundColor: const Color(0xFFD97706),
+          elevation: 0,
+          side: const BorderSide(color: Color(0xFFF59E0B), width: 1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        ),
+      ),
+    );
+
+    return widgets;
   }
 
   Widget _buildMetaChip(
@@ -1646,89 +2202,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
     );
   }
 
-  void _showContractDetailDialog(UnifiedProjectItem item) {
-    final c = item.contract;
-    if (c == null) return;
 
-    final partnerId = _getPartnerId(c);
-    final partnerName = _getPartnerName(c);
-    final partnerRole = _getPartnerRole(c);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Row(
-          children: [
-            const Icon(Icons.handshake_rounded, color: AppTheme.primaryPurple),
-            const SizedBox(width: 8),
-            const Expanded(
-              child: Text(
-                'Detail Kontrak Proyek',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              c.title,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            ),
-            const SizedBox(height: 8),
-            Text('Partner: $partnerName'),
-            Text('Nilai Kontrak: ${item.priceOrBudget}'),
-            Text('Status Kontrak: ${item.statusLabel}'),
-            Text('Status Kerja: ${c.workStatus}'),
-            if (c.deadline != null)
-              Text('Batas Waktu: ${DateFormat('dd MMM yyyy').format(c.deadline!)}'),
-            if (c.description != null && c.description!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              const Text('Catatan/Deskripsi:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(c.description!, style: const TextStyle(fontSize: 12)),
-            ],
-          ],
-        ),
-        actions: [
-          if (partnerId.isNotEmpty)
-            OutlinedButton.icon(
-              onPressed: () {
-                UserProfileModal.show(
-                  context,
-                  userId: partnerId,
-                  initialName: partnerName,
-                  initialRole: partnerRole,
-                  currentUser: widget.user,
-                );
-              },
-              icon: const Icon(Icons.person_outline_rounded, size: 15),
-              label: const Text('Profil & Portofolio'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.primaryPurple,
-              ),
-            ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Tutup'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _openChatWithPartner(partnerId, partnerName);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryPurple,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Kirim Pesan'),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ── Empty State ────────────────────────────────────────────────────────────
   Widget _buildEmptyState(bool isDark) {
@@ -1762,7 +2236,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             Text(
               _selectedStatus == 'Semua'
                   ? (_isSchool
-                      ? 'Belum Ada Program Magang yang Dibuka'
+                      ? 'Belum Ada Program & Magang Aktif'
                       : 'Belum Ada Proyek yang Dibuat')
                   : (_isSchool
                       ? 'Tidak Ada Program pada Status "$_selectedStatus"'
@@ -1775,7 +2249,7 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
             const SizedBox(height: 8),
             Text(
               _isSchool
-                  ? 'Publikasikan program magang, PKL, atau proyek kreatif sekolah Anda untuk menghubungkan siswa dengan industri dan studio mitra.'
+                  ? 'Program magang dibuka langsung oleh mitra korporat dan industri. Pantau program dan pelamar magang dari mitra industri di sini.'
                   : 'Publikasikan kebutuhan proyek Anda sekarang untuk menerima proposal dari kreator terverifikasi.',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -1783,20 +2257,22 @@ class _ProyekSayaScreenState extends State<ProyekSayaScreen> {
                 color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
               ),
             ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: _openBuatKebutuhan,
-              icon: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
-              label: Text(
-                _isSchool ? 'Buka Program Magang Baru' : 'Buat Kebutuhan Baru',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            if (!_isSchool) ...[
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: _openBuatKebutuhan,
+                icon: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                label: const Text(
+                  'Buat Kebutuhan Baru',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryPurple,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryPurple,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
+            ],
           ],
         ),
       ),

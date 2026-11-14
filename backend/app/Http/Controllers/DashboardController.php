@@ -37,6 +37,9 @@ class DashboardController extends Controller
     public function opportunities(Request $request)
     {
         $subRoleSlug = $request->query('sub_role_slug', 'all');
+        if ($subRoleSlug === 'general') {
+            $subRoleSlug = 'all';
+        }
         $type = $request->query('type');
         $limit = (int) $request->query('limit', 50);
 

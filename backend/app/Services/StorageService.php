@@ -19,7 +19,7 @@ class StorageService extends BaseService
     /**
      * Store a file centrally with quota enforcement.
      */
-    public function store(User $user, UploadedFile $file, string $category, string $visibility = 'private'): StorageFile
+    public function store(User $user, UploadedFile $file, string $category, string $visibility = 'private', ?string $customDisk = null): StorageFile
     {
         $size = $file->getSize();
         if ($size === false) {
@@ -28,7 +28,22 @@ class StorageService extends BaseService
 
         $mimeType = $file->getClientMimeType();
         $originalName = $file->getClientOriginalName();
-        $disk = $visibility === 'public' ? 'public' : 'private';
+        
+        // Determine target disk:
+        // 1. Explicit customDisk if provided.
+        // 2. Default filesystem disk if configured as minio or s3.
+        // 3. Otherwise local public/private disk.
+        if ($customDisk) {
+            $disk = $customDisk;
+        } else {
+            $defaultDisk = config('filesystems.default', 'local');
+            if (in_array($defaultDisk, ['minio', 's3'], true)) {
+                $disk = $defaultDisk;
+            } else {
+                $disk = $visibility === 'public' ? 'public' : 'private';
+            }
+        }
+
         $uuid = (string) Str::uuid();
         
         $extension = $file->getClientOriginalExtension();
@@ -376,5 +391,29 @@ class StorageService extends BaseService
 
             return ['cloned' => $cloned, 'pending' => $pending];
         });
+    }
+
+    /**
+     * Get accessible public or streaming URL for a storage file.
+     */
+    public function getUrl(StorageFile $file): string
+    {
+        return $file->url;
+    }
+
+    /**
+     * Generate a temporary URL for private files if supported by disk driver (e.g. MinIO/S3).
+     */
+    public function getTemporaryUrl(StorageFile $file, \DateTimeInterface $expiration): ?string
+    {
+        if (in_array($file->disk, ['minio', 's3'], true)) {
+            try {
+                return Storage::disk($file->disk)->temporaryUrl($file->path, $expiration);
+            } catch (\Throwable $e) {
+                return null;
+            }
+        }
+
+        return null;
     }
 }

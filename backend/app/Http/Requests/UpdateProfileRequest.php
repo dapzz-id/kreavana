@@ -19,7 +19,7 @@ class UpdateProfileRequest extends FormRequest
     {
         return [
             'name' => 'sometimes|string|min:2|max:100',
-            'phone' => 'nullable|regex:/^(\+62|62|0)8[0-9]{8,11}$/',
+            'phone' => 'nullable|string|max:35',
             'sub_role' => ['sometimes', new Enum(CreatorSubRole::class)],
             'avatar_url' => 'sometimes|string',
             'max_work_capacity' => 'sometimes|nullable|integer|min:0|max:10000',

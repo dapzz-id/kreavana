@@ -34,6 +34,9 @@ class CorporateDummySeeder extends Seeder
         $corp->update([
             'role' => RoleType::User,
             'sub_role' => 'corporate',
+            'is_verified' => 1,
+            'verification_type' => 'corporate',
+            'verified_at' => now(),
         ]);
 
         \App\Models\UserSubRole::updateOrCreate(

@@ -16,14 +16,16 @@ class MessageSent implements ShouldBroadcastNow
 
     public $message;
     public $chatId;
+    public array $participantIds;
 
     /**
      * Create a new event instance.
      */
-    public function __construct($message, $chatId)
+    public function __construct($message, $chatId, array $participantIds = [])
     {
         $this->message = $message;
         $this->chatId = $chatId;
+        $this->participantIds = $participantIds;
     }
 
     /**
@@ -33,9 +35,17 @@ class MessageSent implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-        return [
+        $channels = [
             new Channel('chat.' . $this->chatId),
         ];
+
+        foreach ($this->participantIds as $participantId) {
+            if (!empty($participantId)) {
+                $channels[] = new Channel('user.' . $participantId);
+            }
+        }
+
+        return $channels;
     }
 
     public function broadcastAs()

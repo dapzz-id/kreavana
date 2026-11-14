@@ -1,12 +1,12 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
+import '../../../app/app_animations.dart';
 import '../../../models/user_model.dart';
 import '../../../screens/buat_kebutuhan_screen.dart';
 import '../../../screens/creator_service_screen.dart';
 import '../../../screens/creator_calendar_screen.dart';
 import '../../../screens/direct_message_screen.dart';
-import '../../../screens/global_search_screen.dart';
 import '../../../screens/notifications_screen.dart';
 import '../../../screens/kolaborasi_screen.dart';
 import '../../../screens/pengaturan_screen.dart';
@@ -14,13 +14,13 @@ import '../../../screens/ulasan_reputasi_screen.dart';
 import '../../../screens/wallet_screen.dart';
 import '../../../services/api_service.dart';
 import '../../../services/badge_service.dart';
-import '../../../services/theme_transition_service.dart';
 import '../../../services/job_contract_service.dart';
 import '../../../models/job_contract.dart';
 import '../services/dashboard_service.dart';
 import '../../../widgets/desktop_sidebar_layout.dart';
 import '../../../widgets/upgrade_plan_modal.dart';
 import '../../../widgets/waving_hand_emoji.dart';
+import '../../../widgets/app_bar_badge.dart';
 
 class EoDashboardEvent {
   final String title;
@@ -424,154 +424,50 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
       title: Row(
         children: [
           Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: isCompact ? 190 : double.infinity,
-                ),
-                child: GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => GlobalSearchScreen(user: widget.user),
-                    ),
-                  ),
-                  child: Container(
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF1A1830)
-                          : Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isDark
-                            ? AppTheme.inputBorder
-                            : Colors.grey.shade200,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const SizedBox(width: 14),
-                        Icon(
-                          Icons.search,
-                          color: isDark
-                              ? AppTheme.textMuted
-                              : Colors.grey.shade500,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Cari event, vendor, atau talent...',
-                            style: TextStyle(
-                              fontSize: isCompact ? 11.5 : 13,
-                              fontWeight: FontWeight.w500,
-                              color: isDark
-                                  ? AppTheme.textMuted
-                                  : Colors.grey.shade500,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+            child: InteractiveDashboardSearchBar(
+              user: widget.user,
+              isDark: isDark,
+              accentColor: _eoPurple,
+              placeholder: 'Cari event, vendor, atau talent...',
+              constraints: BoxConstraints(
+                maxWidth: isCompact ? 190 : double.infinity,
               ),
             ),
           ),
           const SizedBox(width: 8),
-          ListenableBuilder(
-            listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(
-              Icons.notifications_none_outlined,
-              BadgeService().unreadNotificationsText,
-              isDark,
-            ),
+          AppBarBadgeWidget(
+            icon: Icons.notifications_none_outlined,
+            isDark: isDark,
+            accentColor: _eoPurple,
           ),
           if (isCompact) const SizedBox(width: 8),
           if (!isCompact) ...[
             const SizedBox(width: 6),
-            ListenableBuilder(
-              listenable: BadgeService(),
-              builder: (_, _) => _buildAppBarBadge(
-                Icons.chat_bubble_outline,
-                BadgeService().unreadMessagesText,
-                isDark,
-              ),
+            AppBarBadgeWidget(
+              icon: Icons.chat_bubble_outline,
+              isDark: isDark,
+              accentColor: _eoPurple,
             ),
-            const SizedBox(width: 16),
-            IconButton(
-              key: _themeBtnKey,
-              icon: Icon(
-                isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                size: 20,
-              ),
-              onPressed: () {
-                final box = _themeBtnKey.currentContext?.findRenderObject()
-                    as RenderBox?;
-                final origin = box != null
-                    ? box.localToGlobal(box.size.center(Offset.zero))
-                    : const Offset(0, 0);
-                ThemeTransitionService.animateToggle(
-                  origin: origin,
-                  toDark: !isDark,
-                );
-              },
+            const SizedBox(width: 10),
+            AppBarThemeToggle(
+              isDark: isDark,
+              btnKey: _themeBtnKey,
+              accentColor: _eoPurple,
             ),
             const SizedBox(width: 8),
           ],
-          if (isCompact)
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: _eoPurple.withValues(alpha: 0.1),
-              backgroundImage: widget.user.avatarUrl?.isNotEmpty == true
-                  ? NetworkImage(
-                      ApiService.resolveAssetUrl(widget.user.avatarUrl!),
-                    )
-                  : null,
-              child: widget.user.avatarUrl?.isNotEmpty == true
-                  ? null
-                  : const Icon(Icons.event, color: _eoPurple, size: 18),
-            ),
-          if (!isCompact)
-            Row(
-              children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: _eoPurple.withValues(alpha: 0.1),
-                backgroundImage: widget.user.avatarUrl?.isNotEmpty == true
-                    ? NetworkImage(
-                        ApiService.resolveAssetUrl(widget.user.avatarUrl!),
-                      )
-                    : null,
-                child: widget.user.avatarUrl?.isNotEmpty == true
-                    ? null
-                    : const Icon(Icons.event, color: _eoPurple, size: 20),
+          AppBarProfileBadge(
+            user: widget.user,
+            isDark: isDark,
+            accentColor: _eoPurple,
+            customSubRole: 'Event Organizer',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => PengaturanScreen(user: widget.user),
               ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.user.name,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'Event Organizer',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
-              ],
             ),
+          ),
         ],
       ),
     );
@@ -850,21 +746,25 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
       ],
     );
 
-    final action = ElevatedButton.icon(
-      onPressed: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => BuatKebutuhanScreen(user: widget.user),
+    final action = HoverLiftButton(
+      glowColor: _eoPurple,
+      borderRadius: BorderRadius.circular(12),
+      child: ElevatedButton.icon(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BuatKebutuhanScreen(user: widget.user),
+          ),
         ),
-      ),
-      icon: const Icon(Icons.add, size: 18),
-      label: const Text('Buat Event Baru'),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _eoPurple,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        icon: const Icon(Icons.add, size: 18),
+        label: const Text('Buat Event Baru'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _eoPurple,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       ),
     );
 
@@ -2040,67 +1940,6 @@ class _EoDashboardScreenState extends State<EoDashboardScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildAppBarBadge(IconData icon, String count, bool isDark) {
-    final isNotification = icon == Icons.notifications_none_outlined;
-    return ListenableBuilder(
-      listenable: BadgeService(),
-      builder: (context, _) {
-        final badgeCount = isNotification
-            ? BadgeService().unreadNotificationsText
-            : BadgeService().unreadMessagesText;
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => isNotification
-                    ? NotificationsScreen(userId: '')
-                    : const DirectMessageScreen(),
-              ),
-            );
-          },
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  icon,
-                  size: 20,
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
-                if (badgeCount.isNotEmpty && badgeCount != '0')
-                  Positioned(
-                    right: -4,
-                    top: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.redAccent,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        badgeCount,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }

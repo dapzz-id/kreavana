@@ -10,6 +10,7 @@ class InstitutionResourceController extends Controller
     use \App\Traits\ApiResponse;
 
     private const TYPES = [
+        'profile',
         'tenders',
         'partners',
         'reports',
@@ -17,11 +18,18 @@ class InstitutionResourceController extends Controller
         'monitoring',
         'documents',
         'announcements',
+        'facilities',
         'showcases',
         'members',
         'team',
         'study_programs',
         'talents',
+        'programs',
+        'events',
+        'competitions',
+        'internships',
+        'research',
+        'students',
     ];
 
     private const STATUSES = [
@@ -47,11 +55,28 @@ class InstitutionResourceController extends Controller
         $user = $request->user();
         if ($user) {
             $subRole = $user->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user->sub_role;
-            $isCorporate = in_array($subRole, [
+            $subRoleLower = strtolower((string) ($subRole ?? ''));
+
+            $isCorporate = in_array($subRoleLower, [
                 'corporate', 'company', 'business', 'perusahaan', 'bisnis'
+            ], true);
+            $isGovernment = in_array($subRoleLower, [
+                'government', 'pemerintah', 'instansi', 'dinas', 'bumn', 'kementerian'
+            ], true);
+
+            $isSchool = in_array($subRoleLower, [
+                'institution', 'school', 'sekolah', 'kampus', 'education', 'institusi', 'smk', 'universitas'
             ], true);
             if ($isCorporate && InstitutionResource::where('user_id', $user->id)->count() === 0) {
                 \Database\Seeders\CorporateDummySeeder::seedForUser($user);
+            } elseif ($isGovernment && InstitutionResource::where('user_id', $user->id)->count() === 0) {
+                \Database\Seeders\GovernmentDummySeeder::seedForUser($user);
+            } elseif ($isSchool && InstitutionResource::where('user_id', $user->id)->count() === 0) {
+                \Database\Seeders\SchoolDummySeeder::seedForUser($user);
+            }
+
+            if ($isSchool && ($validated['type'] ?? null) === 'tenders') {
+                return $this->errorResponse('Fitur Pengadaan & Vendor hanya tersedia untuk akun Corporate / Perusahaan.', 403);
             }
         }
 
@@ -67,7 +92,18 @@ class InstitutionResourceController extends Controller
     public function store(Request $request)
     {
         $this->ensureInstitutionAccount($request);
+        $user = $request->user();
+        $subRole = $user?->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user?->sub_role;
+        $subRoleLower = strtolower((string) ($subRole ?? ''));
+        $isSchool = in_array($subRoleLower, [
+            'institution', 'school', 'sekolah', 'kampus', 'education', 'institusi', 'smk', 'universitas'
+        ], true);
+
         $validated = $this->validateResource($request);
+
+        if ($isSchool && ($validated['resource_type'] ?? null) === 'tenders') {
+            return $this->errorResponse('Fitur Pengadaan & Vendor hanya tersedia untuk akun Corporate / Perusahaan.', 403);
+        }
 
         $resource = InstitutionResource::create([
             ...$validated,
@@ -89,7 +125,18 @@ class InstitutionResourceController extends Controller
             return $this->errorResponse('Data tidak ditemukan.', 404);
         }
 
+        $user = $request->user();
+        $subRole = $user?->sub_role instanceof \BackedEnum ? $user->sub_role->value : $user?->sub_role;
+        $subRoleLower = strtolower((string) ($subRole ?? ''));
+        $isSchool = in_array($subRoleLower, [
+            'institution', 'school', 'sekolah', 'kampus', 'education', 'institusi', 'smk', 'universitas'
+        ], true);
+
         $validated = $this->validateResource($request, partial: true);
+
+        if ($isSchool && ($resource->resource_type === 'tenders' || ($validated['resource_type'] ?? null) === 'tenders')) {
+            return $this->errorResponse('Fitur Pengadaan & Vendor hanya tersedia untuk akun Corporate / Perusahaan.', 403);
+        }
         $status = $validated['status'] ?? $resource->status;
         if ($status === 'published' && !$resource->published_at) {
             $validated['published_at'] = now();

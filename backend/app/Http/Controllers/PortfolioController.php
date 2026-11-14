@@ -38,7 +38,7 @@ class PortfolioController extends Controller
             /** @var \App\Services\StorageService $storageService */
             $storageService = app(\App\Services\StorageService::class);
             $storageFile = $storageService->store($request->user(), $request->file('image'), 'portfolio', 'public');
-            $imageUrl = $storageFile->path;
+            $imageUrl = $storageFile->url;
         }
 
         $item = PortfolioItem::create([
@@ -87,7 +87,7 @@ class PortfolioController extends Controller
             // Delete old physical file using Storage::disk('public')->delete if needed, 
             // but we really should fetch the old StorageFile and use StorageService->delete.
             // For now, we update image_url.
-            $data['image_url'] = $storageFile->path;
+            $data['image_url'] = $storageFile->url;
         }
 
         $item->update($data);
@@ -158,6 +158,14 @@ class PortfolioController extends Controller
         }
 
         if (!$path) {
+            // Check cloud/MinIO disk if exists
+            $defaultDisk = config('filesystems.default');
+            $cloudDisks = array_unique(array_filter([$defaultDisk, 'minio', 's3']));
+            foreach ($cloudDisks as $d) {
+                if (\Illuminate\Support\Facades\Storage::disk($d)->exists('portfolio/' . $file)) {
+                    return \Illuminate\Support\Facades\Storage::disk($d)->response('portfolio/' . $file);
+                }
+            }
             abort(404);
         }
 

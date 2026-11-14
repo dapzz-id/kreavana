@@ -56,6 +56,8 @@ Route::get('roles/creator/sub-roles', [RoleController::class, 'getCreatorSubRole
 // Public System Statuses
 Route::get('system/module-statuses', [AdminSystemSettingController::class, 'getPublicModuleStatuses'])
     ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
+Route::get('system/contract-signer-info', [AdminSystemSettingController::class, 'getContractSignature'])
+    ->withoutMiddleware(\App\Http\Middleware\ValidateJti::class);
 
 // Reviews & Reputation (Database driven)
 Route::get('reviews', [OpportunityReviewController::class, 'index'])
@@ -83,7 +85,7 @@ Route::prefix('auth')->withoutMiddleware(\App\Http\Middleware\ValidateJti::class
 });
 
 // Auth & Protected Routes
-Route::middleware('auth:api')->group(function () {
+Route::middleware(['auth:api', 'user.not_suspended'])->group(function () {
 
     // Auth
     Route::prefix('auth')->group(function () {
@@ -178,7 +180,7 @@ Route::middleware('auth:api')->group(function () {
     });
 
     // Opportunities (Write & Applications)
-    Route::prefix('opportunities')->group(function () {
+    Route::prefix('opportunities')->middleware('module:opportunities_enabled')->group(function () {
         Route::get('my', [OpportunityController::class, 'myOpportunities']);
         Route::post('/', [OpportunityController::class, 'store'])->middleware('permission:create_opportunity');
         Route::post('report', [OpportunityController::class, 'submitReport'])->middleware('permission:submit_report');
@@ -191,8 +193,18 @@ Route::middleware('auth:api')->group(function () {
         Route::post('applications/{id}/consider', [OpportunityController::class, 'considerApplication']);
         Route::post('applications/{id}/respond-counter-offer', [OpportunityController::class, 'respondCounterOffer']);
         Route::post('{id}/start-event', [OpportunityController::class, 'startEvent']);
+        Route::post('{id}/sign-contract', [OpportunityController::class, 'signContract']);
+        Route::post('{id}/dynamic-terms', [OpportunityController::class, 'updateDynamicTerms']);
+        Route::get('{id}/contracts', [OpportunityController::class, 'getContracts']);
         Route::post('{id}/update-progress', [OpportunityController::class, 'updateProgress']);
         Route::post('{id}/schedule-meeting', [OpportunityController::class, 'scheduleMeeting']);
+        Route::post('{id}/review-meeting', [OpportunityController::class, 'reviewMeeting'])->middleware('role:admin,marketing');
+        Route::post('{id}/respond-meeting-counter', [OpportunityController::class, 'respondMeetingCounter']);
+        Route::post('{id}/admin-start-event', [OpportunityController::class, 'adminStartEvent'])->middleware('role:admin,marketing');
+        Route::post('{id}/auto-release-escrow', [OpportunityController::class, 'autoReleaseEscrow']);
+        Route::post('applications/{id}/progress', [OpportunityController::class, 'updateWorkerProgress']);
+        Route::post('applications/{id}/deliverables', [OpportunityController::class, 'uploadDeliverable']);
+        Route::post('applications/{id}/pay', [OpportunityController::class, 'payWorker']);
         Route::post('applications/{id}/submit-documents', [OpportunityController::class, 'submitDocuments']);
     });
 
@@ -249,6 +261,7 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/', [JobContractController::class, 'store']);
         Route::get('{id}', [JobContractController::class, 'show']);
         Route::post('{id}/confirm-schedule', [JobContractController::class, 'confirmSchedule']);
+        Route::post('{id}/repeat-order', [JobContractController::class, 'repeatOrder']);
         Route::post('{contract}/transitions', [JobContractTransitionController::class, 'store']);
     });
 
@@ -361,6 +374,8 @@ Route::middleware('auth:api')->group(function () {
         Route::get('ai-config', [AdminSystemSettingController::class, 'getAiConfig']);
         Route::post('ai-config', [AdminSystemSettingController::class, 'updateAiConfig']);
         Route::post('ai-config/test', [AdminSystemSettingController::class, 'testAiConnection']);
+        Route::get('contract-signature', [AdminSystemSettingController::class, 'getContractSignature']);
+        Route::post('contract-signature', [AdminSystemSettingController::class, 'updateContractSignature']);
     });
 
 
@@ -412,6 +427,7 @@ Route::middleware('auth:api')->group(function () {
     // Subscription (authenticated)
     Route::prefix('subscription')->group(function () {
         Route::post('purchase', [SubscriptionController::class, 'purchase']);
+        Route::post('toggle-auto-renew', [SubscriptionController::class, 'toggleAutoRenew']);
         Route::get('current', [SubscriptionController::class, 'getCurrent']);
     });
 
@@ -480,7 +496,7 @@ Route::prefix('subscription')->group(function () {
 });
 
 // Public Opportunities (Guest Browsing)
-Route::prefix('opportunities')->group(function () {
+Route::prefix('opportunities')->middleware('module:opportunities_enabled')->group(function () {
     Route::get('/', [OpportunityController::class, 'index']);
     Route::get('map', [OpportunityController::class, 'mapLocations']);
     Route::get('{id}', [OpportunityController::class, 'show']);
@@ -489,7 +505,13 @@ Route::prefix('opportunities')->group(function () {
 
 // Public Client Dashboard Overview (Guest Browsing)
 Route::get('client-dashboard/overview', [DashboardController::class, 'overview']);
-Route::get('collaborations', [CollaborationController::class, 'index']);
+Route::get('collaborations', [CollaborationController::class, 'index'])->middleware('module:collaboration_enabled');
+
+// Internal Machine-to-Machine (S2S) Endpoints from users_api / IAM
+Route::prefix('internal/v1')->middleware([\App\Http\Middleware\VerifyInternalServiceSignature::class])->group(function () {
+    Route::post('sessions/revoke', [\App\Http\Controllers\Internal\InternalAuthController::class, 'revokeSession']);
+    Route::post('users/suspend', [\App\Http\Controllers\Internal\InternalAuthController::class, 'syncSuspension']);
+});
 
 
 

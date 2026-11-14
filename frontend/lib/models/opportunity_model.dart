@@ -59,15 +59,27 @@ class OpportunityRequirementModel {
   final String subRoleSlug;
   final int quantity;
   final String? notes;
+  final String paymentScheme;
+  final List<Map<String, dynamic>> paymentTerms;
 
   OpportunityRequirementModel({
     this.id,
     required this.subRoleSlug,
     this.quantity = 1,
     this.notes,
+    this.paymentScheme = 'full_at_end',
+    this.paymentTerms = const [],
   });
 
   factory OpportunityRequirementModel.fromJson(Map<String, dynamic> json) {
+    List<Map<String, dynamic>> terms = [];
+    if (json['payment_terms'] is List) {
+      for (final t in json['payment_terms']) {
+        if (t is Map) {
+          terms.add(Map<String, dynamic>.from(t));
+        }
+      }
+    }
     return OpportunityRequirementModel(
       id: json['id']?.toString(),
       subRoleSlug: json['sub_role_slug'] ?? '',
@@ -75,6 +87,8 @@ class OpportunityRequirementModel {
           ? int.tryParse((json['quantity_needed'] ?? json['quantity']).toString()) ?? 1
           : 1,
       notes: json['notes'],
+      paymentScheme: json['payment_scheme']?.toString() ?? 'full_at_end',
+      paymentTerms: terms,
     );
   }
 
@@ -84,6 +98,8 @@ class OpportunityRequirementModel {
       'sub_role_slug': subRoleSlug,
       'quantity': quantity,
       'notes': notes,
+      'payment_scheme': paymentScheme,
+      'payment_terms': paymentTerms,
     };
   }
 
@@ -159,6 +175,8 @@ class OpportunityApprovedCreatorModel {
   final String? avatarUrl;
   final String? subRole;
   final String? capability;
+  final String? creatorSignature;
+  final String? creatorSignedAt;
 
   OpportunityApprovedCreatorModel({
     required this.id,
@@ -167,7 +185,11 @@ class OpportunityApprovedCreatorModel {
     this.avatarUrl,
     this.subRole,
     this.capability,
+    this.creatorSignature,
+    this.creatorSignedAt,
   });
+
+  bool get isSigned => creatorSignedAt != null && creatorSignedAt!.isNotEmpty;
 
   factory OpportunityApprovedCreatorModel.fromJson(Map<String, dynamic> json) {
     return OpportunityApprovedCreatorModel(
@@ -177,6 +199,8 @@ class OpportunityApprovedCreatorModel {
       avatarUrl: json['avatar_url'],
       subRole: json['sub_role'],
       capability: json['capability'],
+      creatorSignature: json['creator_signature'],
+      creatorSignedAt: json['creator_signed_at'],
     );
   }
 
@@ -188,6 +212,8 @@ class OpportunityApprovedCreatorModel {
       'avatar_url': avatarUrl,
       'sub_role': subRole,
       'capability': capability,
+      'creator_signature': creatorSignature,
+      'creator_signed_at': creatorSignedAt,
     };
   }
 }
@@ -220,6 +246,14 @@ class OpportunityModel {
   final double? meetingLng;
   final String? meetingNotes;
   final String meetingStatus; // 'not_required', 'pending_marketing_review', 'verified_paid'
+  final String? meetingCounterBy;
+  final String? meetingCounterDate;
+  final String? meetingCounterTime;
+  final String? meetingCounterLocation;
+  final double? meetingCounterLat;
+  final double? meetingCounterLng;
+  final String? meetingCounterNotes;
+  final String? meetingCounterStatus;
   final String escrowStatus; // 'none', 'pending_deposit', 'held_in_escrow', 'released_to_creators'
   final int eventProgress;
   final String? postedBy;
@@ -231,6 +265,23 @@ class OpportunityModel {
   final double? externalRating;
   final String? externalRatingSource;
   final String? externalProofUrl;
+  final String? signatureType; // 'wet_signature' | 'dynamic_electronic'
+  final String? clientSignature;
+  final String? clientSignedAt;
+  final String? wetSignatureDocumentUrl;
+  final String? wetSignatureVerifiedAt;
+  final double? escrowAmount;
+  final List<String> dynamicTerms;
+  final String? adminName;
+  final String? adminSignatureUrl;
+  final String? adminSignedAt;
+  final String? adminStartedAt;
+  final String? autoReleaseTriggeredAt;
+  final String? gracePeriodDeadline;
+  final bool isGracePeriodActive;
+  final int gracePeriodDaysLeft;
+  final bool isWetSignatureRequired;
+  final bool isDynamicSignatureRequired;
 
   OpportunityModel({
     required this.id,
@@ -260,6 +311,14 @@ class OpportunityModel {
     this.meetingLng,
     this.meetingNotes,
     this.meetingStatus = 'not_required',
+    this.meetingCounterBy,
+    this.meetingCounterDate,
+    this.meetingCounterTime,
+    this.meetingCounterLocation,
+    this.meetingCounterLat,
+    this.meetingCounterLng,
+    this.meetingCounterNotes,
+    this.meetingCounterStatus,
     this.escrowStatus = 'none',
     this.eventProgress = 0,
     this.postedBy,
@@ -271,6 +330,23 @@ class OpportunityModel {
     this.externalRating,
     this.externalRatingSource,
     this.externalProofUrl,
+    this.signatureType,
+    this.clientSignature,
+    this.clientSignedAt,
+    this.wetSignatureDocumentUrl,
+    this.wetSignatureVerifiedAt,
+    this.escrowAmount,
+    this.dynamicTerms = const [],
+    this.adminName,
+    this.adminSignatureUrl,
+    this.adminSignedAt,
+    this.adminStartedAt,
+    this.autoReleaseTriggeredAt,
+    this.gracePeriodDeadline,
+    this.isGracePeriodActive = false,
+    this.gracePeriodDaysLeft = 0,
+    this.isWetSignatureRequired = false,
+    this.isDynamicSignatureRequired = true,
   });
 
   bool get isLocation => type == 'location';
@@ -278,16 +354,69 @@ class OpportunityModel {
   bool get isOngoing => status.toLowerCase() == 'in_progress' || status.toLowerCase() == 'ongoing';
   bool get isClosed => status.toLowerCase() == 'closed' || status.toLowerCase() == 'completed';
   bool get hasExternalRating => externalRating != null && externalRating! > 0;
+  bool get isMeetingPending => meetingStatus.toLowerCase() == 'pending' || meetingStatus.toLowerCase() == 'pending_marketing_review';
+  bool get isMeetingInProcess => meetingStatus.toLowerCase() == 'diproses' || meetingStatus.toLowerCase() == 'approved';
+  bool get isMeetingVerified => meetingStatus.toLowerCase() == 'verified_completed' || meetingStatus.toLowerCase() == 'verified_paid' || (wetSignatureVerifiedAt != null && wetSignatureVerifiedAt!.isNotEmpty);
+  bool get hasMeetingCounter => meetingCounterStatus == 'pending' && meetingCounterBy != null;
+  bool get isMeetingCounterByAdmin => meetingCounterBy == 'admin' && meetingCounterStatus == 'pending';
+  bool get isMeetingCounterByClient => meetingCounterBy == 'client' && meetingCounterStatus == 'pending';
 
-  bool get isLargeTransaction {
+  bool get isEventRunning {
+    if (status.toLowerCase() != 'open') return true;
+    if (eventProgress > 0) return true;
+    final rawDate = eventStartDate ?? eventDate;
+    if (rawDate != null && rawDate.trim().isNotEmpty) {
+      try {
+        final parsed = DateTime.tryParse(rawDate.trim());
+        if (parsed != null) {
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          final eventDay = DateTime(parsed.year, parsed.month, parsed.day);
+          if (eventDay.isBefore(today)) {
+            return true;
+          }
+        }
+      } catch (_) {}
+    }
+    return false;
+  }
+
+  bool get canApply => status.toLowerCase() == 'open' && !isEventRunning;
+
+  bool get isWetSignatureBudget {
+    if (isWetSignatureRequired) return true;
+    if (signatureType == 'wet_signature') return true;
     final b = (budgetRange ?? '').toLowerCase();
     if (b.contains('5.000.000 - 20.000.000')) return false;
-    return b.startsWith('>=') ||
-        b.contains('>= 20.000.000') ||
-        b.contains('skala besar') ||
-        b.contains('mou') ||
-        (meetingStatus != 'not_required' && meetingStatus.isNotEmpty);
+    if (b.contains('20.000.000 - 100.000.000')) return false;
+    return b.contains('100.000.000') ||
+        b.contains('tanda tangan basah') ||
+        (b.startsWith('>=') && !b.contains('2.500.000') && !b.contains('20.000.000'));
   }
+
+  bool get isDynamicSignatureBudget => !isWetSignatureBudget;
+
+  bool get isClientSigned =>
+      (clientSignature != null && clientSignature!.isNotEmpty) ||
+      (clientSignedAt != null && clientSignedAt!.isNotEmpty);
+
+  bool get areAllApprovedCreatorsSigned =>
+      approvedCreators.isNotEmpty && approvedCreators.every((c) => c.isSigned);
+
+  bool get isContractFullyApproved {
+    if (isWetSignatureBudget) {
+      return (wetSignatureDocumentUrl != null && wetSignatureDocumentUrl!.isNotEmpty) ||
+          (wetSignatureVerifiedAt != null && wetSignatureVerifiedAt!.isNotEmpty) ||
+          meetingStatus == 'verified_paid' ||
+          meetingStatus == 'verified_completed';
+    } else {
+      return isClientSigned && areAllApprovedCreatorsSigned;
+    }
+  }
+
+  bool get isContractSigned => isContractFullyApproved;
+
+  bool get isLargeTransaction => isWetSignatureBudget;
 
   String get effectiveBannerUrl => (bannerUrl != null && bannerUrl!.isNotEmpty)
       ? bannerUrl!
@@ -348,6 +477,14 @@ class OpportunityModel {
     double? meetingLng,
     String? meetingNotes,
     String? meetingStatus,
+    String? meetingCounterBy,
+    String? meetingCounterDate,
+    String? meetingCounterTime,
+    String? meetingCounterLocation,
+    double? meetingCounterLat,
+    double? meetingCounterLng,
+    String? meetingCounterNotes,
+    String? meetingCounterStatus,
     String? escrowStatus,
     int? eventProgress,
     String? postedBy,
@@ -359,6 +496,23 @@ class OpportunityModel {
     double? externalRating,
     String? externalRatingSource,
     String? externalProofUrl,
+    String? signatureType,
+    String? clientSignature,
+    String? clientSignedAt,
+    String? wetSignatureDocumentUrl,
+    String? wetSignatureVerifiedAt,
+    double? escrowAmount,
+    List<String>? dynamicTerms,
+    String? adminName,
+    String? adminSignatureUrl,
+    String? adminSignedAt,
+    String? adminStartedAt,
+    String? autoReleaseTriggeredAt,
+    String? gracePeriodDeadline,
+    bool? isGracePeriodActive,
+    int? gracePeriodDaysLeft,
+    bool? isWetSignatureRequired,
+    bool? isDynamicSignatureRequired,
   }) {
     return OpportunityModel(
       id: id ?? this.id,
@@ -388,6 +542,14 @@ class OpportunityModel {
       meetingLng: meetingLng ?? this.meetingLng,
       meetingNotes: meetingNotes ?? this.meetingNotes,
       meetingStatus: meetingStatus ?? this.meetingStatus,
+      meetingCounterBy: meetingCounterBy ?? this.meetingCounterBy,
+      meetingCounterDate: meetingCounterDate ?? this.meetingCounterDate,
+      meetingCounterTime: meetingCounterTime ?? this.meetingCounterTime,
+      meetingCounterLocation: meetingCounterLocation ?? this.meetingCounterLocation,
+      meetingCounterLat: meetingCounterLat ?? this.meetingCounterLat,
+      meetingCounterLng: meetingCounterLng ?? this.meetingCounterLng,
+      meetingCounterNotes: meetingCounterNotes ?? this.meetingCounterNotes,
+      meetingCounterStatus: meetingCounterStatus ?? this.meetingCounterStatus,
       escrowStatus: escrowStatus ?? this.escrowStatus,
       eventProgress: eventProgress ?? this.eventProgress,
       postedBy: postedBy ?? this.postedBy,
@@ -399,6 +561,23 @@ class OpportunityModel {
       externalRating: externalRating ?? this.externalRating,
       externalRatingSource: externalRatingSource ?? this.externalRatingSource,
       externalProofUrl: externalProofUrl ?? this.externalProofUrl,
+      signatureType: signatureType ?? this.signatureType,
+      clientSignature: clientSignature ?? this.clientSignature,
+      clientSignedAt: clientSignedAt ?? this.clientSignedAt,
+      wetSignatureDocumentUrl: wetSignatureDocumentUrl ?? this.wetSignatureDocumentUrl,
+      wetSignatureVerifiedAt: wetSignatureVerifiedAt ?? this.wetSignatureVerifiedAt,
+      escrowAmount: escrowAmount ?? this.escrowAmount,
+      dynamicTerms: dynamicTerms ?? this.dynamicTerms,
+      adminName: adminName ?? this.adminName,
+      adminSignatureUrl: adminSignatureUrl ?? this.adminSignatureUrl,
+      adminSignedAt: adminSignedAt ?? this.adminSignedAt,
+      adminStartedAt: adminStartedAt ?? this.adminStartedAt,
+      autoReleaseTriggeredAt: autoReleaseTriggeredAt ?? this.autoReleaseTriggeredAt,
+      gracePeriodDeadline: gracePeriodDeadline ?? this.gracePeriodDeadline,
+      isGracePeriodActive: isGracePeriodActive ?? this.isGracePeriodActive,
+      gracePeriodDaysLeft: gracePeriodDaysLeft ?? this.gracePeriodDaysLeft,
+      isWetSignatureRequired: isWetSignatureRequired ?? this.isWetSignatureRequired,
+      isDynamicSignatureRequired: isDynamicSignatureRequired ?? this.isDynamicSignatureRequired,
     );
   }
 
@@ -461,6 +640,22 @@ class OpportunityModel {
           : null,
       meetingNotes: json['meeting_notes']?.toString(),
       meetingStatus: json['meeting_status']?.toString() ?? 'not_required',
+      meetingCounterBy: json['meeting_counter_by']?.toString(),
+      meetingCounterDate: json['meeting_counter_date']?.toString(),
+      meetingCounterTime: json['meeting_counter_time']?.toString(),
+      meetingCounterLocation: json['meeting_counter_location']?.toString(),
+      meetingCounterLat: json['meeting_counter_lat'] != null
+          ? (json['meeting_counter_lat'] is double
+              ? json['meeting_counter_lat']
+              : double.tryParse(json['meeting_counter_lat'].toString()))
+          : null,
+      meetingCounterLng: json['meeting_counter_lng'] != null
+          ? (json['meeting_counter_lng'] is double
+              ? json['meeting_counter_lng']
+              : double.tryParse(json['meeting_counter_lng'].toString()))
+          : null,
+      meetingCounterNotes: json['meeting_counter_notes']?.toString(),
+      meetingCounterStatus: json['meeting_counter_status']?.toString(),
       escrowStatus: json['escrow_status']?.toString() ?? 'none',
       eventProgress: json['event_progress'] != null
           ? int.tryParse(json['event_progress'].toString()) ?? 0
@@ -484,6 +679,32 @@ class OpportunityModel {
           : null,
       externalRatingSource: json['external_rating_source']?.toString(),
       externalProofUrl: json['external_proof_url']?.toString(),
+      signatureType: json['signature_type']?.toString(),
+      clientSignature: json['client_signature']?.toString(),
+      clientSignedAt: json['client_signed_at']?.toString(),
+      wetSignatureDocumentUrl: json['wet_signature_document_url']?.toString(),
+      wetSignatureVerifiedAt: json['wet_signature_verified_at']?.toString(),
+      escrowAmount: json['escrow_amount'] != null
+          ? (json['escrow_amount'] is num
+              ? (json['escrow_amount'] as num).toDouble()
+              : double.tryParse(json['escrow_amount'].toString()))
+          : null,
+      dynamicTerms: json['dynamic_terms'] is List
+          ? (json['dynamic_terms'] as List).map((e) => e.toString()).toList()
+          : [],
+      adminName: json['admin_name']?.toString(),
+      adminSignatureUrl: json['admin_signature_url']?.toString(),
+      adminSignedAt: json['admin_signed_at']?.toString(),
+      adminStartedAt: json['admin_started_at']?.toString(),
+      autoReleaseTriggeredAt: json['auto_release_triggered_at']?.toString(),
+      gracePeriodDeadline: json['grace_period_deadline']?.toString(),
+      isGracePeriodActive: json['is_grace_period_active'] == true,
+      gracePeriodDaysLeft: json['grace_period_days_left'] != null
+          ? int.tryParse(json['grace_period_days_left'].toString()) ?? 0
+          : 0,
+      isWetSignatureRequired: json['is_wet_signature_required'] == true,
+      isDynamicSignatureRequired: json['is_dynamic_signature_required'] == true ||
+          json['signature_type'] == 'dynamic_electronic',
     );
   }
 
@@ -516,6 +737,14 @@ class OpportunityModel {
       'meeting_lng': meetingLng,
       'meeting_notes': meetingNotes,
       'meeting_status': meetingStatus,
+      'meeting_counter_by': meetingCounterBy,
+      'meeting_counter_date': meetingCounterDate,
+      'meeting_counter_time': meetingCounterTime,
+      'meeting_counter_location': meetingCounterLocation,
+      'meeting_counter_lat': meetingCounterLat,
+      'meeting_counter_lng': meetingCounterLng,
+      'meeting_counter_notes': meetingCounterNotes,
+      'meeting_counter_status': meetingCounterStatus,
       'escrow_status': escrowStatus,
       'event_progress': eventProgress,
       'posted_by': postedBy,
@@ -526,6 +755,23 @@ class OpportunityModel {
       'external_rating': externalRating,
       'external_rating_source': externalRatingSource,
       'external_proof_url': externalProofUrl,
+      'signature_type': signatureType,
+      'client_signature': clientSignature,
+      'client_signed_at': clientSignedAt,
+      'wet_signature_document_url': wetSignatureDocumentUrl,
+      'wet_signature_verified_at': wetSignatureVerifiedAt,
+      'escrow_amount': escrowAmount,
+      'dynamic_terms': dynamicTerms,
+      'admin_name': adminName,
+      'admin_signature_url': adminSignatureUrl,
+      'admin_signed_at': adminSignedAt,
+      'admin_started_at': adminStartedAt,
+      'auto_release_triggered_at': autoReleaseTriggeredAt,
+      'grace_period_deadline': gracePeriodDeadline,
+      'is_grace_period_active': isGracePeriodActive,
+      'grace_period_days_left': gracePeriodDaysLeft,
+      'is_wet_signature_required': isWetSignatureRequired,
+      'is_dynamic_signature_required': isDynamicSignatureRequired,
     };
   }
 

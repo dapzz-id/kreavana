@@ -10,6 +10,9 @@ import '../models/opportunity_model.dart';
 import '../widgets/skeleton/skeleton_list.dart';
 import '../widgets/app_breadcrumbs.dart';
 import '../widgets/app_sweet_alert.dart';
+import '../widgets/desktop_sidebar_layout.dart';
+import '../services/user_store.dart';
+import '../services/api_service.dart';
 import 'main_navigation.dart';
 
 class AgendaScreen extends StatefulWidget {
@@ -76,13 +79,49 @@ class _AgendaScreenState extends State<AgendaScreen> {
       final results = await Future.wait([
         JobContractService.getUserContracts().catchError((_) => <JobContract>[]),
         OpportunityService.getMyOpportunities().catchError((_) => <OpportunityModel>[]),
+        ApiService.get('institution/resources').catchError((_) => <String, dynamic>{'status': false}),
       ]);
 
       final contracts = results[0] as List<JobContract>;
       final opportunities = results[1] as List<OpportunityModel>;
+      final resResources = results[2] as Map<String, dynamic>;
       final List<Map<String, dynamic>> list = [];
 
-      // 1. Process Opportunities (Kegiatan & Event Sekolah)
+      // 1. Process Institution Events (Kegiatan, Event & Lomba dari Sekolah)
+      if (resResources['status'] == true && resResources['data'] is List) {
+        for (final item in resResources['data']) {
+          if (item is Map && item['resource_type'] == 'events') {
+            final meta = item['metadata'] as Map<String, dynamic>? ?? {};
+            final dateStr = meta['event_date']?.toString();
+            final DateTime dt = dateStr != null ? (DateTime.tryParse(dateStr) ?? DateTime.now()) : DateTime.now();
+            final isComp = meta['is_competition'] == true ||
+                (item['title']?.toString().toLowerCase().contains('lomba') ?? false) ||
+                (item['title']?.toString().toLowerCase().contains('hackathon') ?? false);
+
+            list.add({
+              'id': 'res_${item['id'] ?? item['title']}',
+              'title': item['title'] ?? 'Event Kampus',
+              'startDate': dt,
+              'endDate': dt,
+              'date': dt.day.toString().padLeft(2, '0'),
+              'month': _months[dt.month - 1],
+              'year': '${dt.year}',
+              'endDateStr': dt.day.toString().padLeft(2, '0'),
+              'endMonthStr': _months[dt.month - 1],
+              'endYearStr': '${dt.year}',
+              'dateRange': _formatDateRange(dt, dt),
+              'time': '09:00 - 16:00 WIB',
+              'type': isComp ? 'Event' : 'Offline',
+              'typeColor': isComp ? const Color(0xFFEF4444) : const Color(0xFF4338CA),
+              'icon': isComp ? Icons.emoji_events_outlined : Icons.festival_outlined,
+              'location': meta['location']?.toString() ?? 'Kampus ISRK',
+              'organizer': widget.user?.name ?? 'Institut Seni & Rekayasa Kreatif',
+            });
+          }
+        }
+      }
+
+      // 2. Process Opportunities (Kegiatan & Event Sekolah)
       for (final opp in opportunities) {
         final startStr = opp.eventStartDate ?? opp.eventDate ?? opp.deadline ?? opp.createdAt;
         final DateTime start = startStr != null ? (DateTime.tryParse(startStr) ?? DateTime.now()) : DateTime.now();
@@ -115,7 +154,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
         });
       }
 
-      // 2. Process Contracts
+      // 3. Process Contracts
       for (final c in contracts) {
         final start = c.scheduledStartDate ?? c.deadline ?? DateTime.now();
         final end = c.scheduledEndDate ?? c.deadline ?? start;
@@ -184,7 +223,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
 
     final isDesktop = MediaQuery.of(context).size.width > 900;
 
-    return Scaffold(
+    final scaffold = Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: !isDesktop && Navigator.canPop(context),
         toolbarHeight: 80,
@@ -195,6 +234,22 @@ class _AgendaScreenState extends State<AgendaScreen> {
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         actions: [
+          if (isDesktop) ...[
+            ElevatedButton.icon(
+              onPressed: () => _showAddAgendaModal(context, accentColor),
+              icon: const Icon(Icons.add, size: 16),
+              label: Text(_isSchool ? 'Buat Event / Lomba' : 'Tambah Agenda'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accentColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _fetchRealtimeAgenda,
@@ -333,6 +388,18 @@ class _AgendaScreenState extends State<AgendaScreen> {
               ),
             ),
     );
+
+    final effectiveUser = widget.user ?? currentUserNotifier.value;
+    if (isDesktop && effectiveUser != null) {
+      return DesktopSidebarLayout(
+        user: effectiveUser,
+        activeRoute: 'agenda',
+        onUserUpdated: widget.onUserUpdated,
+        child: scaffold,
+      );
+    }
+
+    return scaffold;
   }
 
   Widget _buildAgendaHeader(Color accentColor, bool isDark) {
@@ -1075,6 +1142,21 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     'organizer': widget.user?.name ?? 'Sekolah',
                   });
                 });
+                if (_isSchool) {
+                  ApiService.post('institution/resources', {
+                    'resource_type': 'events',
+                    'title': titleCtrl.text.trim(),
+                    'description': 'Kegiatan resmi kampus & industri.',
+                    'status': 'open',
+                    'metadata': {
+                      'category': typeSel,
+                      'event_date': '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}',
+                      'location': locCtrl.text.trim().isNotEmpty ? locCtrl.text.trim() : 'Kampus ISRK',
+                      'registered_participants': 0,
+                      'is_competition': typeSel.toLowerCase().contains('lomba') || titleCtrl.text.toLowerCase().contains('lomba'),
+                    },
+                  }).catchError((_) => <String, dynamic>{});
+                }
                 Navigator.pop(ctx);
                 AppSweetAlert.success(
                   context,

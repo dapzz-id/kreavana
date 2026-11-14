@@ -52,6 +52,36 @@ class JobContractTransitionService extends BaseService
                     'metadata' => $metadata,
                     'created_at' => now(),
                 ]);
+
+                // Notify the other party
+                $recipientId = ($actor->id === $lockedContract->client_id)
+                    ? $lockedContract->creator_id
+                    : $lockedContract->client_id;
+
+                $transitionLabels = [
+                    'approve' => 'Kontrak Disetujui',
+                    'submit_work' => 'Hasil Kerja Dikirimkan',
+                    'request_revision' => 'Permintaan Revisi Kontrak',
+                    'accept_work' => 'Hasil Kerja Diterima & Selesai',
+                    'cancel' => 'Kontrak Dibatalkan',
+                ];
+
+                $label = $transitionLabels[$transitionName] ?? ('Pembaruan Status: ' . ucfirst(str_replace('_', ' ', $transitionName)));
+
+                \App\Models\Notification::create([
+                    'user_id' => $recipientId,
+                    'title' => $label,
+                    'message' => $actor->name . ' memperbarui status kontrak "' . $lockedContract->title . '" (' . $label . ').',
+                    'type' => 'contract',
+                    'data' => [
+                        'contract_id' => $lockedContract->id,
+                        'transition' => $transitionName,
+                        'work_status' => $toWorkStatus,
+                        'contract_status' => $toContractStatus,
+                    ],
+                    'is_read' => false,
+                    'created_at' => now(),
+                ]);
             }
 
             return $lockedContract;

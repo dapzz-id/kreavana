@@ -3,15 +3,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../services/badge_service.dart';
 import '../../../app/theme.dart';
+import '../../../app/app_animations.dart';
 import '../../../app/subrole_theme_engine.dart';
-import '../../../services/theme_transition_service.dart';
 import '../../../services/job_contract_service.dart';
 import '../../../models/job_contract.dart';
 import '../../../services/api_service.dart';
 import '../../../widgets/subrole_right_sidebar.dart';
-import '../../../screens/global_search_screen.dart';
 import '../../../models/user_model.dart';
 import '../../../screens/buat_kebutuhan_screen.dart';
 import '../../../screens/proyek_saya_screen.dart';
@@ -21,6 +19,7 @@ import '../../../screens/profile_screen.dart';
 import '../../../screens/explore_screen.dart';
 import '../../../screens/ulasan_reputasi_screen.dart';
 import '../../../screens/institution_workspace_screen.dart';
+import '../../../widgets/app_bar_badge.dart';
 
 class CompanyDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -482,163 +481,51 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
       title: Row(
         children: [
           Expanded(
-            child: GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => GlobalSearchScreen(user: widget.user),
-                ),
-              ),
-              child: Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1A1830) : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark ? AppTheme.inputBorder : Colors.grey.shade200,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 14),
-                    Icon(
-                      Icons.search,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _isInstitution ? 'Cari talenta mahasiswa, prodi, mitra IDUKA, atau tender...' : 'Cari kreator, vendor mitra, atau paket proyek korporat...',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: isDark ? AppTheme.textMuted : Colors.grey.shade500,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            child: InteractiveDashboardSearchBar(
+              user: widget.user,
+              isDark: isDark,
+              accentColor: _brandBlue,
+              placeholder: _isInstitution
+                  ? 'Cari talenta mahasiswa, prodi, mitra IDUKA, atau tender...'
+                  : 'Cari kreator, vendor mitra, atau paket proyek korporat...',
             ),
           ),
-          const SizedBox(width: 20),
-          ListenableBuilder(
-            listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(
-              Icons.notifications_none_outlined,
-              BadgeService().unreadNotificationsText,
-              isDark,
-            ),
+          const SizedBox(width: 14),
+          AppBarBadgeWidget(
+            icon: Icons.notifications_none_outlined,
+            isDark: isDark,
+            accentColor: _brandBlue,
           ),
-          const SizedBox(width: 4),
-          ListenableBuilder(
-            listenable: BadgeService(),
-            builder: (_, _) => _buildAppBarBadge(
-              Icons.chat_bubble_outline,
-              BadgeService().unreadMessagesText,
-              isDark,
-            ),
+          const SizedBox(width: 6),
+          AppBarBadgeWidget(
+            icon: Icons.chat_bubble_outline,
+            isDark: isDark,
+            accentColor: _brandBlue,
           ),
-          const SizedBox(width: 12),
-          IconButton(
-            key: _themeBtnKey,
-            icon: Icon(
-              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-              size: 20,
-            ),
-            onPressed: () {
-              final box = _themeBtnKey.currentContext?.findRenderObject() as RenderBox?;
-              final origin = box != null
-                  ? box.localToGlobal(box.size.center(Offset.zero))
-                  : const Offset(0, 0);
-              ThemeTransitionService.animateToggle(origin: origin, toDark: !isDark);
-            },
+          const SizedBox(width: 10),
+          AppBarThemeToggle(
+            isDark: isDark,
+            btnKey: _themeBtnKey,
+            accentColor: _brandBlue,
           ),
           const SizedBox(width: 8),
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: _brandBlue.withValues(alpha: 0.1),
-                child: Icon(
-                  _isInstitution ? Icons.assured_workload_rounded : Icons.business_rounded,
-                  color: _brandBlue,
-                  size: 20,
+          AppBarProfileBadge(
+            user: widget.user,
+            isDark: isDark,
+            accentColor: _brandBlue,
+            customSubRole: _isInstitution ? 'Institusi / Lembaga' : 'Corporate / Perusahaan',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ProfileScreen(
+                  user: widget.user,
+                  onUserUpdated: widget.onUserUpdated,
+                  onLogout: () {},
                 ),
               ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.user.name,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    _isInstitution ? 'Institusi / Lembaga' : 'Corporate / Perusahaan',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? AppTheme.textMuted : Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildAppBarBadge(IconData icon, String count, bool isDark) {
-    final isNotification = icon == Icons.notifications_none_outlined;
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => isNotification
-                ? NotificationsScreen(
-                    userId: widget.user.id ?? '',
-                    user: widget.user,
-                  )
-                : const DirectMessageScreen(),
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF2D2A3E) : Colors.grey.shade100,
-          shape: BoxShape.circle,
-        ),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Icon(icon, size: 20, color: isDark ? Colors.white : Colors.black87),
-            if (count.isNotEmpty && count != '0')
-              Positioned(
-                right: -4,
-                top: -4,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: Colors.redAccent,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    count,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
       ),
     );
   }
@@ -768,34 +655,42 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
             spacing: 12,
             runSpacing: 10,
             children: [
-              ElevatedButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: widget.user)),
-                ),
-                icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
-                label: Text(_isInstitution ? 'Buka Tender / Riset / Magang' : 'Buka Tender / RFP Proyek'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF1E3A8A),
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              HoverLiftButton(
+                borderRadius: BorderRadius.circular(12),
+                glowColor: Colors.white,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => BuatKebutuhanScreen(user: widget.user)),
+                  ),
+                  icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+                  label: Text(_isInstitution ? 'Buka Tender / Riset / Magang' : 'Buka Tender / RFP Proyek'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF1E3A8A),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
                 ),
               ),
-              OutlinedButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => ExploreScreen(user: widget.user)),
-                ),
-                icon: const Icon(Icons.search_rounded, size: 18, color: Colors.white),
-                label: Text(_isInstitution ? 'Cari Talenta Mahasiswa & IDUKA' : 'Cari & Pilih Kreator/Mitra', style: const TextStyle(color: Colors.white)),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.white70),
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              HoverLiftButton(
+                borderRadius: BorderRadius.circular(12),
+                glowColor: Colors.white,
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => ExploreScreen(user: widget.user)),
+                  ),
+                  icon: const Icon(Icons.search_rounded, size: 18, color: Colors.white),
+                  label: Text(_isInstitution ? 'Cari Talenta Mahasiswa & IDUKA' : 'Cari & Pilih Kreator/Mitra', style: const TextStyle(color: Colors.white)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.white70),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
                 ),
               ),
             ],

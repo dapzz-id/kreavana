@@ -14,12 +14,14 @@ return new class extends Migration
             $table->string('username')->unique();
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
             $table->string('avatar_url', 500)->nullable();
             $table->string('phone', 20)->nullable();
             $table->enum('role', ['user', 'creator', 'admin'])->default('user');
             $table->string('sub_role')->nullable();
             $table->boolean('is_creator_approved')->default(false);
+            $table->boolean('is_suspended')->default(false);
+            $table->timestamp('suspended_until')->nullable();
+            $table->text('suspend_reason')->nullable();
             $table->decimal('balance', 15, 2)->default(0.00);
             $table->rememberToken();
             $table->timestamps();

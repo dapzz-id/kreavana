@@ -65,5 +65,32 @@ class JobContractService {
       throw Exception('Gagal mengonfirmasi jadwal: ${e.toString()}');
     }
   }
+
+  /// Create a repeat order from a previous contract
+  static Future<JobContract> repeatOrder(
+    String contractId,
+    Map<String, dynamic> payload,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/contracts/$contractId/repeat-order',
+        data: payload,
+      );
+
+      final status = response.data['status'];
+      if ((status == true || status == 'success') &&
+          response.data['data'] != null) {
+        return JobContract.fromJson(response.data['data']);
+      }
+
+      throw Exception(response.data['message'] ?? 'Gagal membuat repeat order');
+    } on DioException catch (e) {
+      throw Exception(AppErrors.friendly(e));
+    } catch (e) {
+      throw Exception(
+        'Terjadi kesalahan saat repeat order: ${e.toString()}',
+      );
+    }
+  }
 }
 

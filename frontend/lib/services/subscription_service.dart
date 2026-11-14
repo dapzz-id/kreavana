@@ -9,6 +9,7 @@ class SubscriptionPlan {
   final List<String> features;
   final bool isPopular;
   final bool isFree;
+  final bool isCurrent;
 
   const SubscriptionPlan({
     required this.tier,
@@ -18,6 +19,7 @@ class SubscriptionPlan {
     required this.features,
     required this.isPopular,
     this.isFree = false,
+    this.isCurrent = false,
   });
 
   factory SubscriptionPlan.fromJson(Map<String, dynamic> json) {
@@ -31,6 +33,7 @@ class SubscriptionPlan {
           .toList(),
       isPopular: json['is_popular'] == true,
       isFree: ((json['price'] as num?)?.toInt() ?? 0) == 0,
+      isCurrent: json['is_current'] == true,
     );
   }
   SubscriptionPlan copyWith({
@@ -41,6 +44,7 @@ class SubscriptionPlan {
     List<String>? features,
     bool? isPopular,
     bool? isFree,
+    bool? isCurrent,
   }) {
     return SubscriptionPlan(
       tier: tier ?? this.tier,
@@ -50,6 +54,7 @@ class SubscriptionPlan {
       features: features ?? this.features,
       isPopular: isPopular ?? this.isPopular,
       isFree: isFree ?? this.isFree,
+      isCurrent: isCurrent ?? this.isCurrent,
     );
   }
 }
@@ -162,5 +167,41 @@ class SubscriptionService {
       'pin': pin,
       'auto_renew': autoRenew,
     });
+  }
+
+  /// Get active subscription info for current user
+  static Future<String?> getCurrentTier() async {
+    try {
+      final response = await ApiService.get('subscription/current');
+      if (response['tier'] != null) {
+        return response['tier'].toString();
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Get detailed subscription information including expiry date and auto-renew status
+  static Future<Map<String, dynamic>?> getCurrentSubscriptionDetails() async {
+    try {
+      final response = await ApiService.get('subscription/current');
+      if (response.containsKey('tier') || response['status'] == true) {
+        return response;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Toggle or set auto-renew status for active subscription
+  static Future<Map<String, dynamic>?> toggleAutoRenew({bool? autoRenew}) async {
+    try {
+      final body = <String, dynamic>{};
+      if (autoRenew != null) {
+        body['auto_renew'] = autoRenew;
+      }
+      final response = await ApiService.post('subscription/toggle-auto-renew', body);
+      return response;
+    } catch (_) {
+      return null;
+    }
   }
 }

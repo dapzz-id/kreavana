@@ -22,6 +22,10 @@ enum CreatorSubRole: string
     case MUSICIAN = 'musician';
     case TALENT = 'talent';
     case DRONE_PILOT = 'drone_pilot';
+    case VENDOR = 'vendor';
+    case MITRA_PENDUKUNG = 'mitra_pendukung';
+    case STUDIO = 'studio';
+    case RENTAL_ALAT = 'rental_alat';
 
     public function label(): string
     {
@@ -44,6 +48,10 @@ enum CreatorSubRole: string
             self::MUSICIAN => 'Musician',
             self::TALENT => 'Talent',
             self::DRONE_PILOT => 'Drone Pilot',
+            self::VENDOR => 'Vendor & Penyedia Jasa Pendukung',
+            self::MITRA_PENDUKUNG => 'Mitra Jasa Pendukung',
+            self::STUDIO => 'Studio & Ruang Produksi',
+            self::RENTAL_ALAT => 'Rental Alat Foto & Video',
         };
     }
 }
