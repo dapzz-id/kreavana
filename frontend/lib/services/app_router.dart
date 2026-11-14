@@ -11,6 +11,7 @@ import '../screens/profile_screen.dart';
 import '../screens/institution_workspace_screen.dart';
 import '../screens/tim_hak_akses_screen.dart';
 import '../screens/corporate_lowongan_screen.dart';
+import '../screens/corporate_vacancy_detail_screen.dart';
 import '../screens/buat_kebutuhan_screen.dart';
 import 'user_store.dart';
 import 'system_settings_service.dart';
@@ -62,6 +63,7 @@ class AppRoutes {
 
   // Corporate / Perusahaan
   static const lowonganCorporate = '/lowongan-corporate';
+  static const detailLowonganCorporate = '/lowongan-corporate/detail';
   static const pengadaanVendor = '/pengadaan-vendor';
 
   // Kebutuhan Proyek
@@ -244,7 +246,9 @@ final GoRouter appRouter = GoRouter(
     if (!isAdmin) {
       final isCorp = user != null && user.isCorporate;
       final isGov = user != null && user.isGovernment;
-      if (currentPath == AppRoutes.lowonganCorporate && !isCorp) {
+      if ((currentPath == AppRoutes.lowonganCorporate ||
+              currentPath == AppRoutes.detailLowonganCorporate) &&
+          !isCorp) {
         return AppRoutes.beranda;
       }
       if (currentPath == AppRoutes.pengadaanVendor && !(isCorp || isGov)) {
@@ -477,6 +481,21 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final user = currentUserNotifier.value ?? UserModel.guest();
         return CorporateLowonganScreen(
+          user: user,
+          onUserUpdated: (u) => currentUserNotifier.value = u,
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.detailLowonganCorporate,
+      name: 'detail-lowongan-corporate',
+      builder: (context, state) {
+        final user = currentUserNotifier.value ?? UserModel.guest();
+        final item = state.extra as CorporateVacancyItem?;
+        final vacancyId = state.uri.queryParameters['id'];
+        return CorporateVacancyDetailScreen(
+          item: item,
+          vacancyId: vacancyId,
           user: user,
           onUserUpdated: (u) => currentUserNotifier.value = u,
         );
